@@ -26,7 +26,9 @@ ESP Async Webserver | [GIT](https://github.com/me-no-dev/ESPAsyncWebServer) | `l
 Bounce2 | [GIT](https://github.com/thomasfredericks/Bounce2) | `last`
 DHT Async | [GIT](https://github.com/brunohorta82/DHT_nonblocking) | `last`
 Arduino Json | [ARDUINO IDE](https://arduinojson.org) | `5.*`
-
+OneWire | [ARDUINO IDE](https://playground.arduino.cc/Learning/OneWire) | `last`
+PZEM004T | [GIT](https://github.com/olehs/PZEM004T) | `last`
+Arduino-Temperature-Control-Library | [GIT](https://github.com/milesburton/Arduino-Temperature-Control-Library) | `last`
 
 
 ## Painel de Controlo <a name="id3"></a>
