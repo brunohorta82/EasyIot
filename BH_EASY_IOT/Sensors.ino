@@ -108,7 +108,7 @@ void loopSensors(){
         JsonArray& functions = _sensors[i].sensorJson.get<JsonVariant>("functions");
         for(int i  = 0 ; i < functions.size() ; i++){
           JsonObject& f = functions[i];    
-          String _mqttState =f.get<String>("mqttStateTopic");
+          String _mqttState = f.get<String>("mqttStateTopic");
           int _type =f.get<unsigned int>("type");
           bool _retain =f.get<bool>("mqttRetain");   
           if(_type == TEMPERATURE_TYPE){
@@ -124,11 +124,12 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
   JsonArray& sns = getJsonArray();
   for (unsigned int i=0; i < _sensors.size(); i++) {
     if(_sensors[i].sensorJson.get<String>("id").equals(_id)){
+      
       String _name = _sensor.get<String>("name");
       _sensors[i].sensorJson.set("gpio",_sensor.get<unsigned int>("gpio"));
       _sensors[i].sensorJson.set("name",_name);
       _sensors[i].sensorJson.set("disabled",_sensor.get<bool>("disabled"));
-     
+     removeComponentHaConfig(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix"),getConfigJson().get<String>("nodeId"), _sensors[i].sensorJson.get<String>("type"), _sensors[i].sensorJson.get<String>("class"), _sensors[i].sensorJson.get<String>("id"));
       if(  _sensors[i].sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type")){
           _sensors[i].sensorJson.remove("functions");
            JsonArray& functionsJson = getJsonArray();

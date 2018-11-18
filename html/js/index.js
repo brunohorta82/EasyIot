@@ -430,6 +430,8 @@ function buildSwitch(obj) {
         "                <div  id=\"type-control-box" + obj.id + "\" class=\"col-xs-5 " + (obj.typeControl === 'mqtt' ? 'hide' : '') + "\">" +
         "                           <select class=\"form-control\" style=\" font-size: 10px;padding: 0px 12px; height: 20px;\"" +
         "                                 id=\"gpioControl_" + obj.id + "\">" +
+        "                            <option " + (obj.gpioControl === 0 ? 'selected' : '') + " value=\"0\">0</option>" +
+        "                            <option " + (obj.gpioControl === 2 ? 'selected' : '') + " value=\"2\">2</option>" +
         "                            <option " + (obj.gpioControl === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
         "                            <option " + (obj.gpioControl === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
         "                            <option " + (obj.gpioControl === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
@@ -564,6 +566,7 @@ function buildRelay(obj) {
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"gpio_" + obj.id + "\">" +
         "                            <option " + (obj.gpio === 0 ? 'selected' : '') + " value=\"0\">0</option>" +
+        "                            <option " + (obj.gpio === 2 ? 'selected' : '') + " value=\"2\">2</option>" +
         "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
         "                            <option " + (obj.gpio === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
         "                            <option " + (obj.gpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
@@ -629,6 +632,7 @@ function fillSensors(payload) {
             "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO</span></td>" +
             "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
             "                                    id=\"gpio_" + obj.id + "\">" +
+            "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
             "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
             "                            <option " + (obj.gpio === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
             "                            <option " + (obj.gpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
