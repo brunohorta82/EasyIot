@@ -19,7 +19,24 @@ typedef struct {
 std::vector<sensor_t> _sensors;
 
 const String sensorsFilename = "sensors.json";
+void removeSensor(String _id){
+  int sensorFound = false;
+  int index = 0;
+  for (unsigned int i=0; i < sns.size(); i++) {
+    JsonObject& sensorJson = sns.get<JsonVariant>(i);   
+    if(sensorJson.get<String>("id").equals(_id)){
+      sensorFound = true;
+      index  = i;
+    }
+  }
+  if(sensorFound){
+    sns.remove(index);
+     
+    }
 
+  saveSensors();
+  applyJsonSensors();
+}
 JsonArray& getStoredSensors(){
   return sns;
 }
