@@ -127,8 +127,8 @@ void loadStoredRelays(){
      if(loadDefaults){
       logger("[RELAY] Apply default config...");
       cFile = SPIFFS.open(relaysFilename,"w+"); 
-      JsonArray &defaultRelays = createDefaultRelays();
-      defaultRelays.printTo(cFile);
+      createDefaultRelays();
+      rls.printTo(cFile);
       applyJsonRelays();
       cFile.close();
       }
@@ -176,10 +176,9 @@ void relayJson(String _id,long _gpio, bool _inverted, String _name, int _maxAmp,
       rls.add(relayJson);
 }
 
-JsonArray& createDefaultRelays(){
+void createDefaultRelays(){
     #ifdef BHONOFRE
     relayJson("R1",RELAY_ONE,NORMAL,"Relé 1",2,"fa-circle-o-notch");
     relayJson("R2",RELAY_TWO,NORMAL,"Relé 2",2,"fa-circle-o-notch");
     #endif
-    return rls;
 }

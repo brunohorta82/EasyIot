@@ -198,7 +198,14 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   getStoredRelays().printTo(*response);
   request->send(response);
   });
-  
+     server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request){
+   if(request->hasArg("id")){
+    removeSensor(request->arg("id"));
+   } 
+     AsyncResponseStream *response = request->beginResponseStream("application/json");
+  getStoredSensors().printTo(*response);
+  request->send(response);
+  });
   server.on("/load-easy", HTTP_GET, [](AsyncWebServerRequest *request){
    if(request->hasArg("t")){
     AsyncResponseStream *response = request->beginResponseStream("application/json");

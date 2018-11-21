@@ -3,7 +3,10 @@
 void createHASwitchsComponent(){
   JsonArray& _devices = getStoredSwitchs();
   for(int i  = 0 ; i < _devices.size() ; i++){ 
-    JsonObject& switchJson = _devices[i];      
+    JsonObject& switchJson = _devices[i];    
+    if(switchJson.get<bool>("discoveryDisabled")){
+      continue;
+     }  
     String _id = switchJson.get<String>("id");
     String  _type = switchJson.get<String>("type");
     String _class =switchJson.get<String>("class");
@@ -27,17 +30,17 @@ void createHASwitchsComponent(){
 }
 
 void createHASensorComponent(){
-  JsonArray& _devices = getStoredSensors();
-  for(int i  = 0 ; i < _devices.size() ; i++){ 
-    JsonObject& d = _devices[i];   
-   if(d.get<bool>("disabled")){
-    continue;
-   }  
-    String _id = d.get<String >("id");
-    String  _type = d.get<String>("type");
-    String _class =d.get<String>("class");
-    String _name =d.get<String>("name");
-    JsonArray& functions = d.get<JsonVariant>("functions");
+  JsonArray& sensorsJson = getStoredSensors();
+  for(int i  = 0 ; i < sensorsJson.size() ; i++){ 
+    JsonObject& sensorJson = sensorsJson.get<JsonVariant>(i);;   
+   if(sensorJson.get<bool>("discoveryDisabled")){
+      continue;
+     }   
+    String _id = sensorJson.get<String >("id");
+    String  _type = sensorJson.get<String>("type");
+    String _class =sensorJson.get<String>("class");
+    String _name =sensorJson.get<String>("name");
+    JsonArray& functions = sensorJson.get<JsonVariant>("functions");
      for(int i  = 0 ; i < functions.size() ; i++){
         JsonObject& f = functions[i]; 
         String _fname =f.get<String>("name");
