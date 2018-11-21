@@ -46,17 +46,24 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
       switchJson.set("gpioOpen",_switch.get<unsigned int>("gpioOpen"));
       switchJson.set("gpioClose",_switch.get<unsigned int>("gpioClose"));
       switchJson.set("name",_name);
+      switchJson.set("discoveryDisabled",_switch.get<bool>("discoveryDisabled"));
       switchJson.set("pullup",_switch.get<bool>("pullup"));
       int swMode = _switch.get<unsigned int>("mode");
        switchJson.set("mode",swMode);
       String typeControl = _switch.get<String>("typeControl");
       switchJson.set("typeControl",typeControl);
       switchJson.set("pullState",0);
-      if(swMode == 4 || swMode== 5){
-        switchJson.set("icon","fa-window-maximize");
-        }else{
+      String type = _switch.get<String>("type");
+      switchJson.set("type",_switch.get<String>("type"));
+      if(type.equals("cover")){
+          switchJson.set("icon","fa-window-maximize");
+      }else if(type.equals("light")){
           switchJson.set("icon", "fa-lightbulb-o");
-          }
+       }else if(type.equals("switch")){
+          switchJson.set("icon", "fa-plug");
+       }else if(type.equals("lock")){
+        switchJson.set("icon", "fa-lock");
+       }
       if(!typeControl.equals(RELAY_TYPE) && (swMode != OPEN_CLOSE_SWITCH || swMode != OPEN_CLOSE_SWITCH)){
         switchJson.remove("gpioControl");
        }else{
@@ -133,6 +140,9 @@ void applyJsonSwitchs(){
   for(int i  = 0 ; i < sws.size() ; i++){ 
     JsonObject& switchJson = sws.get<JsonVariant>(i);   
     int gpio= switchJson.get<unsigned int>("gpio");
+    if(gpio ==  99){
+      continue;
+     }
     if(switchJson.get<unsigned int>("mode") == OPEN_CLOSE_SWITCH){
           int gpioOpen= switchJson.get<unsigned int>("gpioOpen");
           int gpioClose= switchJson.get<unsigned int>("gpioClose");

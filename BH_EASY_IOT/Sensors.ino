@@ -8,30 +8,24 @@
 #define HUMIDITY_TYPE 2
 #define DS18B20_TYPE 90
 
+JsonArray& sns = getJsonArray();
+
 typedef struct {
     JsonObject& sensorJson;
     DHT_nonblocking* dht;
     OneWire* oneWire;
-    DallasTemperature* dallas;
-    
+    DallasTemperature* dallas;  
 } sensor_t;
 std::vector<sensor_t> _sensors;
 
 const String sensorsFilename = "sensors.json";
 
 JsonArray& getStoredSensors(){
-  JsonArray& sws = getJsonArray();
-  if(_sensors.size() == 0){
-    loadStoredSensors();
-   } 
-  for (unsigned int i=0; i < _sensors.size(); i++) {
-    sws.add( _sensors[i].sensorJson);
-  }
-  return sws;
+  return sns;
 }
 
-void sensorJson(JsonArray& sensorsJson,String _id,int _gpio ,bool _disabled, String _icon, String _name,  int _type,JsonArray& functions){
-      JsonObject& sensorJson = sensorsJson.createNestedObject();
+void sensorJson(String _id,int _gpio ,bool _disabled, String _icon, String _name,  int _type,JsonArray& functions){
+      JsonObject& sensorJson = getJsonObject();
       sensorJson.set("id", _id);
       sensorJson.set("gpio", _gpio);
       sensorJson.set("icon", _icon);
@@ -40,16 +34,15 @@ void sensorJson(JsonArray& sensorsJson,String _id,int _gpio ,bool _disabled, Str
       sensorJson.set("type", _type);
       sensorJson.set("class", SENSOR_DEVICE);
       sensorJson.set("functions", functions);
+      sns.add(sensorJson);
    
 }
-
-JsonArray& createDefaultSensors(){
-    JsonArray& sensorsJson = getJsonArray();
+void createDefaultSensors(){
     String id = "S1";
     JsonArray& functionsJson = getJsonArray();
     createFunctions(functionsJson,id,DS18B20_TYPE);
-    sensorJson(sensorsJson ,id,SENSOR_PIN,DISABLE,  "fa-microchip","Temperature", DS18B20_TYPE,functionsJson);
-    return  sensorsJson ;
+    sensorJson(id,SENSOR_PIN,DISABLE,  "fa-microchip","Temperature", DS18B20_TYPE,functionsJson);
+   
 }
 void createFunctions( JsonArray& functionsJson,String id,int type){
 
@@ -121,23 +114,24 @@ void loopSensors(){
     }
 }
 JsonArray& saveSensor(String _id,JsonObject& _sensor){
-  JsonArray& sns = getJsonArray();
-  for (unsigned int i=0; i < _sensors.size(); i++) {
-    if(_sensors[i].sensorJson.get<String>("id").equals(_id)){
+  for (unsigned int i=0; i < sns.size(); i++) {
+    JsonObject& sensorJson = sns.get<JsonVariant>(i);  
+    if(sensorJson.get<String>("id").equals(_id)){
       
       String _name = _sensor.get<String>("name");
-      _sensors[i].sensorJson.set("gpio",_sensor.get<unsigned int>("gpio"));
-      _sensors[i].sensorJson.set("name",_name);
-      _sensors[i].sensorJson.set("disabled",_sensor.get<bool>("disabled"));
+      sensorJson.set("gpio",_sensor.get<unsigned int>("gpio"));
+      sensorJson.set("name",_name);
+      sensorJson.set("discoveryDisabled",_sensor.get<bool>("discoveryDisabled"));
+      sensorJson.set("disabled",_sensor.get<bool>("disabled"));
      removeComponentHaConfig(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix"),getConfigJson().get<String>("nodeId"), _sensors[i].sensorJson.get<String>("type"), _sensors[i].sensorJson.get<String>("class"), _sensors[i].sensorJson.get<String>("id"));
-      if(  _sensors[i].sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type")){
-          _sensors[i].sensorJson.remove("functions");
+      if(  sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type")){
+          sensorJson.remove("functions");
            JsonArray& functionsJson = getJsonArray();
-          _sensors[i].sensorJson.set("type",_sensor.get<unsigned int>("type"));
+          sensorJson.set("type",_sensor.get<unsigned int>("type"));
           createFunctions(functionsJson,_sensors[i].sensorJson.get<String>("id"),_sensor.get<unsigned int>("type"));
-          _sensors[i].sensorJson.set("functions",functionsJson);  
+          sensorJson.set("functions",functionsJson);  
         }
-        JsonArray& functions = _sensors[i].sensorJson.get<JsonVariant>("functions");
+        JsonArray& functions = sensorJson.get<JsonVariant>("functions");
         JsonArray& functionsUpdated = _sensor.get<JsonVariant>("functions");
         for(int i  = 0 ; i < functions.size() ; i++){
           for(int i  = 0 ; i < functions.size() ; i++){
@@ -150,25 +144,23 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
           }
         }
     }
-    
-     sns.add(  _sensors[i].sensorJson);
+    return sns;
   }
 
-  saveSensors(sns);
-  applyJsonSensors(sns);
+  saveSensors();
+  applyJsonSensors();
  if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
     createHASensorComponent();  
    }
-  return sns;
 }
-void saveSensors(JsonArray& _sensorsJson){
+void saveSensors(){
    if(SPIFFS.begin()){
       logger("[SENSORS] Open "+sensorsFilename);
       File rFile = SPIFFS.open(sensorsFilename,"w+");
       if(!rFile){
         logger("[SENSORS] Open sensors file Error!");
       } else {
-      _sensorsJson.printTo(rFile);
+      sns.printTo(rFile);
       }
       rFile.close();
    }else{
@@ -198,7 +190,10 @@ void loadStoredSensors(){
         }else{
           
           logger("[SENSORS] Apply stored file config...");
-          applyJsonSensors(storedSensors);
+          for(int i = 0 ; i< storedSensors.size(); i++){
+            sns.add(storedSensors.get<JsonVariant>(i));
+            }
+          applyJsonSensors();
         }
         
      }else{
@@ -208,9 +203,9 @@ void loadStoredSensors(){
      if(loadDefaults){
       logger("[SENSORS] Apply default config...");
       cFile = SPIFFS.open(sensorsFilename,"w+"); 
-      JsonArray &defaultSensors = createDefaultSensors();
-      defaultSensors.printTo(cFile);
-      applyJsonSensors(defaultSensors);
+      createDefaultSensors();
+      sns.printTo(cFile);
+      applyJsonSensors();
        
       cFile.close();
       }
@@ -222,25 +217,25 @@ void loadStoredSensors(){
    
 }
 
-void applyJsonSensors(JsonArray& _sensorsJson){
+void applyJsonSensors(){
   _sensors.clear();
-  for(int i  = 0 ; i < _sensorsJson.size() ; i++){ 
-    JsonObject& s = _sensorsJson[i];
-    int gpio= s.get<unsigned int>("gpio");
-    int type= s.get<unsigned int>("type");
+  for(int i  = 0 ; i < sns.size() ; i++){ 
+    JsonObject& sensorJson = sns.get<JsonVariant>(i);  
+    int gpio= sensorJson.get<unsigned int>("gpio");
+    int type= sensorJson.get<unsigned int>("type");
     switch(type){
       case DHT_TYPE_11:
       case DHT_TYPE_21:
       case DHT_TYPE_22:
       {
         DHT_nonblocking* dht_sensor = new DHT_nonblocking( gpio,type );
-        _sensors.push_back({s, dht_sensor,NULL,NULL});
+        _sensors.push_back({sensorJson, dht_sensor,NULL,NULL});
       }
       break;
       case DS18B20_TYPE:   
       OneWire* oneWire = new OneWire (SENSOR_PIN);
       DallasTemperature* sensors = new DallasTemperature(oneWire);
-       _sensors.push_back({s, NULL ,oneWire,sensors});
+       _sensors.push_back({sensorJson, NULL ,oneWire,sensors});
      break;
      }
   }
@@ -248,21 +243,20 @@ void applyJsonSensors(JsonArray& _sensorsJson){
 
 void rebuildSensorsMqttTopics(){
       bool store = false;
-      JsonArray& _devices =  getStoredSensors();
-      for(int i  = 0 ; i < _devices.size() ; i++){ 
+      for(int i  = 0 ; i < sns.size() ; i++){ 
         store = true;
-        JsonObject& d = _devices[i]; 
-        JsonArray& functions = d.get<JsonVariant>("functions");
+        JsonObject& sensorJson = sns.get<JsonVariant>(i);  
+        JsonArray& functions = sensorJson.get<JsonVariant>("functions");
         for(int i  = 0 ; i < functions.size() ; i++){
-          JsonObject& f = functions[i];    
+          JsonObject& f = functions.get<JsonVariant>(i);
           String _mqttState =f.get<String>("mqttStateTopic");
-          String id = d.get<String>("id");
+          String id = sensorJson.get<String>("id");
           String uniqueName = f.get<String>("uniqueName");
           f.set("mqttStateTopic",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,uniqueName));
         }     
     }
     if(store){
-      saveSensors(_devices);
+      saveSensors();
       if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
         createHASensorComponent();  
       }
