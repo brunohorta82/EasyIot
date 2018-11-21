@@ -201,6 +201,13 @@ void applyJsonSwitchs(){
 }
 
 void toogleSwitch(String id) {
+     for (unsigned int i=0; i < _switchs.size(); i++) {
+    if(  _switchs[i].id.equals(id)){
+      Serial.println("TIME");
+     _switchs[i].onTime = millis();
+    }
+    
+   }
   for (unsigned int i=0; i < sws.size(); i++) {
     JsonObject& switchJson = sws.get<JsonVariant>(i);
     if(switchJson.get<String>("id").equals(id)){
@@ -236,6 +243,7 @@ void mqttSwitchControl(String topic, String payload) {
  }   
 
 void triggerSwitch(bool _state,  String id, int gpio) {
+
    for (unsigned int i=0; i < sws.size(); i++) {
     JsonObject& switchJson = sws.get<JsonVariant>(i);
     if(switchJson.get<String>("id").equals(id)){
@@ -465,7 +473,7 @@ void loopSwitchs(){
       value = _switchs[i].pullup ? !value : value;
       int swmode = _switchs[i].mode;
        if(swmode == AUTO_OFF) {
-        if(_switchs[i].onTime > 0 && _switchs[i].onTime + 2000 < millis()){
+        if(_switchs[i].onTime > 0 && _switchs[i].onTime + 1000 < millis()){
           _switchs[i].onTime = 0;
           triggerSwitch( false, _switchs[i].id, _switchs[i].gpio);
           continue;
@@ -474,11 +482,9 @@ void loopSwitchs(){
           if(_switchs[i].state != value){
             _switchs[i].state = value;
             if(swmode == BUTTON_SWITCH || swmode == OPEN_CLOSE_SWITCH || !value) {   
-              _switchs[i].onTime = millis();
                 if(swmode == AUTO_OFF) {
-                value = !value;
+                  value = !value;
                 }
-                
               triggerSwitch( value, _switchs[i].id, _switchs[i].gpio);
             } 
          }
