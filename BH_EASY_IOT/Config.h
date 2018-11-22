@@ -5,7 +5,7 @@
 #include <DallasTemperature.h> // https://github.com/milesburton/Arduino-Temperature-Control-Library
 #include <Timing.h> //https://github.com/scargill/Timing
 #include <AsyncMqttClient.h> //https://github.com/marvinroger/async-mqtt-client
-#include <ArduinoJson.h> ////Install from Arduino IDE Library Manager
+#include <ArduinoJson.h> //Install from Arduino IDE Library Manager
 #include <FS.h> 
 #include <Ticker.h>
 #include <ESPAsyncTCP.h> //https://github.com/me-no-dev/ESPAsyncTCP
@@ -21,11 +21,11 @@
 #define HARDWARE "bhonofre" 
 #define MODEL "Easy-Light"
 #endif
-#define FIRMWARE_VERSION 3.0
+#define FIRMWARE_VERSION 3.1
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
-#define WIFI_SSID "VOID SOFTWARE"
-#define WIFI_SECRET "blackiscool"  
+#define WIFI_SSID ""
+#define WIFI_SECRET ""  
 #define RELAY_ONE 4
 #define RELAY_TWO 5 
 #define SWITCH_ONE 12
