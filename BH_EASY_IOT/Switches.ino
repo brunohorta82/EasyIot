@@ -63,7 +63,10 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
           switchJson.set("icon", "fa-plug");
        }else if(type.equals("lock")){
         switchJson.set("icon", "fa-lock");
+       }else if(type.equals("sensor")){
+        switchJson.set("icon", "fa-circle-o");
        }
+       
       if(!typeControl.equals(RELAY_TYPE) && (swMode != OPEN_CLOSE_SWITCH || swMode != OPEN_CLOSE_SWITCH)){
         switchJson.remove("gpioControl");
        }else{

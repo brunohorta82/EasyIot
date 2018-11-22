@@ -346,11 +346,12 @@ function buildSwitch(obj) {
         "                            <option " + (obj.type === 'light' ? 'selected' : '') + " value=\"light\">Luz</option>" +
         "                            <option " + (obj.type === 'cover' ? 'selected' : '') + " value=\"cover\">Estore</option>" +
         "                            <option " + (obj.type === 'lock' ? 'selected' : '') + " value=\"lock\">Fechadura</option>" +
+        "                            <option " + (obj.type === 'sensor' ? 'selected' : '') + " value=\"sensor\">Sensor</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MODO</span></td>" +
-        "                   <td   id=\"mode_" + obj.id + "\" class=\"generic_type_"+obj.id+" " + (obj.type !== 'cover' ? '' : 'hide') + "\">" +
+        "                   <td   id=\"mode_" + obj.id + "\" class=\"generic_type_" + obj.id + " " + (obj.type !== 'cover' ? '' : 'hide') + "\">" +
         "                            <select onchange=\"switchModeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                     id=\"modeg_" + obj.id + "\">" +
         "                                <option " + (obj.mode === 1 ? 'selected' : '') + " value=\"1\">ON | OFF NORMAL</option>" +
@@ -360,7 +361,7 @@ function buildSwitch(obj) {
         "                                <option " + (obj.mode === 8 ? 'selected' : '') + " value=\"8\">PIR</option>" +
         "                            </select>" +
         "                        </td>" +
-        "                   <td   id=\"mode_" + obj.id + "\" class=\"cover_type_"+ obj.id+" "+  (obj.type === 'cover' ? '' : 'hide') + "\">" +
+        "                   <td   id=\"mode_" + obj.id + "\" class=\"cover_type_" + obj.id + " " + (obj.type === 'cover' ? '' : 'hide') + "\">" +
         "                            <select onchange=\"switchModeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                     id=\"modec_" + obj.id + "\">" +
         "                                <option " + (obj.mode === 4 ? 'selected' : '') + " value=\"4\">OPEN | STOP | CLOSE NORMAL</option>" +
@@ -539,6 +540,8 @@ function switchTypeRules(e) {
 }
 
 function switchTypeOptions(e) {
+
+
     let type = $('#type_' + e).val();
     if (type !== 'cover') {
         $('.generic_type_' + e).removeClass("hide");
@@ -547,7 +550,21 @@ function switchTypeOptions(e) {
         $('.generic_type_' + e).addClass("hide");
         $('.cover_type_' + e).removeClass("hide");
     }
+    $('#icon_' + e).removeClass("fa-window-maximize").removeClass("fa-lightbulb-o").removeClass("fa-plug").removeClass("fa-lock").removeClass("fa-circle-o");
+
     switchModeRules(e);
+    if (type === "cover") {
+        $('#icon_' + e).addClass("fa-window-maximize");
+    } else if (type === "light") {
+        $('#icon_' + e).addClass("fa-lightbulb-o");
+    } else if (type === "switch") {
+        $('#icon_' + e).addClass("fa-plug");
+    } else if (type === "lock") {
+        $('#icon_' + e).addClass("fa-lock");
+    } else if (type === "sensor") {
+        console.log(type);
+        $('#icon_' + e).addClass("fa-circle-o");
+    }
 }
 
 function switchModeRules(e) {
@@ -555,14 +572,12 @@ function switchModeRules(e) {
     let type = $('#type_' + e).val();
 
     if (type !== 'cover') {
-         mode = $('#modeg_' + e).val();
+        mode = $('#modeg_' + e).val();
     } else {
-         mode = $('#modec_' + e).val();
+        mode = $('#modec_' + e).val();
     }
-console.log(mode);
+    console.log(mode);
     if (mode === '4' || mode === '5') {
-        $('#icon_' + e).removeClass("fa-lightbulb-o");
-        $('#icon_' + e).addClass("fa-window-maximize");
         $('#relay_open_gpio_' + e).removeClass("hide");
         $('#relay_close_gpio_' + e).removeClass("hide");
         $('#type_mode_' + e).addClass("hide");
@@ -585,8 +600,6 @@ console.log(mode);
         $('#type_mode_' + e).removeClass("hide");
         $('#open_gpio_' + e).addClass("hide");
         $('#close_gpio_' + e).addClass("hide");
-        $('#icon_' + e).addClass("fa-lightbulb-o");
-        $('#icon_' + e).removeClass("fa-window-maximize");
     }
 
 
@@ -638,7 +651,8 @@ function buildRelay(obj) {
         "                </div></div></div></div>");
 
 }
-function  buildSensor(obj) {
+
+function buildSensor(obj) {
     $('#sensor_config').append("<div class=\"col-lg-4 col-md-6 col-xs-12\">" +
         "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\"><span class=\"info-box-icon\">" +
         "        <i id=\"icon_" + obj.id + "\" class=\"fa " + obj.icon + " false off\"></i></span>" +
