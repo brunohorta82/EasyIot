@@ -206,7 +206,6 @@ void applyJsonSwitchs(){
 void toogleSwitch(String id) {
      for (unsigned int i=0; i < _switchs.size(); i++) {
     if(  _switchs[i].id.equals(id)){
-      Serial.println("TIME");
      _switchs[i].onTime = millis();
     }
     
