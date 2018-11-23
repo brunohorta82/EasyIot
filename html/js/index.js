@@ -796,6 +796,14 @@ function buildRelayTemplate() {
 }
 
 function saveSwitch(id) {
+    var mode = 1;
+    let type = $('#type_' + id).val();
+
+    if (type !== 'cover') {
+        mode = $('#modeg_' + id).val();
+    } else {
+        mode = $('#modec_' + id).val();
+    }
     let device = {
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
@@ -803,8 +811,8 @@ function saveSwitch(id) {
         "gpioClose": $('#gpio_close_' + id).val(),
         "pullup": $('#pullup_' + id).val(),
         "discoveryDisabled": $('#discovery_' + id).val(),
-        "type": $('#type_' + id).val(),
-        "mode": $('#mode_' + id).val(),
+        "type": type,
+        "mode": mode,
         "typeControl": $('#typeControl_' + id).val(),
         "gpioControl": $('#gpioControl_' + id).val(),
         "gpioControlOpen": $('#relay_open_' + id).val(),
