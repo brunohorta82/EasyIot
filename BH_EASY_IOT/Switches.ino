@@ -8,8 +8,6 @@
 #define OPEN_CLOSE_SWITCH 4
 #define OPEN_CLOSE_PUSH 5
 #define AUTO_OFF 6
-#define REED_SWITCH 7
-#define PIR 8
 #define BUTTON_SET_PULLUP true
 #define INIT_STATE_OFF false
 #define BUTTON_MASTER false
