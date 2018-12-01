@@ -129,20 +129,24 @@ void loopSensors(){
      if(!_sensors[i].dht->measure( &temperature, &humidity )){
       continue;
       }
+       Serial.println( temperature);
       }
       break;
       }
-        measurement_timestamp = millis( );
+     
+       
         JsonArray& functions = _sensors[i].sensorJson.get<JsonVariant>("functions");
         for(int i  = 0 ; i < functions.size() ; i++){
           JsonObject& f = functions.get<JsonVariant>(i);    
           String _mqttState = f.get<String>("mqttStateTopic");
           int _type =f.get<unsigned int>("type");
           bool _retain =f.get<bool>("mqttRetain");   
-          if(_type == TEMPERATURE_TYPE && temperature != -99){
+          if(_type == TEMPERATURE_TYPE && temperature != -127.0){
             publishOnMqttQueue(_mqttState ,String(  temperature,1),_retain);
-          }else if(_type == HUMIDITY_TYPE && humidity != -99){
+             measurement_timestamp = millis( );
+          }else if(_type == HUMIDITY_TYPE && humidity != -127.0){
             publishOnMqttQueue(_mqttState ,String( humidity,1),_retain);
+             measurement_timestamp = millis( );
           }else if(_type == MOTION_TYPE && motion != _sensors[i].lastBinaryRead){ 
             _sensors[i].lastBinaryRead = motion;
             
