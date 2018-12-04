@@ -52,7 +52,7 @@ void registerMqttDevices(){
     }else{
       JsonArray& _devices = getStoredSwitchs();
       for(int i  = 0 ; i < _devices.size() ; i++){ 
-      JsonObject& d = _devices[i];      
+      JsonObject& d = _devices.get<JsonVariant>(i);      
       String _mqttCommand =d.get<String>("mqttCommandTopic");
       subscribeOnMqtt(_mqttCommand.c_str());
     }

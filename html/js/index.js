@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.187.193"
 };
 
 const map = {
@@ -357,8 +357,6 @@ function buildSwitch(obj) {
         "                                <option " + (obj.mode === 1 ? 'selected' : '') + " value=\"1\">ON | OFF NORMAL</option>" +
         "                                <option " + (obj.mode === 2 ? 'selected' : '') + " value=\"2\">ON | OFF PUSH/TOUCH</option>" +
         "                                <option " + (obj.mode === 6 ? 'selected' : '') + " value=\"6\">ON | AUTO OFF PUSH/TOUCH</option>" +
-        "                                <option " + (obj.mode === 7 ? 'selected' : '') + " value=\"7\">MAGNÉTICO</option>" +
-        "                                <option " + (obj.mode === 8 ? 'selected' : '') + " value=\"8\">PIR</option>" +
         "                            </select>" +
         "                        </td>" +
         "                   <td   id=\"mode_" + obj.id + "\" class=\"cover_type_" + obj.id + " " + (obj.type === 'cover' ? '' : 'hide') + "\">" +
@@ -654,7 +652,7 @@ function buildRelay(obj) {
 }
 
 function buildSensor(obj) {
-    $('#sensor_config').append("<div class=\"col-lg-4 col-md-6 col-xs-12\">" +
+    $('#sensor_config').append("<div id=\"sn_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
         "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\"><span class=\"info-box-icon\">" +
         "        <i id=\"icon_" + obj.id + "\" class=\"fa " + obj.icon + " false off\"></i></span>" +
         "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
@@ -684,6 +682,7 @@ function buildSensor(obj) {
         "                            <option " + (obj.type === 1 ? 'selected' : '') + " value=\"1\">DHT 21</option>" +
         "                            <option " + (obj.type === 2 ? 'selected' : '') + " value=\"2\">DHT 22</option>" +
         "                            <option " + (obj.type === 90 ? 'selected' : '') + " value=\"90\">DS18B20</option>" +
+        "                            <option " + (obj.type === 65 ? 'selected' : '') + " value=\"65\">PIR</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
@@ -757,12 +756,49 @@ function buildSwitchTemplate() {
     buildSwitch(device);
 }
 
-function buildSensorTemplate() {
+function buildSensorDHTemplate() {
+    if ($('#sn_0').length > 0) {
+        return
+    }
+    let sensor = {
+        "id": "0",
+        "gpio": 14,
+        "icon": "fa-microchip",
+        "name": "Temperatura",
+        "disabled": true,
+        "type": 1,
+        "class": "sensor",
+        "discoveryDisabled": false,
+        "functions": [{
+            "name": "Temperatura",
+            "uniqueName": "temperature",
+            "icon": "fa-thermometer-half",
+            "unit": "ºC",
+            "type": 1,
+            "mqttStateTopic": "-",
+            "mqttRetain": false
+        }, {
+            "name": "Humidade",
+            "uniqueName": "humidity",
+            "icon": "fa-percent",
+            "unit": "%",
+            "type": 2,
+            "mqttStateTopic": "-",
+            "mqttRetain": false
+        }]
+    };
+    buildSensor(sensor);
+}
+
+function buildSensorDallasTemplate() {
+    if ($('#sn_0').length > 0) {
+        return
+    }
     let sensor = {
         "id": "0",
         "gpio": 0,
         "icon": "fa-microchip",
-        "name": "Temperature",
+        "name": "Temperatura",
         "disabled": false,
         "type": 90,
         "class": "sensor",
@@ -772,6 +808,31 @@ function buildSensorTemplate() {
             "icon": "fa-thermometer-half",
             "unit": "ºC",
             "type": 1,
+            "mqttStateTopic": "-",
+            "mqttRetain": false
+        }]
+    };
+    buildSensor(sensor);
+}
+
+function buildSensorPirTemplate() {
+    if ($('#sn_0').length > 0) {
+        return
+    }
+    let sensor = {
+        "id": "0",
+        "gpio": 0,
+        "icon": "fa-circle-o",
+        "name": "Movimento",
+        "disabled": false,
+        "type": 65,
+        "class": "sensor",
+        "functions": [{
+            "name": "Movimento",
+            "uniqueName": "motion",
+            "icon": "fa-circle-o",
+            "unit": "",
+            "type": 4,
             "mqttStateTopic": "-",
             "mqttRetain": false
         }]
@@ -836,16 +897,41 @@ function saveRelay(id) {
 function saveSensor(id) {
     let temp = $("#name_" + id + "_temperature").val();
     let hum = $("#name_" + id + "_humidity").val();
+    let motion = $("#name_" + id + "_motion").val();
+    let functions = [];
+    let type = $('#type_' + id).val();
+
+    if (type === '1') {
+        functions = [{
+            "name": temp, "uniqueName": "temperature", "icon": "fa-thermometer-half",
+            "unit": "ºC",
+            "type": 1
+        }, {"name": hum, "uniqueName": "humidity",  "icon": "fa-percent",
+            "unit": "%",
+            "type": 2}];
+    } else if (type === '90') {
+        functions = [{
+            "name": temp, "uniqueName": "temperature", "icon": "fa-thermometer-half",
+            "unit": "ºC",
+            "type": 1
+        }];
+    } else if ('65' === type) {
+        functions = [{
+            "name": motion, "uniqueName": "motion" , "icon": "fa-circle-o",
+            "unit": "",
+            "type": 4
+        }];
+    }
+
     let device = {
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
         "disabled": $('#disabled_' + id).val(),
         "discoveryDisabled": $('#discovery_' + id).val(),
         "type": $('#type_' + id).val(),
-        "functions": [{
-            "name": temp, "uniqueName": "temperature"
-        }, {"name": hum, "uniqueName": "humidity"}]
+        "functions": functions
     };
+    console.log(device);
     storeDevice(id, device, "save-sensor", "sensors", fillSensors);
 }
 

@@ -156,7 +156,14 @@ void loopBHPzem() {
     }
   
 }
-
+void createPzemSensors(){
+  
+    publishOnMqttQueue("homeassistant/sensor/"+getConfigJson().get<String>("nodeId")+"/counter/config",("{\"name\": \""+getConfigJson().get<String>("nodeId")+"_counter\", \"state_topic\": \""+(getConfigJson().get<String>("nodeId")+String(PZEM_READINDS_TOPIC))+"\", \"value_template\": \"{{ value_json.contador }}\", \"unit_of_measurement\": \"ºkWh\",\"icon\":\"mdi:power-socket-eu\"}"),true);   
+     publishOnMqttQueue("homeassistant/sensor/"+getConfigJson().get<String>("nodeId")+"/voltage/config",("{\"name\": \""+getConfigJson().get<String>("nodeId")+"_voltage\", \"state_topic\": \""+(getConfigJson().get<String>("nodeId")+String(PZEM_READINDS_TOPIC))+"\", \"value_template\": \"{{ value_json.voltagem }}\", \"unit_of_measurement\": \"V\",\"icon\":\"mdi:power-socket-eu\"}"),true);   
+    publishOnMqttQueue("homeassistant/sensor/"+getConfigJson().get<String>("nodeId")+"/amperage/config",("{\"name\": \""+getConfigJson().get<String>("nodeId")+"_amperage\", \"state_topic\": \""+(getConfigJson().get<String>("nodeId")+String(PZEM_READINDS_TOPIC))+"\", \"value_template\": \"{{ value_json.amperagem }}\", \"unit_of_measurement\": \"A\",\"icon\":\"mdi:power-socket-eu\"}"),true);
+     publishOnMqttQueue("homeassistant/sensor/"+getConfigJson().get<String>("nodeId")+"/power/config",("{\"name\": \""+getConfigJson().get<String>("nodeId")+"_power\", \"state_topic\": \""+(getConfigJson().get<String>("nodeId")+String(PZEM_READINDS_TOPIC))+"\", \"value_template\": \"{{ value_json.potencia }}\", \"unit_of_measurement\": \"W\",\"icon\":\"mdi:power-socket-eu\"}"),true);  
+     
+}
 void publishData(){
   publishOnEventSource("pzem-readings",readingsJson);
   //MQTT
