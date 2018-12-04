@@ -32,6 +32,7 @@ JsonArray& saveRelay(String _id,JsonObject& _relay){
     if(relayJson.get<String>("id").equals(_id)){
       relayFound = true;
       relayJson.set("gpio",_relay.get<unsigned int>("gpio"));
+       relayJson.set("name",_relay.get<String>("name"));
       relayJson.set("inverted",_relay.get<bool>("inverted"));
     }
   }
@@ -78,7 +79,10 @@ bool toogleNormal(int gpio){
    }
    return digitalRead(gpio);
 }
-
+bool turnOnRelayNormal(int gpio){
+   turnOn(getRelay(gpio));
+   return digitalRead(gpio);
+}
 JsonObject& getRelay(int gpio){
     for (unsigned int i=0; i < rls.size(); i++) {
     JsonObject& relayJson = rls.get<JsonVariant>(i);
