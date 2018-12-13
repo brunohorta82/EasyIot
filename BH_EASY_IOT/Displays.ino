@@ -7,7 +7,7 @@
 #define DISPLAY_BTN 16
 
 bool displayOn = true;
-SSD1306 display(0x3c, DISPLAY_SDA,DISPLAY_SCL);
+SSD1306 display(0x3C, DISPLAY_SDA,DISPLAY_SCL);
 bool lastState = false;
 Bounce debouncer = Bounce();
 void setupDisplay(){
