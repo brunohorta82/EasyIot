@@ -113,6 +113,7 @@ JsonObject& getPzemReadings(){
   return readingsJson;
   }
 void loopBHPzem() {
+      loopSwitchDisplay();
       if (timerRead.onTimeout(getConfigJson().get<unsigned int>("notificationInterval")) ){
         float v = pzemError ? -1 :  getVoltage();
         float i = pzemError ? -1 :   getCurrent();
