@@ -20,7 +20,7 @@ Nome | Link | Versão
 :---: | :---: | ---:
 JustWifi | [GIT](https://github.com/xoseperez/justwifi) | `last`
 Timming | [GIT](https://github.com/scargill/Timing) | `last`
-Async Mqtt Client | [GIT](https://github.com/marvinroger/async-mqtt-client) | `last`
+Async Mqtt Client | [GIT](https://github.com/jeroenst/async-mqtt-client) | `last`
 ESP Async TCP | [GIT](https://github.com/me-no-dev/ESPAsyncTCP)| `last`
 ESP Async Webserver | [GIT](https://github.com/me-no-dev/ESPAsyncWebServer) | `last`
 Bounce2 | [GIT](https://github.com/thomasfredericks/Bounce2) | `last`
