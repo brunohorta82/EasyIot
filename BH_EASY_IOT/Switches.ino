@@ -510,4 +510,27 @@ void loopSwitchs(){
          }
     }
 }
+ void tryMe(){
+  Serial.println("TRY MODE");
+    for (unsigned int i=0; i < _switchs.size(); i++) {
+      bool value =   !_switchs[i].state;
+      int swmode = _switchs[i].mode;
+       if(swmode == AUTO_OFF) {
+        if(_switchs[i].onTime > 0 && _switchs[i].onTime + 1000 < millis()){
+          _switchs[i].onTime = 0;
+          triggerSwitch( false, _switchs[i].id, _switchs[i].gpio);
+          continue;
+          }
+        }
+          if(_switchs[i].state != value){
+            _switchs[i].state = value;
+            if(swmode == BUTTON_SWITCH || swmode == OPEN_CLOSE_SWITCH || !value) {   
+                if(swmode == AUTO_OFF) {
+                  value = !value;
+                }
+              triggerSwitch( value, _switchs[i].id, _switchs[i].gpio);
+            } 
+         }
+    }
+}
  

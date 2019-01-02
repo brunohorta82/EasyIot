@@ -10,7 +10,14 @@ AsyncWebServer server(80);
 
 void  setupWebserver(){
   MDNS.begin(getHostname().c_str());
-  MDNS.addService("http","tcp",80);
+  MDNS.addService("bhboard","tcp",80);
+  MDNS.addServiceTxt("bhboard", "tcp", "hardware", HARDWARE);
+  MDNS.addServiceTxt("bhboard", "tcp", "nodeId", getConfigJson().get<String>("nodeId"));
+  MDNS.addServiceTxt("bhboard", "tcp", "config_version", getConfigJson().get<String>("configVersion"));
+  MDNS.addServiceTxt("bhboard", "tcp", "hardwareId", String(ESP.getChipId()));
+  MDNS.addServiceTxt("bhboard", "tcp", "wifi-signal",  String(WiFi.RSSI()));
+  MDNS.addServiceTxt("bhboard", "tcp", "wifi-mode", (WiFi.getMode() & WIFI_AP)  ? "AP" : "STATION");
+  MDNS.addServiceTxt("bhboard", "tcp", "type", FACTORY_TYPE);
   server.addHandler(&events);
   /** HTML  **/
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -146,6 +153,11 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   getConfigJson().printTo(*response);
   request->send(response);
   });
+   
+   server.on("/try-me", HTTP_GET, [](AsyncWebServerRequest *request){
+    tryMe();
+    request->send(200);
+   });
    server.on("/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request){
    AsyncResponseStream *response = request->beginResponseStream("application/json");
   if(!request->host().equals("192.168.4.1") && WiFi.getMode() & WIFI_AP){
