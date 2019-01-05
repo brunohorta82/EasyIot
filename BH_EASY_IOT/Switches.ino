@@ -360,8 +360,9 @@ void loadStoredSwitchs(){
     cFile.close();
      if(loadDefaults){
       logger("[SWITCH] Apply default config...");
-      cFile = SPIFFS.open(switchsFilename,"w+"); 
-      createDefaultSwitchs(EASY_LIGHT);
+      cFile = SPIFFS.open(switchsFilename,"w+");
+     
+      createDefaultSwitchs(FACTORY_TYPE == "COVER" ? EASY_BLINDS : EASY_LIGHT);
       sws.printTo(cFile);
       applyJsonSwitchs();
       cFile.close();
