@@ -23,11 +23,12 @@ JsonObject& getConfigJson(){
 }
 
 String getHostname(){
-  String nodeId = configJson.get<String>("nodeId");
-  if(nodeId.equals(configJson.get<String>("hostname"))){
-    return nodeId;
-    }
-  return String(HARDWARE) +"-"+nodeId;
+  //String nodeId = configJson.get<String>("nodeId");
+  //if(nodeId.equals(configJson.get<String>("hostname"))){
+   // return nodeId;
+   // }
+  //return String(HARDWARE) +"-"+nodeId;
+  return  String(HARDWARE)+"-"+String(ESP.getChipId());
 }
 void applyUpdateConfig(double outdatedVersion){
   if(outdatedVersion < 1.4){
@@ -47,6 +48,9 @@ void applyUpdateConfig(double outdatedVersion){
         }
         rebuildSensorsMqttTopics();     
     }
+  }
+  if(outdatedVersion < 3.54){
+    configJson.set("hardwareId", String(ESP.getChipId()));
   }
 }
 
@@ -70,6 +74,7 @@ void loadStoredConfiguration(){
           configJson.set("wifiSSID",storedConfig.get<String>("wifiSSID"));
           configJson.set("wifiSecret", storedConfig.get<String>("wifiSecret"));
           configJson.set("wifiIp", storedConfig.get<String>("wifiIp"));
+          configJson.set("hardwareId", String(ESP.getChipId()));
           #ifdef BHPZEM
           configJson.set("notificationInterval",storedConfig.get<unsigned int>("notificationInterval"));
           configJson.set("directionCurrentDetection",storedConfig.get<bool>("directionCurrentDetection"));
@@ -150,7 +155,7 @@ JsonObject& saveNode(JsonObject& nodeConfig){
     String oldNodeId = configJson.get<String>("nodeId");
     configJson.set("nodeId",nodeId);
   
-    reloadWiFiConfig();
+    //reloadWiFiConfig();
     reloadMqttConfig();
     rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),oldNodeId);
     rebuildSensorsMqttTopics();
@@ -172,6 +177,36 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
   configJson.set("apSecret", _config.get<String>("apSecret"));
+  if(_config.containsKey("mqttIpDns")){
+    
+    if(_config.containsKey("mqttEmbedded") &&  _config.get<bool>("mqttEmbedded")){
+     Serial.println("Sending mDNS query");
+      int n = MDNS.queryService("heleeus", "tcp"); // Send out query for esp tcp services
+      Serial.println("mDNS query done");
+    if (n == 0) {
+      Serial.println("no services found");
+    } else {
+    Serial.print(n);
+    Serial.println(" service(s) found");
+    for (int i = 0; i < n; ++i) {
+      // Print details for each service found
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(MDNS.hostname(i));
+      Serial.print(" (");
+      Serial.print(MDNS.IP(i));
+      _config.containsKey(String(MDNS.IP(i)));
+      Serial.print(":");
+      Serial.print(MDNS.port(i));
+      Serial.println(")");
+    }
+  }
+  }
+  Serial.println();
+
+  Serial.println("loop() next");
+  saveMqtt(_config);
+  }
   wifiUpdated  = true;
   return configJson;
 }
