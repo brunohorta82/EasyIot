@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.193"
+    baseUrl: "http://192.168.1.105"
 };
 
 const map = {
@@ -325,7 +325,7 @@ function buildSwitch(obj) {
         "        <i id=\"icon_" + obj.id + "\" class=\"fa " + obj.icon + " false\"></i></span>" +
         "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
         "<div  id=\"on_off_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
-        "                <i id=\"btn_" + obj.id + "\" style=\"float: right\" class=\"fa fa-3x fa-toggle-on toggler \"></i>" +
+        "                <button onclick='toggleSwitch(\""+obj.id+"\");' id=\"btn_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
         "</div><div  id=\"open_close_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
         "        <i data-state=\"OPEN\" id=\"btn_up_" + obj.id + "\" style=\"padding: 5px; float: right\" class=\"cover_btn fa fa-3x  fa-chevron-circle-up\"></i> <i data-state=\"STOP\" id=\"btn_stop_" + obj.id + "\" style=\"padding: 5px;float: right\" class=\"cover_btn fa fa-3x  fa-stop-circle\"></i> <i data-state=\"CLOSE\" id=\"btn_down_" + obj.id + "\" style=\"padding: 5px;float: right\" class=\"cover_btn fa fa-3x  fa-chevron-circle-down\"></i>" +
         "            </div></div>" +
@@ -506,11 +506,7 @@ function buildSwitch(obj) {
         let state = $(e.currentTarget).data('state')
         stateSwitch(obj["id"], state);
     });
-    $('#icon_' + obj["id"]).addClass(obj["stateControl"] ? 'on' : 'off');
-    $('#btn_' + obj["id"]).addClass(obj["stateControl"] ? '' : 'fa-rotate-180');
-    $('#btn_' + obj["id"]).on('click', function () {
-        toggleSwitch(obj["id"]);
-    });
+
 }
 
 function stateSwitch(id, state) {
@@ -766,7 +762,7 @@ function buildSensorDHTemplate() {
         "icon": "fa-microchip",
         "name": "Temperatura",
         "disabled": true,
-        "type": 1,
+        "type": 2,
         "class": "sensor",
         "discoveryDisabled": false,
         "functions": [{
@@ -906,9 +902,11 @@ function saveSensor(id) {
             "name": temp, "uniqueName": "temperature", "icon": "fa-thermometer-half",
             "unit": "ºC",
             "type": 1
-        }, {"name": hum, "uniqueName": "humidity",  "icon": "fa-percent",
+        }, {
+            "name": hum, "uniqueName": "humidity", "icon": "fa-percent",
             "unit": "%",
-            "type": 2}];
+            "type": 2
+        }];
     } else if (type === '90') {
         functions = [{
             "name": temp, "uniqueName": "temperature", "icon": "fa-thermometer-half",
@@ -917,7 +915,7 @@ function saveSensor(id) {
         }];
     } else if ('65' === type) {
         functions = [{
-            "name": motion, "uniqueName": "motion" , "icon": "fa-circle-o",
+            "name": motion, "uniqueName": "motion", "icon": "fa-circle-o",
             "unit": "",
             "type": 4
         }];
@@ -1017,12 +1015,7 @@ function refreshDashboard(payload) {
 
             });
         } else if (obj.type === "light" || obj.type === "switch") {
-            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div class="info-box bg-aqua"><span class="info-box-icon"><i id="icon_' + obj["id"] + '"  class="fa ' + obj["icon"] + ' ' + obj["stateControl"] + '"></i></span><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span> <i id=btn_' + obj["id"] + ' style="float: right" class="fa fa-3x fa-toggle-on  toggler"></i></div></div></div>');
-            $('#icon_' + obj["id"]).addClass(obj["stateControl"] ? 'on' : 'off');
-            $('#btn_' + obj["id"]).addClass(obj["stateControl"] ? '' : 'fa-rotate-180');
-            $('#btn_' + obj["id"]).on('click', function () {
-                toggleSwitch(obj["id"]);
-            });
+            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div class="info-box bg-aqua"><span class="info-box-icon"></span><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span><button onclick="toggleSwitch(\"'+obj.id+'\");\" id=\"btn_' + obj.id + '\" style=\"float: right\" class=\"btn btn-primary\" >' + (obj.stateControl ? "ON" : "OFF") + '</button></div></div></div>');
         }
     }
 }

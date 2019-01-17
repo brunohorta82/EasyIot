@@ -28,6 +28,7 @@
 #define CONFIG_BUFFER_SIZE 1024
 #define WIFI_SSID ""
 #define WIFI_SECRET ""  
+#define AP_SECRET "EasyIot@"
 #define RELAY_ONE 4
 #define RELAY_TWO 5 
 #define SWITCH_ONE 12

@@ -54,19 +54,7 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
       switchJson.set("typeControl",typeControl);
       switchJson.set("pullState",0);
      
-      switchJson.set("type",_switch.get<String>("type"));
-      if(type.equals("cover")){
-          switchJson.set("icon","fa-window-maximize");
-      }else if(type.equals("light")){
-          switchJson.set("icon", "fa-lightbulb-o");
-       }else if(type.equals("switch")){
-          switchJson.set("icon", "fa-plug");
-       }else if(type.equals("lock")){
-        switchJson.set("icon", "fa-lock");
-       }else if(type.equals("sensor")){
-        switchJson.set("icon", "fa-circle-o");
-       }
-       
+      switchJson.set("type",_switch.get<String>("type"));     
       if(!typeControl.equals(RELAY_TYPE) && (swMode != OPEN_CLOSE_SWITCH || swMode != OPEN_CLOSE_SWITCH)){
         switchJson.remove("gpioControl");
        }else{
@@ -87,18 +75,7 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
       String _name = _switch.get<String>("name");
       String _id = "B"+String(millis());
       String typeControl = _switch.get<String>("typeControl");
-       if(type.equals("cover")){
-          _switch.set("icon","fa-window-maximize");
-      }else if(type.equals("light")){
-         _switch.set("icon", "fa-lightbulb-o");
-       }else if(type.equals("switch")){
-          _switch.set("icon", "fa-plug");
-       }else if(type.equals("lock")){
-       _switch.set("icon", "fa-lock");
-       }else if(type.equals("sensor")){
-        _switch.set("icon", "fa-circle-o");
-       }
-      switchJson(_id,_switch.get<unsigned int>("gpio"),_switch.get<unsigned int>("gpioOpenClose"),_switch.get<unsigned int>("gpio"),typeControl,_switch.get<unsigned int>("gpioControl"),_switch.get<unsigned int>("gpioControlOpen"),_switch.get<unsigned int>("gpioControlClose"),INIT_STATE_OFF,_switch.get<String>("icon"),_name, _switch.get<bool>("pullup"),INIT_STATE_OFF,  _switch.get<unsigned int>("mode"), _switch.get<bool>("master"), MQTT_STATE_TOPIC_BUILDER(_id,SWITCH_DEVICE,_name), MQTT_COMMAND_TOPIC_BUILDER(_id,SWITCH_DEVICE,_name), _switch.get<String>("type"));
+      switchJson(_id,_switch.get<unsigned int>("gpio"),_switch.get<unsigned int>("gpioOpenClose"),_switch.get<unsigned int>("gpio"),typeControl,_switch.get<unsigned int>("gpioControl"),_switch.get<unsigned int>("gpioControlOpen"),_switch.get<unsigned int>("gpioControlClose"),INIT_STATE_OFF,_name, _switch.get<bool>("pullup"),INIT_STATE_OFF,  _switch.get<unsigned int>("mode"), _switch.get<bool>("master"), MQTT_STATE_TOPIC_BUILDER(_id,SWITCH_DEVICE,_name), MQTT_COMMAND_TOPIC_BUILDER(_id,SWITCH_DEVICE,_name), _switch.get<String>("type"));
     }
 
   saveSwitchs();
@@ -149,6 +126,15 @@ void stateSwitch(String id, String state) {
     }
 }
 
+void setChildLockStateControl(String command){
+    if(String("CHILD_UNLOCK").equals(command)){
+    
+    }else if(String("CHILD_LOCK").equals(command)){
+      
+    }else{
+        logger("INVALID CHILD LOCK STATE CONTROL");
+   }
+}
 void applyJsonSwitchs(){
   _switchs.clear();
   for(int i  = 0 ; i < sws.size() ; i++){ 
@@ -393,7 +379,7 @@ void saveSwitchs(){
   logger("[SWITCH] New switch config loaded.");
 }
 
-void switchJson(String _id,int _gpio ,int _gpioOpen ,int _gpioClose ,String _typeControl, int _gpioControl,int _gpioControlOpen,int _gpioControlClose, bool _stateControl, String _icon, String _name, bool _pullup, bool _state, int _mode, bool _master, String _mqttStateTopic, String _mqttCommandTopic, String _type){
+void switchJson(String _id,int _gpio ,int _gpioOpen ,int _gpioClose ,String _typeControl, int _gpioControl,int _gpioControlOpen,int _gpioControlClose, bool _stateControl,  String _name, bool _pullup, bool _state, int _mode, bool _master, String _mqttStateTopic, String _mqttCommandTopic, String _type){
     JsonObject& switchJson =  getJsonObject();
       switchJson.set("id", _id);
       switchJson.set("gpio", _gpio);
@@ -411,11 +397,10 @@ void switchJson(String _id,int _gpio ,int _gpioOpen ,int _gpioClose ,String _typ
       switchJson.set("mqttCommandTopic", _mqttCommandTopic);
       switchJson.set("mqttRetain", true);
       switchJson.set("master", _master);
-      switchJson.set("icon", _icon);
       switchJson.set("name", _name);
       switchJson.set("mode", _mode);
       switchJson.set("state", _state);
-      switchJson.set("locked", false);
+      switchJson.set("childLockStateControl", false);
       switchJson.set("type", _type);
       switchJson.set("class", SWITCH_DEVICE);
       sws.add(switchJson);
@@ -455,10 +440,10 @@ void createDefaultSwitchs(int type){
     String id1 = "B1";
     if(type == EASY_LIGHT){    
       String id2 = "B2";
-      switchJson(id1,SWITCH_ONE,0,0,RELAY_TYPE,RELAY_ONE,0,0,INIT_STATE_OFF,  "fa-lightbulb-o","Interruptor1", BUTTON_SET_PULLUP,INIT_STATE_OFF,  BUTTON_SWITCH, BUTTON_MASTER, MQTT_STATE_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interrutor1"), MQTT_COMMAND_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interruptor1"), "light");
-      switchJson(id2,SWITCH_TWO,0,0,RELAY_TYPE,RELAY_TWO,0,0, INIT_STATE_OFF, "fa-lightbulb-o","Interruptor2", BUTTON_SET_PULLUP,INIT_STATE_OFF,  BUTTON_SWITCH, BUTTON_MASTER, MQTT_STATE_TOPIC_BUILDER(id2,SWITCH_DEVICE,"Interrutor2"),MQTT_COMMAND_TOPIC_BUILDER(id2,SWITCH_DEVICE,"Interruptor2"), "light");
+      switchJson(id1,SWITCH_ONE,0,0,RELAY_TYPE,RELAY_ONE,0,0,INIT_STATE_OFF,  "Interruptor1", BUTTON_SET_PULLUP,INIT_STATE_OFF,  BUTTON_SWITCH, BUTTON_MASTER, MQTT_STATE_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interrutor1"), MQTT_COMMAND_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interruptor1"), "light");
+      switchJson(id2,SWITCH_TWO,0,0,RELAY_TYPE,RELAY_TWO,0,0, INIT_STATE_OFF, "Interruptor2", BUTTON_SET_PULLUP,INIT_STATE_OFF,  BUTTON_SWITCH, BUTTON_MASTER, MQTT_STATE_TOPIC_BUILDER(id2,SWITCH_DEVICE,"Interrutor2"),MQTT_COMMAND_TOPIC_BUILDER(id2,SWITCH_DEVICE,"Interruptor2"), "light");
     }else if(type == EASY_BLINDS){
-      switchJson(id1,0,SWITCH_ONE,SWITCH_TWO,RELAY_TYPE,0,RELAY_ONE,RELAY_TWO,INIT_STATE_OFF,  "fa-window-maximize","Interruptor", BUTTON_SET_PULLUP,INIT_STATE_OFF,  OPEN_CLOSE_SWITCH, BUTTON_MASTER, MQTT_STATE_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interrutor"), MQTT_COMMAND_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interruptor"), "cover");
+      switchJson(id1,0,SWITCH_ONE,SWITCH_TWO,RELAY_TYPE,0,RELAY_ONE,RELAY_TWO,INIT_STATE_OFF,"Interruptor", BUTTON_SET_PULLUP,INIT_STATE_OFF,  OPEN_CLOSE_SWITCH, BUTTON_MASTER, MQTT_STATE_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interrutor"), MQTT_COMMAND_TOPIC_BUILDER(id1,SWITCH_DEVICE,"Interruptor"), "cover");
    }
 }
 void removeSwitch(String _id){
