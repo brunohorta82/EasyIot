@@ -23,7 +23,7 @@
 #define MODEL "Easy-Lights"
 #define FACTORY_TYPE "DUAL"
 #endif
-#define FIRMWARE_VERSION 3.54
+#define FIRMWARE_VERSION 3.6
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 #define WIFI_SSID ""

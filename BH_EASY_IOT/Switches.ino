@@ -26,6 +26,7 @@ typedef struct {
     bool pullup;
     int mode;
     bool state;
+    bool locked;
     
 } switch_t;
 std::vector<switch_t> _switchs;
@@ -126,20 +127,13 @@ void stateSwitch(String id, String state) {
     }
 }
 
-void setChildLockStateControl(String command){
-    if(String("CHILD_UNLOCK").equals(command)){
-    
-    }else if(String("CHILD_LOCK").equals(command)){
-      
-    }else{
-        logger("INVALID CHILD LOCK STATE CONTROL");
-   }
-}
+
 void applyJsonSwitchs(){
   _switchs.clear();
   for(int i  = 0 ; i < sws.size() ; i++){ 
     JsonObject& switchJson = sws.get<JsonVariant>(i);   
     int gpio= switchJson.get<unsigned int>("gpio");
+      bool lock =switchJson.get<bool>("childLockStateControl");
     if(gpio ==  99){
        _switchs.push_back({0,gpio,new Bounce(),switchJson.get<String>("id"),false,switchJson.get<unsigned int>("mode"),false});
       continue;
@@ -149,6 +143,7 @@ void applyJsonSwitchs(){
           int gpioClose= switchJson.get<unsigned int>("gpioClose");
           bool pullup =switchJson.get<bool>("pullup");
           bool state =switchJson.get<bool>("state");
+        
           int gpioControl = switchJson.get<unsigned int>("gpioControl");
           if ( gpioOpen == 16) {
              configGpio(gpioOpen, INPUT_PULLDOWN_16);
@@ -167,14 +162,14 @@ void applyJsonSwitchs(){
     debouncerClose->attach(gpioClose);
     debouncerClose->interval(5); // interval in ms
     if(switchJson.get<String>("stateControlCover").equals(PAYLOAD_OPEN)){
-      _switchs.push_back({0,gpioOpen,debouncerOpen,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state});
-      _switchs.push_back({0,gpioClose,debouncerClose,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,!state});
+      _switchs.push_back({0,gpioOpen,debouncerOpen,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state, lock});
+      _switchs.push_back({0,gpioClose,debouncerClose,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,!state,lock});
     }else if(switchJson.get<String>("stateControlCover").equals(PAYLOAD_CLOSE)){
-      _switchs.push_back({0,gpioOpen,debouncerOpen,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,!state});
-      _switchs.push_back({0,gpioClose,debouncerClose,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state});
+      _switchs.push_back({0,gpioOpen,debouncerOpen,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,!state,lock});
+      _switchs.push_back({0,gpioClose,debouncerClose,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state,lock});
     }else{
-      _switchs.push_back({0,gpioOpen,debouncerOpen,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state});
-      _switchs.push_back({0,gpioClose,debouncerClose,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state});
+      _switchs.push_back({0,gpioOpen,debouncerOpen,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state,lock});
+      _switchs.push_back({0,gpioClose,debouncerClose,switchJson.get<String>("id"),pullup,OPEN_CLOSE_SWITCH,state,lock});
       }
     //initNormal(switchJson.get<bool>("stateControl"),gpioControl);
       }else{
@@ -190,7 +185,7 @@ void applyJsonSwitchs(){
     Bounce* debouncer = new Bounce(); 
     debouncer->attach(gpio);
     debouncer->interval(5); // interval in ms
-    _switchs.push_back({0,gpio,debouncer,switchJson.get<String>("id"),pullup,switchJson.get<unsigned int>("mode"),state});
+    _switchs.push_back({0,gpio,debouncer,switchJson.get<String>("id"),pullup,switchJson.get<unsigned int>("mode"),state,lock});
     if(switchJson.get<unsigned int>("mode") == AUTO_OFF){
       switchJson.set("stateControl",false);
     }
@@ -238,7 +233,15 @@ void mqttSwitchControl(String topic, String payload) {
         turnOff( getRelay(gpio));  
        } else if(String(PAYLOAD_OPEN).equals(payload) || String(PAYLOAD_CLOSE).equals(payload) ||String(PAYLOAD_STOP).equals(payload)){
        stateSwitch(switchJson.get<String>("id"), payload);
-       }   
+       }else if(String("CHILD_UNLOCK").equals(payload)){
+       switchJson.set("childLockStateControl",false);
+         saveSwitchs();
+         applyJsonSwitchs();
+      }else if(String("CHILD_LOCK").equals(payload)){
+      switchJson.set("childLockStateControl",true);
+        saveSwitchs();
+        applyJsonSwitchs();
+      } 
     }else  if(switchJson.get<String>("typeControl").equals(MQTT_TYPE)){
       toogleSwitch(switchJson.get<String>("id"));
     }
@@ -470,6 +473,8 @@ void removeSwitch(String _id){
 }
 void loopSwitchs(){
     for (unsigned int i=0; i < _switchs.size(); i++) {
+      if(_switchs[i].locked){
+        continue;}
       Bounce* b =   _switchs[i].debouncer;
       b->update();
       bool value =  b->read();

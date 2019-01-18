@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.105"
+    baseUrl: ""
 };
 
 const map = {
@@ -222,7 +222,7 @@ function refreshDashboardPzem(payload) {
     if ($('#devices').find('.GaugeMeter').length === 0) {
         Object.keys(payload).reverse().forEach(function (key) {
             if (key !== "config") {
-                $('#devices').append('<div class="col-lg-4 col-md-6 col-xs-12"><div class="info-box bg-aqua"><span class="info-box-icon"><i class="fa ' + mapIcons[key.split("_")[0]] + '"></i></span><div class="info-box-content"><span class="info-box-text">' + mapTitles[key.split("_")[0]] + '</span><div id="' + key + '"  class="GaugeMeter" data-animationstep="0" data-total="' + limits[key.split("_")[0]] + '"  data-size="200" data-label_color="#fff" data-used_color="#fff" data-animate_gauge_colors="false" data-width="15" data-style="Semi" data-theme="Red-Gold-Green" data-back="#fff"  data-label="' + map[key.split("_")[0]] + '"><canvas width="200" height="200"></canvas></div></div></div></div>');
+                $('#devices').append('<div class="col-lg-4 col-md-6 col-xs-12"><div class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + mapTitles[key.split("_")[0]] + '</span><div id="' + key + '"  class="GaugeMeter" data-animationstep="0" data-total="' + limits[key.split("_")[0]] + '"  data-size="200" data-label_color="#fff" data-used_color="#fff" data-animate_gauge_colors="false" data-width="15" data-style="Semi" data-theme="Red-Gold-Green" data-back="#fff"  data-label="' + map[key.split("_")[0]] + '"><canvas width="200" height="200"></canvas></div></div></div></div>');
                 $('#' + key).gaugeMeter({used: Math.round(payload[key]), text: payload[key]});
             }
         });
@@ -325,7 +325,7 @@ function buildSwitch(obj) {
         "        <i id=\"icon_" + obj.id + "\" class=\"fa " + obj.icon + " false\"></i></span>" +
         "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
         "<div  id=\"on_off_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
-        "                <button onclick='toggleSwitch(\""+obj.id+"\");' id=\"btn_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
+        "                <button onclick='toggleSwitch(\"" + obj.id + "\");' id=\"btn_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
         "</div><div  id=\"open_close_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
         "        <i data-state=\"OPEN\" id=\"btn_up_" + obj.id + "\" style=\"padding: 5px; float: right\" class=\"cover_btn fa fa-3x  fa-chevron-circle-up\"></i> <i data-state=\"STOP\" id=\"btn_stop_" + obj.id + "\" style=\"padding: 5px;float: right\" class=\"cover_btn fa fa-3x  fa-stop-circle\"></i> <i data-state=\"CLOSE\" id=\"btn_down_" + obj.id + "\" style=\"padding: 5px;float: right\" class=\"cover_btn fa fa-3x  fa-chevron-circle-down\"></i>" +
         "            </div></div>" +
@@ -1008,26 +1008,22 @@ function refreshDashboard(payload) {
     devices.empty();
     for (let obj of payload) {
         if (obj.type === "cover") {
-            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div style="min-height: 100px;" class="info-box bg-aqua"><span class="info-box-icon"><i id="icon_' + obj["id"] + '"  class="fa ' + obj["icon"] + ' ' + obj["stateControl"] + '"></i></span><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span>  <i data-state=\"OPEN\" id="btn_up_' + obj["id"] + '" style="padding: 5px; float: right" class="cover_btn fa fa-3x  fa-chevron-circle-up"></i> <i data-state=\"STOP\" id="btn_stop_' + obj["id"] + '" style="padding: 5px;float: right" class="cover_btn fa fa-3x  fa-stop-circle"></i> <i data-state=\"CLOSE\" id="btn_down_' + obj["id"] + '" style="padding: 5px;float: right" class="cover_btn fa fa-3x  fa-chevron-circle-down"></i></div></div></div>');
+            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div style="min-height: 100px;" class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span>  <i data-state=\"OPEN\" id="btn_up_' + obj["id"] + '" style="padding: 5px; float: right" class="cover_btn fa fa-3x  fa-chevron-circle-up"></i> <i data-state=\"STOP\" id="btn_stop_' + obj["id"] + '" style="padding: 5px;float: right" class="cover_btn fa fa-3x  fa-stop-circle"></i> <i data-state=\"CLOSE\" id="btn_down_' + obj["id"] + '" style="padding: 5px;float: right" class="cover_btn fa fa-3x  fa-chevron-circle-down"></i></div></div></div>');
             $('.cover_btn').on('click', function (e) {
                 let state = $(e.currentTarget).data('state')
                 stateSwitch(obj["id"], state);
 
             });
         } else if (obj.type === "light" || obj.type === "switch") {
-            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div class="info-box bg-aqua"><span class="info-box-icon"></span><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span><button onclick="toggleSwitch(\"'+obj.id+'\");\" id=\"btn_' + obj.id + '\" style=\"float: right\" class=\"btn btn-primary\" >' + (obj.stateControl ? "ON" : "OFF") + '</button></div></div></div>');
+            devices.append('<div class="col-lg-4  col-xs-12"><div class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span><button onclick="toggleSwitch(\''+obj["id"]+'\')" id="btn_' + obj.id + '" style="float: right" class="btn btn-primary" >' + (obj.stateControl ? "ON" : "OFF") + '</button></div></div></div>');
         }
     }
 }
 
 function updateSwitch(obj) {
     if (!obj) return;
-    let icon = $('#icon_' + obj["id"]);
     let btn = $('#btn_' + obj["id"]);
-    icon.removeClass('on').removeClass('off');
-    icon.addClass(obj["stateControl"] ? 'on' : 'off');
-    btn.removeClass('fa-rotate-180');
-    btn.addClass(obj["stateControl"] ? '' : 'fa-rotate-180');
+    btn.text(obj["stateControl"] ? 'ON' : 'OFF');
 }
 
 function wifiStatus() {
