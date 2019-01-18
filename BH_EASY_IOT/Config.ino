@@ -30,6 +30,9 @@ String getHostname(){
   //return String(HARDWARE) +"-"+nodeId;
   return  String(HARDWARE)+"-"+String(ESP.getChipId());
 }
+String getApName(){
+  return  "bhnode-"+String(ESP.getChipId());
+}
 void applyUpdateConfig(double outdatedVersion){
   if(outdatedVersion < 1.4){
       JsonArray& _devices =  getStoredSensors();
@@ -128,6 +131,7 @@ void loadStoredConfiguration(){
     configJson.set("wifiSSID", WIFI_SSID);
     configJson.set("wifiSecret", WIFI_SECRET);
     configJson.set("configVersion", FIRMWARE_VERSION);
+    configJson.set("apSecret", AP_SECRET);
     
     configJson.set("emoncmsPort", 80);
     configJson.set("directionCurrentDetection",false);
@@ -178,10 +182,9 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("staticIp", _config.get<bool>("staticIp"));
   configJson.set("apSecret", _config.get<String>("apSecret"));
   if(_config.containsKey("mqttIpDns")){
-    
     if(_config.containsKey("mqttEmbedded") &&  _config.get<bool>("mqttEmbedded")){
      Serial.println("Sending mDNS query");
-      int n = MDNS.queryService("heleeus", "tcp"); // Send out query for esp tcp services
+      int n = MDNS.queryService("bhsystems", "tcp");
       Serial.println("mDNS query done");
     if (n == 0) {
       Serial.println("no services found");
@@ -223,7 +226,9 @@ JsonObject& saveMqtt(JsonObject& _config){
   configJson.set("mqttIpDns",_config.get<String>("mqttIpDns"));
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
+  configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
   saveConfig();
+  _config.printTo(Serial);
   reloadMqttConfig();
   return configJson;
 } 

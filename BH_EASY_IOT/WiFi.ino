@@ -22,7 +22,6 @@ void reloadWiFiConfig(){
        }else{
         jw.addNetwork(getConfigJson().get<String>("wifiSSID").c_str(), getConfigJson().get<String>("wifiSecret").c_str());
       }
-     // reloadWifi = false;
  }
  
 void scanNewWifiNetworks(){
@@ -65,7 +64,7 @@ void scanNewWifiNetworks(){
 void setupWiFi(){
   jw.setHostname(getHostname().c_str());
   jw.subscribe(infoCallback);
-  jw.setSoftAP(getHostname().c_str(),getConfigJson().get<String>("apSecret").c_str());
+  jw.setSoftAP(getApName().c_str(),getConfigJson().get<String>("apSecret").c_str());
 
   jw.enableAP(false);
   jw.enableAPFallback(true);
@@ -201,4 +200,3 @@ void infoCallback(justwifi_messages_t code, char * parameter) {
       publishOnEventSource("wifi-log",msg);
       logger(msg);
 };
-

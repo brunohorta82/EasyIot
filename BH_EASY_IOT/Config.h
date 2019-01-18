@@ -1,5 +1,5 @@
-//#define BHPZEM
-#define BHONOFRE
+#define BHPZEM
+//#define BHONOFRE
 #include <JustWifi.h> //https://github.com/xoseperez/justwifi
 #include <ESP8266mDNS.h>
 #include <DallasTemperature.h> // https://github.com/milesburton/Arduino-Temperature-Control-Library
@@ -23,11 +23,12 @@
 #define MODEL "Easy-Lights"
 #define FACTORY_TYPE "DUAL"
 #endif
-#define FIRMWARE_VERSION 3.54
+#define FIRMWARE_VERSION 3.6
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 #define WIFI_SSID ""
 #define WIFI_SECRET ""  
+#define AP_SECRET "EasyIot@"
 #define RELAY_ONE 4
 #define RELAY_TWO 5 
 #define SWITCH_ONE 12
