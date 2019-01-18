@@ -13,7 +13,11 @@ void publishOnEmoncms(JsonObject& json){
      String url = emoncmsPrefix+ "/input/post?node="+getConfigJson().get<String>("nodeId")+"&apikey="+emoncmsApiKey+"&json="+jsonStr;
           if(emoncmsUrl.startsWith("https://")){
            emoncmsUrl.replace("https://","");
-           WiFiClientSecure clienthttps;
+          }
+          if(emoncmsPort == 443){
+           emoncmsPort = 80;
+          }
+     /*      WiFiClientSecure clienthttps;
         logger("[EMONCMS] Try HTTPS Connection...");
         if (!clienthttps.connect(emoncmsUrl,emoncmsPort)) {
           logger("[EMONCMS] Connection failed");
@@ -32,7 +36,7 @@ void publishOnEmoncms(JsonObject& json){
           }
         }
         logger("[EMONCMS] HTTPS Data sent OK");
-          }else{
+          }else{*/
          emoncmsUrl.replace("http://","");
          WiFiClient clienthttp;
             if (!clienthttp.connect(emoncmsUrl,emoncmsPort)) {
@@ -52,6 +56,6 @@ void publishOnEmoncms(JsonObject& json){
               }
             }
           logger("[EMONCMS] HTTP Data sent OK");
-       }
+      // }
 }
 #endif
