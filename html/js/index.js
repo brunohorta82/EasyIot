@@ -327,7 +327,7 @@ function buildSwitch(obj) {
         "<div  id=\"on_off_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
         "                <button onclick='toggleSwitch(\"" + obj.id + "\");' id=\"btn_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
         "</div><div  id=\"open_close_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
-        "        <i data-state=\"OPEN\" id=\"btn_up_" + obj.id + "\" style=\"padding: 5px; float: right\" class=\"cover_btn fa fa-3x  fa-chevron-circle-up\"></i> <i data-state=\"STOP\" id=\"btn_stop_" + obj.id + "\" style=\"padding: 5px;float: right\" class=\"cover_btn fa fa-3x  fa-stop-circle\"></i> <i data-state=\"CLOSE\" id=\"btn_down_" + obj.id + "\" style=\"padding: 5px;float: right\" class=\"cover_btn fa fa-3x  fa-chevron-circle-down\"></i>" +
+        "<button onclick='stateSwitch(\"" + obj.id + "\",\"OPEN\");' id=\"btn_up_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >ABRIR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"STOP\");' id=\"btn_stop_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >PARAR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"CLOSE\");' id=\"btn_down_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >FECHAR</button>"+
         "            </div></div>" +
         "        </div>" +
         "        <div style=\"font-size: 10px;  border: 0px solid #08c; border-radius: 0\" class=\"box\">" +
@@ -502,10 +502,9 @@ function buildSwitch(obj) {
         "" +
         "    </div>"
     );
-    $('.cover_btn').on('click', function (e) {
-        let state = $(e.currentTarget).data('state')
-        stateSwitch(obj["id"], state);
-    });
+
+
+
 
 }
 
@@ -1008,14 +1007,14 @@ function refreshDashboard(payload) {
     devices.empty();
     for (let obj of payload) {
         if (obj.type === "cover") {
-            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div style="min-height: 100px;" class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span>  <i data-state=\"OPEN\" id="btn_up_' + obj["id"] + '" style="padding: 5px; float: right" class="cover_btn fa fa-3x  fa-chevron-circle-up"></i> <i data-state=\"STOP\" id="btn_stop_' + obj["id"] + '" style="padding: 5px;float: right" class="cover_btn fa fa-3x  fa-stop-circle"></i> <i data-state=\"CLOSE\" id="btn_down_' + obj["id"] + '" style="padding: 5px;float: right" class="cover_btn fa fa-3x  fa-chevron-circle-down"></i></div></div></div>');
-            $('.cover_btn').on('click', function (e) {
-                let state = $(e.currentTarget).data('state')
-                stateSwitch(obj["id"], state);
-
-            });
+            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div style="min-height: 100px;" class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span>' +
+                '<button onclick="stateSwitch(\'' + obj["id"] + '\',\'OPEN\');" id="btn_up_' + obj["id"] + '" style="float: right" class="btn btn-primary" >ABRIR</button>' +
+                '<button onclick="stateSwitch(\'' +obj["id"] + '\',\'STOP\');" id="btn_stop_' + obj["id"] + '" style="float: right" class="btn btn-primary" >PARAR</button>' +
+                '<button onclick="stateSwitch(\'' +obj["id"] + '\',\'CLOSE\');" id="btn_down_' + obj["id"] + '" style="float: right" class="btn btn-primary" >FECHAR</button>' +
+                '</div></div></div>');
         } else if (obj.type === "light" || obj.type === "switch") {
-            devices.append('<div class="col-lg-4  col-xs-12"><div class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span><button onclick="toggleSwitch(\''+obj["id"]+'\')" id="btn_' + obj.id + '" style="float: right" class="btn btn-primary" >' + (obj.stateControl ? "ON" : "OFF") + '</button></div></div></div>');
+            devices.append('<div class="col-lg-4  col-xs-12"><div class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span>' +
+                '<button onclick="toggleSwitch(\''+obj["id"]+'\')" id="btn_' + obj["id"] + '" style="float: right" class="btn btn-primary" >' + (obj.stateControl ? "ON" : "OFF") + '</button></div></div></div>');
         }
     }
 }
