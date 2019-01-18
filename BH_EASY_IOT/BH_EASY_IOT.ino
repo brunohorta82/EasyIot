@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "Config.h"
-
+Timing timerStats;
 void checkServices(){
   if(laodDefaults){
     SPIFFS.format();
@@ -55,10 +55,16 @@ void setup() {
     setupBHPzem();
     setupDisplay();
   #endif
+   timerStats.begin(0);
 }
-
-void loop() {
+void stats(){
+   if (timerStats.onTimeout(60000) ){
+     publishOnMqtt(getBaseTopic()+"/stats",String(ESP.getFreeHeap(),DEC),false);
+   }
   
+}
+void loop() {
+    stats();
    if(shouldReboot){
     logger("Rebooting...");
     delay(100);

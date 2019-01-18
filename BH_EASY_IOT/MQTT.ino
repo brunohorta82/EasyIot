@@ -1,6 +1,8 @@
 #define MQTT_BROKER_PORT 1883
+#define MQTT_CONFIG_TOPIC  "heleeus/config/#"
 AsyncMqttClient mqttClient; 
 Ticker mqttReconnectTimer;
+
 /**
  * REASONS
   TCP_DISCONNECTED = 0,
@@ -44,6 +46,7 @@ String MQTT_STATE_TOPIC_BUILDER( String _id,String _class, String _name){
 void onMqttConnect(bool sessionPresent) {
     logger("[MQTT] Connected to MQTT.");
     mqttClient.publish(getAvailableTopic().c_str(),0,true,"1");
+    subscribeOnMqtt(MQTT_CONFIG_TOPIC);
     registerMqttDevices();
 }
 void registerMqttDevices(){
@@ -101,7 +104,7 @@ void setupMQTT() {
   passwordMqtt =strdup(getConfigJson().get<String>("mqttPassword").c_str());
   mqttClient.setCredentials(usernameMqtt,passwordMqtt);
   mqttClient.setWill(getAvailableTopic().c_str(),0,true,"0");
-  mqttClient.setCleanSession(false);
+  mqttClient.setCleanSession(true);
   mqttClient.setServer(ipDnsMqtt, MQTT_BROKER_PORT);
   connectToMqtt();
   reloadMqttConfiguration = false;
@@ -145,5 +148,10 @@ void subscribeOnMqtt(String topic){
   mqttClient.subscribe(topic.c_str(), 0);
  }
  void processMqttAction(String topic, String payload){
-    mqttSwitchControl(topic, payload);
+  if(topic.startsWith(MQTT_CONFIG_TOPIC)){
+    StaticJsonBuffer<200> jsonBuffer;
+    saveHa(jsonBuffer.parseObject(payload));
+  }else{
+     mqttSwitchControl(topic, payload);
+    }
  }
