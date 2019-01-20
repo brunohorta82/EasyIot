@@ -148,7 +148,7 @@ void subscribeOnMqtt(String topic){
   mqttClient.subscribe(topic.c_str(), 0);
  }
  void processMqttAction(String topic, String payload){
-  if(topic.startsWith(MQTT_CONFIG_TOPIC)){
+  if(topic.startsWith("heleeus/config/")){
     StaticJsonBuffer<200> jsonBuffer;
     saveHa(jsonBuffer.parseObject(payload));
   }else{

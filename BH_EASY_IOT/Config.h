@@ -23,12 +23,17 @@
 #define MODEL "Easy-Lights"
 #define FACTORY_TYPE "DUAL"
 #endif
-#define FIRMWARE_VERSION 3.61
+#define FIRMWARE_VERSION 3.62
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
+
+//WIFI
 #define WIFI_SSID ""
-#define WIFI_SECRET ""  
+#define WIFI_SECRET ""
+
+//AP PASSWORD  
 #define AP_SECRET "EasyIot@"
+
 #define RELAY_ONE 4
 #define RELAY_TWO 5 
 #define SWITCH_ONE 12
