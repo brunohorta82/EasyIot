@@ -241,7 +241,9 @@ void mqttSwitchControl(String topic, String payload) {
       switchJson.set("childLockStateControl",true);
         saveSwitchs();
         applyJsonSwitchs();
-      } 
+      }else if(payload.equals("LOCK") ||payload.equals("UNLOCK")){
+        toogleSwitch(switchJson.get<String>("id"));
+        } 
     }else  if(switchJson.get<String>("typeControl").equals(MQTT_TYPE)){
       toogleSwitch(switchJson.get<String>("id"));
     }
@@ -250,7 +252,6 @@ void mqttSwitchControl(String topic, String payload) {
  }   
 
 void triggerSwitch(bool _state,  String id, int gpio) {
-
    for (unsigned int i=0; i < sws.size(); i++) {
     JsonObject& switchJson = sws.get<JsonVariant>(i);
     if(switchJson.get<String>("id").equals(id)){

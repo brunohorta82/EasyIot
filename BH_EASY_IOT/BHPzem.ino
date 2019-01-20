@@ -8,7 +8,7 @@
 #define TX_PIN 5 
 #define DS18B20_PIN 12
 #define MAX_ATTEMPTS 5
-#define DELAY_NOTIFICATION 10000 //10 seconds
+#define DELAY_NOTIFICATION 3000 //10 seconds
 DeviceAddress sensores[8];
 IPAddress pzemIP(192, 168, 1, 1);
 PZEM004T pzem(RX_PIN, TX_PIN);

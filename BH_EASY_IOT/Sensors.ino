@@ -170,7 +170,7 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
       sensorJson.set("icon",_sensor.get<String>("icon"));
       sensorJson.set("disabled",_sensor.get<bool>("disabled"));
      removeComponentHaConfig(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix"),getConfigJson().get<String>("nodeId"),sensorJson.get<String>("type"),sensorJson.get<String>("class"), sensorJson.get<String>("id"));
-      if(  sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type")){
+      if( sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type")){
           sensorJson.remove("functions");
            JsonArray& functionsJson = getJsonArray();
           sensorJson.set("type",_sensor.get<unsigned int>("type"));

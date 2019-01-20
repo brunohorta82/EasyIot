@@ -896,7 +896,7 @@ function saveSensor(id) {
     let functions = [];
     let type = $('#type_' + id).val();
 
-    if (type === '1') {
+    if (type === '0' || type === '1' || type === '2') {
         functions = [{
             "name": temp, "uniqueName": "temperature", "icon": "fa-thermometer-half",
             "unit": "ºC",
