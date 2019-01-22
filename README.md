@@ -8,7 +8,7 @@
 * [Donativos](#id6)
 * [Site Oficial](http://bhonofre.pt/)
 
-#AP Password
+## AP Password
 EasyIot@
 
 ## Intro <a name="id1"></a>
