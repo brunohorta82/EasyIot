@@ -8,7 +8,8 @@
 * [Donativos](#id6)
 * [Site Oficial](http://bhonofre.pt/)
 
-
+#AP Password
+EasyIot@
 
 ## Intro <a name="id1"></a>
 O projeto BH Easy Iot, é o firmware oficial para todas as boards BH, no entanto tambem é compativel com todas as boards baseadas em ESP8266 tem  o objetivo de tornar a automação domiciliar muito mais simples, de forma aberta e sem restrições. Todo o código fonte é aberto.
