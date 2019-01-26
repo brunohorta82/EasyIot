@@ -20,10 +20,10 @@
 #endif
 #ifdef BHONOFRE
 #define HARDWARE "bhonofre" 
-#define MODEL "Easy-Lights"
-#define FACTORY_TYPE "DUAL"
+#define MODEL "Easy-Light"
+#define FACTORY_TYPE "DUAL" //COVER SINGLE DUAL
 #endif
-#define FIRMWARE_VERSION 3.62
+#define FIRMWARE_VERSION 3.64
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 

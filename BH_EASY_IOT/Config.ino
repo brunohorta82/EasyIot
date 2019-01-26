@@ -122,7 +122,7 @@ void loadStoredConfiguration(){
     logger("[CONFIG] Apply default config...");
     cFile = SPIFFS.open(CONFIG_FILENAME,"w+"); 
     configJson.set("nodeId",String(HARDWARE) +"-"+String(MODEL)+"-"+String(ESP.getChipId()));
-    configJson.set("homeAssistantAutoDiscovery", false);
+    configJson.set("homeAssistantAutoDiscovery", true);
     configJson.set("homeAssistantAutoDiscoveryPrefix", HOME_ASSISTANT_AUTO_DISCOVERY_PREFIX);
     configJson.set("hostname",String(HARDWARE) +"-"+String(MODEL)+"-"+String(ESP.getChipId()));
     configJson.set("mqttIpDns",MQTT_BROKER_IP);

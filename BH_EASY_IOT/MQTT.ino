@@ -100,11 +100,14 @@ void setupMQTT() {
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onMessage(onMqttMessage);
   char * ipDnsMqtt = strdup(getConfigJson().get<String>("mqttIpDns").c_str());
-  usernameMqtt = strdup(getConfigJson().get<String>("mqttUsername").c_str());
-  passwordMqtt =strdup(getConfigJson().get<String>("mqttPassword").c_str());
-  mqttClient.setCredentials(usernameMqtt,passwordMqtt);
+
+  if(!(getConfigJson().get<String>("mqttUsername").equals("") && getConfigJson().get<String>("mqttPassword        ").equals(""))){
+      usernameMqtt = strdup(getConfigJson().get<String>("mqttUsername").c_str());
+      passwordMqtt =strdup(getConfigJson().get<String>("mqttPassword").c_str());
+      mqttClient.setCredentials(usernameMqtt,passwordMqtt);
+  }
   mqttClient.setWill(getAvailableTopic().c_str(),0,true,"0");
-  mqttClient.setCleanSession(true);
+  mqttClient.setCleanSession(false);
   mqttClient.setServer(ipDnsMqtt, MQTT_BROKER_PORT);
   connectToMqtt();
   reloadMqttConfiguration = false;
