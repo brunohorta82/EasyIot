@@ -184,6 +184,5 @@ void createDefaultRelays(){
     #ifdef BHONOFRE
     relayJson("R1",RELAY_ONE,NORMAL,"Relé 1",2,"fa-circle-o-notch");
     relayJson("R2",RELAY_TWO,NORMAL,"Relé 2",2,"fa-circle-o-notch");
-
     #endif
 }
