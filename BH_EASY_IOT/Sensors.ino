@@ -4,7 +4,7 @@
 #define TIME_READINGS_DELAY 30000ul
 #define SENSOR_DEVICE  "sensor"
 #define BINARY_SENSOR_DEVICE  "binary_sensor"
-#define SENSOR_PIN 14
+#define SENSOR_PIN 15
 #define TEMPERATURE_TYPE 1
 #define MOTION_TYPE 4
 #define HUMIDITY_TYPE 2

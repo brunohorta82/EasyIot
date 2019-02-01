@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.115"
+    baseUrl: ""
 };
 
 const map = {
@@ -385,6 +385,8 @@ function buildSwitch(obj) {
         "                            <option " + (obj.gpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
         "                            <option " + (obj.gpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
         "                            <option " + (obj.gpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.gpio === 1 ? 'selected' : '') + " value=\"1\">TX</option>" +
+        "                            <option " + (obj.gpio === 3 ? 'selected' : '') + " value=\"3\">RX</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                   <tr  id=\"open_gpio_" + obj.id + "\" class=\"" + (obj.mode !== 4 ? 'hide' : '') + "\">" +

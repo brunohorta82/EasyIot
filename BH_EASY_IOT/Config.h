@@ -23,7 +23,7 @@
 #define MODEL "Easy-Light"
 #define FACTORY_TYPE "DUAL" //COVER SINGLE DUAL
 #endif
-#define FIRMWARE_VERSION 3.64
+#define FIRMWARE_VERSION 3.65
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 
