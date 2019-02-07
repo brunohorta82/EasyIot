@@ -23,12 +23,11 @@ JsonObject& getConfigJson(){
 }
 
 String getHostname(){
-  //String nodeId = configJson.get<String>("nodeId");
-  //if(nodeId.equals(configJson.get<String>("hostname"))){
-   // return nodeId;
-   // }
-  //return String(HARDWARE) +"-"+nodeId;
-  return  String(HARDWARE)+"-"+String(ESP.getChipId());
+  String nodeId = configJson.get<String>("nodeId");
+  if(nodeId.equals(configJson.get<String>("hostname"))){
+    return nodeId;
+  }
+  return String(HARDWARE) +"-"+String(ESP.getChipId())+"-"+nodeId;
 }
 String getApName(){
   return  "bhnode-"+String(ESP.getChipId());

@@ -1,4 +1,6 @@
 //#define BHPZEM
+//#define PZEM004
+//#define PZEMDC
 #define BHONOFRE
 #include <JustWifi.h> //https://github.com/xoseperez/justwifi
 #include <ESP8266mDNS.h>
@@ -20,10 +22,10 @@
 #endif
 #ifdef BHONOFRE
 #define HARDWARE "bhonofre" 
-#define MODEL "Easy-Light"
+#define MODEL "dual"
 #define FACTORY_TYPE "DUAL" //COVER SINGLE DUAL
 #endif
-#define FIRMWARE_VERSION 3.64
+#define FIRMWARE_VERSION 3.67
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 
