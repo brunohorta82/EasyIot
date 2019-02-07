@@ -1,5 +1,4 @@
 #ifdef BHPZEM
-#include <PZEM004T.h> //https://github.com/olehs/PZEM004T
 //TEMPERATURA
 #include <OneWire.h>
 #define DIRECTION_PIN 14
@@ -9,9 +8,20 @@
 #define DS18B20_PIN 12
 #define MAX_ATTEMPTS 5
 #define DELAY_NOTIFICATION 3000 //10 seconds
+#ifdef PZEM004
+  #include <PZEM004T.h> //https://github.com/olehs/PZEM004T
+  IPAddress pzemIP(192, 168, 1, 1);
+  PZEM004T pzem(RX_PIN, TX_PIN);
+#endif
+
+#ifdef PZEMDC
+  #include <TasmotaModbus.h>
+  #define PZEM_DC_DEVICE_ADDRESS  0x01
+  TasmotaModbus *PzemDcModbus;
+#endif
 DeviceAddress sensores[8];
-IPAddress pzemIP(192, 168, 1, 1);
-PZEM004T pzem(RX_PIN, TX_PIN);
+
+
 Timing timerRead;
 //DALLAS
 OneWire oneWire(DS18B20_PIN);
@@ -37,7 +47,7 @@ int directionSignal(){
     return digitalRead(DIRECTION_PIN) ? -1 : 1;
   return 1;
 }
-
+#ifdef PZEM004
 float getVoltage() {
   int i = 0;
   float r = -1.0;
@@ -78,10 +88,17 @@ float getEnergy() {
   return r;
 }
 #endif
+#endif
 void setupBHPzem() {
   
 #ifdef BHPZEM
+  #ifdef PZEM004
   pzemrdy = pzem.setAddress(pzemIP);
+  #endif
+  #ifdef PZEMDC
+  PzemDcModbus = new TasmotaModbus(RX_PIN, TX_PIN);
+  uint8_t result = PzemDcModbus->Begin(9600, 2);
+  #endif
   delay(1000);
   pinMode(DIRECTION_PIN,INPUT);
   sensors.begin();
@@ -115,11 +132,52 @@ JsonObject& getPzemReadings(){
 void loopBHPzem() {
       loopSwitchDisplay();
       if (timerRead.onTimeout(getConfigJson().get<unsigned int>("notificationInterval")) ){
+        #ifdef PZEM004
         float v = pzemError ? -1 :  getVoltage();
         float i = pzemError ? -1 :   getCurrent();
         float p = pzemError ? -1 :   getPower()*directionSignal();
         float e = pzemError ? -1 :  getEnergy()/1000;
-       
+       #endif
+       #ifdef PZEMDC
+       float v = -1;
+        float i = -1;
+        float p = -1;
+        float e =-1;
+         static uint8_t send_retry = 0;
+        bool data_ready = PzemDcModbus->ReceiveReady();
+        if (data_ready) {
+    uint8_t buffer[22];
+    uint8_t error = PzemDcModbus->ReceiveBuffer(buffer, 8);
+    if (error) {
+      logger("ERROR PZEM "+String(error));
+    } else {
+       v = (float)((buffer[3] << 8) + buffer[4]) / 100.0;                                               
+      i = (float)((buffer[5] << 8) + buffer[6]) / 100.0;                                              
+       p = (float)((buffer[9] << 24) + (buffer[10] << 16) + (buffer[7] << 8) + buffer[8]) / 10.0;  
+        e = (float)((buffer[13] << 24) + (buffer[14] << 16) + (buffer[11] << 8) + buffer[12]); 
+         logger("[PZEM] V: "+String(v));
+        logger("[PZEM] A: "+String(i));
+        logger("[PZEM] W: "+String(p));
+        logger("[PZEM] kWh: "+String(e));
+       readingsJson.set("voltagem",v);
+        readingsJson.set("amperagem",i);
+        readingsJson.set("potencia",p);
+        readingsJson.set("contador",e);
+          publishData();
+      printOnDisplay(v, i, p, e, "");
+    }
+  }
+  if (0 == send_retry || data_ready) {
+    send_retry = 5;
+    PzemDcModbus->Send(PZEM_DC_DEVICE_ADDRESS, 0x04, 0, 8);
+   
+  }
+  else {
+    send_retry--;
+  
+  }
+       #endif
+       #ifdef PZEM004
       if(v < 0 && i < 0 && p < 0 && e <= 0){
         pzemError = true;
         pzemErrorAttemps++;
@@ -153,8 +211,9 @@ void loopBHPzem() {
         }
       publishData();
       printOnDisplay(v, i, p, e, displayTemps);
-     
+       #endif
     }
+  
   
 }
 void createPzemSensors(){
