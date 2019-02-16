@@ -14,6 +14,7 @@
 #define BUTTON_SLAVE true
 #define EASY_LIGHT 1
 #define EASY_BLINDS 2
+
 String statesPool[] = {"OPEN","STOP","CLOSE","STOP"};
 
 JsonArray& sws = getJsonArray();
@@ -38,7 +39,6 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
    String type = _switch.get<String>("type");
   for (unsigned int i=0; i < sws.size(); i++) {
      JsonObject& switchJson = sws.get<JsonVariant>(i);
-        
     if(switchJson.get<String>("id").equals(_id)){
       switchFound = true;
       removeComponentHaConfig(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix"),getConfigJson().get<String>("nodeId"),switchJson.get<String>("type"),switchJson.get<String>("class"),switchJson.get<String>("id"));
@@ -104,6 +104,7 @@ void stopAction(int gpioClose, int gpioOpen){
   turnOff( getRelay(gpioClose));  
   turnOff( getRelay(gpioOpen));
 }
+
 void stateSwitch(String id, String state) {
   for (unsigned int i=0; i < sws.size(); i++) {
      JsonObject& switchJson = sws.get<JsonVariant>(i);   
@@ -126,7 +127,33 @@ void stateSwitch(String id, String state) {
        }
     }
 }
-
+void stateSwitchByName(String name, String state) {
+  for (unsigned int i=0; i < sws.size(); i++) {
+     JsonObject& switchJson = sws.get<JsonVariant>(i);   
+    if(switchJson.get<String>("name").equals(name)){
+      switchJson.set("stateControlCover",state);
+    if(switchJson.get<String>("typeControl").equals(RELAY_TYPE)){
+      int gpioOpen =switchJson.get<unsigned int>("gpioControlOpen");
+      int gpioClose = switchJson.get<unsigned int>("gpioControlClose");
+      int gpioControl = switchJson.get<unsigned int>("gpioControl");
+      if(String("OPEN").equals(state)){
+        switchJson.set("positionControlCover",1);
+        openAction(gpioClose,gpioOpen);
+        }else if(String("STOP").equals(state)){
+          stopAction(gpioClose,gpioOpen);
+        }else if(String("CLOSE").equals(state)){
+          switchJson.set("positionControlCover",0);
+          closeAction(gpioClose,gpioOpen);
+        }else if(String("ON").equals(state)){
+         turnOn( getRelay(switchJson.get<unsigned int>("gpioControl")));
+          } else if(String("OFF").equals(state)){
+             turnOff( getRelay(switchJson.get<unsigned int>("gpioControl")));
+            }
+        }
+        publishState(switchJson);      
+       }
+    }
+}
 
 void applyJsonSwitchs(){
   _switchs.clear();
@@ -250,6 +277,7 @@ void mqttSwitchControl(String topic, String payload) {
     }
    }
  }   
+
 
 void triggerSwitch(bool _state,  String id, int gpio) {
    for (unsigned int i=0; i < sws.size(); i++) {
