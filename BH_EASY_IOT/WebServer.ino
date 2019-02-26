@@ -371,13 +371,13 @@ server.addHandler(handlerSensor);
     }
   });
 // These two callbacks are required for gen1 and gen3 compatibility
-  /*  server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data))) return;
         // Handle any other body request here...
-    });*/
+    });
   server.onNotFound([](AsyncWebServerRequest *request) {
- /*    String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
-        if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body)) return;*/
+    String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
+        if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body)) return;
   if (request->method() == HTTP_OPTIONS) {
     request->send(200);
   } else {
