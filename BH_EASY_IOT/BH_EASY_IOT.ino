@@ -19,6 +19,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
+#include <fauxmoESP.h>
+fauxmoESP fauxmo;
 
 #include "Config.h"
 Timing timerStats;
@@ -56,6 +58,25 @@ void setup() {
     setupDisplay();
   #endif
    timerStats.begin(0);
+
+   
+JsonArray& _devices = getStoredSwitchs();
+  for(int i  = 0 ; i < _devices.size() ; i++){ 
+    JsonObject& switchJson = _devices[i];    
+    if(switchJson.get<bool>("discoveryDisabled")){
+      continue;
+     }  
+    String _name =switchJson.get<String>("name");
+     fauxmo.addDevice(_name.c_str());
+ 
+  }
+    fauxmo.createServer(false);
+    fauxmo.setPort(80); // required for gen3 devices
+    fauxmo.enable(true);
+   fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value) {
+     stateSwitchByName(String(device_name),state ? "ON" : "OFF");
+    });
+    
 }
 void stats(){
    if (timerStats.onTimeout(60000) ){
@@ -81,5 +102,5 @@ void loop() {
   loopWiFi();
   checkServices();
   mqttMsgDigest();
- 
+  fauxmo.handle();
 }

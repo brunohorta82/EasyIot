@@ -45,7 +45,8 @@ void createHASensorComponent(){
         String _unit =f.get<String>("unit");
         String _mqttState =f.get<String>("mqttStateTopic");
         bool _retain =f.get<bool>("mqttRetain");   
-        publishOnMqttQueue((getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+_class+"/"+getConfigJson().get<String>("nodeId")+"/"+_class+"_"+_fname+"_"+_id+"/config"),("{\"name\": \""+_fname+"\",\"unit_of_measurement\": \""+_unit+"\", \"state_topic\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\",\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
+        String unitStr = _class.equals("binary_sensor") ? "" : "\"unit_of_measurement\": \""+_unit+"\",";
+        publishOnMqttQueue((getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+_class+"/"+getConfigJson().get<String>("nodeId")+"/"+_class+"_"+_fname+"_"+_id+"/config"),("{\"name\": \""+_fname+"\","+unitStr+" \"state_topic\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\",\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
    } 
   }
 }

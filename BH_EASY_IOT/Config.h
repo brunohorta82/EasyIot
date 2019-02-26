@@ -25,7 +25,7 @@
 #define MODEL "dual"
 #define FACTORY_TYPE "DUAL" //COVER SINGLE DUAL
 #endif
-#define FIRMWARE_VERSION 3.68
+#define FIRMWARE_VERSION 3.70
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 
@@ -34,7 +34,7 @@
 #define WIFI_SECRET ""
 
 //AP PASSWORD  
-#define AP_SECRET "EasyIot@"
+#define AP_SECRET ""
 
 #define RELAY_ONE 4
 #define RELAY_TWO 5 

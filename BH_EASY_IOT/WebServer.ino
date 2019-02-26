@@ -24,6 +24,7 @@ void  setupWebserver(){
     response->addHeader("Content-Encoding", "gzip");
     request->send(response);
   });
+  
 server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
     activateScan();
     request->send(200,  "application/json","{\"result\":\"OK\"}");
@@ -369,8 +370,14 @@ server.addHandler(handlerSensor);
       }
     }
   });
-
+// These two callbacks are required for gen1 and gen3 compatibility
+    server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data))) return;
+        // Handle any other body request here...
+    });
   server.onNotFound([](AsyncWebServerRequest *request) {
+    String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
+        if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body)) return;
   if (request->method() == HTTP_OPTIONS) {
     request->send(200);
   } else {
