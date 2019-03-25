@@ -19,9 +19,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
+#include <ESP8266httpUpdate.h>
 #include <fauxmoESP.h>
 fauxmoESP fauxmo;
-
+const char * updateUrl="http://release.bhonofre.pt/release.bin";
 #include "Config.h"
 Timing timerStats;
 void checkServices(){
@@ -85,10 +86,20 @@ void stats(){
   
 }
 void loop() {
+   MDNS.update();
+   if(autoUpdate){
+    autoUpdate = false;
+    actualUpdate();
+    }
     stats();
+  if(adopted){
+   saveConfig();
+   shouldReboot = true;
+   adopted = false;
+  }
    if(shouldReboot){
     logger("Rebooting...");
-    delay(100);
+    shouldReboot = false;
     ESP.restart();
     return;
   }
@@ -103,4 +114,27 @@ void loop() {
   checkServices();
   mqttMsgDigest();
   fauxmo.handle();
+}
+
+
+
+
+
+bool actualUpdate(){
+  Serial.println("Start Update");
+  WiFiClient client;
+     t_httpUpdate_return ret = ESPhttpUpdate.update(client, updateUrl);
+     switch (ret) {
+      case HTTP_UPDATE_FAILED:
+        Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        Serial.println("HTTP_UPDATE_NO_UPDATES");
+        break;
+
+      case HTTP_UPDATE_OK:
+        Serial.println("HTTP_UPDATE_OK");
+        break;
+    }
 }

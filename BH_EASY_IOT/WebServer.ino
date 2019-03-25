@@ -10,13 +10,10 @@ AsyncWebServer server(80);
 void  setupWebserver(){
   MDNS.begin(getHostname().c_str());
   MDNS.addService("bhsystems","tcp",80);
-  MDNS.addServiceTxt("bhsystems", "tcp", "hardware", HARDWARE);
   MDNS.addServiceTxt("bhsystems", "tcp", "nodeId", getConfigJson().get<String>("nodeId"));
   MDNS.addServiceTxt("bhsystems", "tcp", "config_version", getConfigJson().get<String>("configVersion"));
   MDNS.addServiceTxt("bhsystems", "tcp", "hardwareId", String(ESP.getChipId()));
   MDNS.addServiceTxt("bhsystems", "tcp", "wifi-signal",  String(WiFi.RSSI()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "wifi-mode", (WiFi.getMode() & WIFI_AP)  ? "AP" : "STATION");
-  MDNS.addServiceTxt("bhsystems", "tcp", "type", FACTORY_TYPE);
   server.addHandler(&events);
   /** HTML  **/
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -217,6 +214,10 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
    request->send(200 );
    laodDefaults = true;
   });
+   server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request){
+   request->send(200 );
+   autoUpdate = true;
+  });
   
   AsyncCallbackJsonWebHandler* handlerSwitch = new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant &json) {
   JsonObject& jsonObj = json.as<JsonObject>();
@@ -263,6 +264,21 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(400, "text/plain", "JSON INVALID");
     }
 });server.addHandler(handlerWifi);
+
+
+    AsyncCallbackJsonWebHandler* handlerAdopt = new AsyncCallbackJsonWebHandler("/adopt", [](AsyncWebServerRequest *request, JsonVariant &json) {
+    JsonObject& jsonObj = json.as<JsonObject>();
+    if (jsonObj.success()) {
+      AsyncResponseStream *response = request->beginResponseStream("application/json");
+      //SAVE CONFIG
+      adopt(jsonObj).printTo(*response);
+      
+      request->send(response);
+    } else {
+      logger("[WEBSERVER] Json Error");
+      request->send(400, "text/plain", "JSON INVALID");
+    }
+});server.addHandler(handlerAdopt);
 
      AsyncCallbackJsonWebHandler* handlerha = new AsyncCallbackJsonWebHandler("/save-ha", [](AsyncWebServerRequest *request, JsonVariant &json) {
     JsonObject& jsonObj = json.as<JsonObject>();
