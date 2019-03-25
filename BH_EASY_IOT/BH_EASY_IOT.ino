@@ -19,9 +19,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
+
 #include <ESP8266httpUpdate.h>
 #include <fauxmoESP.h>
 fauxmoESP fauxmo;
+
 const char * updateUrl="http://release.bhonofre.pt/release.bin";
 #include "Config.h"
 Timing timerStats;
@@ -60,7 +62,7 @@ void setup() {
   #endif
    timerStats.begin(0);
 
-   
+   #ifdef BHONOFRE
 JsonArray& _devices = getStoredSwitchs();
   for(int i  = 0 ; i < _devices.size() ; i++){ 
     JsonObject& switchJson = _devices[i];    
@@ -77,6 +79,7 @@ JsonArray& _devices = getStoredSwitchs();
    fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value) {
      stateSwitchByName(String(device_name),state ? "ON" : "OFF");
     });
+    #endif
     
 }
 void stats(){
@@ -113,7 +116,9 @@ void loop() {
   loopWiFi();
   checkServices();
   mqttMsgDigest();
+  #ifdef BHONOFRE
   fauxmo.handle();
+  #endif
 }
 
 

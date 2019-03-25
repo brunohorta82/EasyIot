@@ -386,14 +386,18 @@ server.addHandler(handlerSensor);
       }
     }
   });
+   #ifdef BHONOFRE
 // These two callbacks are required for gen1 and gen3 compatibility
     server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data))) return;
         // Handle any other body request here...
     });
+    #endif
   server.onNotFound([](AsyncWebServerRequest *request) {
+    #ifdef BHONOFRE
     String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
         if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body)) return;
+   #endif  
   if (request->method() == HTTP_OPTIONS) {
     request->send(200);
   } else {
