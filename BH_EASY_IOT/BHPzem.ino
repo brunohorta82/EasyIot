@@ -32,7 +32,7 @@ int sensorsCount = 0;
 bool pzemError = false;
 int pzemErrorAttemps = 0;
 bool pzemrdy = false;
-JsonObject& readingsJson = getJsonObject();
+JsonObject readingsJson = getJsonObject();
 float requestTemperature(DeviceAddress deviceAddress){
   float temp = 0;
    do {
@@ -126,7 +126,7 @@ void setupBHPzem() {
 }
 
 #ifdef BHPZEM
-JsonObject& getPzemReadings(){
+JsonObject getPzemReadings(){
   return readingsJson;
   }
 void loopBHPzem() {
