@@ -8,7 +8,7 @@
 #include <Timing.h> //https://github.com/scargill/Timing
 #include <AsyncMqttClient.h> //https://github.com/marvinroger/async-mqtt-client
 #include <ArduinoJson.h> //Install from Arduino IDE Library Manager
-#include <FS.h> 
+#include "FS.h" 
 #include <Ticker.h>
 #include <ESPAsyncTCP.h> //https://github.com/me-no-dev/ESPAsyncTCP
 #include <ESPAsyncWebServer.h> //https://github.com/me-no-dev/ESPAsyncWebServer
@@ -22,10 +22,10 @@
 #endif
 #ifdef BHONOFRE
 #define HARDWARE "bhonofre" 
-#define MODEL "dual"
-#define FACTORY_TYPE "DUAL" //COVER SINGLE DUAL
+#define MODEL "cover"
+#define FACTORY_TYPE "COVER" //COVER SINGLE DUAL
 #endif
-#define FIRMWARE_VERSION 3.70
+#define FIRMWARE_VERSION 3.92
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 
@@ -34,7 +34,7 @@
 #define WIFI_SECRET ""
 
 //AP PASSWORD  
-#define AP_SECRET ""
+#define AP_SECRET "EasyIot@"
 
 #define RELAY_ONE 4
 #define RELAY_TWO 5 
@@ -60,6 +60,8 @@ bool shouldReboot = false;
 bool reloadMqttConfiguration = false;
 bool wifiUpdated = false;
 bool laodDefaults = false;
+bool adopted = false;
+bool autoUpdate = false;
 int easyConfig = 0;
 DynamicJsonBuffer jsonBuffer(CONFIG_BUFFER_SIZE);
 JsonArray& getJsonArray(){

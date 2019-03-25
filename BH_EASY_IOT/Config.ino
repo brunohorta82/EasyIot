@@ -30,6 +30,11 @@ String getHostname(){
   return String(HARDWARE) +"-"+String(ESP.getChipId())+"-"+nodeId;
 }
 String getApName(){
+
+   String nodeId = configJson.get<String>("nodeId");
+  if(nodeId.equals(configJson.get<String>("hostname"))){
+    return  "bhnode-"+nodeId;
+  }
   return  "bhnode-"+String(ESP.getChipId());
 }
 void applyUpdateConfig(double outdatedVersion){
@@ -180,36 +185,23 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
   configJson.set("apSecret", _config.get<String>("apSecret"));
-  if(_config.containsKey("mqttIpDns")){
-    if(_config.containsKey("mqttEmbedded") &&  _config.get<bool>("mqttEmbedded")){
-     Serial.println("Sending mDNS query");
-      int n = MDNS.queryService("bhsystems", "tcp");
-      Serial.println("mDNS query done");
-    if (n == 0) {
-      Serial.println("no services found");
-    } else {
-    Serial.print(n);
-    Serial.println(" service(s) found");
-    for (int i = 0; i < n; ++i) {
-      // Print details for each service found
-      Serial.print(i + 1);
-      Serial.print(": ");
-      Serial.print(MDNS.hostname(i));
-      Serial.print(" (");
-      Serial.print(MDNS.IP(i));
-      _config.containsKey(String(MDNS.IP(i)));
-      Serial.print(":");
-      Serial.print(MDNS.port(i));
-      Serial.println(")");
-    }
-  }
-  }
-  Serial.println();
-
-  Serial.println("loop() next");
-  saveMqtt(_config);
-  }
   wifiUpdated  = true;
+  return configJson;
+}
+
+JsonObject& adopt(JsonObject& _config){
+  configJson.set("wifiSSID",_config.get<String>("wifiSSID"));
+  configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
+  configJson.set("apSecret", _config.get<String>("apSecret"));
+  configJson.set("mqttIpDns",_config.get<String>("mqttIpDns"));
+  configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
+  configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
+  configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
+  configJson.set("emoncmsApiKey",_config.get<String>("emoncmsApiKey"));
+  configJson.set("emoncmsPrefix",_config.get<String>("emoncmsPrefix"));
+  configJson.set("emoncmsUrl", _config.get<String>("emoncmsUrl"));
+  configJson.set("emoncmsPort", _config.get<int>("emoncmsPort"));
+  adopted = true;
   return configJson;
 }
 
