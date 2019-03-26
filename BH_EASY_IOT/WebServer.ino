@@ -33,18 +33,7 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(response);
   });
   
-  #ifdef BHPZEM
-    server.on("/pzem-readings", HTTP_GET, [](AsyncWebServerRequest *request){
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getPzemReadings().printTo(*response);
-    request->send(response);
-  });
-  server.on("/emoncms.html", HTTP_GET, [](AsyncWebServerRequest *request){
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", emoncms_html,sizeof(emoncms_html));
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response);
-  });
-  #endif
+ 
   server.on("/firmware.html", HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", firmware_html,sizeof(firmware_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -83,14 +72,7 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(response);
   });
   /** JS    **/
-  #ifdef BHPZEM
-  server.on("/js/GaugeMeter.js", HTTP_GET, [](AsyncWebServerRequest *request){
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/js", GaugeMeter_js,sizeof(GaugeMeter_js));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Expires","Mon, 1 Jan 2222 10:10:10 GMT");
-    request->send(response);
-  });
-  #endif
+ 
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/js", index_js,sizeof(index_js));
     response->addHeader("Content-Encoding", "gzip");
@@ -192,7 +174,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(400);
     }
   
-  
   });
     server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request){
    if(request->hasArg("id")){
@@ -293,21 +274,7 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(400, "text/plain", "JSON INVALID");
     }
 });server.addHandler(handlerha ); 
-#ifdef BHPZEM
-AsyncCallbackJsonWebHandler* handleremon = new AsyncCallbackJsonWebHandler("/save-emoncms", [](AsyncWebServerRequest *request, JsonVariant &json) {
-    JsonObject& jsonObj = json.as<JsonObject>();
-    if (jsonObj.success()) {
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
-      //SAVE CONFIG
-      saveEmoncms(jsonObj).printTo(*response);
-      
-      request->send(response);
-    } else {
-      logger("[WEBSERVER] Json Error");
-      request->send(400, "text/plain", "JSON INVALID");
-    }
-});server.addHandler(handleremon ); 
-#endif
+
     AsyncCallbackJsonWebHandler* handlermqtt = new AsyncCallbackJsonWebHandler("/save-mqtt", [](AsyncWebServerRequest *request, JsonVariant &json) {
     JsonObject& jsonObj = json.as<JsonObject>();
     if (jsonObj.success()) {
@@ -370,30 +337,32 @@ server.addHandler(handlerSensor);
       logger("[FIRMWARE] Update Start:"+ filename);
       Update.runAsync(true);
       if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
-        Update.printError(Serial);
+       // Update.printError(Serial);
       }
     }
     if(!Update.hasError()){
       if(Update.write(data, len) != len){
-        Update.printError(Serial);
+        //Update.printError(Serial);
       }
     }
     if(final){
       if(Update.end(true)){
         logger("[FIRMWARE] Update Success: "+String( index+len));
       } else {
-        Update.printError(Serial);
+        //Update.printError(Serial);
       }
     }
   });
-// These two callbacks are required for gen1 and gen3 compatibility
+
     server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data))) return;
-        // Handle any other body request here...
     });
+
   server.onNotFound([](AsyncWebServerRequest *request) {
+  
     String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
         if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body)) return;
+ 
   if (request->method() == HTTP_OPTIONS) {
     request->send(200);
   } else {

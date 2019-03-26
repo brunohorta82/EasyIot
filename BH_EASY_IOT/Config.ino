@@ -7,9 +7,6 @@ typedef struct {
 std::vector<gpios_t> inUseGpios;
 void logger(String payload){
   if(payload.equals(""))return;
-  Serial.print("Free heap:"); Serial.println(ESP.getFreeHeap(),DEC);
-  // events.send(payload.c_str(), "log");
-   Serial.printf((payload+"\n").c_str());
 }
  
 
@@ -22,6 +19,9 @@ JsonObject& getConfigJson(){
  return configJson;
 }
 
+String getUpdateUrl(){
+ return "http://release.bhonofre.pt/release_"+String(FACTORY_TYPE)+".bin";
+ }
 String getHostname(){
   String nodeId = configJson.get<String>("nodeId");
   if(nodeId.equals(configJson.get<String>("hostname"))){
@@ -82,22 +82,12 @@ void loadStoredConfiguration(){
           configJson.set("wifiSecret", storedConfig.get<String>("wifiSecret"));
           configJson.set("wifiIp", storedConfig.get<String>("wifiIp"));
           configJson.set("hardwareId", String(ESP.getChipId()));
-          #ifdef BHPZEM
-          configJson.set("notificationInterval",storedConfig.get<unsigned int>("notificationInterval"));
-          configJson.set("directionCurrentDetection",storedConfig.get<bool>("directionCurrentDetection"));
-          configJson.set("emoncmsApiKey",storedConfig.get<String>("emoncmsApiKey"));
-          configJson.set("emoncmsPrefix",storedConfig.get<String>("emoncmsPrefix"));
-          configJson.set("emoncmsUrl", storedConfig.get<String>("emoncmsUrl"));
-          configJson.set("emoncmsPort", storedConfig.get<int>("emoncmsPort"));
-          configJson.set("hardware", "PZEM");
-          #endif
+         
           configJson.set("wifiMask", storedConfig.get<String>("wifiMask"));
           configJson.set("wifiGw", storedConfig.get<String>("wifiGw"));
           configJson.set("staticIp", storedConfig.get<bool>("staticIp"));
           configJson.set("apSecret", storedConfig.get<String>("apSecret"));
-          #ifdef BHONOFRE
             configJson.set("hardware", "ONOFRE");
-          #endif
           double configVersion = storedConfig.get<double>("configVersion");
           if(configVersion < FIRMWARE_VERSION){
                logger("[CONFIG] CONFIG VERSION STARTED");
@@ -125,10 +115,10 @@ void loadStoredConfiguration(){
   if(configFail){
     logger("[CONFIG] Apply default config...");
     cFile = SPIFFS.open(CONFIG_FILENAME,"w+"); 
-    configJson.set("nodeId",String(HARDWARE) +"-"+String(MODEL)+"-"+String(ESP.getChipId()));
+    configJson.set("nodeId",String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId()));
     configJson.set("homeAssistantAutoDiscovery", true);
     configJson.set("homeAssistantAutoDiscoveryPrefix", HOME_ASSISTANT_AUTO_DISCOVERY_PREFIX);
-    configJson.set("hostname",String(HARDWARE) +"-"+String(MODEL)+"-"+String(ESP.getChipId()));
+    configJson.set("hostname",String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId()));
     configJson.set("mqttIpDns",MQTT_BROKER_IP);
     configJson.set("mqttUsername", MQTT_USERNAME);
     configJson.set("mqttPassword",MQTT_PASSWORD);
@@ -136,16 +126,7 @@ void loadStoredConfiguration(){
     configJson.set("wifiSecret", WIFI_SECRET);
     configJson.set("configVersion", FIRMWARE_VERSION);
     configJson.set("apSecret", AP_SECRET);
-    
-    configJson.set("emoncmsPort", 80);
-    configJson.set("directionCurrentDetection",false);
-    #ifdef BHPZEM
-       configJson.set("notificationInterval",DELAY_NOTIFICATION);
-       configJson.set("hardware", "PZEM");
-    #endif
-    #ifdef BHONOFRE
-       configJson.set("hardware", "ONOFRE");
-     #endif
+    configJson.set("hardware", HARDWARE);
     configJson.printTo(cFile);
   }
   SPIFFS.end(); 
@@ -167,12 +148,7 @@ JsonObject& saveNode(JsonObject& nodeConfig){
     reloadMqttConfig();
     rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),oldNodeId);
     rebuildSensorsMqttTopics();
-  }else{
-     #ifdef BHPZEM
-      configJson.set("notificationInterval",nodeConfig.get<unsigned int>("notificationInterval"));
-      configJson.set("directionCurrentDetection",nodeConfig.get<bool>("directionCurrentDetection"));
-      #endif
-    }
+  }
   saveConfig();
   return configJson;
 } 
@@ -185,7 +161,11 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
   configJson.set("apSecret", _config.get<String>("apSecret"));
-  wifiUpdated  = true;
+  if(_config.get<bool>("global")){
+  return adopt(_config);
+    }else{
+      wifiUpdated  = true;
+      }
   return configJson;
 }
 
@@ -219,7 +199,6 @@ JsonObject& saveMqtt(JsonObject& _config){
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
   saveConfig();
-  _config.printTo(Serial);
   reloadMqttConfig();
   return configJson;
 } 
@@ -232,16 +211,7 @@ JsonObject& saveHa(JsonObject& _config){
   return configJson;
 } 
 
-#ifdef BHPZEM
-JsonObject& saveEmoncms(JsonObject& _config){
-  configJson.set("emoncmsApiKey",_config.get<String>("emoncmsApiKey"));
-  configJson.set("emoncmsPrefix",_config.get<String>("emoncmsPrefix"));
-  configJson.set("emoncmsUrl", _config.get<String>("emoncmsUrl"));
-  configJson.set("emoncmsPort", _config.get<int>("emoncmsPort"));
-  saveConfig();
-  return configJson;
-} 
-#endif
+
 void saveConfig(){
    if(SPIFFS.begin()){
       File rFile = SPIFFS.open(CONFIG_FILENAME,"w+");

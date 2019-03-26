@@ -1,5 +1,5 @@
-#include <Bounce2.h> // https://github.com/thomasfredericks/Bounce2
-#include <vector>
+
+
 #define RELAY_TYPE "relay"
 #define MQTT_TYPE "mqtt"
 #define SWITCH_DEVICE "switch"
@@ -89,15 +89,19 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
  
  void openAction(int gpioClose, int gpioOpen){
   logger("[SWITCH] OPEN");
+  delay(100); 
   turnOff( getRelay(gpioClose));
-  delay(90);  
+  delay(100);  
   turnOn( getRelay(gpioOpen));
+  delay(100);  
 }
 void closeAction(int gpioClose, int gpioOpen){
   logger("[SWITCH] CLOSE");
+  delay(100);  
   turnOff( getRelay(gpioOpen));
-  delay(90);  
+  delay(100);  
   turnOn( getRelay(gpioClose));
+  delay(100);  
 }
 void stopAction(int gpioClose, int gpioOpen){
   logger("[SWITCH] STOP");
@@ -350,9 +354,7 @@ void loadStoredSwitchs(){
   bool loadDefaults = false;
   if(SPIFFS.begin()){
     File cFile;   
-    #ifdef FORMAT
-    SPIFFS.remove(switchsFilename);
-    #endif
+
     if(SPIFFS.exists(switchsFilename)){
       cFile = SPIFFS.open(switchsFilename,"r+"); 
       if(!cFile){
@@ -379,8 +381,7 @@ void loadStoredSwitchs(){
      if(loadDefaults){
       logger("[SWITCH] Apply default config...");
       cFile = SPIFFS.open(switchsFilename,"w+");
-     
-      createDefaultSwitchs(FACTORY_TYPE == "COVER" ? EASY_BLINDS : EASY_LIGHT);
+      createDefaultSwitchs(FACTORY_TYPE == "cover" ? EASY_BLINDS : EASY_LIGHT);
       sws.printTo(cFile);
       applyJsonSwitchs();
       cFile.close();
@@ -531,7 +532,6 @@ void loopSwitchs(){
     }
 }
  void tryMe(){
-  Serial.println("TRY MODE");
     for (unsigned int i=0; i < _switchs.size(); i++) {
       bool value =   !_switchs[i].state;
       int swmode = _switchs[i].mode;

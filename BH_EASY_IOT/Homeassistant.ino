@@ -54,9 +54,7 @@ void createHASensorComponent(){
 void realoadHaConfig(){
   createHASwitchsComponent();
   createHASensorComponent();
-  #ifdef BHPZEM
-  createPzemSensors();
-  #endif
+
 }
 
 void removeComponentHaConfig(String oldPrefix,String oldNodeId, String _type, String _class, String _id){
