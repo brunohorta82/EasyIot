@@ -177,10 +177,6 @@ JsonObject& adopt(JsonObject& _config){
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
-  configJson.set("emoncmsApiKey",_config.get<String>("emoncmsApiKey"));
-  configJson.set("emoncmsPrefix",_config.get<String>("emoncmsPrefix"));
-  configJson.set("emoncmsUrl", _config.get<String>("emoncmsUrl"));
-  configJson.set("emoncmsPort", _config.get<int>("emoncmsPort"));
   adopted = true;
   return configJson;
 }
