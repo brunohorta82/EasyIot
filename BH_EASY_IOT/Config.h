@@ -1,6 +1,6 @@
 #define FIRMWARE_VERSION 4
 
-#define HARDWARE "ONOFRE"
+#define HARDWARE "bhonofre"
 
 //IMPORTANT CHANGE THIS IF USE ONOFRE COVER
 //cover -> Estores
