@@ -82,7 +82,7 @@ void loadStoredConfiguration(){
           configJson.set("wifiSecret", storedConfig.get<String>("wifiSecret"));
           configJson.set("wifiIp", storedConfig.get<String>("wifiIp"));
           configJson.set("hardwareId", String(ESP.getChipId()));
-         
+          configJson.set("type", String(FACTORY_TYPE));
           configJson.set("wifiMask", storedConfig.get<String>("wifiMask"));
           configJson.set("wifiGw", storedConfig.get<String>("wifiGw"));
           configJson.set("staticIp", storedConfig.get<bool>("staticIp"));
@@ -121,6 +121,7 @@ void loadStoredConfiguration(){
     configJson.set("hostname",String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId()));
     configJson.set("mqttIpDns",MQTT_BROKER_IP);
     configJson.set("mqttUsername", MQTT_USERNAME);
+    configJson.set("type", String(FACTORY_TYPE));
     configJson.set("mqttPassword",MQTT_PASSWORD);
     configJson.set("wifiSSID", WIFI_SSID);
     configJson.set("wifiSecret", WIFI_SECRET);
