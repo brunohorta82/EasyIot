@@ -1,5 +1,4 @@
-#include <dht_nonblocking.h> // https://github.com/brunohorta82/DHT_nonblocking
-#include <OneWire.h> // Install on Arduino IDE Library manager 
+
 
 #define TIME_READINGS_DELAY 30000ul
 #define SENSOR_DEVICE  "sensor"
@@ -129,7 +128,7 @@ void loopSensors(){
      if(!_sensors[i].dht->measure( &temperature, &humidity )){
       continue;
       }
-       Serial.println( temperature);
+       
       }
       break;
       }
@@ -233,9 +232,7 @@ void loadStoredSensors(){
   bool loadDefaults = false;
   if(SPIFFS.begin()){
     File cFile;   
-    #ifdef FORMAT
-    SPIFFS.remove(sensorsFilename);
-    #endif
+
     if(SPIFFS.exists(sensorsFilename)){
       cFile = SPIFFS.open(sensorsFilename,"r+"); 
       if(!cFile){

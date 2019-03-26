@@ -1,4 +1,4 @@
-#include <Ticker.h>
+
 #define RELAY_DEVICE "relay"
 #define NORMAL false
 #define INVERTED true
@@ -102,9 +102,7 @@ void loadStoredRelays(){
   bool loadDefaults = false;
   if(SPIFFS.begin()){
     File cFile;
-    #ifdef FORMAT
-    SPIFFS.remove(relaysFilename);
-    #endif
+    
     if(SPIFFS.exists(relaysFilename)){
       cFile = SPIFFS.open(relaysFilename,"r+"); 
       if(!cFile){
@@ -181,8 +179,6 @@ void relayJson(String _id,long _gpio, bool _inverted, String _name, int _maxAmp,
 }
 
 void createDefaultRelays(){
-    #ifdef BHONOFRE
     relayJson("R1",RELAY_ONE,NORMAL,"Relé 1",2,"fa-circle-o-notch");
     relayJson("R2",RELAY_TWO,NORMAL,"Relé 2",2,"fa-circle-o-notch");
-    #endif
 }

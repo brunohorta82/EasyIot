@@ -20,126 +20,98 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#include <ESP8266httpUpdate.h>
-#include <fauxmoESP.h>
+
+#include "Libs.h"
+#include "Config.h"
+
+Timing timerStats;
 fauxmoESP fauxmo;
 
-const char * updateUrl="http://release.bhonofre.pt/release.bin";
-#include "Config.h"
-Timing timerStats;
-void checkServices(){
-  if(laodDefaults){
-    SPIFFS.format();
-    shouldReboot = true;
-  }
-
-  if(wifiUpdated){
-    saveConfig();
-    reloadWiFiConfig();
-    wifiUpdated = false;
+void checkServices() {
+    if (laodDefaults) {
+        SPIFFS.format();
+        shouldReboot = true;
     }
-  if(needScan()){
-      scanNewWifiNetworks();
-   }
-   if(reloadMqttConfiguration){
-     setupMQTT();
-   }
+
+    if (wifiUpdated) {
+        saveConfig();
+        reloadWiFiConfig();
+        wifiUpdated = false;
+    }
+    if (needScan()) {
+        scanNewWifiNetworks();
+    }
+    if (reloadMqttConfiguration) {
+        setupMQTT();
+    }
 }
 
 void setup() {
-  Serial.begin(115200);
-  loadStoredConfiguration();
-  #ifdef BHONOFRE
+   // Serial.begin(115200);
+    loadStoredConfiguration();
     loadStoredRelays();
     loadStoredSwitchs();
     loadStoredSensors();
-  #endif
-  setupWiFi(); 
-  setupWebserver();
-  #ifdef BHPZEM
-    setupBHPzem();
-    setupDisplay();
-  #endif
-   timerStats.begin(0);
+    setupWiFi();
+    setupWebserver();
+    timerStats.begin(0);
+    JsonArray &_devices = getStoredSwitchs();
+    for (int i = 0; i < _devices.size(); i++) {
+        JsonObject &switchJson = _devices[i];
+        if (switchJson.get<bool>("discoveryDisabled")) {
+            continue;
+        }
+        String _name = switchJson.get<String>("name");
+        fauxmo.addDevice(_name.c_str());
 
-   #ifdef BHONOFRE
-JsonArray& _devices = getStoredSwitchs();
-  for(int i  = 0 ; i < _devices.size() ; i++){ 
-    JsonObject& switchJson = _devices[i];    
-    if(switchJson.get<bool>("discoveryDisabled")){
-      continue;
-     }  
-    String _name =switchJson.get<String>("name");
-     fauxmo.addDevice(_name.c_str());
- 
-  }
+    }
     fauxmo.createServer(false);
     fauxmo.setPort(80); // required for gen3 devices
     fauxmo.enable(true);
-   fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value) {
-     stateSwitchByName(String(device_name),state ? "ON" : "OFF");
+    fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
+        stateSwitchByName(String(device_name), state ? "ON" : "OFF");
     });
-    #endif
-    
+
+
 }
-void stats(){
-   if (timerStats.onTimeout(60000) ){
-     publishOnMqtt(getBaseTopic()+"/stats",String(ESP.getFreeHeap(),DEC),false);
-   }
-  
+
+void stats() {
+    if (timerStats.onTimeout(60000)) {
+        publishOnMqtt(getBaseTopic() + "/stats", String(ESP.getFreeHeap(), DEC), false);
+    }
+
 }
+
 void loop() {
-   MDNS.update();
-   if(autoUpdate){
-    autoUpdate = false;
-    actualUpdate();
+    MDNS.update();
+    if (autoUpdate) {
+        autoUpdate = false;
+        actualUpdate();
     }
     stats();
-  if(adopted){
-   saveConfig();
-   shouldReboot = true;
-   adopted = false;
-  }
-   if(shouldReboot){
-    logger("Rebooting...");
-    shouldReboot = false;
-    ESP.restart();
-    return;
-  }
-  #ifdef BHPZEM
-    loopBHPzem();
-   #endif
-  #ifdef BHONOFRE
+    if (adopted) {
+        saveConfig();
+        shouldReboot = true;
+        adopted = false;
+    }
+    if (shouldReboot) {
+        logger("Rebooting...");
+        shouldReboot = false;
+        ESP.restart();
+        return;
+    }
+
     loopSwitchs();
     loopSensors();
-  #endif
-  loopWiFi();
-  checkServices();
-  mqttMsgDigest();
-  #ifdef BHONOFRE
-  fauxmo.handle();
-  #endif
+    loopWiFi();
+    checkServices();
+    mqttMsgDigest();
+    fauxmo.handle();
+
 }
 
 
-
-
-
-bool actualUpdate(){
-  Serial.println("Start Update");
-  WiFiClient client;
-     t_httpUpdate_return ret = ESPhttpUpdate.update(client, updateUrl);
-     switch (ret) {
-      case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-        break;
-
-      case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
-        break;
-
-      case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
-        break;
-    }
+void actualUpdate() {
+    WiFiClient client;
+    ESPhttpUpdate.update(client, getUpdateUrl());
 }
