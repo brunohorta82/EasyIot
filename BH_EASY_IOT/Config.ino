@@ -7,6 +7,7 @@ typedef struct {
 std::vector<gpios_t> inUseGpios;
 void logger(String payload){
   if(payload.equals(""))return;
+  Serial.println(payload);
 }
  
 
