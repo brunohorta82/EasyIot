@@ -78,9 +78,12 @@ void setup() {
 void stats() {
     if (timerStats.onTimeout(60000)) {
         publishOnMqtt(getBaseTopic() + "/stats", String(ESP.getFreeHeap(), DEC), false);
+        if (WiFi.isConnected() && (WiFi.getMode() & WIFI_AP)) {
+          dissableAP();  
+          logger("[WI-FI] AUTO TURN OFF AP") ;
+        }
+        }
     }
-
-}
 
 void loop() {
     MDNS.update();

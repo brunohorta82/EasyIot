@@ -40,11 +40,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
     response->addHeader("Content-Encoding", "gzip");
     request->send(response);
   });
-  server.on("/homeassistant.html", HTTP_GET, [](AsyncWebServerRequest *request){
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", homeassistant_html,sizeof(homeassistant_html));
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response);
-  });
 
   server.on("/mqtt.html", HTTP_GET, [](AsyncWebServerRequest *request){
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", mqtt_html,sizeof(mqtt_html));
@@ -144,6 +139,8 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
    } 
     request->send(200);
   });
+
+  
   server.on("/control-switch", HTTP_GET, [](AsyncWebServerRequest *request){
    if(request->hasArg("id")){
     toogleSwitch(request->arg("id"));
@@ -166,16 +163,7 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   getStoredSensors().printTo(*response);
   request->send(response);
   });
-  server.on("/load-easy", HTTP_GET, [](AsyncWebServerRequest *request){
-   if(request->hasArg("t")){
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    loadEasy(request->arg("t").toInt()).printTo(*response);
-    request->send(response);
-   } else{
-    request->send(400);
-    }
-  
-  });
+
     server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request){
    if(request->hasArg("id")){
     removeSwitch(request->arg("id"));

@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION 4
+#define FIRMWARE_VERSION 4.2
 
 #define HARDWARE "bhonofre"
 

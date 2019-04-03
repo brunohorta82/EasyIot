@@ -207,9 +207,7 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
     }
   saveSensors();
   applyJsonSensors();
- if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
     createHASensorComponent();  
-   }
    return sns;
 }
 void saveSensors(){
@@ -326,8 +324,8 @@ void rebuildSensorsMqttTopics(){
     }
     if(store){
       saveSensors();
-      if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
+      
         createHASensorComponent();  
-      }
+      
     }
   }

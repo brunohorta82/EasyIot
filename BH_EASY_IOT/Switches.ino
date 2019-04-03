@@ -81,9 +81,9 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
 
   saveSwitchs();
   applyJsonSwitchs();
- if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
+ 
     createHASwitchsComponent();  
- }
+ 
   return sws;
  }
  
@@ -453,22 +453,14 @@ void rebuildSwitchMqttTopics( String oldPrefix,String oldNodeId){
     }
     if(store){
       saveSwitchs();
-      if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
+      
         
         createHASwitchsComponent();  
-      }
+      
     }
   }
 
- JsonArray& loadEasy(int type){
-  createDefaultSwitchs(type);
-  saveSwitchs();
-  applyJsonSwitchs();
-  if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
-    createHASwitchsComponent();  
- }
- return sws; 
-  }
+
 void createDefaultSwitchs(int type){
     String id1 = "B1";
     if(type == EASY_LIGHT){    
@@ -497,9 +489,9 @@ void removeSwitch(String _id){
 
   saveSwitchs();
   applyJsonSwitchs();
-  if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
+  
     createHASwitchsComponent();  
- }
+ 
 }
 void loopSwitchs(){
     for (unsigned int i=0; i < _switchs.size(); i++) {

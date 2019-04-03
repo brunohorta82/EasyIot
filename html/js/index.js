@@ -1,42 +1,8 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.115"
+    baseUrl: ""
 };
 
-const map = {
-    "config": "",
-    "potencia": "Wats",
-    "amperagem": "Amperes",
-    "voltagem": "Volts",
-    "temp": "\u00BAC",
-    "contador": "kWh"
-};
-const mapTitles = {
-    "config": "",
-    "potencia": "Potência",
-    "amperagem": "Corrente",
-    "voltagem": "Tensão",
-    "temp": "Temperatura",
-    "contador": "Contador"
-};
-const mapIcons = {
-    "config": "",
-    "potencia": "fa-plug",
-    "amperagem": "fa-plug",
-    "voltagem": "fa-plug",
-    "temp": "fa-thermometer-empty",
-    "contador": "fa-dot-circle-o"
-};
-
-const limits = {
-    "config": "0",
-    "potencia": "2700",
-    "amperagem": "32",
-    "voltagem": "270",
-    "temp": "180",
-    "contador": "0"
-};
 var switchs;
-
 function toggleSwitch(id) {
     const someUrl = endpoint.baseUrl + "/toggle-switch?id=" + id;
     $.ajax({
@@ -67,31 +33,6 @@ function removeDevice(e, id, func) {
         },
         error: function () {
             alert("Erro a ao remover dispositivo");
-        },
-        timeout: 2000
-    });
-}
-
-function loadEasy(t) {
-    for (const s of switchs) {
-        removeDevice('remove-switch', s.id);
-    }
-    const someUrl = endpoint.baseUrl + "/load-easy" + "?t=" + t;
-    $.ajax({
-        url: someUrl,
-        dataType: "json",
-        contentType: "text/plain; charset=utf-8",
-        success: function (response) {
-            alert("Configuração Fácil Carregada");
-            loadDevice(fillSwitches, "switchs", function () {
-                loadDevice(fillRelays, "relays");
-            });
-
-        },
-        error: function () {
-            alert("Erro não foi possivel guardar a configuração");
-        }, complete: function () {
-
         },
         timeout: 2000
     });
@@ -196,7 +137,6 @@ function loadConfig(next) {
     });
 }
 
-
 function loadDevice(func, e, next) {
     const someUrl = endpoint.baseUrl + "/" + e;
     $.ajax({
@@ -217,34 +157,10 @@ function loadDevice(func, e, next) {
     });
 }
 
-function refreshDashboardPzem(payload) {
-    if (!payload) return;
-    if ($('#devices').find('.GaugeMeter').length === 0) {
-        Object.keys(payload).reverse().forEach(function (key) {
-            if (key !== "config") {
-                $('#devices').append('<div class="col-lg-4 col-md-6 col-xs-12"><div class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + mapTitles[key.split("_")[0]] + '</span><div id="' + key + '"  class="GaugeMeter" data-animationstep="0" data-total="' + limits[key.split("_")[0]] + '"  data-size="200" data-label_color="#fff" data-used_color="#fff" data-animate_gauge_colors="false" data-width="15" data-style="Semi" data-theme="Red-Gold-Green" data-back="#fff"  data-label="' + map[key.split("_")[0]] + '"><canvas width="200" height="200"></canvas></div></div></div></div>');
-                $('#' + key).gaugeMeter({used: Math.round(payload[key]), text: payload[key]});
-            }
-        });
-    } else {
-        Object.keys(payload).reverse().forEach(function (key) {
-            if (key !== "config") {
-                $('#' + key).gaugeMeter({used: Math.round(payload[key]), text: payload[key]});
-            }
-        });
-    }
-
-}
-
 function fillConfig(response) {
     $("#firmwareVersion").text(response.configVersion);
     $(".bh-model").text(response.hardware);
-    if (response.hardware === "PZEM") {
-        $(".bh-pzem-item").removeClass("hide");
-
-    } else {
         $(".bh-onofre-item").removeClass("hide");
-    }
     $("#version_lbl").text(response.configVersion);
     $('input[name="nodeId"]').val(response.nodeId);
     $('input[name="mqttIpDns"]').val(response.mqttIpDns);
@@ -261,10 +177,7 @@ function fillConfig(response) {
     $('input[name="apSecret"]').val(response.apSecret);
     $('select[name="notificationInterval"] option[value="' + response.notificationInterval + '"]').attr("selected", "selected");
     $('select[name="directionCurrentDetection"] option[value="' + response.directionCurrentDetection + '"]').attr("selected", "selected");
-    $('input[name="emoncmsApiKey"]').val(response.emoncmsApiKey);
-    $('input[name="emoncmsUrl"]').val(response.emoncmsUrl);
-    $('input[name="emoncmsPrefix"]').val(response.emoncmsPrefix);
-    $('input[name="emoncmsPort"]').val(response.emoncmsPort);
+
     $('#ff').prop('disabled', false);
 }
 
@@ -274,12 +187,8 @@ function toggleActive(menu) {
     $(".content").load(menu + ".html", function () {
         if (menu === "dashboard") {
             loadConfig(function () {
-                if ($(".bh-model").text() === "PZEM") {
-                    loadDevice(refreshDashboardPzem, "pzem-readings");
-                }
-                else {
                     loadDevice(refreshDashboard, "switchs");
-                }
+
             })
         } else if (menu === "devices") {
             loadDevice(fillSwitches, "switchs", function () {
@@ -299,7 +208,6 @@ function toggleActive(menu) {
 
     });
 }
-
 
 function fillSwitches(payload) {
     if (!payload) return;
@@ -982,24 +890,7 @@ function saveMqtt() {
     storeConfig("save-mqtt", _config);
 }
 
-function saveEmoncms() {
-    let _config = {
-        "emoncmsApiKey": $('#emoncmsApiKey').val(),
-        "emoncmsPrefix": $('#emoncmsPrefix').val(),
-        "emoncmsUrl": $('#emoncmsUrl').val(),
-        "emoncmsPort": $('#emoncmsPort').val()
 
-    };
-    storeConfig("save-emoncms", _config);
-}
-
-function saveHa() {
-    let _config = {
-        "homeAssistantAutoDiscovery": $('#homeAssistantAutoDiscovery').val(),
-        "homeAssistantAutoDiscoveryPrefix": $('#homeAssistantAutoDiscoveryPrefix').val()
-    };
-    storeConfig("save-ha", _config);
-}
 
 function refreshDashboard(payload) {
     if (!payload) return;
@@ -1171,9 +1062,6 @@ $(document).ready(function () {
         }, false);
         source.addEventListener('wifi-log', function (e) {
             appendWifiLog(e.data);
-        }, false);
-        source.addEventListener('pzem-readings', function (e) {
-            refreshDashboardPzem(JSON.parse(e.data));
         }, false);
 
     }

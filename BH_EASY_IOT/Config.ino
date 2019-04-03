@@ -73,7 +73,6 @@ void loadStoredConfiguration(){
         JsonObject& storedConfig = getJsonObject(cFile);
         if (storedConfig.success()) {
           configJson.set("nodeId",storedConfig.get<String>("nodeId"));
-          configJson.set("homeAssistantAutoDiscovery",storedConfig.get<bool>("homeAssistantAutoDiscovery"));
           configJson.set("homeAssistantAutoDiscoveryPrefix",storedConfig.get<String>("homeAssistantAutoDiscoveryPrefix"));
           configJson.set("hostname",storedConfig.get<String>("hostname"));
           configJson.set("mqttIpDns",storedConfig.get<String>("mqttIpDns"));
@@ -81,6 +80,8 @@ void loadStoredConfiguration(){
           configJson.set("mqttPassword",storedConfig.get<String>("mqttPassword"));
           configJson.set("wifiSSID",storedConfig.get<String>("wifiSSID"));
           configJson.set("wifiSecret", storedConfig.get<String>("wifiSecret"));
+          configJson.set("wifiSSID2",storedConfig.get<String>("wifiSSID2"));
+          configJson.set("wifiSecret2", storedConfig.get<String>("wifiSecret2"));
           configJson.set("wifiIp", storedConfig.get<String>("wifiIp"));
           configJson.set("hardwareId", String(ESP.getChipId()));
           configJson.set("type", String(FACTORY_TYPE));
@@ -117,7 +118,6 @@ void loadStoredConfiguration(){
     logger("[CONFIG] Apply default config...");
     cFile = SPIFFS.open(CONFIG_FILENAME,"w+"); 
     configJson.set("nodeId",String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId()));
-    configJson.set("homeAssistantAutoDiscovery", true);
     configJson.set("homeAssistantAutoDiscoveryPrefix", "homeassistant");
     configJson.set("hostname",String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId()));
     configJson.set("mqttIpDns",MQTT_BROKER_IP);
@@ -126,6 +126,8 @@ void loadStoredConfiguration(){
     configJson.set("mqttPassword",MQTT_PASSWORD);
     configJson.set("wifiSSID", WIFI_SSID);
     configJson.set("wifiSecret", WIFI_SECRET);
+     configJson.set("wifiSSID2","");
+    configJson.set("wifiSecret2", "");
     configJson.set("configVersion", FIRMWARE_VERSION);
     configJson.set("apSecret", AP_SECRET);
     configJson.set("hardware", HARDWARE);
@@ -158,6 +160,8 @@ JsonObject& saveNode(JsonObject& nodeConfig){
 JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiSSID",_config.get<String>("wifiSSID"));
   configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
+  configJson.set("wifiSSID2",_config.get<String>("wifiSSID2"));
+  configJson.set("wifiSecret2", _config.get<String>("wifiSecret2"));
   configJson.set("wifiIp", _config.get<String>("wifiIp"));
   configJson.set("wifiMask", _config.get<String>("wifiMask"));
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
@@ -174,6 +178,8 @@ JsonObject& saveWifi(JsonObject& _config){
 JsonObject& adopt(JsonObject& _config){
   configJson.set("wifiSSID",_config.get<String>("wifiSSID"));
   configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
+   configJson.set("wifiSSID2",_config.get<String>("wifiSSID2"));
+  configJson.set("wifiSecret2", _config.get<String>("wifiSecret2"));
   configJson.set("apSecret", _config.get<String>("apSecret"));
   configJson.set("mqttIpDns",_config.get<String>("mqttIpDns"));
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
@@ -202,7 +208,6 @@ JsonObject& saveMqtt(JsonObject& _config){
 } 
 
 JsonObject& saveHa(JsonObject& _config){
-  configJson.set("homeAssistantAutoDiscovery",_config.get<bool>("homeAssistantAutoDiscovery"));
   configJson.set("homeAssistantAutoDiscoveryPrefix",_config.get<String>("homeAssistantAutoDiscoveryPrefix"));
   saveConfig();
   realoadHaConfig();
