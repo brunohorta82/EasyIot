@@ -1,4 +1,4 @@
-#define FIRMWARE_VERSION 4.4
+#define FIRMWARE_VERSION 4.5
 
 #define HARDWARE "bhonofre"
 
@@ -6,7 +6,7 @@
 //cover -> Estores
 //single -> 1 Relé iluminação
 //dual -> 2 relés iluminação
-#define FACTORY_TYPE "dual" //cover single dual
+#define FACTORY_TYPE "cover" //cover single dual
 
 
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
