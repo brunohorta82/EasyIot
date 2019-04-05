@@ -89,6 +89,7 @@ void loadStoredConfiguration(){
           configJson.set("wifiGw", storedConfig.get<String>("wifiGw"));
           configJson.set("staticIp", storedConfig.get<bool>("staticIp"));
           configJson.set("apSecret", storedConfig.get<String>("apSecret"));
+          configJson.set("configTime", storedConfig.get<long>("configTime"));
             configJson.set("hardware", "ONOFRE");
           double configVersion = storedConfig.get<double>("configVersion");
           if(configVersion < FIRMWARE_VERSION){
@@ -125,6 +126,7 @@ void loadStoredConfiguration(){
     configJson.set("type", String(FACTORY_TYPE));
     configJson.set("mqttPassword",MQTT_PASSWORD);
     configJson.set("wifiSSID", WIFI_SSID);
+    configJson.set("configTime",0L);
     configJson.set("wifiSecret", WIFI_SECRET);
      configJson.set("wifiSSID2","");
     configJson.set("wifiSecret2", "");
@@ -167,15 +169,10 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
   configJson.set("apSecret", _config.get<String>("apSecret"));
-  if(_config.get<bool>("global")){
-  return adopt(_config);
-    }else{
-      wifiUpdated  = true;
-      }
   return configJson;
 }
 
-JsonObject& adopt(JsonObject& _config){
+JsonObject& adoptControllerConfig(JsonObject& _config){
   configJson.set("wifiSSID",_config.get<String>("wifiSSID"));
   configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
    configJson.set("wifiSSID2",_config.get<String>("wifiSSID2"));
@@ -185,6 +182,7 @@ JsonObject& adopt(JsonObject& _config){
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
+  configJson.set("configTime",_config.get<long>("configTime"));
   adopted = true;
   return configJson;
 }
