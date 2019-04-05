@@ -89,6 +89,7 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
  
  void openAction(int gpioClose, int gpioOpen){
   logger("[SWITCH] OPEN");
+  stopAction(gpioClose, gpioOpen);
   delay(100); 
   turnOff( getRelay(gpioClose));
   delay(100);  
@@ -96,6 +97,7 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
   delay(100);  
 }
 void closeAction(int gpioClose, int gpioOpen){
+   stopAction(gpioClose, gpioOpen);
   logger("[SWITCH] CLOSE");
   delay(100);  
   turnOff( getRelay(gpioOpen));
