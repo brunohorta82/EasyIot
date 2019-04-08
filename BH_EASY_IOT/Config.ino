@@ -173,6 +173,7 @@ JsonObject& saveWifi(JsonObject& _config){
 }
 
 JsonObject& adoptControllerConfig(JsonObject& _config){
+  logger("ADOPTION");
   configJson.set("wifiSSID",_config.get<String>("wifiSSID"));
   configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
    configJson.set("wifiSSID2",_config.get<String>("wifiSSID2"));

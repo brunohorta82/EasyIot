@@ -10,8 +10,11 @@
 #define DS18B20_TYPE 90
 #define REED_SWITCH_TYPE 56
 #define PIR_TYPE 65
+#define LDR_TYPE 21
+#define ANALOG_TYPE 7
 
-
+int analogReadCount = 0;
+ float avg = 0;
 JsonArray& sns = getJsonArray();
 
 typedef struct {
@@ -50,11 +53,10 @@ JsonArray& getStoredSensors(){
   return sns;
 }
 
-void sensorJson(String _id,int _gpio ,bool _disabled, String _icon, String _name,  int _type,JsonArray& functions){
+void sensorJson(String _id,int _gpio ,bool _disabled,  String _name,  int _type,JsonArray& functions){
       JsonObject& sensorJson = getJsonObject();
       sensorJson.set("id", _id);
       sensorJson.set("gpio", _gpio);
-      sensorJson.set("icon", _icon);
       sensorJson.set("name", _name);
       sensorJson.set("disabled", _disabled);
       sensorJson.set("type", _type);
@@ -67,26 +69,28 @@ void sensorJson(String _id,int _gpio ,bool _disabled, String _icon, String _name
 void createFunctions( JsonArray& functionsJson,String id,int type){
 
   switch(type){
+    case LDR_TYPE:
+    createFunctionArray(functionsJson,"Sensor de Luz","ligth_sensor","",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"ligth_sensor"),false,ANALOG_TYPE);
+    break;
     case PIR_TYPE:
-    createFunctionArray(functionsJson,"Movimento","motion","fa-circle-o","C",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"motion"),false,MOTION_TYPE);
+    createFunctionArray(functionsJson,"Movimento","motion","C",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"motion"),false,MOTION_TYPE);
     break;
     case DS18B20_TYPE:
-    createFunctionArray(functionsJson,"Temperatura","temperature","fa-thermometer-half","ºC",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"temperature"),false,TEMPERATURE_TYPE);
+    createFunctionArray(functionsJson,"Temperatura","temperature","ºC",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"temperature"),false,TEMPERATURE_TYPE);
     break;
     case DHT_TYPE_11:
     case DHT_TYPE_21:
     case DHT_TYPE_22:
-      createFunctionArray(functionsJson,"Temperatura","temperature","fa-thermometer-half","ºC",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"temperature"),false,TEMPERATURE_TYPE);
-      createFunctionArray(functionsJson,"Humidade","humidity","fa-percent","%", MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"humidity"),false, HUMIDITY_TYPE);
+      createFunctionArray(functionsJson,"Temperatura","temperature","ºC",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"temperature"),false,TEMPERATURE_TYPE);
+      createFunctionArray(functionsJson,"Humidade","humidity","%", MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"humidity"),false, HUMIDITY_TYPE);
     break;
     }
  
   }
-void createFunctionArray(JsonArray& functionsJson,String _name, String _uniqueName,String _icon, String _unit, String _mqttStateTopic, bool _retain, int _type ){
+void createFunctionArray(JsonArray& functionsJson,String _name, String _uniqueName, String _unit, String _mqttStateTopic, bool _retain, int _type ){
     JsonObject& functionJson = functionsJson.createNestedObject();
       functionJson.set("name", _name);
       functionJson.set("uniqueName", _uniqueName);
-      functionJson.set("icon", _icon);
       functionJson.set("unit", _unit);
       functionJson.set("type", _type);
       functionJson.set("mqttStateTopic", _mqttStateTopic);
@@ -95,6 +99,8 @@ void createFunctionArray(JsonArray& functionsJson,String _name, String _uniqueNa
 void loopSensors(){
     float temperature = -127.0; 
     float humidity = -127.0;
+    float analogReadValue = 0;
+ 
     bool motion = false;
    static unsigned long measurement_timestamp = millis( );
    
@@ -104,6 +110,17 @@ void loopSensors(){
         }
    unsigned int sensorType = _sensors[i].type;
     switch( sensorType){
+      case LDR_TYPE:
+      if( millis( ) - measurement_timestamp >100 ){
+        analogReadCount++;
+        analogReadValue= analogRead(A0);
+        measurement_timestamp = millis( );
+        avg += analogReadValue;
+      }else{
+         continue;
+        }
+    
+        break;
       case PIR_TYPE:
          motion = digitalRead(_sensors[i].gpio);
       break;
@@ -148,10 +165,15 @@ void loopSensors(){
              measurement_timestamp = millis( );
           }else if(_type == MOTION_TYPE && motion != _sensors[i].lastBinaryRead){ 
             _sensors[i].lastBinaryRead = motion;
-            
-              publishOnMqtt(_mqttState ,motion ? PAYLOAD_ON : PAYLOAD_OFF,_retain);
-            
-          }
+            publishOnMqtt(_mqttState ,motion ? PAYLOAD_ON : PAYLOAD_OFF,_retain);
+          }else if(_type == ANALOG_TYPE){
+            if(analogReadCount >= 10){
+              publishOnMqttQueue(_mqttState ,String(avg/analogReadCount ,1),false);
+              analogReadCount = 0;
+              avg = 0;
+            }
+             
+           }
          }
     }
     
@@ -168,7 +190,7 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
       sensorJson.set("discoveryDisabled",_sensor.get<bool>("discoveryDisabled"));
       sensorJson.set("icon",_sensor.get<String>("icon"));
       sensorJson.set("disabled",_sensor.get<bool>("disabled"));
-     removeComponentHaConfig(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix"),getConfigJson().get<String>("nodeId"),sensorJson.get<String>("type"),sensorJson.get<String>("class"), sensorJson.get<String>("id"));
+      removeComponentHaConfig(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix"),getConfigJson().get<String>("nodeId"),sensorJson.get<String>("type"),sensorJson.get<String>("class"), sensorJson.get<String>("id"));
       if( sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type")){
           sensorJson.remove("functions");
            JsonArray& functionsJson = getJsonArray();
@@ -200,10 +222,10 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
           JsonArray& functionsNew = _sensor.get<JsonVariant>("functions");
           for(int i  = 0 ; i < functionsNew .size() ; i++){
             JsonObject& f = functionsNew.get<JsonVariant>(i);
-            createFunctionArray(functionsJson,f.get<String>("name"), f.get<String>("uniqueName"),f.get<String>("icon"), f.get<String>("unit"), MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,f.get<String>("uniqueName")), f.get<bool>("retain"), f.get<unsigned int>("type") );
+            createFunctionArray(functionsJson,f.get<String>("name"), f.get<String>("uniqueName"), f.get<String>("unit"), MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,f.get<String>("uniqueName")), f.get<bool>("retain"), f.get<unsigned int>("type") );
           }
           
-          sensorJson(id,_sensor.get<unsigned int>("gpio"),_sensor.get<bool>("disabled"), _sensor.get<String>("icon"),_sensor.get<String>("name"),  _sensor.get<unsigned int>("type"),functionsJson);
+          sensorJson(id,_sensor.get<unsigned int>("gpio"),_sensor.get<bool>("disabled"),_sensor.get<String>("name"),  _sensor.get<unsigned int>("type"),functionsJson);
     }
   saveSensors();
   applyJsonSensors();
@@ -239,11 +261,11 @@ void loadStoredSensors(){
       }
         logger("[SENSORS] Read stored file config...");
         JsonArray &storedSensors = getJsonArray(cFile);
-        if (!storedSensors.success() || storedSensors.size()==0) {
-         logger("[SENSORS] Json file parse Error!");
+        if (!storedSensors.success()) {
+          logger("[SENSORS] Json file parse Error!");
           loadDefaults = true;
         }else{
-          
+         
           logger("[SENSORS] Apply stored file config...");
           for(int i = 0 ; i< storedSensors.size(); i++){
             sns.add(storedSensors.get<JsonVariant>(i));
@@ -279,6 +301,9 @@ void applyJsonSensors(){
     int disabled= sensorJson.get<bool>("disabled");
     String id= sensorJson.get<String>("id");
     switch(type){
+      case LDR_TYPE:
+       _sensors.push_back({A0,type,id,disabled,false,sensorJson,NULL,NULL,NULL});
+      break;
       case PIR_TYPE:
          _sensors.push_back({gpio,type,id,disabled,false,sensorJson,NULL,NULL,NULL});
          configGpio(gpio,INPUT);

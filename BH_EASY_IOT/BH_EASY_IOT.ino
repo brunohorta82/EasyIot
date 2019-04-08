@@ -23,7 +23,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "Libs.h"
 #include "Config.h"
-
 Timing timerStats;
 fauxmoESP fauxmo;
 
@@ -84,9 +83,11 @@ void stats() {
         }
         }
     }
-
 void loop() {
+ 
     MDNS.update();
+   
+
     if (autoUpdate) {
         autoUpdate = false;
         actualUpdate();
