@@ -206,14 +206,6 @@ JsonObject& saveMqtt(JsonObject& _config){
   return configJson;
 } 
 
-JsonObject& saveHa(JsonObject& _config){
-  configJson.set("homeAssistantAutoDiscoveryPrefix",_config.get<String>("homeAssistantAutoDiscoveryPrefix"));
-  saveConfig();
-  realoadHaConfig();
-  return configJson;
-} 
-
-
 void saveConfig(){
    if(SPIFFS.begin()){
       File rFile = SPIFFS.open(CONFIG_FILENAME,"w+");

@@ -47,20 +47,9 @@ void onMqttConnect(bool sessionPresent) {
     logger("[MQTT] Connected to MQTT.");
     mqttClient.publish(getAvailableTopic().c_str(),0,true,"1");
     subscribeOnMqtt(MQTT_CONFIG_TOPIC);
-    registerMqttDevices();
+   reloadDiscovery();
 }
-void registerMqttDevices(){
-  if(getConfigJson().get<bool>("homeAssistantAutoDiscovery")){
-      realoadHaConfig();
-    }else{
-      JsonArray& _devices = getStoredSwitchs();
-      for(int i  = 0 ; i < _devices.size() ; i++){ 
-      JsonObject& d = _devices.get<JsonVariant>(i);      
-      String _mqttCommand =d.get<String>("mqttCommandTopic");
-      subscribeOnMqtt(_mqttCommand.c_str());
-    }
-  }
-}
+
 
 void connectToMqtt() {
   logger("[MQTT] Connecting to MQTT ["+getConfigJson().get<String>("mqttIpDns")+"]...");
@@ -88,6 +77,7 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   logger("[MQTT] PAYLOAD: "+payloadStr);
   processMqttAction(topicStr,payloadStr);
 }
+
 
 void setupMQTT() {
   if(mqttClient.connected()){
@@ -151,10 +141,5 @@ void subscribeOnMqtt(String topic){
   mqttClient.subscribe(topic.c_str(), 0);
  }
  void processMqttAction(String topic, String payload){
-  if(topic.startsWith("heleeus/config/")){
-    StaticJsonBuffer<200> jsonBuffer;
-    saveHa(jsonBuffer.parseObject(payload));
-  }else{
      mqttSwitchControl(topic, payload);
-    }
  }

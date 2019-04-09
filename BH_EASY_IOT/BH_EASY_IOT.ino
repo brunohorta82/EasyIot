@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "Libs.h"
 #include "Config.h"
 Timing timerStats;
-fauxmoESP fauxmo;
 
 void checkServices() {
     if (laodDefaults) {
@@ -54,24 +53,7 @@ void setup() {
     setupWiFi();
     setupWebserver();
     timerStats.begin(0);
-    JsonArray &_devices = getStoredSwitchs();
-    for (int i = 0; i < _devices.size(); i++) {
-        JsonObject &switchJson = _devices[i];
-        if (switchJson.get<bool>("discoveryDisabled")) {
-            continue;
-        }
-        String _name = switchJson.get<String>("name");
-        fauxmo.addDevice(_name.c_str());
-
-    }
-    fauxmo.createServer(false);
-    fauxmo.setPort(80); // required for gen3 devices
-    fauxmo.enable(true);
-    fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
-        stateSwitchByName(String(device_name), state ? "ON" : "OFF");
-    });
-
-
+    startDiscovery();
 }
 
 void stats() {
@@ -84,10 +66,7 @@ void stats() {
         }
     }
 void loop() {
- 
     MDNS.update();
-   
-
     if (autoUpdate) {
         autoUpdate = false;
         actualUpdate();
@@ -110,7 +89,7 @@ void loop() {
     loopWiFi();
     checkServices();
     mqttMsgDigest();
-    fauxmo.handle();
+    loopDiscovery();
 
 }
 

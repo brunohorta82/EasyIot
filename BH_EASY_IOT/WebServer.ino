@@ -247,20 +247,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
     }
 });server.addHandler(handlerAdopt);
 
-     AsyncCallbackJsonWebHandler* handlerha = new AsyncCallbackJsonWebHandler("/save-ha", [](AsyncWebServerRequest *request, JsonVariant &json) {
-    JsonObject& jsonObj = json.as<JsonObject>();
-    if (jsonObj.success()) {
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
-      //SAVE CONFIG
-      saveHa(jsonObj).printTo(*response);
-      
-      request->send(response);
-    } else {
-      logger("[WEBSERVER] Json Error");
-      request->send(400, "text/plain", "JSON INVALID");
-    }
-});server.addHandler(handlerha ); 
-
     AsyncCallbackJsonWebHandler* handlermqtt = new AsyncCallbackJsonWebHandler("/save-mqtt", [](AsyncWebServerRequest *request, JsonVariant &json) {
     JsonObject& jsonObj = json.as<JsonObject>();
     if (jsonObj.success()) {

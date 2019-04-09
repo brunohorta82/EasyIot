@@ -1,5 +1,4 @@
 
-
 #define TIME_READINGS_DELAY 30000ul
 #define SENSOR_DEVICE  "sensor"
 #define BINARY_SENSOR_DEVICE  "binary_sensor"

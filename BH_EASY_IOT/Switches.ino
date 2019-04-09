@@ -1,5 +1,3 @@
-
-
 #define RELAY_TYPE "relay"
 #define MQTT_TYPE "mqtt"
 #define SWITCH_DEVICE "switch"
