@@ -16,7 +16,10 @@
 String statesPool[] = {"OPEN","STOP","CLOSE","STOP"};
 
 JsonArray& sws = getJsonArray();
-
+bool coverNeedsStop;
+long openCloseonTime;
+int _gpioClose;
+int _gpioOpen;
 typedef struct {
     long onTime;
     int gpio;
@@ -26,6 +29,7 @@ typedef struct {
     int mode;
     bool state;
     bool locked;
+   
     
 } switch_t;
 std::vector<switch_t> _switchs;
@@ -92,7 +96,8 @@ JsonArray& saveSwitch(String _id,JsonObject& _switch){
   turnOff( getRelay(gpioClose));
   delay(100);  
   turnOn( getRelay(gpioOpen));
-  delay(100);  
+  delay(100);
+ coverAutoStop(gpioClose,  gpioOpen);
 }
 void closeAction(int gpioClose, int gpioOpen){
    stopAction(gpioClose, gpioOpen);
@@ -101,14 +106,21 @@ void closeAction(int gpioClose, int gpioOpen){
   turnOff( getRelay(gpioOpen));
   delay(100);  
   turnOn( getRelay(gpioClose));
-  delay(100);  
+  delay(100); 
+ coverAutoStop(gpioClose,  gpioOpen);
 }
 void stopAction(int gpioClose, int gpioOpen){
   logger("[SWITCH] STOP");
   turnOff( getRelay(gpioClose));  
   turnOff( getRelay(gpioOpen));
+  coverNeedsStop = false;
 }
-
+void coverAutoStop(int gpioClose, int gpioOpen){
+  coverNeedsStop = true;
+  openCloseonTime = millis();
+  _gpioClose = gpioClose;
+  _gpioOpen =  gpioOpen;
+  }
 void stateSwitch(String id, String state) {
   for (unsigned int i=0; i < sws.size(); i++) {
      JsonObject& switchJson = sws.get<JsonVariant>(i);   
@@ -494,6 +506,11 @@ void removeSwitch(String _id){
  
 }
 void loopSwitchs(){
+    if(coverNeedsStop){
+        if(openCloseonTime+25000 < millis() ){
+          stopAction(_gpioClose,_gpioOpen);
+          }
+    }
     for (unsigned int i=0; i < _switchs.size(); i++) {
       if(_switchs[i].locked){
         continue;}
