@@ -168,7 +168,6 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiMask", _config.get<String>("wifiMask"));
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
-  configJson.set("apSecret", _config.get<String>("apSecret"));
   return configJson;
 }
 
@@ -178,7 +177,6 @@ JsonObject& adoptControllerConfig(JsonObject& _config){
   configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
    configJson.set("wifiSSID2",_config.get<String>("wifiSSID2"));
   configJson.set("wifiSecret2", _config.get<String>("wifiSecret2"));
-  configJson.set("apSecret", _config.get<String>("apSecret"));
   configJson.set("mqttIpDns",_config.get<String>("mqttIpDns"));
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
