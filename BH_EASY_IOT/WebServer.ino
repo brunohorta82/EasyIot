@@ -189,17 +189,12 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   });
   
   AsyncCallbackJsonWebHandler* handlerSwitch = new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant &json) {
-  JsonObject& jsonObj = json.as<JsonObject>();
+  JsonArray& jsonObj = json.as<JsonArray>();
   if (jsonObj.success()) {
-        if(request->hasArg("id")){
-          String id = request->arg("id");
+ 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            saveSwitch(id, jsonObj).printTo(*response);
+            saveSwitch( jsonObj).printTo(*response);
             request->send(response);
-        }else{
-          logger("[WEBSERVER] ID NOT FOUND");
-          request->send(400, "text/plain", "ID NOT FOUND");
-          }
       
     } else {
       logger("[WEBSERVER] Json Error");

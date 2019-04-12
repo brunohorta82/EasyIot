@@ -785,7 +785,7 @@ function saveSwitch(id) {
     } else {
         mode = $('#modec_' + id).val();
     }
-    let device = {
+    let device = [{
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
         "gpioOpen": $('#gpio_open_' + id).val(),
@@ -800,7 +800,7 @@ function saveSwitch(id) {
         "gpioControlClose": $('#relay_close_' + id).val(),
         "master": true
         // "master": $('#master_' + id).val()
-    };
+    }];
 
     storeDevice(id, device, "save-switch", "switchs", fillSwitches);
 }
