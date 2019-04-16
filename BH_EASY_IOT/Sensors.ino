@@ -228,7 +228,7 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
     }
   saveSensors();
   applyJsonSensors();
-    createHASensorComponent();  
+  reloadDiscovery();
    return sns;
 }
 void saveSensors(){
@@ -349,7 +349,7 @@ void rebuildSensorsMqttTopics(){
     if(store){
       saveSensors();
       
-        createHASensorComponent();  
+       reloadDiscovery();
       
     }
   }

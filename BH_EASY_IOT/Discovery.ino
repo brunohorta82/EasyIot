@@ -1,7 +1,7 @@
 
 
 fauxmoESP fauxmo;
-void createHASwitchsComponent(){
+void createHASwitchsComponentss(){
   JsonArray& _devices = getStoredSwitchs();
   for(int i  = 0 ; i < _devices.size() ; i++){ 
     JsonObject& switchJson = _devices[i];    
@@ -33,6 +33,8 @@ void createHASwitchsComponent(){
    
 }
 void startDiscovery(){
+   createHASwitchsComponentss();
+   createHASensorComponentss();
    fauxmo.createServer(false);
     fauxmo.setPort(80); // required for gen3 devices
     fauxmo.enable(true);
@@ -40,7 +42,7 @@ void startDiscovery(){
         stateSwitchByName(String(device_name), state ? "ON" : "OFF");
     });
   }
-void createHASensorComponent(){
+void createHASensorComponentss(){
   JsonArray& sensorsJson = getStoredSensors();
   for(int i  = 0 ; i < sensorsJson.size() ; i++){ 
     JsonObject& sensorJson = sensorsJson.get<JsonVariant>(i);;   
@@ -66,8 +68,8 @@ void loopDiscovery(){
    fauxmo.handle();
    }
 void reloadDiscovery(){
-  createHASwitchsComponent();
-  createHASensorComponent();
+  createHASwitchsComponentss();
+  createHASensorComponentss();
 
 }
 

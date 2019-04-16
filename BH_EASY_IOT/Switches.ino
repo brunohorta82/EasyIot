@@ -85,7 +85,7 @@ JsonArray& saveSwitch(JsonArray& _switchs){
   }
   saveSwitchs();
   applyJsonSwitchs();
-  createHASwitchsComponent();  
+ reloadDiscovery();
   return sws;
  }
  
@@ -467,7 +467,7 @@ void rebuildSwitchMqttTopics( String oldPrefix,String oldNodeId){
       saveSwitchs();
       
         
-        createHASwitchsComponent();  
+      reloadDiscovery(); 
       
     }
   }
@@ -502,7 +502,7 @@ void removeSwitch(String _id){
   saveSwitchs();
   applyJsonSwitchs();
   
-    createHASwitchsComponent();  
+  reloadDiscovery(); 
  
 }
 void loopSwitchs(){
