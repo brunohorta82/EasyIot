@@ -10,7 +10,7 @@
 #include <ESPAsyncTCP.h> //https://github.com/me-no-dev/ESPAsyncTCP
 #include <ESPAsyncWebServer.h> //https://github.com/me-no-dev/ESPAsyncWebServer
 #include <AsyncJson.h> //https://github.com/me-no-dev/ESPAsyncWebServer
-#include <fauxmoESP.h>
+#include <fauxmoESP.h> //https://bitbucket.org/xoseperez/fauxmoesp
 #include <Ticker.h>
 #include <dht_nonblocking.h> // https://github.com/brunohorta82/DHT_nonblocking
 #include <OneWire.h> // Install on Arduino IDE Library manager 

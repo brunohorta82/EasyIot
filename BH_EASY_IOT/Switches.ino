@@ -166,6 +166,7 @@ void stateSwitchByName(String name, String state) {
              turnOff( getRelay(switchJson.get<unsigned int>("gpioControl")));
             }
         }
+        switchJson.set("stateControl",state.equals(PAYLOAD_ON));
         publishState(switchJson);      
        }
     }
