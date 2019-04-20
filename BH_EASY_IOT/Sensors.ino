@@ -146,6 +146,7 @@ void loopSensors(){
       }
        
       }
+      
       break;
       }
      
@@ -168,6 +169,7 @@ void loopSensors(){
           }else if(_type == ANALOG_TYPE){
             if(analogReadCount >= 10){
               publishOnMqttQueue(_mqttState ,String(avg/analogReadCount ,1),false);
+             
               analogReadCount = 0;
               avg = 0;
             }

@@ -17,9 +17,9 @@ void createHASwitchsComponentss(){
     String retain = _type.equals("sensor") ? "" : "\"retain\": false,";
     if(!switchJson.get<bool>("discoveryDisabled")){
       publishOnMqttQueue((getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+_type+"/"+getConfigJson().get<String>("nodeId")+"/"+_id+"/config"),("{\"name\": \""+_name+"\", \""+(_type.equals("cover") ? "position_topic" : "state_topic")+"\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\", "+commandTopic+retain+"\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
-      if (!String("light").equals(switchJson.get<String>("type"))){
-      fauxmo.removeDevice(_name.c_str());
-      fauxmo.addDevice(_name.c_str());
+      if (String("light").equals(switchJson.get<String>("type"))){
+        fauxmo.removeDevice(_name.c_str());
+        fauxmo.addDevice(_name.c_str());
       }
     }
    

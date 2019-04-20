@@ -786,6 +786,7 @@ function saveSwitch(id) {
         mode = $('#modec_' + id).val();
     }
     let device = [{
+        "id": id,
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
         "gpioOpen": $('#gpio_open_' + id).val(),
