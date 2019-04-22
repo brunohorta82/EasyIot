@@ -13,8 +13,7 @@ void  setupWebserver(){
   MDNS.addServiceTxt("bhsystems", "tcp", "nodeId", getConfigJson().get<String>("nodeId"));
   MDNS.addServiceTxt("bhsystems", "tcp", "config_version", getConfigJson().get<String>("configVersion"));
   MDNS.addServiceTxt("bhsystems", "tcp", "hardwareId", String(ESP.getChipId()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "wifi-signal",  String(WiFi.RSSI()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "type",  String(FACTORY_TYPE));
+  MDNS.addServiceTxt("bhsystems", "tcp", "wifi-signal",  String(WiFi.RSSI()));  MDNS.addServiceTxt("bhsystems", "tcp", "type",  String(FACTORY_TYPE));
   server.addHandler(&events);
   /** HTML  **/
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -190,17 +189,12 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   });
   
   AsyncCallbackJsonWebHandler* handlerSwitch = new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant &json) {
-  JsonObject& jsonObj = json.as<JsonObject>();
+  JsonArray& jsonObj = json.as<JsonArray>();
   if (jsonObj.success()) {
-        if(request->hasArg("id")){
-          String id = request->arg("id");
+ 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            saveSwitch(id, jsonObj).printTo(*response);
+            saveSwitch( jsonObj).printTo(*response);
             request->send(response);
-        }else{
-          logger("[WEBSERVER] ID NOT FOUND");
-          request->send(400, "text/plain", "ID NOT FOUND");
-          }
       
     } else {
       logger("[WEBSERVER] Json Error");
@@ -247,20 +241,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(400, "text/plain", "JSON INVALID");
     }
 });server.addHandler(handlerAdopt);
-
-     AsyncCallbackJsonWebHandler* handlerha = new AsyncCallbackJsonWebHandler("/save-ha", [](AsyncWebServerRequest *request, JsonVariant &json) {
-    JsonObject& jsonObj = json.as<JsonObject>();
-    if (jsonObj.success()) {
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
-      //SAVE CONFIG
-      saveHa(jsonObj).printTo(*response);
-      
-      request->send(response);
-    } else {
-      logger("[WEBSERVER] Json Error");
-      request->send(400, "text/plain", "JSON INVALID");
-    }
-});server.addHandler(handlerha ); 
 
     AsyncCallbackJsonWebHandler* handlermqtt = new AsyncCallbackJsonWebHandler("/save-mqtt", [](AsyncWebServerRequest *request, JsonVariant &json) {
     JsonObject& jsonObj = json.as<JsonObject>();

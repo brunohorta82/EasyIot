@@ -586,6 +586,7 @@ function buildSensor(obj) {
         "                            <option " + (obj.type === 2 ? 'selected' : '') + " value=\"2\">DHT 22</option>" +
         "                            <option " + (obj.type === 90 ? 'selected' : '') + " value=\"90\">DS18B20</option>" +
         "                            <option " + (obj.type === 65 ? 'selected' : '') + " value=\"65\">PIR</option>" +
+        "                            <option " + (obj.type === 21 ? 'selected' : '') + " value=\"21\">LDR</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
@@ -599,6 +600,7 @@ function buildSensor(obj) {
         "                            <option " + (obj.gpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
         "                            <option " + (obj.gpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
         "                            <option " + (obj.gpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.type === 21 ? 'selected' : '') + " value=\"A0\">A0</option>" +
         "                        </select></td>" +
         "                    </tr>" + getSensorFunctions(obj) +
         "                    <tr>" +
@@ -666,7 +668,6 @@ function buildSensorDHTemplate() {
     let sensor = {
         "id": "0",
         "gpio": 14,
-        "icon": "fa-microchip",
         "name": "Temperatura",
         "disabled": true,
         "type": 2,
@@ -700,7 +701,6 @@ function buildSensorDallasTemplate() {
     let sensor = {
         "id": "0",
         "gpio": 0,
-        "icon": "fa-microchip",
         "name": "Temperatura",
         "disabled": false,
         "type": 90,
@@ -708,7 +708,6 @@ function buildSensorDallasTemplate() {
         "functions": [{
             "name": "Temperatura",
             "uniqueName": "temperature",
-            "icon": "fa-thermometer-half",
             "unit": "ºC",
             "type": 1,
             "mqttStateTopic": "-",
@@ -725,7 +724,6 @@ function buildSensorPirTemplate() {
     let sensor = {
         "id": "0",
         "gpio": 0,
-        "icon": "fa-circle-o",
         "name": "Movimento",
         "disabled": false,
         "type": 65,
@@ -733,7 +731,6 @@ function buildSensorPirTemplate() {
         "functions": [{
             "name": "Movimento",
             "uniqueName": "motion",
-            "icon": "fa-circle-o",
             "unit": "",
             "type": 4,
             "mqttStateTopic": "-",
@@ -742,7 +739,28 @@ function buildSensorPirTemplate() {
     };
     buildSensor(sensor);
 }
-
+function buildSensorLdrTemplate() {
+    if ($('#sn_0').length > 0) {
+        return
+    }
+    let sensor = {
+        "id": "0",
+        "gpio": 0,
+        "name": "Sensor de Luz",
+        "disabled": false,
+        "type": 21,
+        "class": "sensor",
+        "functions": [{
+            "name": "Sensor de Luz",
+            "uniqueName": "light_sensor",
+            "unit": "",
+            "type": 7,
+            "mqttStateTopic": "-",
+            "mqttRetain": false
+        }]
+    };
+    buildSensor(sensor);
+}
 function buildRelayTemplate() {
     if ($('#rl_0').length > 0) {
         return
@@ -753,7 +771,6 @@ function buildRelayTemplate() {
         "gpio": 0,
         "inverted": false,
         "mode": 1,
-        "icon": "fa-circle-o-notch",
         "maxAmp": 2, "state": false, "class": "relay"
     };
     buildRelay(device);
@@ -768,7 +785,8 @@ function saveSwitch(id) {
     } else {
         mode = $('#modec_' + id).val();
     }
-    let device = {
+    let device = [{
+        "id": id,
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
         "gpioOpen": $('#gpio_open_' + id).val(),
@@ -783,7 +801,7 @@ function saveSwitch(id) {
         "gpioControlClose": $('#relay_close_' + id).val(),
         "master": true
         // "master": $('#master_' + id).val()
-    };
+    }];
 
     storeDevice(id, device, "save-switch", "switchs", fillSwitches);
 }
@@ -801,30 +819,37 @@ function saveSensor(id) {
     let temp = $("#name_" + id + "_temperature").val();
     let hum = $("#name_" + id + "_humidity").val();
     let motion = $("#name_" + id + "_motion").val();
+    let ldr = $("#name_" + id + "_light_sensor").val();
     let functions = [];
     let type = $('#type_' + id).val();
 
     if (type === '0' || type === '1' || type === '2') {
         functions = [{
-            "name": temp, "uniqueName": "temperature", "icon": "fa-thermometer-half",
+            "name": temp, "uniqueName": "temperature", 
             "unit": "ºC",
             "type": 1
         }, {
-            "name": hum, "uniqueName": "humidity", "icon": "fa-percent",
+            "name": hum, "uniqueName": "humidity", 
             "unit": "%",
             "type": 2
         }];
     } else if (type === '90') {
         functions = [{
-            "name": temp, "uniqueName": "temperature", "icon": "fa-thermometer-half",
+            "name": temp, "uniqueName": "temperature", 
             "unit": "ºC",
             "type": 1
         }];
     } else if ('65' === type) {
         functions = [{
-            "name": motion, "uniqueName": "motion", "icon": "fa-circle-o",
+            "name": motion, "uniqueName": "motion",
             "unit": "",
             "type": 4
+        }];
+    }else if ('21' === type) {
+        functions = [{
+            "name": ldr, "uniqueName": "light_sensor",
+            "unit": "",
+            "type": 7
         }];
     }
 
@@ -836,7 +861,6 @@ function saveSensor(id) {
         "type": $('#type_' + id).val(),
         "functions": functions
     };
-    console.log(device);
     storeDevice(id, device, "save-sensor", "sensors", fillSensors);
 }
 

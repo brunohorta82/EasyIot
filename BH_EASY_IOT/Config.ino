@@ -168,16 +168,16 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiMask", _config.get<String>("wifiMask"));
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
-  configJson.set("apSecret", _config.get<String>("apSecret"));
+  wifiUpdated = true;
   return configJson;
 }
 
 JsonObject& adoptControllerConfig(JsonObject& _config){
+  logger("ADOPTION");
   configJson.set("wifiSSID",_config.get<String>("wifiSSID"));
   configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
    configJson.set("wifiSSID2",_config.get<String>("wifiSSID2"));
   configJson.set("wifiSecret2", _config.get<String>("wifiSecret2"));
-  configJson.set("apSecret", _config.get<String>("apSecret"));
   configJson.set("mqttIpDns",_config.get<String>("mqttIpDns"));
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
@@ -204,14 +204,6 @@ JsonObject& saveMqtt(JsonObject& _config){
   reloadMqttConfig();
   return configJson;
 } 
-
-JsonObject& saveHa(JsonObject& _config){
-  configJson.set("homeAssistantAutoDiscoveryPrefix",_config.get<String>("homeAssistantAutoDiscoveryPrefix"));
-  saveConfig();
-  realoadHaConfig();
-  return configJson;
-} 
-
 
 void saveConfig(){
    if(SPIFFS.begin()){
