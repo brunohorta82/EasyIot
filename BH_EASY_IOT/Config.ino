@@ -168,6 +168,7 @@ JsonObject& saveWifi(JsonObject& _config){
   configJson.set("wifiMask", _config.get<String>("wifiMask"));
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
+  wifiUpdated = true;
   return configJson;
 }
 
