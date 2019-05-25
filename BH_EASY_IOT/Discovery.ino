@@ -49,17 +49,20 @@ void createHASensorComponentss(){
     String _id = sensorJson.get<String >("id");
     String  _type = sensorJson.get<String>("type");
     String _class =sensorJson.get<String>("class");
+    
     String _name =sensorJson.get<String>("name");
     JsonArray& functions = sensorJson.get<JsonVariant>("functions");
      for(int i  = 0 ; i < functions.size() ; i++){
         JsonObject& f = functions[i]; 
+        String _uniqueName =f.get<String>("uniqueName");
         String _fname =f.get<String>("name");
         String _unit =f.get<String>("unit");
         String _mqttState =f.get<String>("mqttStateTopic");
         bool _retain =f.get<bool>("mqttRetain");   
         String unitStr = _class.equals("binary_sensor") ? "" : "\"unit_of_measurement\": \""+_unit+"\",";
+        String sensorClass = "\"device_class\": \""+_uniqueName+"\",";
          if(!sensorJson.get<bool>("discoveryDisabled")){
-        publishOnMqttQueue((getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+_class+"/"+getConfigJson().get<String>("nodeId")+"/"+_class+"_"+_fname+"_"+_id+"/config"),("{\"name\": \""+_fname+"\","+unitStr+" \"state_topic\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\",\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
+        publishOnMqttQueue((getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+_class+"/"+getConfigJson().get<String>("nodeId")+"/"+_class+"_"+_fname+"_"+_id+"/config"),("{\"name\": \""+_fname+"\","+unitStr+sensorClass+" \"state_topic\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\",\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
          }  
    } 
   }

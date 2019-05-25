@@ -102,6 +102,7 @@ void loopSensors(){
  
     bool motion = false;
    static unsigned long measurement_timestamp = millis( );
+   static unsigned long measurement_timestampldr = millis( );
    
     for (unsigned int i=0; i < _sensors.size(); i++) {
       if(_sensors[i].disabled){
@@ -110,14 +111,12 @@ void loopSensors(){
    unsigned int sensorType = _sensors[i].type;
     switch( sensorType){
       case LDR_TYPE:
-      if( millis( ) - measurement_timestamp >100 ){
+      if( millis( ) - measurement_timestampldr >100 ){
         analogReadCount++;
         analogReadValue= analogRead(A0);
-        measurement_timestamp = millis( );
+        measurement_timestampldr = millis( );
         avg += analogReadValue;
-      }else{
-         continue;
-        }
+      }
     
         break;
       case PIR_TYPE:
