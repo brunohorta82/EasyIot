@@ -18,7 +18,7 @@ String getBaseTopic(){
  return  String(HARDWARE)+"/"+getConfigJson().get<String>("nodeId");
 } 
 String getAvailableTopic(){
-  return String(HARDWARE)+"/"+getConfigJson().get<String>("nodeId")+"/available";
+  return getConfigJson().get<String>("nodeId")+"/available";
 } 
 
 typedef struct {
