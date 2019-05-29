@@ -13,7 +13,8 @@ void  setupWebserver(){
   MDNS.addServiceTxt("bhsystems", "tcp", "nodeId", getConfigJson().get<String>("nodeId"));
   MDNS.addServiceTxt("bhsystems", "tcp", "config_version", getConfigJson().get<String>("configVersion"));
   MDNS.addServiceTxt("bhsystems", "tcp", "hardwareId", String(ESP.getChipId()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "wifi-signal",  String(WiFi.RSSI()));  MDNS.addServiceTxt("bhsystems", "tcp", "type",  String(FACTORY_TYPE));
+  MDNS.addServiceTxt("bhsystems", "tcp", "wifi-signal",  String(WiFi.RSSI()));  
+  MDNS.addServiceTxt("bhsystems", "tcp", "type",  String(FACTORY_TYPE));
   server.addHandler(&events);
   /** HTML  **/
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -230,16 +231,25 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
 });server.addHandler(handlerWifi);
 
     AsyncCallbackJsonWebHandler* handlerAdopt = new AsyncCallbackJsonWebHandler("/adopt-controller-config", [](AsyncWebServerRequest *request, JsonVariant &json) {
+      logger("ADOPT");
+      if(request->hasHeader("configkey")){
+        AsyncWebHeader* h = request->getHeader("configkey");
+        Serial.printf("configkey: %s\n", h->value().c_str());
+        String configkey = String(h->value().c_str());
+     
     JsonObject& jsonObj = json.as<JsonObject>();
     if (jsonObj.success()) {
       AsyncResponseStream *response = request->beginResponseStream("application/json");
       //SAVE CONFIG
-      adoptControllerConfig(jsonObj).printTo(*response);
+      adoptControllerConfig(jsonObj,configkey ).printTo(*response);
       request->send(response);
     } else {
       logger("[WEBSERVER] Json Error");
       request->send(400, "text/plain", "JSON INVALID");
     }
+     }else{
+      logger("MISSING CONFIG KEY");
+      }
 });server.addHandler(handlerAdopt);
 
     AsyncCallbackJsonWebHandler* handlermqtt = new AsyncCallbackJsonWebHandler("/save-mqtt", [](AsyncWebServerRequest *request, JsonVariant &json) {
