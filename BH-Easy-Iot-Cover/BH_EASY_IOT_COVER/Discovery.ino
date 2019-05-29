@@ -19,8 +19,12 @@ void createHASwitchsComponentss(){
     if(_type.equals("sensor")){
       t = "binary_sensor";
       }
+      String prefix = getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
+      if(getConfigJson().get<String>("mqttIpDns").endsWith("bhonofre.pt")){
+        prefix = getConfigJson().get<String>("mqttUsername");
+        }
     if(!switchJson.get<bool>("discoveryDisabled")){
-      publishOnMqttQueue((getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+t+"/"+getConfigJson().get<String>("mqttUsername")+"/"+_id+"/config"),("{\"name\": \""+_name+"\", \""+(_type.equals("cover") ? "position_topic" : "state_topic")+"\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\", "+commandTopic+retain+"\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
+      publishOnMqttQueue((prefix+"/"+t+"/"+_id+"/config"),("{\"name\": \""+_name+"\", \""+(_type.equals("cover") ? "position_topic" : "state_topic")+"\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\", "+commandTopic+retain+"\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
       if (String("light").equals(switchJson.get<String>("type"))){
         fauxmo.removeDevice(_name.c_str());
         fauxmo.addDevice(_name.c_str());
