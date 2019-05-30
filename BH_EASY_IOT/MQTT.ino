@@ -35,9 +35,6 @@ String MQTT_COMMAND_TOPIC_BUILDER( String _id,String _class){
 String MQTT_STATE_TOPIC_BUILDER( String _id,String _class){
  return getBaseTopic()+"/"+_class+"/"+_id+"/status";
 }
-String MQTT_COMMAND_TOPIC_BUILDER( String _id,String _class, String _name){
- return getBaseTopic()+"/"+_class+"/"+_name+"/"+_id+"/set";
-}
 
 String MQTT_STATE_TOPIC_BUILDER( String _id,String _class, String _name){
  return getBaseTopic()+"/"+_class+"/"+_name+"/"+_id+"/status";
