@@ -77,7 +77,7 @@ JsonArray& saveSwitch(JsonArray& _switchs){
   }
   if(!switchFound){
       String _name = _switch.get<String>("name");
-      String _id = "B"+String(millis());
+      String _id = sha1(_name);
       String typeControl = _switch.get<String>("typeControl");
       switchJson(_id,_switch.get<unsigned int>("gpio"),_switch.get<unsigned int>("gpioOpenClose"),_switch.get<unsigned int>("gpio"),typeControl,_switch.get<unsigned int>("gpioControl"),_switch.get<unsigned int>("gpioControlOpenClose"),_switch.get<unsigned int>("gpioControlStop"),INIT_STATE_OFF,_name, _switch.get<bool>("pullup"),INIT_STATE_OFF,  _switch.get<unsigned int>("mode"), _switch.get<bool>("master"), MQTT_STATE_TOPIC_BUILDER(_id,SWITCH_DEVICE,_name), MQTT_COMMAND_TOPIC_BUILDER(_id,SWITCH_DEVICE,_name), _switch.get<String>("type"));
   }

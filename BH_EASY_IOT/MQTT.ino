@@ -15,10 +15,10 @@ Ticker mqttReconnectTimer;
 char * usernameMqtt = 0;
 char * passwordMqtt = 0;
 String getBaseTopic(){
- return  String(HARDWARE)+"/"+getConfigJson().get<String>("nodeId");
+ return  getConfigJson().get<String>("mqttUsername")+"/"+String(ESP.getChipId());
 } 
 String getAvailableTopic(){
-  return getConfigJson().get<String>("nodeId")+"/available";
+  return getConfigJson().get<String>("mqttUsername")+"/"+String(ESP.getChipId())+"/available";
 } 
 
 typedef struct {
@@ -34,9 +34,6 @@ String MQTT_COMMAND_TOPIC_BUILDER( String _id,String _class){
 
 String MQTT_STATE_TOPIC_BUILDER( String _id,String _class){
  return getBaseTopic()+"/"+_class+"/"+_id+"/status";
-}
-String MQTT_COMMAND_TOPIC_BUILDER( String _id,String _class, String _name){
- return getBaseTopic()+"/"+_class+"/"+_name+"/"+_id+"/set";
 }
 
 String MQTT_STATE_TOPIC_BUILDER( String _id,String _class, String _name){
@@ -85,7 +82,7 @@ void setupMQTT() {
   }
   if(WiFi.status() != WL_CONNECTED || getConfigJson().get<String>("mqttIpDns").equals(""))return;
   mqttClient.onConnect(onMqttConnect);
-  const static String clientId = getHostname();
+  const static String clientId = String(ESP.getChipId());
   mqttClient.setClientId(clientId.c_str());
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onMessage(onMqttMessage);
@@ -96,8 +93,8 @@ void setupMQTT() {
       passwordMqtt =strdup(getConfigJson().get<String>("mqttPassword").c_str());
       mqttClient.setCredentials(usernameMqtt,passwordMqtt);
   }
-  mqttClient.setWill(getAvailableTopic().c_str(),0,true,"0");
-  mqttClient.setCleanSession(false);
+ 
+  mqttClient.setCleanSession(true);
   mqttClient.setServer(ipDnsMqtt, MQTT_BROKER_PORT);
   connectToMqtt();
   reloadMqttConfiguration = false;
@@ -114,7 +111,7 @@ void publishOnMqttQueue(String topic,String payload, bool retain){
 }
 void publishOnMqtt(String topic,String payload, bool retain){
   if(mqttClient.connected() && !topic.equals("null")){
-    mqttClient.publish(topic.c_str(), 0,retain,payload.c_str());
+   mqttClient.publish(topic.c_str(), 0,retain,payload.c_str());
   }
 }
 void publishOnMqtt(String topic,JsonObject& payloadJson, bool retain){

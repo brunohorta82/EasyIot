@@ -1,13 +1,7 @@
-#define FIRMWARE_VERSION 4.93
-
+#define FIRMWARE_VERSION 5.0
 #define HARDWARE "bhonofre"
-
-//IMPORTANT CHANGE THIS IF USE ONOFRE COVER
-//cover -> Estores
-//single -> 1 Relé iluminação
-//dual -> 2 relés iluminação
-#define FACTORY_TYPE "single" //cover single dual
-
+#define FACTORY_TYPE "light" 
+const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId());
 
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
