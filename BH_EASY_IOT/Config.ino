@@ -33,7 +33,7 @@ String getHostname(){
 String getApName(){
    String nodeId = configJson.get<String>("nodeId");
   if(nodeId.equals(DEFAULT_NODE_ID)){
-    return "bhnode-"+String(ESP.getChipId());
+    return DEFAULT_NODE_ID;
   }
   return  nodeId;
 }

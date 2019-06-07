@@ -74,7 +74,6 @@ void loop() {
     stats();
     if (adopted) {
         saveConfig();
-        shouldReboot = true;
         adopted = false;
     }
     if (shouldReboot) {

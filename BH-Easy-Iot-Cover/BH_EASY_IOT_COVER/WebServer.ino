@@ -11,9 +11,11 @@ void  setupWebserver(){
   MDNS.begin(getHostname().c_str());
   MDNS.addService("bhsystems","tcp",80);
   MDNS.addServiceTxt("bhsystems", "tcp", "nodeId", getConfigJson().get<String>("nodeId"));
-  MDNS.addServiceTxt("bhsystems", "tcp", "config_version", getConfigJson().get<String>("configVersion"));
   MDNS.addServiceTxt("bhsystems", "tcp", "hardwareId", String(ESP.getChipId()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "wifi-signal",  String(WiFi.RSSI()));  MDNS.addServiceTxt("bhsystems", "tcp", "type",  String(FACTORY_TYPE));
+  MDNS.addServiceTxt("bhsystems", "tcp", "type",  String(FACTORY_TYPE));
+  MDNS.addServiceTxt("bhsystems", "tcp", "wifiSignal",  String(WiFi.RSSI()));  
+  MDNS.addServiceTxt("bhsystems", "tcp", "ssid",  getApName());  
+  MDNS.addServiceTxt("bhsystems", "tcp", "configVersion", getConfigJson().get<String>("configVersion"));  
   server.addHandler(&events);
   /** HTML  **/
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
