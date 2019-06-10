@@ -594,8 +594,9 @@ function buildSensor(obj) {
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"gpio_" + obj.id + "\">" +
         "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
+        "                            <option " + (obj.gpio === 2 ? 'selected' : '') + " value=\"2\">2</option>" +
         "                            <option " + (obj.gpio === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
+        "                            <option " + (obj.gpio === 15 ? 'selected' : '') + " value=\"15\">15</option>" +
         "                            <option " + (obj.gpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
         "                            <option " + (obj.gpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
         "                            <option " + (obj.gpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
