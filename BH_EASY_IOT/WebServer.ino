@@ -115,10 +115,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   getStoredSwitchs().printTo(*response);
   request->send(response);
   });
-  
-
-    
-   
    server.on("/relays", HTTP_GET, [](AsyncWebServerRequest *request){
    AsyncResponseStream *response = request->beginResponseStream("application/json");
    getStoredRelays().printTo(*response);
@@ -129,6 +125,12 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
      request->send(200);
    });
     server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request){
+   AsyncResponseStream *response = request->beginResponseStream("application/json");
+   getStoredSensors().printTo(*response);
+   request->send(response);
+   });
+  
+  server.on("/features", HTTP_GET, [](AsyncWebServerRequest *request){
    AsyncResponseStream *response = request->beginResponseStream("application/json");
    getStoredSensors().printTo(*response);
    request->send(response);

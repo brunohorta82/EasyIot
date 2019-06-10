@@ -466,8 +466,6 @@ void rebuildSwitchMqttTopics( String oldPrefix,String oldNodeId){
     }
     if(store){
       saveSwitchs();
-      
-        
       reloadDiscovery(); 
       
     }
