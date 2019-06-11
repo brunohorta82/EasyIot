@@ -1,8 +1,8 @@
-#define FIRMWARE_VERSION 6.0
-#define HARDWARE "bhonofre"
+#define HARDWARE "onofre"
 #define FACTORY_TYPE "light" 
+#define FIRMWARE_VERSION 6.0
 
-const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId());
+const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION);
 
 #define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024

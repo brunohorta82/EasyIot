@@ -15,10 +15,10 @@ Ticker mqttReconnectTimer;
 char * usernameMqtt = 0;
 char * passwordMqtt = 0;
 String getBaseTopic(){
- return getConfigJson().get<String>("mqttUsername")+"/"+String(ESP.getChipId());
+ return  getConfigJson().get<String>("mqttUsername")+"/"+String(ESP.getChipId());
 } 
 String getAvailableTopic(){
-  return getBaseTopic()+"/available";
+  return getConfigJson().get<String>("mqttUsername")+"/"+String(ESP.getChipId())+"/available";
 } 
 
 typedef struct {
@@ -35,9 +35,6 @@ String MQTT_COMMAND_TOPIC_BUILDER( String _id,String _class){
 String MQTT_STATE_TOPIC_BUILDER( String _id,String _class){
  return getBaseTopic()+"/"+_class+"/"+_id+"/status";
 }
-String MQTT_COMMAND_TOPIC_BUILDER( String _id,String _class, String _name){
- return getBaseTopic()+"/"+_class+"/"+_name+"/"+_id+"/set";
-}
 
 String MQTT_STATE_TOPIC_BUILDER( String _id,String _class, String _name){
  return getBaseTopic()+"/"+_class+"/"+_name+"/"+_id+"/status";
@@ -47,7 +44,7 @@ void onMqttConnect(bool sessionPresent) {
     logger("[MQTT] Connected to MQTT.");
     mqttClient.publish(getAvailableTopic().c_str(),0,true,"1");
     subscribeOnMqtt(MQTT_CONFIG_TOPIC);
-   reloadDiscovery();
+    reloadDiscovery();
 }
 
 
@@ -84,6 +81,7 @@ void setupMQTT() {
     mqttClient.disconnect();
   }
   if(WiFi.status() != WL_CONNECTED || getConfigJson().get<String>("mqttIpDns").equals(""))return;
+
   mqttClient.onConnect(onMqttConnect);
   const static String clientId = String(ESP.getChipId());
   mqttClient.setClientId(clientId.c_str());
@@ -91,13 +89,13 @@ void setupMQTT() {
   mqttClient.onMessage(onMqttMessage);
   char * ipDnsMqtt = strdup(getConfigJson().get<String>("mqttIpDns").c_str());
 
-  if(!(getConfigJson().get<String>("mqttUsername").equals("") && getConfigJson().get<String>("mqttPassword        ").equals(""))){
+  if(!(getConfigJson().get<String>("mqttUsername").equals("") && getConfigJson().get<String>("mqttPassword").equals(""))){
       usernameMqtt = strdup(getConfigJson().get<String>("mqttUsername").c_str());
       passwordMqtt =strdup(getConfigJson().get<String>("mqttPassword").c_str());
       mqttClient.setCredentials(usernameMqtt,passwordMqtt);
   }
-  //mqttClient.setWill(getAvailableTopic().c_str(),0,true,"0");
-  mqttClient.setCleanSession(false);
+ 
+  mqttClient.setCleanSession(true);
   mqttClient.setServer(ipDnsMqtt, MQTT_BROKER_PORT);
   connectToMqtt();
   reloadMqttConfiguration = false;
@@ -114,7 +112,7 @@ void publishOnMqttQueue(String topic,String payload, bool retain){
 }
 void publishOnMqtt(String topic,String payload, bool retain){
   if(mqttClient.connected() && !topic.equals("null")){
-    mqttClient.publish(topic.c_str(), 0,retain,payload.c_str());
+   mqttClient.publish(topic.c_str(), 0,retain,payload.c_str());
   }
 }
 void publishOnMqtt(String topic,JsonObject& payloadJson, bool retain){

@@ -115,10 +115,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   getStoredSwitchs().printTo(*response);
   request->send(response);
   });
-  
-
-    
-   
    server.on("/relays", HTTP_GET, [](AsyncWebServerRequest *request){
    AsyncResponseStream *response = request->beginResponseStream("application/json");
    getStoredRelays().printTo(*response);
@@ -129,6 +125,12 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
      request->send(200);
    });
     server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request){
+   AsyncResponseStream *response = request->beginResponseStream("application/json");
+   getStoredSensors().printTo(*response);
+   request->send(response);
+   });
+  
+  server.on("/features", HTTP_GET, [](AsyncWebServerRequest *request){
    AsyncResponseStream *response = request->beginResponseStream("application/json");
    getStoredSensors().printTo(*response);
    request->send(response);
@@ -232,16 +234,25 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
 });server.addHandler(handlerWifi);
 
     AsyncCallbackJsonWebHandler* handlerAdopt = new AsyncCallbackJsonWebHandler("/adopt-controller-config", [](AsyncWebServerRequest *request, JsonVariant &json) {
+      logger("ADOPT");
+      if(request->hasHeader("configkey")){
+        AsyncWebHeader* h = request->getHeader("configkey");
+        Serial.printf("configkey: %s\n", h->value().c_str());
+        String configkey = String(h->value().c_str());
+     
     JsonObject& jsonObj = json.as<JsonObject>();
     if (jsonObj.success()) {
       AsyncResponseStream *response = request->beginResponseStream("application/json");
       //SAVE CONFIG
-      adoptControllerConfig(jsonObj).printTo(*response);
+      adoptControllerConfig(jsonObj,configkey ).printTo(*response);
       request->send(response);
     } else {
       logger("[WEBSERVER] Json Error");
       request->send(400, "text/plain", "JSON INVALID");
     }
+     }else{
+      logger("MISSING CONFIG KEY");
+      }
 });server.addHandler(handlerAdopt);
 
     AsyncCallbackJsonWebHandler* handlermqtt = new AsyncCallbackJsonWebHandler("/save-mqtt", [](AsyncWebServerRequest *request, JsonVariant &json) {

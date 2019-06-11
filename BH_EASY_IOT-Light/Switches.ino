@@ -69,7 +69,7 @@ JsonArray& saveSwitch(JsonArray& _switchs){
         switchJson.set("gpioControlOpen",_switch.get<unsigned int>("gpioControlOpen"));
         switchJson.set("gpioControlClose",_switch.get<unsigned int>("gpioControlClose"));
        }
-      switchJson.set("master",_switch.get<bool>("master"));
+      
       String mqttCommand = MQTT_COMMAND_TOPIC_BUILDER(_id,SWITCH_DEVICE);
       switchJson.set("mqttCommandTopic",mqttCommand);
       switchJson.set("mqttStateTopic",MQTT_STATE_TOPIC_BUILDER(_id,SWITCH_DEVICE));

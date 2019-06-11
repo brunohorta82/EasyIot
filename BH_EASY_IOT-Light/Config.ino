@@ -43,29 +43,6 @@ String getApName(){
   }
   return  nodeId;
 }
-void applyUpdateConfig(double outdatedVersion){
-  if(outdatedVersion < 1.4){
-      JsonArray& _devices =  getStoredSensors();
-      for(int i  = 0 ; i < _devices.size() ; i++){ 
-        JsonObject& d = _devices[i]; 
-        JsonArray& functions = d.get<JsonVariant>("functions");
-        for(int i  = 0 ; i < functions.size() ; i++){
-          JsonObject& f = functions[i];    
-          String _name = f.get<String>("name");
-          if(_name.equals("Temperatura")){
-            f.set("uniqueName","temperature");
-          }else if(_name.equals("Humidade")){
-            f.set("uniqueName","humidity");
-          }
-          
-        }
-        rebuildSensorsMqttTopics();     
-    }
-  }
-  if(outdatedVersion < 3.54){
-    configJson.set("hardwareId", String(ESP.getChipId()));
-  }
-}
 
 void loadStoredConfiguration(){
   bool configFail = true;
@@ -182,7 +159,7 @@ JsonObject& adoptControllerConfig(JsonObject& _config, String configkey){
   
   configJson.set("homeAssistantAutoDiscoveryPrefix",_config.get<String>("homeAssistantAutoDiscoveryPrefix"));
   
-   rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
+  rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
   rebuildSensorsMqttTopics();
   reloadMqttConfig();
   saveConfig();
@@ -202,8 +179,10 @@ JsonObject& saveMqtt(JsonObject& _config){
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
-  saveConfig();
+  rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
+  rebuildSensorsMqttTopics();
   reloadMqttConfig();
+  saveConfig();
   return configJson;
 } 
 
