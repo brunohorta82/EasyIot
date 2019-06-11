@@ -4,7 +4,7 @@
 
 const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION);
 
-#define CONFIG_FILENAME  "/config_"+String(HARDWARE)+".json"
+#define CONFIG_FILENAME  "/config_bh"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
 
 //AP PASSWORD  
