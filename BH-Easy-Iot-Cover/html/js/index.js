@@ -158,10 +158,10 @@ function loadDevice(func, e, next) {
 }
 
 function fillConfig(response) {
-    $("#firmwareVersion").text(response.configVersion);
+    $("#firmwareVersion").text(response.firmware);
     $(".bh-model").text(response.hardware);
         $(".bh-onofre-item").removeClass("hide");
-    $("#version_lbl").text(response.configVersion);
+    $("#version_lbl").text(response.firmware);
     $('input[name="nodeId"]').val(response.nodeId);
     $('input[name="mqttIpDns"]').val(response.mqttIpDns);
     $('input[name="mqttUsername"]').val(response.mqttUsername);

@@ -72,10 +72,7 @@ void loop() {
         actualUpdate();
     }
     stats();
-    if (adopted) {
-        saveConfig();
-        adopted = false;
-    }
+   
     if (shouldReboot) {
         logger("Rebooting...");
         shouldReboot = false;

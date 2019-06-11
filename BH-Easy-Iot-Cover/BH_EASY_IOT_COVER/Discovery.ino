@@ -1,7 +1,7 @@
 
 
 fauxmoESP fauxmo;
-void createHASwitchsComponentss(){
+void createHASwitchsComponents(){
   JsonArray& _devices = getStoredSwitchs();
   for(int i  = 0 ; i < _devices.size() ; i++){ 
     JsonObject& switchJson = _devices[i];    
@@ -15,16 +15,12 @@ void createHASwitchsComponentss(){
     String state = switchJson.get<bool>("stateControl") ? PAYLOAD_ON : PAYLOAD_OFF;
     String commandTopic = _type.equals("sensor") ? "" : "\"command_topic\": \""+_mqttCommand+"\",";
     String retain = _type.equals("sensor") ? "" : "\"retain\": false,";
-    String  t = _type;
-    if(_type.equals("sensor")){
-      t = "binary_sensor";
-      }
+    if(!switchJson.get<bool>("discoveryDisabled")){
       String prefix = getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
       if(getConfigJson().get<String>("mqttIpDns").endsWith("bhonofre.pt")){
         prefix = getConfigJson().get<String>("mqttUsername");
         }
-    if(!switchJson.get<bool>("discoveryDisabled")){
-      publishOnMqttQueue((prefix+"/"+t+"/"+_id+"/config"),("{\"name\": \""+_name+"\", \""+(_type.equals("cover") ? "position_topic" : "state_topic")+"\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\", "+commandTopic+retain+"\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
+      publishOnMqttQueue((prefix+"/"+_type+"/"+_id+"/config"),("{\"name\": \""+_name+"\", \""+(_type.equals("cover") ? "position_topic" : "state_topic")+"\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\", "+commandTopic+retain+"\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
       if (String("light").equals(switchJson.get<String>("type"))){
         fauxmo.removeDevice(_name.c_str());
         fauxmo.addDevice(_name.c_str());
@@ -41,8 +37,8 @@ void createHASwitchsComponentss(){
    
 }
 void startDiscovery(){
-   createHASwitchsComponentss();
-   createHASensorComponentss();
+   createHASwitchsComponents();
+   createHASensorComponents();
    fauxmo.createServer(false);
     fauxmo.setPort(80); // required for gen3 devices
     fauxmo.enable(true);
@@ -50,7 +46,7 @@ void startDiscovery(){
         stateSwitchByName(String(device_name), state ? "ON" : "OFF");
     });
   }
-void createHASensorComponentss(){
+void createHASensorComponents(){
   JsonArray& sensorsJson = getStoredSensors();
   for(int i  = 0 ; i < sensorsJson.size() ; i++){ 
     JsonObject& sensorJson = sensorsJson.get<JsonVariant>(i);;   
@@ -79,8 +75,8 @@ void loopDiscovery(){
    fauxmo.handle();
    }
 void reloadDiscovery(){
-  createHASwitchsComponentss();
-  createHASensorComponentss();
+  createHASwitchsComponents();
+  createHASensorComponents();
 
 }
 

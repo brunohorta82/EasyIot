@@ -25,41 +25,23 @@ String getUpdateUrl(){
  }
 String getHostname(){
   String nodeId = configJson.get<String>("nodeId");
-  if(nodeId.equals(configJson.get<String>("hostname"))){
-    return nodeId;
+  if(nodeId.equals(DEFAULT_NODE_ID)){
+    return DEFAULT_NODE_ID;
   }
-  return String(HARDWARE) +"-"+String(ESP.getChipId())+"-"+nodeId;
+  return nodeId;
 }
-String getApName(){
 
+String normalize(String inputStr){
+  inputStr.trim();
+  inputStr.replace(" ","_");
+  return inputStr;
+  }
+String getApName(){
    String nodeId = configJson.get<String>("nodeId");
-  if(nodeId.equals(configJson.get<String>("hostname"))){
-    return  "bhnode-"+nodeId;
+  if(nodeId.equals(DEFAULT_NODE_ID)){
+    return DEFAULT_NODE_ID;
   }
-  return  "bhnode-"+String(ESP.getChipId());
-}
-void applyUpdateConfig(double outdatedVersion){
-  if(outdatedVersion < 1.4){
-      JsonArray& _devices =  getStoredSensors();
-      for(int i  = 0 ; i < _devices.size() ; i++){ 
-        JsonObject& d = _devices[i]; 
-        JsonArray& functions = d.get<JsonVariant>("functions");
-        for(int i  = 0 ; i < functions.size() ; i++){
-          JsonObject& f = functions[i];    
-          String _name = f.get<String>("name");
-          if(_name.equals("Temperatura")){
-            f.set("uniqueName","temperature");
-          }else if(_name.equals("Humidade")){
-            f.set("uniqueName","humidity");
-          }
-          
-        }
-        rebuildSensorsMqttTopics();     
-    }
-  }
-  if(outdatedVersion < 3.54){
-    configJson.set("hardwareId", String(ESP.getChipId()));
-  }
+  return  nodeId;
 }
 
 void loadStoredConfiguration(){
@@ -72,42 +54,36 @@ void loadStoredConfiguration(){
         logger("[CONFIG] Read stored file config...");
         JsonObject& storedConfig = getJsonObject(cFile);
         if (storedConfig.success()) {
+          configJson.set("firmware", FIRMWARE_VERSION);
           configJson.set("nodeId",storedConfig.get<String>("nodeId"));
-          configJson.set("homeAssistantAutoDiscoveryPrefix",storedConfig.get<String>("homeAssistantAutoDiscoveryPrefix"));
           configJson.set("hostname",storedConfig.get<String>("hostname"));
-          configJson.set("mqttIpDns",storedConfig.get<String>("mqttIpDns"));
-          configJson.set("mqttUsername",storedConfig.get<String>("mqttUsername"));
-          configJson.set("mqttPassword",storedConfig.get<String>("mqttPassword"));
-          configJson.set("wifiSSID",storedConfig.get<String>("wifiSSID"));
-          configJson.set("wifiSecret", storedConfig.get<String>("wifiSecret"));
-          configJson.set("wifiSSID2",storedConfig.get<String>("wifiSSID2"));
-          configJson.set("wifiSecret2", storedConfig.get<String>("wifiSecret2"));
-          configJson.set("wifiIp", storedConfig.get<String>("wifiIp"));
+          configJson.set("hardware",HARDWARE);
           configJson.set("hardwareId", String(ESP.getChipId()));
           configJson.set("type", String(FACTORY_TYPE));
+          
+          configJson.set("homeAssistantAutoDiscoveryPrefix",storedConfig.get<String>("homeAssistantAutoDiscoveryPrefix"));
+          
+          configJson.set("mqttIpDns",storedConfig.get<String>("mqttIpDns"));
+          configJson.set("mqttUsername",storedConfig.get<String>("mqttUsername"));
+          configJson.set("mqttPort",storedConfig.get<unsigned int>("mqttPort"));
+          configJson.set("mqttPassword",storedConfig.get<String>("mqttPassword"));
+          
+          configJson.set("wifiSSID",storedConfig.get<String>("wifiSSID"));
+          configJson.set("wifiSecret", storedConfig.get<String>("wifiSecret"));
+          
+          configJson.set("wifiSSID2",storedConfig.get<String>("wifiSSID2"));
+          configJson.set("wifiSecret2", storedConfig.get<String>("wifiSecret2"));
+          
+          configJson.set("staticIp", storedConfig.get<bool>("staticIp"));
+          configJson.set("wifiIp", storedConfig.get<String>("wifiIp"));
           configJson.set("wifiMask", storedConfig.get<String>("wifiMask"));
           configJson.set("wifiGw", storedConfig.get<String>("wifiGw"));
-          configJson.set("staticIp", storedConfig.get<bool>("staticIp"));
+          
           configJson.set("apSecret", storedConfig.get<String>("apSecret"));
+          
           configJson.set("configTime", storedConfig.get<long>("configTime"));
-            configJson.set("hardware", "ONOFRE");
-          double configVersion = storedConfig.get<double>("configVersion");
-          if(configVersion < FIRMWARE_VERSION){
-               logger("[CONFIG] CONFIG VERSION STARTED");
-               cFile.close();
-               SPIFFS.end(); 
-               applyUpdateConfig(configVersion);
-               logger("[CONFIG] UPDATE REQUIRED");
-               applyUpdateConfig(configVersion);
-               configJson.set("configVersion", FIRMWARE_VERSION);
-               saveConfig();
-               loadStoredConfiguration();
-               return;
-          }else{
-                logger("[CONFIG] CONFIG UPDATED Version "+String(configVersion));
-                 configJson.set("configVersion", FIRMWARE_VERSION);
-            }
-           
+          configJson.set("configkey", storedConfig.get<String>("configkey"));
+          
           logger("[CONFIG] Apply stored file config with success...");
           cFile.close();
           configFail = false;
@@ -118,21 +94,16 @@ void loadStoredConfiguration(){
   if(configFail){
     logger("[CONFIG] Apply default config...");
     cFile = SPIFFS.open(CONFIG_FILENAME,"w+"); 
-    configJson.set("nodeId",String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId()));
+    configJson.set("nodeId",DEFAULT_NODE_ID);
     configJson.set("homeAssistantAutoDiscoveryPrefix", "homeassistant");
-    configJson.set("hostname",String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId()));
-    configJson.set("mqttIpDns",MQTT_BROKER_IP);
-    configJson.set("mqttUsername", MQTT_USERNAME);
+    configJson.set("hostname",getHostname());
+    configJson.set("mqttPort",1883);
     configJson.set("type", String(FACTORY_TYPE));
-    configJson.set("mqttPassword",MQTT_PASSWORD);
-    configJson.set("wifiSSID", WIFI_SSID);
     configJson.set("configTime",0L);
-    configJson.set("wifiSecret", WIFI_SECRET);
-     configJson.set("wifiSSID2","");
-    configJson.set("wifiSecret2", "");
-    configJson.set("configVersion", FIRMWARE_VERSION);
     configJson.set("apSecret", AP_SECRET);
     configJson.set("hardware", HARDWARE);
+    configJson.set("configTime", 0L);
+    configJson.set("firmware", FIRMWARE_VERSION);
     configJson.printTo(cFile);
   }
   SPIFFS.end(); 
@@ -172,21 +143,26 @@ JsonObject& saveWifi(JsonObject& _config){
   return configJson;
 }
 
-JsonObject& adoptControllerConfig(JsonObject& _config){
-  logger("ADOPTION");
+JsonObject& adoptControllerConfig(JsonObject& _config, String configkey){
   configJson.set("wifiSSID",_config.get<String>("wifiSSID"));
   configJson.set("wifiSecret", _config.get<String>("wifiSecret"));
+  
   configJson.set("wifiSSID2",_config.get<String>("wifiSSID2"));
   configJson.set("wifiSecret2", _config.get<String>("wifiSecret2"));
+  
   configJson.set("mqttIpDns",_config.get<String>("mqttIpDns"));
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
-  configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
+  
   configJson.set("configTime",_config.get<long>("configTime"));
-  reloadMqttConfig();
+  configJson.set("configkey",configkey);
+  
+  configJson.set("homeAssistantAutoDiscoveryPrefix",_config.get<String>("homeAssistantAutoDiscoveryPrefix"));
+  
   rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
   rebuildSensorsMqttTopics();
-  adopted = true;
+  reloadMqttConfig();
+  saveConfig();
   return configJson;
 }
 
@@ -203,8 +179,10 @@ JsonObject& saveMqtt(JsonObject& _config){
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
-  saveConfig();
+  rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
+  rebuildSensorsMqttTopics();
   reloadMqttConfig();
+  saveConfig();
   return configJson;
 } 
 

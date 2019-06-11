@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Timing timerStats;
 
 void checkServices() {
-    if (laodDefaults) {
+   if (laodDefaults) {
         SPIFFS.format();
         shouldReboot = true;
     }

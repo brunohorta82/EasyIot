@@ -44,7 +44,7 @@ void onMqttConnect(bool sessionPresent) {
     logger("[MQTT] Connected to MQTT.");
     mqttClient.publish(getAvailableTopic().c_str(),0,true,"1");
     subscribeOnMqtt(MQTT_CONFIG_TOPIC);
-   reloadDiscovery();
+    reloadDiscovery();
 }
 
 
@@ -81,6 +81,7 @@ void setupMQTT() {
     mqttClient.disconnect();
   }
   if(WiFi.status() != WL_CONNECTED || getConfigJson().get<String>("mqttIpDns").equals(""))return;
+
   mqttClient.onConnect(onMqttConnect);
   const static String clientId = String(ESP.getChipId());
   mqttClient.setClientId(clientId.c_str());
@@ -88,7 +89,7 @@ void setupMQTT() {
   mqttClient.onMessage(onMqttMessage);
   char * ipDnsMqtt = strdup(getConfigJson().get<String>("mqttIpDns").c_str());
 
-  if(!(getConfigJson().get<String>("mqttUsername").equals("") && getConfigJson().get<String>("mqttPassword        ").equals(""))){
+  if(!(getConfigJson().get<String>("mqttUsername").equals("") && getConfigJson().get<String>("mqttPassword").equals(""))){
       usernameMqtt = strdup(getConfigJson().get<String>("mqttUsername").c_str());
       passwordMqtt =strdup(getConfigJson().get<String>("mqttPassword").c_str());
       mqttClient.setCredentials(usernameMqtt,passwordMqtt);
