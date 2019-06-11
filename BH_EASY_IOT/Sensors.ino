@@ -217,7 +217,7 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
     
   }
     if(!sensorFound){
-          String id = sha1(_sensor.get<String>("name"));
+          String id = normalize(_sensor.get<String>("name"));
           JsonArray& functionsJson = getJsonArray();
           JsonArray& functionsNew = _sensor.get<JsonVariant>("functions");
           for(int i  = 0 ; i < functionsNew .size() ; i++){

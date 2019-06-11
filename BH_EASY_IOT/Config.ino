@@ -30,6 +30,12 @@ String getHostname(){
   }
   return nodeId;
 }
+
+String normalize(String inputStr){
+  inputStr.trim();
+  inputStr.replace(" ","_");
+  return inputStr;
+  }
 String getApName(){
    String nodeId = configJson.get<String>("nodeId");
   if(nodeId.equals(DEFAULT_NODE_ID)){
