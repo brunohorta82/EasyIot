@@ -15,7 +15,7 @@ void  setupWebserver(){
   MDNS.addServiceTxt("bhsystems", "tcp", "type",  String(FACTORY_TYPE));
   MDNS.addServiceTxt("bhsystems", "tcp", "wifiSignal",  String(WiFi.RSSI()));  
   MDNS.addServiceTxt("bhsystems", "tcp", "ssid",  getApName());  
-  MDNS.addServiceTxt("bhsystems", "tcp", "configVersion", getConfigJson().get<String>("configVersion"));  
+  MDNS.addServiceTxt("bhsystems", "tcp", "firmware", getConfigJson().get<String>("firmware"));  
   server.addHandler(&events);
   /** HTML  **/
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
