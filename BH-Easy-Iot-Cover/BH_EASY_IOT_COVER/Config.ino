@@ -20,6 +20,7 @@ JsonObject& getConfigJson(){
  return configJson;
 }
 
+
 String getUpdateUrl(){
  return "http://release.bhonofre.pt/release_"+String(FACTORY_TYPE)+".bin";
  }
@@ -32,8 +33,28 @@ String getHostname(){
 }
 
 String normalize(String inputStr){
+  inputStr.toLowerCase();
   inputStr.trim();
-  inputStr.replace(" ","_");
+  inputStr.replace("_","");
+  inputStr.replace(".","");
+  inputStr.replace("/","");
+  inputStr.replace("\\","");
+  inputStr.replace("º","");
+  inputStr.replace("ª","");
+  inputStr.replace("ç","c");
+  inputStr.replace("á","a");
+  inputStr.replace("à","a");
+  inputStr.replace("é","e");
+  inputStr.replace("&","");
+  inputStr.replace("%","");
+  inputStr.replace("$","");
+  inputStr.replace("#","");
+  inputStr.replace("!","");
+  inputStr.replace("+","");
+  inputStr.replace("-","");
+  inputStr.replace(",","");
+  inputStr.replace("\"","");
+  inputStr.replace(" ","");
   return inputStr;
   }
 String getApName(){
@@ -103,6 +124,8 @@ void loadStoredConfiguration(){
     configJson.set("apSecret", AP_SECRET);
     configJson.set("hardware", HARDWARE);
     configJson.set("configTime", 0L);
+    configJson.set("wifiSSID","VOID SOFTWARE");
+    configJson.set("wifiSecret", "blackiscool");
     configJson.set("firmware", FIRMWARE_VERSION);
     configJson.printTo(cFile);
   }
@@ -121,10 +144,10 @@ JsonObject& saveNode(JsonObject& nodeConfig){
     String oldNodeId = configJson.get<String>("nodeId");
     configJson.set("nodeId",nodeId);
   
-    //reloadWiFiConfig();
+    rebuildAllMqttTopics();
     reloadMqttConfig();
-    rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),oldNodeId);
-    rebuildSensorsMqttTopics();
+    
+    
   }
   saveConfig();
   return configJson;
@@ -159,8 +182,8 @@ JsonObject& adoptControllerConfig(JsonObject& _config, String configkey){
   
   configJson.set("homeAssistantAutoDiscoveryPrefix",_config.get<String>("homeAssistantAutoDiscoveryPrefix"));
   
-  rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
-  rebuildSensorsMqttTopics();
+  rebuildAllMqttTopics();
+  
   reloadMqttConfig();
   saveConfig();
   return configJson;
@@ -174,14 +197,14 @@ void updateNetworkConfig(){
    }
   saveConfig();
 }
+
 JsonObject& saveMqtt(JsonObject& _config){
   configJson.set("mqttIpDns",_config.get<String>("mqttIpDns"));
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
-  rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
-  rebuildSensorsMqttTopics();
   reloadMqttConfig();
+  rebuildAllMqttTopics();
   saveConfig();
   return configJson;
 } 

@@ -68,30 +68,29 @@ void createFunctions( JsonArray& functionsJson,String id,int type){
 
   switch(type){
     case LDR_TYPE:
-    createFunctionArray(functionsJson,"Sensor de Luz","ligth_sensor","",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"ligth_sensor"),false,ANALOG_TYPE);
+    createFunctionArray(functionsJson,"Sensor de Luz","ligth_sensor","",false,ANALOG_TYPE);
     break;
     case PIR_TYPE:
-    createFunctionArray(functionsJson,"Movimento","motion","C",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"motion"),false,MOTION_TYPE);
+    createFunctionArray(functionsJson,"Movimento","motion","C",false,MOTION_TYPE);
     break;
     case DS18B20_TYPE:
-    createFunctionArray(functionsJson,"Temperatura","temperature","ºC",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"temperature"),false,TEMPERATURE_TYPE);
+    createFunctionArray(functionsJson,"Temperatura","temperature","ºC",false,TEMPERATURE_TYPE);
     break;
     case DHT_TYPE_11:
     case DHT_TYPE_21:
     case DHT_TYPE_22:
-      createFunctionArray(functionsJson,"Temperatura","temperature","ºC",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"temperature"),false,TEMPERATURE_TYPE);
-      createFunctionArray(functionsJson,"Humidade","humidity","%", MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,"humidity"),false, HUMIDITY_TYPE);
+      createFunctionArray(functionsJson,"Temperatura","temperature","ºC",false,TEMPERATURE_TYPE);
+      createFunctionArray(functionsJson,"Humidade","humidity","%", false, HUMIDITY_TYPE);
     break;
     }
  
   }
-void createFunctionArray(JsonArray& functionsJson,String _name, String _uniqueName, String _unit, String _mqttStateTopic, bool _retain, int _type ){
+void createFunctionArray(JsonArray& functionsJson,String _name, String _uniqueName, String _unit, bool _retain, int _type ){
     JsonObject& functionJson = functionsJson.createNestedObject();
       functionJson.set("name", _name);
       functionJson.set("uniqueName", _uniqueName);
       functionJson.set("unit", _unit);
       functionJson.set("type", _type);
-      functionJson.set("mqttStateTopic", _mqttStateTopic);
       functionJson.set("mqttRetain", _retain);
 }
 void loopSensors(){
@@ -189,7 +188,6 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
       sensorJson.set("discoveryDisabled",_sensor.get<bool>("discoveryDisabled"));
       sensorJson.set("icon",_sensor.get<String>("icon"));
       sensorJson.set("disabled",_sensor.get<bool>("disabled"));
-      removeComponentHaConfig(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix"),getConfigJson().get<String>("nodeId"),sensorJson.get<String>("type"),sensorJson.get<String>("class"), sensorJson.get<String>("id"));
       if( sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type")){
           sensorJson.remove("functions");
            JsonArray& functionsJson = getJsonArray();
@@ -216,19 +214,20 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
     
   }
     if(!sensorFound){
-          String id = "S"+String(millis());
+          String id = normalize(_sensor.get<String>("name"));
           JsonArray& functionsJson = getJsonArray();
           JsonArray& functionsNew = _sensor.get<JsonVariant>("functions");
           for(int i  = 0 ; i < functionsNew .size() ; i++){
             JsonObject& f = functionsNew.get<JsonVariant>(i);
-            createFunctionArray(functionsJson,f.get<String>("name"), f.get<String>("uniqueName"), f.get<String>("unit"), MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,f.get<String>("uniqueName")), f.get<bool>("retain"), f.get<unsigned int>("type") );
+            String idf = normalize(f.get<String>("name"));
+            createFunctionArray(functionsJson,f.get<String>("name"), f.get<String>("uniqueName"), f.get<String>("unit"),  f.get<bool>("retain"), f.get<unsigned int>("type") );
           }
           
           sensorJson(id,_sensor.get<unsigned int>("gpio"),_sensor.get<bool>("disabled"),_sensor.get<String>("name"),  _sensor.get<unsigned int>("type"),functionsJson);
     }
   saveSensors();
   applyJsonSensors();
-  reloadDiscovery();
+  rebuildAllMqttTopics();
    return sns;
 }
 void saveSensors(){
@@ -331,25 +330,3 @@ void applyJsonSensors(){
      }
   }
 }
-
-void rebuildSensorsMqttTopics(){
-      bool store = false;
-      for(int i  = 0 ; i < sns.size() ; i++){ 
-        store = true;
-        JsonObject& sensorJson = sns.get<JsonVariant>(i);  
-        JsonArray& functions = sensorJson.get<JsonVariant>("functions");
-        for(int i  = 0 ; i < functions.size() ; i++){
-          JsonObject& f = functions.get<JsonVariant>(i);
-          String _mqttState =f.get<String>("mqttStateTopic");
-          String id = sensorJson.get<String>("id");
-          String uniqueName = f.get<String>("uniqueName");
-          f.set("mqttStateTopic",MQTT_STATE_TOPIC_BUILDER(id,SENSOR_DEVICE,uniqueName));
-        }     
-    }
-    if(store){
-      saveSensors();
-      
-       reloadDiscovery();
-      
-    }
-  }

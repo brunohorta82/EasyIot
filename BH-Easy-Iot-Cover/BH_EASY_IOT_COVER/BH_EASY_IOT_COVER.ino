@@ -53,7 +53,9 @@ void setup() {
     setupWiFi();
     setupWebserver();
     timerStats.begin(0);
-    startDiscovery();
+    startAlexaDiscovery();
+    reloadAlexaDiscoveryServices();
+    
 }
 
 void stats() {

@@ -15,10 +15,14 @@ Ticker mqttReconnectTimer;
 char * usernameMqtt = 0;
 char * passwordMqtt = 0;
 String getBaseTopic(){
- return  getConfigJson().get<String>("mqttUsername")+"/"+String(ESP.getChipId());
+  String username = getConfigJson().get<String>("mqttUsername");
+  if(username == ""){
+    username = String(HARDWARE);
+    }
+ return  username+"/"+String(ESP.getChipId());
 } 
 String getAvailableTopic(){
-  return getConfigJson().get<String>("mqttUsername")+"/"+String(ESP.getChipId())+"/available";
+  return getBaseTopic()+"/available";
 } 
 
 typedef struct {
@@ -28,25 +32,37 @@ typedef struct {
 } message_t;
 std::vector<message_t> _messages;
 
-String MQTT_COMMAND_TOPIC_BUILDER( String _id,String _class){
- return getBaseTopic()+"/"+_class+"/"+_id+"/set";
-}
-
-String MQTT_STATE_TOPIC_BUILDER( String _id,String _class){
- return getBaseTopic()+"/"+_class+"/"+_id+"/status";
-}
-
-String MQTT_STATE_TOPIC_BUILDER( String _id,String _class, String _name){
- return getBaseTopic()+"/"+_class+"/"+_name+"/"+_id+"/status";
-}
-
 void onMqttConnect(bool sessionPresent) {
     logger("[MQTT] Connected to MQTT.");
-    mqttClient.publish(getAvailableTopic().c_str(),0,true,"1");
-    subscribeOnMqtt(MQTT_CONFIG_TOPIC);
-    reloadDiscovery();
+    mqttClient.publish(getAvailableTopic().c_str(),0,true,"1"); 
+    reloadMqttDiscoveryServices();
 }
 
+void rebuildAllMqttTopics(){
+   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
+   if( ipMqtt == "")return;
+      JsonArray& _devices = getStoredSwitchs();
+      for(int i  = 0 ; i < _devices.size() ; i++){ 
+        JsonObject& switchJson = _devices[i];
+        String _id = switchJson.get<String>("id");
+        String _class = switchJson.get<String>("class");
+        switchJson.set("mqttCommandTopic",getBaseTopic()+"/"+_class+"/"+_id+"/set");
+        switchJson.set("mqttStateTopic",getBaseTopic()+"/"+_class+"/"+_id+"/state");
+      }
+      saveSwitchs();
+      JsonArray& _sensores = getStoredSensors();
+      for(int i  = 0 ; i < _sensores.size() ; i++){ 
+        JsonObject& sensorJson = _sensores.get<JsonVariant>(i);  
+        JsonArray& functions = sensorJson.get<JsonVariant>("functions");
+        for(int i  = 0 ; i < functions.size() ; i++){
+          JsonObject& f = functions.get<JsonVariant>(i);
+          String uniqueName = f.get<String>("uniqueName");
+          sensorJson.set("mqttStateTopic",getBaseTopic()+"/"+uniqueName+"/state");
+        }     
+    }
+      saveSensors();
+      reloadMqttDiscoveryServices();
+}
 
 void connectToMqtt() {
   logger("[MQTT] Connecting to MQTT ["+getConfigJson().get<String>("mqttIpDns")+"]...");
@@ -94,7 +110,6 @@ void setupMQTT() {
       passwordMqtt =strdup(getConfigJson().get<String>("mqttPassword").c_str());
       mqttClient.setCredentials(usernameMqtt,passwordMqtt);
   }
- 
   mqttClient.setCleanSession(true);
   mqttClient.setServer(ipDnsMqtt, MQTT_BROKER_PORT);
   connectToMqtt();

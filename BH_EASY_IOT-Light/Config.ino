@@ -32,8 +32,28 @@ String getHostname(){
 }
 
 String normalize(String inputStr){
+  inputStr.toLowerCase();
   inputStr.trim();
-  inputStr.replace(" ","_");
+  inputStr.replace("_","");
+  inputStr.replace(".","");
+  inputStr.replace("/","");
+  inputStr.replace("\\","");
+  inputStr.replace("º","");
+  inputStr.replace("ª","");
+  inputStr.replace("ç","c");
+  inputStr.replace("á","a");
+  inputStr.replace("à","a");
+  inputStr.replace("é","e");
+  inputStr.replace("&","");
+  inputStr.replace("%","");
+  inputStr.replace("$","");
+  inputStr.replace("#","");
+  inputStr.replace("!","");
+  inputStr.replace("+","");
+  inputStr.replace("-","");
+  inputStr.replace(",","");
+  inputStr.replace("\"","");
+  inputStr.replace(" ","");
   return inputStr;
   }
 String getApName(){
@@ -179,7 +199,6 @@ JsonObject& saveMqtt(JsonObject& _config){
   configJson.set("mqttUsername",_config.get<String>("mqttUsername"));
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
-  rebuildSwitchMqttTopics(configJson.get<String>("homeAssistantAutoDiscoveryPrefix"),configJson.get<String>("nodeId"));
   rebuildSensorsMqttTopics();
   reloadMqttConfig();
   saveConfig();

@@ -1,85 +1,106 @@
 
-
 fauxmoESP fauxmo;
-void createHASwitchsComponents(){
-  JsonArray& _devices = getStoredSwitchs();
-  for(int i  = 0 ; i < _devices.size() ; i++){ 
-    JsonObject& switchJson = _devices[i];    
-    String _id = switchJson.get<String>("id");
-    String  _type = switchJson.get<String>("type");
-    String _class =switchJson.get<String>("class");
-    String _name =switchJson.get<String>("name");
-    String _mqttCommand =switchJson.get<String>("mqttCommandTopic");
-    String _mqttState =switchJson.get<String>("mqttStateTopic");
-    bool _retain =switchJson.get<bool>("mqttRetain");
-    String state = switchJson.get<bool>("stateControl") ? PAYLOAD_ON : PAYLOAD_OFF;
-    String commandTopic = _type.equals("sensor") ? "" : "\"command_topic\": \""+_mqttCommand+"\",";
-    String retain = _type.equals("sensor") ? "" : "\"retain\": false,";
-    if(!switchJson.get<bool>("discoveryDisabled")){
-      String prefix = getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
-      if(getConfigJson().get<String>("mqttIpDns").endsWith("bhonofre.pt")){
-        prefix = getConfigJson().get<String>("mqttUsername");
-        }
-      publishOnMqttQueue((prefix+"/"+_type+"/"+_id+"/config"),("{\"name\": \""+_name+"\", \""+(_type.equals("cover") ? "position_topic" : "state_topic")+"\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\", "+commandTopic+retain+"\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
-      if (String("light").equals(switchJson.get<String>("type"))){
-        fauxmo.removeDevice(_name.c_str());
-        fauxmo.addDevice(_name.c_str());
-      }
-    }
-   
-    subscribeOnMqtt(_mqttCommand.c_str());
-    if(_type.equals("cover")){
-       publishOnMqttQueue(switchJson.get<String>("mqttStateTopic").c_str(),String(switchJson.get<unsigned int>("positionControlCover")),true);
-    }else{
-      publishOnMqttQueue(switchJson.get<String>("mqttStateTopic").c_str(),switchJson.get<bool>("stateControl") ? PAYLOAD_ON : PAYLOAD_OFF,true);
-      }
-   }
-   
-}
-void startDiscovery(){
-   createHASwitchsComponents();
-   createHASensorComponents();
+
+void startAlexaDiscovery(){
    fauxmo.createServer(false);
     fauxmo.setPort(80); // required for gen3 devices
     fauxmo.enable(true);
     fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
         stateSwitchByName(String(device_name), state ? "ON" : "OFF");
     });
-  }
-void createHASensorComponents(){
-  JsonArray& sensorsJson = getStoredSensors();
-  for(int i  = 0 ; i < sensorsJson.size() ; i++){ 
-    JsonObject& sensorJson = sensorsJson.get<JsonVariant>(i);;   
-    String _id = sensorJson.get<String >("id");
-    String  _type = sensorJson.get<String>("type");
-    String _class =sensorJson.get<String>("class");
-    
-    String _name =sensorJson.get<String>("name");
-    JsonArray& functions = sensorJson.get<JsonVariant>("functions");
-     for(int i  = 0 ; i < functions.size() ; i++){
-        JsonObject& f = functions[i]; 
-        String _uniqueName =f.get<String>("uniqueName");
-        String _fname =f.get<String>("name");
-        String _unit =f.get<String>("unit");
-        String _mqttState =f.get<String>("mqttStateTopic");
-        bool _retain =f.get<bool>("mqttRetain");   
-        String unitStr = _class.equals("binary_sensor") ? "" : "\"unit_of_measurement\": \""+_unit+"\",";
-        String sensorClass = "\"device_class\": \""+_uniqueName+"\",";
-         if(!sensorJson.get<bool>("discoveryDisabled")){
-        publishOnMqttQueue((getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+_class+"/"+getConfigJson().get<String>("nodeId")+"/"+_class+"_"+_fname+"_"+_id+"/config"),("{\"name\": \""+_fname+"\","+unitStr+sensorClass+" \"state_topic\": \""+_mqttState+"\",\"availability_topic\": \""+getAvailableTopic()+"\",\"payload_available\":\"1\",\"payload_not_available\":\"0\"}"),true);
-         }  
-   } 
-  }
 }
+
+void reloadAlexaDiscoveryServices(){
+  JsonArray& _devices = getStoredSwitchs();
+      for(int i  = 0 ; i < _devices.size() ; i++){ 
+        JsonObject& switchJson = _devices[i];
+        String _name = switchJson.get<String>("name");
+        fauxmo.removeDevice(_name.c_str());
+        fauxmo.addDevice(_name.c_str());
+      }
+ }
+void reloadMqttDiscoveryServices(){
+     String ipMqtt = getConfigJson().get<String>("mqttIpDns");
+      if( ipMqtt == "")return;
+      String prefix =  getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
+      JsonArray& _devices = getStoredSwitchs();
+      for(int i  = 0 ; i < _devices.size() ; i++){ 
+        JsonObject& switchJson = _devices[i];
+        String _id = switchJson.get<String>("id");
+        String _name = switchJson.get<String>("name");
+        String type = switchJson.get<String>("type");
+        if(type.equals("cover")){
+          publishOnMqttQueue(prefix+"/cover/"+String(ESP.getChipId())+"/"+_id+"/config",createHaCover(switchJson),true); 
+          publishOnMqttQueue(prefix+"/cover/"+String(ESP.getChipId())+"/"+_id+"/config","", false); 
+          subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic")); 
+        }else if(type.equals("light")){
+          publishOnMqttQueue(prefix+"/light/"+String(ESP.getChipId())+"/"+_id+"/config",createHaLight(switchJson),true); 
+          publishOnMqttQueue(prefix+"/light/"+String(ESP.getChipId())+"/"+_id+"/config","", false); 
+          subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic")); 
+        }else if(type.equals("switch")){
+          publishOnMqttQueue(prefix+"/switch/"+String(ESP.getChipId())+"/"+_id+"/config",createHaSwitch(switchJson),true); 
+          publishOnMqttQueue(prefix+"/switch/"+String(ESP.getChipId())+"/"+_id+"/config","", false); 
+          subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic")); 
+        }
+      }
+      
+      JsonArray& _sensores = getStoredSensors();
+      for(int i  = 0 ; i < _sensores.size() ; i++){ 
+        JsonObject& sensorJson = _sensores.get<JsonVariant>(i);  
+        JsonArray& functions = sensorJson.get<JsonVariant>("functions");
+        for(int i  = 0 ; i < functions.size() ; i++){
+          JsonObject& f = functions.get<JsonVariant>(i);
+          String uniqueName = f.get<String>("uniqueName");
+        }     
+    }
+}
+
 void loopDiscovery(){
    fauxmo.handle();
-   }
-void reloadDiscovery(){
-  createHASwitchsComponents();
-  createHASensorComponents();
-
 }
 
-void removeComponentHaConfig(String oldPrefix,String oldNodeId, String _type, String _class, String _id){
-   publishOnMqtt((oldPrefix+"/"+_type+"/"+oldNodeId+"/"+_id+"/config"),"",true);
+String createHaSwitch(JsonObject& _switchJson){
+   String object = "";
+   JsonObject& switchJson = getJsonObject();
+   switchJson.set("name", _switchJson.get<String>("name"));
+   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
+   switchJson.set("state_topic",  _switchJson.get<String>("mqttStateTopic"));
+   switchJson.set("retain",  _switchJson.get<bool>("retain"));
+   switchJson.set("payload_on", String(PAYLOAD_ON));
+   switchJson.set("payload_off",  String(PAYLOAD_OFF));
+   switchJson.printTo(object);
+   return object;
+}
+String createHaLight(JsonObject& _switchJson){
+   String object = "";
+   JsonObject& switchJson = getJsonObject();
+   switchJson.set("name", _switchJson.get<String>("name"));
+   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
+   switchJson.set("state_topic",  _switchJson.get<String>("mqttStateTopic"));
+   switchJson.set("retain",  _switchJson.get<bool>("retain"));
+   switchJson.set("payload_on", String(PAYLOAD_ON));
+   switchJson.set("payload_off",  String(PAYLOAD_OFF));
+   switchJson.printTo(object);
+   return object;
+}
+String createHaCover(JsonObject& _switchJson){
+  String object = "";
+   JsonObject& switchJson = getJsonObject();
+   switchJson.set("name", _switchJson.get<String>("name"));
+   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
+   switchJson.set("state_topic",  _switchJson.get<String>("mqttStateTopic"));
+   switchJson.set("retain",  _switchJson.get<bool>("retain"));
+   switchJson.set("payload_open", String(PAYLOAD_OPEN));
+   switchJson.set("payload_close",  String(PAYLOAD_CLOSE));
+   switchJson.set("payload_stop",  String(PAYLOAD_STOP));
+   switchJson.printTo(object);
+   return object;
+}
+
+void removeFromAlexaDiscovery(String _name){
+  fauxmo.removeDevice(_name.c_str());
+}
+
+void removeFromHaDiscovery( String type, String _id){
+     publishOnMqttQueue(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix")+"/"+type+"/"+String(ESP.getChipId())+"/"+_id+"/config","", false); 
 }
