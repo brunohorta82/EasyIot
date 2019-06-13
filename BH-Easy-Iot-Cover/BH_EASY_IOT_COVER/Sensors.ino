@@ -30,6 +30,8 @@ typedef struct {
 std::vector<sensor_t> _sensors;
 
 const String sensorsFilename = "sensors.json";
+
+
 void removeSensor(String _id){
   int sensorFound = false;
   int index = 0;
@@ -45,8 +47,7 @@ void removeSensor(String _id){
      
     }
 
-  saveSensors();
-  applyJsonSensors();
+  persistSensorsFile(false);
 }
 JsonArray& getStoredSensors(){
   return sns;
@@ -89,6 +90,7 @@ void createFunctionArray(JsonArray& functionsJson,String _name, String _uniqueNa
     JsonObject& functionJson = functionsJson.createNestedObject();
       functionJson.set("name", _name);
       functionJson.set("uniqueName", _uniqueName);
+      functionJson.set("functionClass", _uniqueName);
       functionJson.set("unit", _unit);
       functionJson.set("type", _type);
       functionJson.set("mqttRetain", _retain);
@@ -176,8 +178,9 @@ void loopSensors(){
     }
     
 }
-JsonArray& saveSensor(String _id,JsonObject& _sensor){
-    bool sensorFound = false;
+JsonArray& storeSensor(JsonObject& _sensor){
+   bool sensorFound = false;
+   String _id = _sensor.get<String>("id");
   for (unsigned int i=0; i < sns.size(); i++) {
     JsonObject& sensorJson = sns.get<JsonVariant>(i);  
     if(sensorJson.get<String>("id").equals(_id)){
@@ -225,12 +228,14 @@ JsonArray& saveSensor(String _id,JsonObject& _sensor){
           
           sensorJson(id,_sensor.get<unsigned int>("gpio"),_sensor.get<bool>("disabled"),_sensor.get<String>("name"),  _sensor.get<unsigned int>("type"),functionsJson);
     }
-  saveSensors();
-  applyJsonSensors();
-  rebuildAllMqttTopics();
+    persistSensorsFile(true);
    return sns;
 }
-void saveSensors(){
+void persistSensorsFile(boolean rebuild ){
+  if(rebuild){
+     rebuildAllMqttTopics();
+      
+    }
    if(SPIFFS.begin()){
       logger("[SENSORS] Open "+sensorsFilename);
       File rFile = SPIFFS.open(sensorsFilename,"w+");
@@ -244,7 +249,10 @@ void saveSensors(){
      logger("[SENSORS] Open file system Error!");
   }
   SPIFFS.end();
+  applyJsonSensors();
   logger("[SENSORS] New sensors config loaded.");
+ 
+  
 }
 void loadStoredSensors(){
   bool loadDefaults = false;

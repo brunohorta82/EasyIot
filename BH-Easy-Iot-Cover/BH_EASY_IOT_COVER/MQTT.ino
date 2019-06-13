@@ -45,11 +45,19 @@ void rebuildAllMqttTopics(){
       for(int i  = 0 ; i < _devices.size() ; i++){ 
         JsonObject& switchJson = _devices[i];
         String _id = switchJson.get<String>("id");
+        String type = switchJson.get<String>("type");
         String _class = switchJson.get<String>("class");
         switchJson.set("mqttCommandTopic",getBaseTopic()+"/"+_class+"/"+_id+"/set");
         switchJson.set("mqttStateTopic",getBaseTopic()+"/"+_class+"/"+_id+"/state");
+        if(type.equals("cover")){
+          switchJson.set("mqttPositionStateTopic",getBaseTopic()+"/"+_class+"/"+_id+"/position");
+          switchJson.set("mqttPositionCommandTopic",getBaseTopic()+"/"+_class+"/"+_id+"/setposition");
+          switchJson.set("mqttPositionStateTopic",getBaseTopic()+"/"+_class+"/"+_id+"/position");
+          switchJson.set("mqttTiltStateTopic",getBaseTopic()+"/"+_class+"/"+_id+"/tiltstate");
+          switchJson.set("mqttTiltCommandTopic",getBaseTopic()+"/"+_class+"/"+_id+"/tilt");
+        }
       }
-      saveSwitchs();
+      
       JsonArray& _sensores = getStoredSensors();
       for(int i  = 0 ; i < _sensores.size() ; i++){ 
         JsonObject& sensorJson = _sensores.get<JsonVariant>(i);  
@@ -60,8 +68,8 @@ void rebuildAllMqttTopics(){
           sensorJson.set("mqttStateTopic",getBaseTopic()+"/"+uniqueName+"/state");
         }     
     }
-      saveSensors();
-      reloadMqttDiscoveryServices();
+    logger("[MQTT] REBUILD TOPICS OK"); 
+    reloadMqttDiscoveryServices();
 }
 
 void connectToMqtt() {

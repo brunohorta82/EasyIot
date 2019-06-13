@@ -15,5 +15,5 @@
 #include <Ticker.h>
 #include <dht_nonblocking.h> // https://github.com/brunohorta82/DHT_nonblocking
 #include <OneWire.h> // Install on Arduino IDE Library manager 
-#include <Bounce2.h> // https://github.com/thomasfredericks/Bounce2
 #include <vector>
+#include <DebounceEvent.h> //https://github.com/xoseperez/debounceevent

@@ -59,7 +59,15 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   });
        server.on("/state-switch", HTTP_POST, [](AsyncWebServerRequest *request){
    if(request->hasArg("id") && request->hasArg("state")){
-    stateSwitch(request->arg("id"),request->arg("state"));
+        JsonArray& _devices = getStoredSwitchs();
+      for(int i  = 0 ; i < _devices.size() ; i++){ 
+        JsonObject& switchJson = _devices[i];
+        if(switchJson.get<String>("id").equals(request->arg("id"))){
+          stateSwitch(switchJson,request->arg("state"));
+          break;
+        }
+      }
+    
    } 
     request->send(200);
   });
@@ -98,10 +106,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   request->send(response);
   });
    
-   server.on("/try-me", HTTP_GET, [](AsyncWebServerRequest *request){
-    tryMe();
-    request->send(200);
-   });
    server.on("/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request){
    AsyncResponseStream *response = request->beginResponseStream("application/json");
   if(!request->host().equals("192.168.4.1") && WiFi.getMode() & WIFI_AP){
@@ -136,20 +140,6 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
    request->send(response);
    });
 
-   server.on("/toggle-switch", HTTP_POST, [](AsyncWebServerRequest *request){
-   if(request->hasArg("id")){
-    toogleSwitch(request->arg("id"));
-   } 
-    request->send(200);
-  });
-
-  
-  server.on("/control-switch", HTTP_GET, [](AsyncWebServerRequest *request){
-   if(request->hasArg("id")){
-    toogleSwitch(request->arg("id"));
-   } 
-    request->send(200);
-  });
    server.on("/remove-relay", HTTP_GET, [](AsyncWebServerRequest *request){
    if(request->hasArg("id")){
     removeRelay(request->arg("id"));
@@ -197,7 +187,7 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
   if (jsonObj.success()) {
  
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            saveSwitch( jsonObj).printTo(*response);
+            storeSwitch( jsonObj).printTo(*response);
             request->send(response);
       
     } else {
@@ -294,7 +284,7 @@ server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
         if(request->hasArg("id")){
           String id = request->arg("id");
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            saveSensor(id, jsonObj).printTo(*response);
+            storeSensor( jsonObj).printTo(*response);
             request->send(response);
         }else{
           logger("[WEBSERVER] ID NOT FOUND");

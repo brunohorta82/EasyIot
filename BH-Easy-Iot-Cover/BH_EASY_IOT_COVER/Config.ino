@@ -117,6 +117,7 @@ void loadStoredConfiguration(){
     cFile = SPIFFS.open(CONFIG_FILENAME,"w+"); 
     configJson.set("nodeId",DEFAULT_NODE_ID);
     configJson.set("homeAssistantAutoDiscoveryPrefix", "homeassistant");
+    configJson.set("homeAssistantAutoDiscoveryPrefixOld", "homeassistant");
     configJson.set("hostname",getHostname());
     configJson.set("mqttPort",1883);
     configJson.set("type", String(FACTORY_TYPE));
@@ -124,8 +125,6 @@ void loadStoredConfiguration(){
     configJson.set("apSecret", AP_SECRET);
     configJson.set("hardware", HARDWARE);
     configJson.set("configTime", 0L);
-    configJson.set("wifiSSID","VOID SOFTWARE");
-    configJson.set("wifiSecret", "blackiscool");
     configJson.set("firmware", FIRMWARE_VERSION);
     configJson.printTo(cFile);
   }
@@ -143,8 +142,6 @@ JsonObject& saveNode(JsonObject& nodeConfig){
     nodeId.replace(" ","");
     String oldNodeId = configJson.get<String>("nodeId");
     configJson.set("nodeId",nodeId);
-  
-    rebuildAllMqttTopics();
     reloadMqttConfig();
     
     
@@ -182,8 +179,6 @@ JsonObject& adoptControllerConfig(JsonObject& _config, String configkey){
   
   configJson.set("homeAssistantAutoDiscoveryPrefix",_config.get<String>("homeAssistantAutoDiscoveryPrefix"));
   
-  rebuildAllMqttTopics();
-  
   reloadMqttConfig();
   saveConfig();
   return configJson;
@@ -204,12 +199,13 @@ JsonObject& saveMqtt(JsonObject& _config){
   configJson.set("mqttPassword",_config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded",_config.get<String>("mqttEmbedded"));
   reloadMqttConfig();
-  rebuildAllMqttTopics();
   saveConfig();
   return configJson;
 } 
 
 void saveConfig(){
+    rebuildAllMqttTopics();
+    logger("[MQTT] REBUILD TOPICS OK");
    if(SPIFFS.begin()){
       File rFile = SPIFFS.open(CONFIG_FILENAME,"w+");
       if(!rFile){
@@ -224,10 +220,6 @@ void saveConfig(){
   }
   SPIFFS.end();
   logger("[CONFIG] New config stored.");
-  
-}
-
-void releaseGpio(int gpio){
   
 }
 

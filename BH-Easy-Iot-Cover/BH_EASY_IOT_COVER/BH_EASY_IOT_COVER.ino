@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "Libs.h"
 #include "Config.h"
-Timing timerStats;
+
 
 void checkServices() {
    if (laodDefaults) {
@@ -52,28 +52,16 @@ void setup() {
     loadStoredSensors();
     setupWiFi();
     setupWebserver();
-    timerStats.begin(0);
     startAlexaDiscovery();
     reloadAlexaDiscoveryServices();
     
 }
-
-void stats() {
-    if (timerStats.onTimeout(60000)) {
-        publishOnMqtt(getBaseTopic() + "/stats", String(ESP.getFreeHeap(), DEC), false);
-        if (WiFi.isConnected() && (WiFi.getMode() & WIFI_AP)) {
-          dissableAP();  
-          logger("[WI-FI] AUTO TURN OFF AP") ;
-        }
-        }
-    }
 void loop() {
     MDNS.update();
     if (autoUpdate) {
         autoUpdate = false;
         actualUpdate();
     }
-    stats();
     if (adopted) {
         saveConfig();
         shouldReboot = true;

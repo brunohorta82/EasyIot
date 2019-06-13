@@ -45,25 +45,82 @@ JsonArray& saveRelay(String _id,JsonObject& _relay){
   applyJsonRelays();
   return rls;
 }
- 
-void turnOn(JsonObject& relay) {
+ void openAction(JsonObject& switchJson){
+  int gpioOpenClose =switchJson.get<unsigned int>("gpioControlOpenClose");
+  int gpioStop = switchJson.get<unsigned int>("gpioControlStop");
+  delay(10);
+  _turnOff(getRelay(gpioStop));  
+  delay(50);
+  logger("[SWITCH] OPEN");
+  _turnOn( getRelay(gpioOpenClose));
+  delay(50);
+  _turnOn( getRelay(gpioStop));
+  switchJson.set("positionControlCover",100);
+  switchJson.set("stateControlCover","OPEN");
+  switchJson.set("statePayload","open");
+  publishState( switchJson);  
+}
+
+void closeAction(JsonObject& switchJson){
+  int gpioOpenClose =switchJson.get<unsigned int>("gpioControlOpenClose");
+  int gpioStop = switchJson.get<unsigned int>("gpioControlStop");
+  delay(10);
+  _turnOff(getRelay(gpioStop));
+  delay(50);  
+  logger("[SWITCH] CLOSE");
+  _turnOff(getRelay(gpioOpenClose));
+  delay(50);
+  _turnOn( getRelay(gpioStop));
+  switchJson.set("positionControlCover",0);
+  switchJson.set("stateControlCover","CLOSE");
+  switchJson.set("statePayload","closed");
+  publishState( switchJson);  
+}
+
+void stopAction(JsonObject& switchJson){
+  int gpioOpenClose =switchJson.get<unsigned int>("gpioControlOpenClose");
+  int gpioStop = switchJson.get<unsigned int>("gpioControlStop");
+  logger("[SWITCH] STOP.");
+  _turnOff(getRelay(gpioStop)); 
+  switchJson.set("positionControlCover",50); 
+  switchJson.set("stateControlCover","STOP");
+  switchJson.set("statePayload","");
+  
+  publishState( switchJson);  
+}
+
+void turnOn( JsonObject& switchJson) {
+  JsonObject& relay = getRelay(switchJson.get<unsigned int>("gpioControl")); 
+  bool state =_turnOn(relay); 
+  switchJson.set("stateControl",state);
+  switchJson.set("statePayload",state ? "ON" : "OFF");
+  publishState( switchJson);   
+}
+
+void turnOff( JsonObject& switchJson) {
+  JsonObject& relay = getRelay(switchJson.get<unsigned int>("gpioControl"));
+    bool state =_turnOff(relay); 
+  switchJson.set("stateControl",state);
+  switchJson.set("statePayload",state ? "ON" : "OFF");
+  publishState( switchJson);  
+}
+bool _turnOn( JsonObject& relay) {
   int gpio = relay.get<unsigned int>("gpio");
   bool inverted = relay.get<bool>("inverted");
   String name = relay.get<String>("name");
   digitalWrite( gpio,inverted ? LOW : HIGH);
-  switchNotify(gpio, inverted ? !digitalRead(gpio) : digitalRead(gpio) );
   logger("[RELAY "+name+" GPIO: "+String(gpio)+"] ON");
+  return inverted ? !digitalRead(gpio) : digitalRead(gpio);
 }
 
-void turnOff(JsonObject& relay) {
+bool _turnOff( JsonObject& relay) {
   int gpio = relay.get<unsigned int>("gpio");
-  bool inverted = relay.get<bool>("inverted");
+   bool inverted = relay.get<bool>("inverted");
   String name = relay.get<String>("name");
   digitalWrite( gpio,inverted ? HIGH : LOW);
-  switchNotify(gpio, inverted ? !digitalRead(gpio) : digitalRead(gpio) );
   logger("[RELAY "+name+" GPIO: "+String(gpio)+"] OFF");
+  return inverted ? !digitalRead(gpio) : digitalRead(gpio);
 }
-
 void initNormal(bool state,int gpio){
   if(state){
     turnOn(getRelay(gpio));
