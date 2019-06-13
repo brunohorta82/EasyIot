@@ -3,6 +3,7 @@ const endpoint = {
 };
 
 var switchs;
+
 function toggleSwitch(id) {
     const someUrl = endpoint.baseUrl + "/toggle-switch?id=" + id;
     $.ajax({
@@ -160,7 +161,7 @@ function loadDevice(func, e, next) {
 function fillConfig(response) {
     $("#firmwareVersion").text(response.firmware);
     $(".bh-model").text(response.hardware);
-        $(".bh-onofre-item").removeClass("hide");
+    $(".bh-onofre-item").removeClass("hide");
     $("#version_lbl").text(response.firmware);
     $('input[name="nodeId"]').val(response.nodeId);
     $('input[name="mqttIpDns"]').val(response.mqttIpDns);
@@ -185,12 +186,7 @@ function toggleActive(menu) {
     $('.sidebar-menu').find('li').removeClass('active');
     $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
     $(".content").load(menu + ".html", function () {
-        if (menu === "dashboard") {
-            loadConfig(function () {
-                    loadDevice(refreshDashboard, "switchs");
-
-            })
-        } else if (menu === "devices") {
+        if (menu === "devices") {
             loadDevice(fillSwitches, "switchs", function () {
                 loadDevice(fillRelays, "relays", function () {
                     loadDevice(fillSensors, "sensors");
@@ -229,13 +225,13 @@ function fillRelays(payload) {
 
 function buildSwitch(obj) {
     $('#switch_config').append("<div id=\"bs_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
-        "        <div style=\"margin-bottom: 0\" class=\"info-box bg-aqua\"><span class=\"info-box-icon\">" +
-        "        <i id=\"icon_" + obj.id + "\" class=\"fa " + obj.icon + " false\"></i></span>" +
+        "        <div style=\"margin-bottom: 0\" class=\"info-box bg-aqua\">" +
+
         "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
         "<div  id=\"on_off_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
         "                <button onclick='toggleSwitch(\"" + obj.id + "\");' id=\"btn_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
         "</div><div  id=\"open_close_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
-        "<button onclick='stateSwitch(\"" + obj.id + "\",\"OPEN\");' id=\"btn_up_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >ABRIR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"STOP\");' id=\"btn_stop_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >PARAR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"CLOSE\");' id=\"btn_down_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >FECHAR</button>"+
+        "<button onclick='stateSwitch(\"" + obj.id + "\",\"OPEN\");' id=\"btn_up_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >ABRIR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"STOP\");' id=\"btn_stop_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >PARAR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"CLOSE\");' id=\"btn_down_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >FECHAR</button>" +
         "            </div></div>" +
         "        </div>" +
         "        <div style=\"font-size: 10px;  border: 0px solid #08c; border-radius: 0\" class=\"box\">" +
@@ -250,11 +246,10 @@ function buildSwitch(obj) {
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">TIPO</span></td>" +
         "                        <td><select onchange=\"switchTypeOptions('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"type_" + obj.id + "\">" +
-        "                            <option " + (obj.type === 'switch' ? 'selected' : '') + " value=\"switch\">Genérico</option>" +
+        "                            <option " + (obj.type === 'switch' ? 'selected' : '') + " value=\"switch\">Interruptor</option>" +
         "                            <option " + (obj.type === 'light' ? 'selected' : '') + " value=\"light\">Luz</option>" +
         "                            <option " + (obj.type === 'cover' ? 'selected' : '') + " value=\"cover\">Estore</option>" +
         "                            <option " + (obj.type === 'lock' ? 'selected' : '') + " value=\"lock\">Fechadura</option>" +
-        "                            <option " + (obj.type === 'sensor' ? 'selected' : '') + " value=\"sensor\">Sensor</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
@@ -412,8 +407,6 @@ function buildSwitch(obj) {
     );
 
 
-
-
 }
 
 function stateSwitch(id, state) {
@@ -452,21 +445,9 @@ function switchTypeOptions(e) {
         $('.generic_type_' + e).addClass("hide");
         $('.cover_type_' + e).removeClass("hide");
     }
-    $('#icon_' + e).removeClass("fa-window-maximize").removeClass("fa-lightbulb-o").removeClass("fa-plug").removeClass("fa-lock").removeClass("fa-circle-o");
 
     switchModeRules(e);
-    if (type === "cover") {
-        $('#icon_' + e).addClass("fa-window-maximize");
-    } else if (type === "light") {
-        $('#icon_' + e).addClass("fa-lightbulb-o");
-    } else if (type === "switch") {
-        $('#icon_' + e).addClass("fa-plug");
-    } else if (type === "lock") {
-        $('#icon_' + e).addClass("fa-lock");
-    } else if (type === "sensor") {
-        console.log(type);
-        $('#icon_' + e).addClass("fa-circle-o");
-    }
+
 }
 
 function switchModeRules(e) {
@@ -510,8 +491,8 @@ function switchModeRules(e) {
 function buildRelay(obj) {
 
     $('#relay_config').append("<div id=\"rl_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
-        "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\"><span class=\"info-box-icon\">" +
-        "        <i id=\"icon_" + obj.id + "\" class=\"fa " + obj.icon + " false off\"></i></span>" +
+        "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\">" +
+        "       " +
         "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
         "            </div>" +
         "        </div>" +
@@ -556,8 +537,8 @@ function buildRelay(obj) {
 
 function buildSensor(obj) {
     $('#sensor_config').append("<div id=\"sn_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
-        "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\"><span class=\"info-box-icon\">" +
-        "        <i id=\"icon_" + obj.id + "\" class=\"fa " + obj.icon + " false off\"></i></span>" +
+        "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\">" +
+
         "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
         "            </div>" +
         "        </div>" +
@@ -739,6 +720,7 @@ function buildSensorPirTemplate() {
     };
     buildSensor(sensor);
 }
+
 function buildSensorLdrTemplate() {
     if ($('#sn_0').length > 0) {
         return
@@ -761,6 +743,7 @@ function buildSensorLdrTemplate() {
     };
     buildSensor(sensor);
 }
+
 function buildRelayTemplate() {
     if ($('#rl_0').length > 0) {
         return
@@ -785,7 +768,7 @@ function saveSwitch(id) {
     } else {
         mode = $('#modec_' + id).val();
     }
-    let device = [{
+    let device = {
         "id": id,
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
@@ -800,8 +783,7 @@ function saveSwitch(id) {
         "gpioControlOpenClose": $('#relay_open_' + id).val(),
         "gpioControlStop": $('#relay_close_' + id).val(),
         "master": true
-        // "master": $('#master_' + id).val()
-    }];
+    };
 
     storeDevice(id, device, "save-switch", "switchs", fillSwitches);
 }
@@ -825,17 +807,17 @@ function saveSensor(id) {
 
     if (type === '0' || type === '1' || type === '2') {
         functions = [{
-            "name": temp, "uniqueName": "temperature", 
+            "name": temp, "uniqueName": "temperature",
             "unit": "ºC",
             "type": 1
         }, {
-            "name": hum, "uniqueName": "humidity", 
+            "name": hum, "uniqueName": "humidity",
             "unit": "%",
             "type": 2
         }];
     } else if (type === '90') {
         functions = [{
-            "name": temp, "uniqueName": "temperature", 
+            "name": temp, "uniqueName": "temperature",
             "unit": "ºC",
             "type": 1
         }];
@@ -845,7 +827,7 @@ function saveSensor(id) {
             "unit": "",
             "type": 4
         }];
-    }else if ('21' === type) {
+    } else if ('21' === type) {
         functions = [{
             "name": ldr, "uniqueName": "light_sensor",
             "unit": "",
@@ -914,25 +896,6 @@ function saveMqtt() {
     storeConfig("save-mqtt", _config);
 }
 
-
-
-function refreshDashboard(payload) {
-    if (!payload) return;
-    let devices = $('#devices');
-    devices.empty();
-    for (let obj of payload) {
-        if (obj.type === "cover") {
-            devices.append('<div class="col-lg-4 col-md-6 col-xs-12"><div style="min-height: 100px;" class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span>' +
-                '<button onclick="stateSwitch(\'' + obj["id"] + '\',\'OPEN\');" id="btn_up_' + obj["id"] + '" style="float: right" class="btn btn-primary" >ABRIR</button>' +
-                '<button onclick="stateSwitch(\'' +obj["id"] + '\',\'STOP\');" id="btn_stop_' + obj["id"] + '" style="float: right" class="btn btn-primary" >PARAR</button>' +
-                '<button onclick="stateSwitch(\'' +obj["id"] + '\',\'CLOSE\');" id="btn_down_' + obj["id"] + '" style="float: right" class="btn btn-primary" >FECHAR</button>' +
-                '</div></div></div>');
-        } else if (obj.type === "light" || obj.type === "switch") {
-            devices.append('<div class="col-lg-4  col-xs-12"><div class="info-box bg-aqua"><div class="info-box-content"><span class="info-box-text">' + obj["name"] + '</span>' +
-                '<button onclick="toggleSwitch(\''+obj["id"]+'\')" id="btn_' + obj["id"] + '" style="float: right" class="btn btn-primary" >' + (obj.stateControl ? "ON" : "OFF") + '</button></div></div></div>');
-        }
-    }
-}
 
 function updateSwitch(obj) {
     if (!obj) return;
@@ -1102,6 +1065,6 @@ $(document).ready(function () {
 
     });
     wifiStatus();
-    toggleActive("dashboard");
+    toggleActive("node");
     setInterval(wifiStatus, 3000);
 });

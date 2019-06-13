@@ -140,7 +140,7 @@ void loadStoredConfiguration()
       configJson.set("apSecret", AP_SECRET);
       configJson.set("hardware", HARDWARE);
       configJson.set("configTime", 0L);
-      configJson.set("firmware", FIRMWARE_VERSION);
+      configJson.set("firmware",FIRMWARE_VERSION);
       configJson.printTo(cFile);
     }
     SPIFFS.end();

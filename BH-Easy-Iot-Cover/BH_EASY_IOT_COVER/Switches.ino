@@ -75,12 +75,8 @@ void callback(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
   }
 }
 
-JsonArray &storeSwitch(JsonArray &_switchs)
+JsonObject &storeSwitch(JsonObject &_switch)
 {
-
-  for (unsigned int s = 0; s < _switchs.size(); s++)
-  {
-    JsonObject &_switch = _switchs.get<JsonVariant>(s);
     int switchFound = false;
     String type = _switch.get<String>("type");
     String _id = _switch.get<String>("id");
@@ -121,12 +117,15 @@ JsonArray &storeSwitch(JsonArray &_switchs)
       String _name = _switch.get<String>("name");
       String _id = normalize(_name);
       _switch.set("id", _id);
+      _switch.set("class", "switch");
       String typeControl = _switch.get<String>("typeControl");
-      sws.add(_switch);
+      String sw = "";
+      _switch.printTo(sw);
+      sws.add(getJsonObject(sw.c_str()));
     }
-  }
+  
   persistSwitchsFile(true);
-  return sws;
+  return _switch;
 }
 
 void coverAutoStop(int gpioStop)
@@ -226,6 +225,7 @@ void publishState(JsonObject &switchJson)
   publishOnEventSource("switch", swtr);
   if (switchJson.get<String>("type").equals("cover"))
   {
+    publishOnMqttQueue(switchJson.get<String>("mqttStateTopic").c_str(), switchJson.get<String>("stateControlCover"), switchJson.get<bool>("retain"));
     publishOnMqtt(switchJson.get<String>("mqttPositionStateTopic").c_str(), switchJson.get<String>("positionControlCover"), switchJson.get<bool>("retain"));
   }
   else

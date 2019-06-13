@@ -30,11 +30,6 @@ void setupWebserver()
     request->send(200, "application/json", "{\"result\":\"OK\"}");
   });
 
-  server.on("/dashboard.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", dashboard_html, sizeof(dashboard_html));
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response);
-  });
 
   server.on("/firmware.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", firmware_html, sizeof(firmware_html));
@@ -188,7 +183,7 @@ void setupWebserver()
   });
 
   AsyncCallbackJsonWebHandler *handlerSwitch = new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant &json) {
-    JsonArray &jsonObj = json.as<JsonArray>();
+    JsonObject& jsonObj = json.as<JsonObject>();
     if (jsonObj.success())
     {
 
