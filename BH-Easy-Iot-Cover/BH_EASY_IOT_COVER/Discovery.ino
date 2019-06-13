@@ -111,7 +111,6 @@ String createHaSensor(JsonObject &_sensorJson)
   JsonObject &sensorJson = getJsonObject();
   sensorJson.set("name", _sensorJson.get<String>("name"));
   sensorJson.set("state_topic", _sensorJson.get<String>("mqttStateTopic"));
-  sensorJson.set("retain", _sensorJson.get<bool>("retain"));
   sensorJson.set("unit_of_measurement", _sensorJson.get<String>("unit"));
   sensorJson.set("device_class", _sensorJson.get<String>("functionClass"));
   sensorJson.printTo(object);
@@ -123,7 +122,6 @@ String createHaBinarySensor(JsonObject &_sensorJson)
   JsonObject &sensorJson = getJsonObject();
   sensorJson.set("name", _sensorJson.get<String>("name"));
   sensorJson.set("state_topic", _sensorJson.get<String>("mqttStateTopic"));
-  sensorJson.set("retain", _sensorJson.get<bool>("retain"));
   sensorJson.set("payload_on", String(PAYLOAD_ON));
   sensorJson.set("payload_off", String(PAYLOAD_OFF));
   sensorJson.set("device_class", "opening");

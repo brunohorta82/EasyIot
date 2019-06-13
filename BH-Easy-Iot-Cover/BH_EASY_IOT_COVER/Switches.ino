@@ -28,13 +28,17 @@ void callback(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
   for (unsigned int i = 0; i < sws.size(); i++)
   {
     JsonObject &switchJson = sws.get<JsonVariant>(i);
-    if (switchJson.get<unsigned int>("gpio") == gpio)
-    {
-      if (event == EVENT_RELEASED)
-      {
-        int currentStatePool = switchJson.get<unsigned int>("currentStatePool");
-        stateSwitch(switchJson, statesPool[currentStatePool % 4]);
-        switchJson.set("currentStatePool", currentStatePool + 1);
+    if (switchJson.get<unsigned int>("gpio") == gpio){
+        if(switchJson.get<String>("type").equals("cover")){
+          if (event == EVENT_RELEASED){
+            int currentStatePool = switchJson.get<unsigned int>("currentStatePool");
+            stateSwitch(switchJson, statesPool[currentStatePool % 4]);
+            switchJson.set("currentStatePool", currentStatePool + 1);
+          }
+        }else if(switchJson.get<String>("type").equals("light") || switchJson.get<String>("type").equals("switch")){
+        if (event == EVENT_CHANGED || event == EVENT_RELEASED){
+          stateSwitch(switchJson, switchJson.get<bool>("stateControl") ? "OFF" : "ON");
+        }
       }
     }
     else if (switchJson.get<unsigned int>("gpioOpen") == gpio)
@@ -179,11 +183,11 @@ void applyJsonSwitchs()
   {
     JsonObject &switchJson = sws.get<JsonVariant>(i);
     uint8_t mode = BUTTON_DEFAULT_HIGH;
-    if (switchJson.get<unsigned int>("mode") == OPEN_CLOSE_SWITCH)
+    if (switchJson.get<unsigned int>("mode") == OPEN_CLOSE_SWITCH || switchJson.get<unsigned int>("mode") == BUTTON_SWITCH)
     {
       mode = mode | BUTTON_SWITCH;
     }
-    else if (switchJson.get<unsigned int>("mode") == OPEN_CLOSE_PUSH)
+    else if (switchJson.get<unsigned int>("mode") == OPEN_CLOSE_PUSH || switchJson.get<unsigned int>("mode") == BUTTON_PUSH)
     {
       mode = mode | BUTTON_PUSHBUTTON;
     }
@@ -280,7 +284,12 @@ void loadStoredSwitchs()
     {
       logger("[SWITCH] Apply default config...");
       cFile = SPIFFS.open(switchsFilename, "w+");
-      sws.add(getJsonObject(COVER_SWITCH));
+      if(String(FACTORY_TYPE).equals("cover")){
+        sws.add(getJsonObject(COVER_SWITCH));
+      }else if(String(FACTORY_TYPE).equals("light")){
+        sws.add(getJsonObject(LIGHT_ONE));
+        sws.add(getJsonObject(LIGHT_TWO));
+       }
       sws.printTo(cFile);
       applyJsonSwitchs();
       cFile.close();

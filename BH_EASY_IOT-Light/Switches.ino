@@ -70,18 +70,22 @@ JsonArray& saveSwitch(JsonArray& _switchs){
         switchJson.set("gpioControlClose",_switch.get<unsigned int>("gpioControlClose"));
        }
       
+      String mqttCommand = MQTT_COMMAND_TOPIC_BUILDER(_id,SWITCH_DEVICE);
+      switchJson.set("mqttCommandTopic",mqttCommand);
+      switchJson.set("mqttStateTopic",MQTT_STATE_TOPIC_BUILDER(_id,SWITCH_DEVICE));
+      subscribeOnMqtt(mqttCommand);
     }
   }
   if(!switchFound){
       String _name = _switch.get<String>("name");
       String _id = normalize(_name);
       String typeControl = _switch.get<String>("typeControl");
-      switchJson(_id,_switch.get<unsigned int>("gpio"),_switch.get<unsigned int>("gpioOpenClose"),_switch.get<unsigned int>("gpio"),typeControl,_switch.get<unsigned int>("gpioControl"),_switch.get<unsigned int>("gpioControlOpen"),_switch.get<unsigned int>("gpioControlClose"),INIT_STATE_OFF,_name, _switch.get<bool>("pullup"),INIT_STATE_OFF,  _switch.get<unsigned int>("mode"), _switch.get<bool>("master"),  _switch.get<String>("type"));
+      switchJson(_id,_switch.get<unsigned int>("gpio"),_switch.get<unsigned int>("gpioOpenClose"),_switch.get<unsigned int>("gpio"),typeControl,_switch.get<unsigned int>("gpioControl"),_switch.get<unsigned int>("gpioControlOpen"),_switch.get<unsigned int>("gpioControlClose"),INIT_STATE_OFF,_name, _switch.get<bool>("pullup"),INIT_STATE_OFF,  _switch.get<unsigned int>("mode"), _switch.get<bool>("master"), MQTT_STATE_TOPIC_BUILDER(_id,SWITCH_DEVICE), MQTT_COMMAND_TOPIC_BUILDER(_id,SWITCH_DEVICE), _switch.get<String>("type"));
   }
   }
   saveSwitchs();
   applyJsonSwitchs();
-  reloadDiscovery();
+ reloadDiscovery();
   return sws;
  }
  
@@ -421,7 +425,7 @@ void saveSwitchs(){
   logger("[SWITCH] New switch config loaded.");
 }
 
-void switchJson(String _id,int _gpio ,int _gpioOpen ,int _gpioClose ,String _typeControl, int _gpioControl,int _gpioControlOpen,int _gpioControlClose, bool _stateControl,  String _name, bool _pullup, bool _state, int _mode, bool _master,String _type){
+void switchJson(String _id,int _gpio ,int _gpioOpen ,int _gpioClose ,String _typeControl, int _gpioControl,int _gpioControlOpen,int _gpioControlClose, bool _stateControl,  String _name, bool _pullup, bool _state, int _mode, bool _master, String _mqttStateTopic, String _mqttCommandTopic, String _type){
     JsonObject& switchJson =  getJsonObject();
       switchJson.set("id", _id);
       switchJson.set("gpio", _gpio);
@@ -435,6 +439,8 @@ void switchJson(String _id,int _gpio ,int _gpioOpen ,int _gpioClose ,String _typ
       }
       switchJson.set("typeControl", _typeControl);
       switchJson.set("stateControl", _stateControl);
+      switchJson.set("mqttStateTopic", _mqttStateTopic);
+      switchJson.set("mqttCommandTopic", _mqttCommandTopic);
       switchJson.set("mqttRetain", true);
       switchJson.set("master", _master);
       switchJson.set("name", _name);
@@ -449,6 +455,7 @@ void rebuildSwitchMqttTopics( String oldPrefix,String oldNodeId){
       bool store = false;
       JsonArray& _devices = getStoredSwitchs();
       for(int i  = 0 ; i < _devices.size() ; i++){ 
+        store = true;
       JsonObject& switchJson = _devices[i];
       removeComponentHaConfig(oldPrefix,oldNodeId,switchJson.get<String>("type"),switchJson.get<String>("class"),switchJson.get<String>("id"));      
       String id = switchJson.get<String>("id");
@@ -457,8 +464,11 @@ void rebuildSwitchMqttTopics( String oldPrefix,String oldNodeId){
       switchJson.set("mqttStateTopic",MQTT_STATE_TOPIC_BUILDER(id,SWITCH_DEVICE));
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
+    if(store){
       saveSwitchs();
       reloadDiscovery(); 
+      
+    }
   }
 
 

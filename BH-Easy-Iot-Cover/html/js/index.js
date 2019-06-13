@@ -4,25 +4,6 @@ const endpoint = {
 
 var switchs;
 
-function toggleSwitch(id) {
-    const someUrl = endpoint.baseUrl + "/toggle-switch?id=" + id;
-    $.ajax({
-        type: "POST",
-        url: someUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-
-        },
-        error: function () {
-
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
-}
-
 function removeDevice(e, id, func) {
     const someUrl = endpoint.baseUrl + "/" + e + "?id=" + id;
     $.ajax({
@@ -223,13 +204,17 @@ function fillRelays(payload) {
     }
 }
 
+function btnSwitch(e) {
+    stateSwitch($(e).attr("data-id"), $(e).text() === "ON" ? "OFF" : "ON");
+}
+
 function buildSwitch(obj) {
     $('#switch_config').append("<div id=\"bs_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
         "        <div style=\"margin-bottom: 0\" class=\"info-box bg-aqua\">" +
 
         "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
         "<div  id=\"on_off_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
-        "                <button onclick='toggleSwitch(\"" + obj.id + "\");' id=\"btn_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
+        "                <button onclick='btnSwitch(this)' id=\"btn_" + obj.id + "\" data-id=\"" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
         "</div><div  id=\"open_close_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
         "<button onclick='stateSwitch(\"" + obj.id + "\",\"OPEN\");' id=\"btn_up_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >ABRIR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"STOP\");' id=\"btn_stop_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >PARAR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"CLOSE\");' id=\"btn_down_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >FECHAR</button>" +
         "            </div></div>" +
