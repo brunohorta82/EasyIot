@@ -20,71 +20,77 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-
 #include "Libs.h"
 #include "Config.h"
 
+void checkServices()
+{
+  if (laodDefaults)
+  {
+    SPIFFS.format();
+    shouldReboot = true;
+  }
 
-void checkServices() {
-   if (laodDefaults) {
-        SPIFFS.format();
-        shouldReboot = true;
-    }
-
-    if (wifiUpdated) {
-        saveConfig();
-        reloadWiFiConfig();
-        wifiUpdated = false;
-    }
-    if (needScan()) {
-        scanNewWifiNetworks();
-    }
-    if (reloadMqttConfiguration) {
-        setupMQTT();
-    }
+  if (wifiUpdated)
+  {
+    saveConfig();
+    reloadWiFiConfig();
+    wifiUpdated = false;
+  }
+  if (needScan())
+  {
+    scanNewWifiNetworks();
+  }
+  if (reloadMqttConfiguration)
+  {
+    setupMQTT();
+  }
 }
 
-void setup() {
-    Serial.begin(115200);
-    loadStoredConfiguration();
-    loadStoredRelays();
-    loadStoredSwitchs();
-    loadStoredSensors();
-    setupWiFi();
-    setupWebserver();
-    startAlexaDiscovery();
-    reloadAlexaDiscoveryServices();
-    
+void setup()
+{
+  Serial.begin(115200);
+  loadStoredConfiguration();
+  loadStoredRelays();
+  loadStoredSwitchs();
+  loadStoredSensors();
+  setupWiFi();
+  setupWebserver();
+  startAlexaDiscovery();
+  reloadAlexaDiscoveryServices();
 }
-void loop() {
-    MDNS.update();
-    if (autoUpdate) {
-        autoUpdate = false;
-        actualUpdate();
-    }
-    if (adopted) {
-        saveConfig();
-        shouldReboot = true;
-        adopted = false;
-    }
-    if (shouldReboot) {
-        logger("Rebooting...");
-        shouldReboot = false;
-        ESP.restart();
-        return;
-    }
+void loop()
+{
+  MDNS.update();
+  if (autoUpdate)
+  {
+    autoUpdate = false;
+    actualUpdate();
+  }
+  if (adopted)
+  {
+    saveConfig();
+    shouldReboot = true;
+    adopted = false;
+  }
+  if (shouldReboot)
+  {
+    logger("Rebooting...");
+    shouldReboot = false;
+    ESP.restart();
+    return;
+  }
 
-    loopSwitchs();
-    loopSensors();
-    loopWiFi();
-    checkServices();
-    mqttMsgDigest();
-    loopDiscovery();
-
+  loopSwitchs();
+  loopSensors();
+  loopWiFi();
+  checkServices();
+  mqttMsgDigest();
+  loopDiscovery();
 }
 
-
-void actualUpdate() {
-    WiFiClient client;
-    ESPhttpUpdate.update(client, getUpdateUrl());
+void actualUpdate()
+{
+  WiFiClient client;
+  ESPhttpUpdate.update(client, getUpdateUrl());
 }

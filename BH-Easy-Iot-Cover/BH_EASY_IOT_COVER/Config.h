@@ -1,6 +1,6 @@
 #define HARDWARE "onofre"
 #define FACTORY_TYPE "cover" 
-#define FIRMWARE_VERSION 6.1
+#define FIRMWARE_VERSION 6.11
 
 const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION);
 
@@ -17,18 +17,8 @@ const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+St
 #define PAYLOAD_STOP "STOP"
 #define PAYLOAD_LOCK "LOCK"
 #define PAYLOAD_UNLOCK "UNLOCK"
-#define PAYLOAD_PULSE_OFF_ON "PULSE_OFF"
-#define PAYLOAD_PULSE_ON_OFF "PULSE_ON"
 
-//DEFAULT GPIOS
-#define RELAY_ONE 4
-#define RELAY_TWO 5
 
-#define RELAY_OPEN_CLOSE 5
-#define RELAY_STOP 4
-
-#define SWITCH_ONE 12
-#define SWITCH_TWO 13
 
 //CONTROL FLAGS
 bool shouldReboot = false;
