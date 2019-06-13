@@ -226,7 +226,7 @@ JsonObject &saveMqtt(JsonObject &_config)
 
 void saveConfig()
 {
-  rebuildAllMqttTopics();
+  rebuildAllMqttTopics(true, true);
   logger("[MQTT] REBUILD TOPICS OK");
   if (SPIFFS.begin())
   {

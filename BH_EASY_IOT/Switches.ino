@@ -306,7 +306,7 @@ void persistSwitchsFile(boolean rebuild)
 {
   if (rebuild)
   {
-    rebuildAllMqttTopics();
+    rebuildAllMqttTopics(true, false);
   }
   if (SPIFFS.begin())
   {

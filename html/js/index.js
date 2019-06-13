@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.1.81"
 };
 
 var switchs;
@@ -531,14 +531,7 @@ function buildSensor(obj) {
         "            <div class=\"box-body no-padding\">" +
         "                <table class=\"table table-condensed\">" +
         "                    <tbody>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">ATIVO</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"disabled_" + obj.id + "\">" +
-        "                            <option " + (obj.disabled ? 'selected' : '') + " value=\"true\">NÃO</option>" +
-        "                            <option " + (!obj.disabled ? 'selected' : '') + " value=\"false\">SIM</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
+
         "                    <tr>" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">NOME</span></td>" +
         "                        <td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + obj.name + "\" type=\"text\"  id=\"name_" + obj.id + "\" placeholder=\"ex: luz sala\"  required=\"true\"/></td>" +
@@ -553,6 +546,7 @@ function buildSensor(obj) {
         "                            <option " + (obj.type === 90 ? 'selected' : '') + " value=\"90\">DS18B20</option>" +
         "                            <option " + (obj.type === 65 ? 'selected' : '') + " value=\"65\">PIR</option>" +
         "                            <option " + (obj.type === 21 ? 'selected' : '') + " value=\"21\">LDR</option>" +
+        "                            <option " + (obj.type === 56 ? 'selected' : '') + " value=\"56\">REED SWITCH</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
@@ -569,14 +563,7 @@ function buildSensor(obj) {
         "                            <option " + (obj.type === 21 ? 'selected' : '') + " value=\"A0\">A0</option>" +
         "                        </select></td>" +
         "                    </tr>" + getSensorFunctions(obj) +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">AUTO DISCOVERY</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"discovery_" + obj.id + "\">" +
-        "                            <option " + (!obj.discoveryDisabled ? 'selected' : '') + " value=\"false\">SIM</option>" +
-        "                            <option " + (obj.discoveryDisabled ? 'selected' : '') + " value=\"true\">NÃO</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
+
         "                    </tbody>" +
         "                </table>" +
         "                <div class=\"box-footer save\">" +
@@ -682,7 +669,25 @@ function buildSensorDallasTemplate() {
     };
     buildSensor(sensor);
 }
-
+function buildSensorMagTemplate() {
+    if ($('#sn_0').length > 0) {
+        return
+    }
+    let sensor = {
+        "id": "0",
+        "gpio": 14,
+        "name": "Magnético",
+        "disabled": false,
+        "type": 56,
+        "class": "binary_sensor",
+        "functions": [{
+            "name": "Janela",
+            "uniqueName": "opening",
+            "type": 5,
+        }]
+    };
+    buildSensor(sensor);
+}
 function buildSensorPirTemplate() {
     if ($('#sn_0').length > 0) {
         return
@@ -693,7 +698,7 @@ function buildSensorPirTemplate() {
         "name": "Movimento",
         "disabled": false,
         "type": 65,
-        "class": "sensor",
+        "class": "binary_sensor",
         "functions": [{
             "name": "Movimento",
             "uniqueName": "motion",
@@ -787,9 +792,10 @@ function saveSensor(id) {
     let hum = $("#name_" + id + "_humidity").val();
     let motion = $("#name_" + id + "_motion").val();
     let ldr = $("#name_" + id + "_light_sensor").val();
+    let reed = $("#name_" + id + "opening").val();
     let functions = [];
     let type = $('#type_' + id).val();
-
+    let classs = "sensor";
     if (type === '0' || type === '1' || type === '2') {
         functions = [{
             "name": temp, "uniqueName": "temperature",
@@ -807,6 +813,7 @@ function saveSensor(id) {
             "type": 1
         }];
     } else if ('65' === type) {
+        classs = "binary_sensor";
         functions = [{
             "name": motion, "uniqueName": "motion",
             "unit": "",
@@ -818,13 +825,21 @@ function saveSensor(id) {
             "unit": "",
             "type": 7
         }];
+    }else if ('56' === type) {
+        classs = "binary_sensor";
+        functions = [{
+            "name": reed, "uniqueName": "opening",
+            "unit": "",
+            "type": 5
+        }];
     }
 
     let device = {
+        "class": classs,
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
-        "disabled": $('#disabled_' + id).val(),
-        "discoveryDisabled": $('#discovery_' + id).val(),
+        "disabled": false,
+        "discoveryDisabled": false,
         "type": $('#type_' + id).val(),
         "functions": functions
     };

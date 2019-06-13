@@ -31,12 +31,13 @@ void reloadAlexaDiscoveryServices()
     fauxmo.addDevice(_name.c_str());
   }
 }
-void reloadMqttDiscoveryServices()
+void reloadMqttDiscoveryServices(boolean switches, boolean sensors)
 {
   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
   if (ipMqtt == "")
     return;
   String prefix = getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
+  if(switches){
   JsonArray &_devices = getStoredSwitchs();
   for (int i = 0; i < _devices.size(); i++)
   {
@@ -74,7 +75,8 @@ void reloadMqttDiscoveryServices()
       publishOnMqttQueue(prefix + "/binary_sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
     }
   }
-
+  }
+  if(sensors){
   JsonArray &_sensores = getStoredSensors();
   for (int i = 0; i < _sensores.size(); i++)
   {
@@ -96,6 +98,7 @@ void reloadMqttDiscoveryServices()
         publishOnMqttQueue(prefix + "/sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
       }
     }
+  }
   }
   logger("[MQTT] RELOAD MQTT DISCOVERY OK");
 }

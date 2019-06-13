@@ -1,16 +1,18 @@
 
 #define TIME_READINGS_DELAY 30000ul
-#define SENSOR_DEVICE "sensor"
-#define BINARY_SENSOR_DEVICE "binary_sensor"
-#define SENSOR_PIN 14
-#define TEMPERATURE_TYPE 1
-#define MOTION_TYPE 4
-#define HUMIDITY_TYPE 2
-#define DS18B20_TYPE 90
-#define REED_SWITCH_TYPE 56
+
+//FUNTIONS
+#define TEMPERATURE_FUNCTION 1
+#define HUMIDITY_FUNCTION 2
+#define MOTION_FUNCTION 4
+#define OPENING 5
+#define ANALOG_FUNCTION 7
+
+//SENSORS
 #define PIR_TYPE 65
 #define LDR_TYPE 21
-#define ANALOG_TYPE 7
+#define DS18B20_TYPE 90
+#define REED_SWITCH_TYPE 56
 
 int analogReadCount = 0;
 float avg = 0;
@@ -57,51 +59,6 @@ JsonArray &getStoredSensors()
   return sns;
 }
 
-void sensorJson(String _id, int _gpio, bool _disabled, String _name, int _type, JsonArray &functions)
-{
-  JsonObject &sensorJson = getJsonObject();
-  sensorJson.set("id", _id);
-  sensorJson.set("gpio", _gpio);
-  sensorJson.set("name", _name);
-  sensorJson.set("disabled", _disabled);
-  sensorJson.set("type", _type);
-  sensorJson.set("class", _type == PIR_TYPE ? BINARY_SENSOR_DEVICE : SENSOR_DEVICE);
-  sensorJson.set("functions", functions);
-  sns.add(sensorJson);
-}
-
-void createFunctions(JsonArray &functionsJson, String id, int type)
-{
-
-  switch (type)
-  {
-  case LDR_TYPE:
-    createFunctionArray(functionsJson, "Sensor de Luz", "ligth_sensor", "", false, ANALOG_TYPE);
-    break;
-  case PIR_TYPE:
-    createFunctionArray(functionsJson, "Movimento", "motion", "C", false, MOTION_TYPE);
-    break;
-  case DS18B20_TYPE:
-    createFunctionArray(functionsJson, "Temperatura", "temperature", "ºC", false, TEMPERATURE_TYPE);
-    break;
-  case DHT_TYPE_11:
-  case DHT_TYPE_21:
-  case DHT_TYPE_22:
-    createFunctionArray(functionsJson, "Temperatura", "temperature", "ºC", false, TEMPERATURE_TYPE);
-    createFunctionArray(functionsJson, "Humidade", "humidity", "%", false, HUMIDITY_TYPE);
-    break;
-  }
-}
-void createFunctionArray(JsonArray &functionsJson, String _name, String _uniqueName, String _unit, bool _retain, int _type)
-{
-  JsonObject &functionJson = functionsJson.createNestedObject();
-  functionJson.set("name", _name);
-  functionJson.set("uniqueName", _uniqueName);
-  functionJson.set("functionClass", _uniqueName);
-  functionJson.set("unit", _unit);
-  functionJson.set("type", _type);
-  functionJson.set("mqttRetain", _retain);
-}
 void loopSensors()
 {
   float temperature = -127.0;
@@ -114,10 +71,10 @@ void loopSensors()
 
   for (unsigned int i = 0; i < _sensors.size(); i++)
   {
-    if (_sensors[i].disabled)
-    {
+    if (_sensors[i].disabled){
       continue;
     }
+    
     unsigned int sensorType = _sensors[i].type;
     switch (sensorType)
     {
@@ -171,22 +128,22 @@ void loopSensors()
       String _mqttState = f.get<String>("mqttStateTopic");
       int _type = f.get<unsigned int>("type");
       bool _retain = f.get<bool>("mqttRetain");
-      if (_type == TEMPERATURE_TYPE && temperature != -127.0)
+      if (_type == TEMPERATURE_FUNCTION  && temperature != -127.0)
       {
         publishOnMqttQueue(_mqttState, String(temperature, 1), _retain);
         measurement_timestamp = millis();
       }
-      else if (_type == HUMIDITY_TYPE && humidity != -127.0)
+      else if (_type == HUMIDITY_FUNCTION  && humidity != -127.0)
       {
         publishOnMqttQueue(_mqttState, String(humidity, 1), _retain);
         measurement_timestamp = millis();
       }
-      else if (_type == MOTION_TYPE && motion != _sensors[i].lastBinaryRead)
+      else if (_type == MOTION_FUNCTION  && motion != _sensors[i].lastBinaryRead)
       {
         _sensors[i].lastBinaryRead = motion;
         publishOnMqtt(_mqttState, motion ? PAYLOAD_ON : PAYLOAD_OFF, _retain);
       }
-      else if (_type == ANALOG_TYPE)
+      else if (_type == ANALOG_FUNCTION )
       {
         if (analogReadCount >= 10)
         {
@@ -199,7 +156,7 @@ void loopSensors()
     }
   }
 }
-JsonArray &storeSensor(JsonObject &_sensor)
+JsonObject &storeSensor(JsonObject &_sensor)
 {
   bool sensorFound = false;
   String _id = _sensor.get<String>("id");
@@ -220,7 +177,7 @@ JsonArray &storeSensor(JsonObject &_sensor)
         sensorJson.remove("functions");
         JsonArray &functionsJson = getJsonArray();
         sensorJson.set("type", _sensor.get<unsigned int>("type"));
-        createFunctions(functionsJson, sensorJson.get<String>("id"), _sensor.get<unsigned int>("type"));
+        //createFunctions(functionsJson, sensorJson.get<String>("id"), _sensor.get<unsigned int>("type"));
         sensorJson.set("functions", functionsJson);
       }
       JsonArray &functions = sensorJson.get<JsonVariant>("functions");
@@ -244,26 +201,19 @@ JsonArray &storeSensor(JsonObject &_sensor)
   }
   if (!sensorFound)
   {
-    String id = normalize(_sensor.get<String>("name"));
-    JsonArray &functionsJson = getJsonArray();
-    JsonArray &functionsNew = _sensor.get<JsonVariant>("functions");
-    for (int i = 0; i < functionsNew.size(); i++)
-    {
-      JsonObject &f = functionsNew.get<JsonVariant>(i);
-      String idf = normalize(f.get<String>("name"));
-      createFunctionArray(functionsJson, f.get<String>("name"), f.get<String>("uniqueName"), f.get<String>("unit"), f.get<bool>("retain"), f.get<unsigned int>("type"));
-    }
-
-    sensorJson(id, _sensor.get<unsigned int>("gpio"), _sensor.get<bool>("disabled"), _sensor.get<String>("name"), _sensor.get<unsigned int>("type"), functionsJson);
+    _sensor.set("id", normalize(_sensor.get<String>("name")));
+     String sn = "";
+     _sensor.printTo(sn);
+     sns.add(getJsonObject(sn.c_str()));
   }
   persistSensorsFile(true);
-  return sns;
+  return _sensor;
 }
 void persistSensorsFile(boolean rebuild)
 {
   if (rebuild)
   {
-    rebuildAllMqttTopics();
+    rebuildAllMqttTopics(false, true);
   }
   if (SPIFFS.begin())
   {
@@ -380,7 +330,7 @@ void applyJsonSensors()
     }
     break;
     case DS18B20_TYPE:
-      OneWire *oneWire = new OneWire(SENSOR_PIN);
+      OneWire *oneWire = new OneWire(gpio);
       DallasTemperature *sensors = new DallasTemperature(oneWire);
       _sensors.push_back({gpio, type, id, disabled, false, sensorJson, NULL, oneWire, sensors});
       break;
