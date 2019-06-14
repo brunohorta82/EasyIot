@@ -24,7 +24,7 @@ Timming | [GIT](https://github.com/scargill/Timing) | `last`
 Async Mqtt Client | [GIT](https://github.com/jeroenst/async-mqtt-client) | `last`
 ESP Async TCP | [GIT](https://github.com/me-no-dev/ESPAsyncTCP)| `last`
 ESP Async Webserver | [GIT](https://github.com/me-no-dev/ESPAsyncWebServer) | `last`
-Bounce2 | [GIT](https://github.com/thomasfredericks/Bounce2) | `last`
+DebounceEvent | [GIT](https://github.com/xoseperez/debounceevent) | `last`
 DHT Async | [GIT](https://github.com/brunohorta82/DHT_nonblocking) | `last`
 Arduino Json | [ARDUINO IDE](https://arduinojson.org) | `5.*`
 OneWire | [ARDUINO IDE](https://playground.arduino.cc/Learning/OneWire) | `last`
