@@ -107,6 +107,7 @@ void loopSensors()
             logger("[SENSOR LDT] Reading...");
             _sensors[i].lastRead = millis();
             publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String(analogRead(_sensors[i].gpio)).c_str(),false);
+           
          }
       }
       break;
@@ -127,17 +128,15 @@ void loopSensors()
     case DHT_TYPE_21:
     case DHT_TYPE_22:
     {
-      if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
-      if (_sensors[i].dht->measure(&_sensors[i].temperature, &_sensors[i].humidity))
+
+      if (_sensors[i].dht->measure(&_sensors[i].temperature, &_sensors[i].humidity) == true)
       {
-     
+      
+      if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
             logger("[SENSOR DHT] Reading...");
             _sensors[i].lastRead = millis();
-            
-            publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);
-            
-   }
-       
+            publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);      
+        }
       }
     }
       break;
@@ -297,10 +296,10 @@ void applyJsonSensors()
     case DHT_TYPE_11:
     case DHT_TYPE_21:
     case DHT_TYPE_22:
-      _sensors.push_back({type, mqttStateTopic, new DHT_nonblocking(gpio, type), NULL, NULL, gpio, 4000ul, 0L, 0L, 0L,"",""});
+      _sensors.push_back({type, mqttStateTopic, new DHT_nonblocking(gpio, type), NULL, NULL, gpio, 60000ul, 0L, 0L, 0L,"",""});
       break;
     case DS18B20_TYPE:
-      _sensors.push_back({type, mqttStateTopic, NULL, new DallasTemperature(new OneWire(gpio)), NULL, gpio, 35000L, 0L, 0L, 0L,"",""});
+      _sensors.push_back({type, mqttStateTopic, NULL, new DallasTemperature(new OneWire(gpio)), NULL, gpio, 60000L, 0L, 0L, 0L,"",""});
       break;
     }
   }
