@@ -81,54 +81,16 @@ void callback(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
 
 JsonObject &storeSwitch(JsonObject &_switch)
 {
-    int switchFound = false;
-    String type = _switch.get<String>("type");
-    String _id = _switch.get<String>("id");
-    for (unsigned int i = 0; i < sws.size(); i++)
-    {
-      JsonObject &switchJson = sws.get<JsonVariant>(i);
-      if (switchJson.get<String>("id").equals(_id))
-      {
-        switchFound = true;
-        String _name = _switch.get<String>("name");
-        switchJson.set("gpio", _switch.get<unsigned int>("gpio"));
-        switchJson.set("gpioOpen", _switch.get<unsigned int>("gpioOpen"));
-        switchJson.set("gpioClose", _switch.get<unsigned int>("gpioClose"));
-        switchJson.set("name", _name);
-        switchJson.set("spot", _switch.get<String>("spot"));
-        switchJson.set("discoveryDisabled", _switch.get<bool>("discoveryDisabled"));
-        switchJson.set("pullup", _switch.get<bool>("pullup"));
-        int swMode = _switch.get<unsigned int>("mode");
-        switchJson.set("mode", swMode);
-        String typeControl = _switch.get<String>("typeControl");
-        switchJson.set("typeControl", typeControl);
-        switchJson.set("pullState", 0);
-        switchJson.set("type", _switch.get<String>("type"));
-        if (!typeControl.equals(RELAY_TYPE) && (swMode != OPEN_CLOSE_SWITCH || swMode != OPEN_CLOSE_SWITCH))
-        {
-          switchJson.remove("gpioControl");
-        }
-        else
-        {
-          switchJson.set("gpioControl", _switch.get<unsigned int>("gpioControl"));
-          switchJson.set("gpioControlOpenClose", _switch.get<unsigned int>("gpioControlOpenClose"));
-          switchJson.set("gpioControlStop", _switch.get<unsigned int>("gpioControlStop"));
-        }
-      }
-    }
-    if (!switchFound)
-    {
-      String _name = _switch.get<String>("name");
-      String _id = normalize(_name);
-      _switch.set("id", _id);
-      _switch.set("class", "switch");
-      String typeControl = _switch.get<String>("typeControl");
-      String sw = "";
-      _switch.printTo(sw);
-      sws.add(getJsonObject(sw.c_str()));
-    }
-  
-  persistSwitchsFile(true);
+  removeSwitch(_switch.get<String>("id"));
+ _switch.set("id", normalize(_switch.get<String>("name")));
+ _switch.set("class", "switch");
+
+  rebuildSwitchMqttTopics(_switch);
+  rebuildDiscoverySwitchMqttTopics(_switch);
+    String sw = "";
+  _switch.printTo(sw);
+  sws.add(getJsonObject(sw.c_str()));
+  persistSwitchesFile();
   return _switch;
 }
 
@@ -223,7 +185,7 @@ void mqttSwitchControl(String topic, String payload)
 
 void publishState(JsonObject &switchJson)
 {
-  persistSwitchsFile(false);
+  persistSwitchesFile();
   String swtr = "";
   switchJson.printTo(swtr);
   publishOnEventSource("switch", swtr);
@@ -302,12 +264,9 @@ void loadStoredSwitchs()
   SPIFFS.end();
 }
 
-void persistSwitchsFile(boolean rebuild)
+void persistSwitchesFile()
 {
-  if (rebuild)
-  {
-    rebuildAllMqttTopics(true, false);
-  }
+
   if (SPIFFS.begin())
   {
     logger("[SWITCH] Open " + switchsFilename);
@@ -352,7 +311,7 @@ void removeSwitch(String _id)
     sws.remove(index);
   }
 
-  persistSwitchsFile(true);
+  persistSwitchesFile();
 }
 
 void loopSwitchs()

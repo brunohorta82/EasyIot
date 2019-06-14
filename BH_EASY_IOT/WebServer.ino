@@ -285,18 +285,10 @@ void setupWebserver()
     JsonObject &jsonObj = json.as<JsonObject>();
     if (jsonObj.success())
     {
-      if (request->hasArg("id"))
-      {
-        String id = request->arg("id");
         AsyncResponseStream *response = request->beginResponseStream("application/json");
-        saveRelay(id, jsonObj).printTo(*response);
+        saveRelay(jsonObj).printTo(*response);
         request->send(response);
-      }
-      else
-      {
-        logger("[WEBSERVER] ID NOT FOUND");
-        request->send(400, "text/plain", "ID NOT FOUND");
-      }
+      
     }
     else
     {
@@ -310,18 +302,9 @@ void setupWebserver()
     JsonObject &jsonObj = json.as<JsonObject>();
     if (jsonObj.success())
     {
-      if (request->hasArg("id"))
-      {
-        String id = request->arg("id");
         AsyncResponseStream *response = request->beginResponseStream("application/json");
         storeSensor(jsonObj).printTo(*response);
         request->send(response);
-      }
-      else
-      {
-        logger("[WEBSERVER] ID NOT FOUND");
-        request->send(400, "text/plain", "ID NOT FOUND");
-      }
     }
     else
     {

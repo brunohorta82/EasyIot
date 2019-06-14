@@ -25,32 +25,18 @@ void removeRelay(String _id)
     rls.remove(index);
   }
 
-  saveRelays();
+  persistRelaysFile();
   applyJsonRelays();
 }
-JsonArray &saveRelay(String _id, JsonObject &_relay)
+JsonObject &saveRelay( JsonObject &_relay)
 {
-  bool relayFound = false;
-  for (unsigned int i = 0; i < rls.size(); i++)
-  {
-    JsonObject &relayJson = rls.get<JsonVariant>(i);
-    if (relayJson.get<String>("id").equals(_id))
-    {
-      relayFound = true;
-      relayJson.set("gpio", _relay.get<unsigned int>("gpio"));
-      relayJson.set("name", _relay.get<String>("name"));
-      relayJson.set("inverted", _relay.get<bool>("inverted"));
-    }
-  }
-  if (!relayFound)
-  {
-    String _name =  _relay.get<String>("name");
-    String _id = normalize(_name);
-    relayJson(_id, _relay.get<unsigned int>("gpio"), _relay.get<bool>("inverted"),_name);
-  }
-  saveRelays();
-  applyJsonRelays();
-  return rls;
+  removeRelay(_relay.get<String>("id"));
+ _relay.set("id", normalize(_relay.get<String>("name")));
+  String r = "";
+  _relay.printTo(r);
+  rls.add(getJsonObject(r.c_str()));
+  persistRelaysFile();
+  return _relay;
 }
 void openAction(JsonObject &switchJson)
 {
@@ -244,7 +230,7 @@ void applyJsonRelays()
     configGpio(gpio, OUTPUT);
   }
 }
-void saveRelays()
+void persistRelaysFile()
 {
   if (SPIFFS.begin())
   {

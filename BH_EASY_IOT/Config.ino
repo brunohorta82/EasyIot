@@ -210,7 +210,6 @@ void updateNetworkConfig()
     configJson.set("wifiMask", WiFi.subnetMask().toString());
     configJson.set("wifiGw", WiFi.gatewayIP().toString());
   }
-  saveConfig();
 }
 
 JsonObject &saveMqtt(JsonObject &_config)
@@ -226,8 +225,7 @@ JsonObject &saveMqtt(JsonObject &_config)
 
 void saveConfig()
 {
-  rebuildAllMqttTopics(true, true);
-  logger("[MQTT] REBUILD TOPICS OK");
+  
   if (SPIFFS.begin())
   {
     File rFile = SPIFFS.open(CONFIG_FILENAME, "w+");
@@ -248,6 +246,23 @@ void saveConfig()
   }
   SPIFFS.end();
   logger("[CONFIG] New config stored.");
+  
+ 
+   JsonArray &switches = getStoredSwitchs();
+  for (int i = 0; i < switches.size(); i++)
+  {
+    JsonObject &switchJson = switches.get<JsonVariant>(i);
+    rebuildSwitchMqttTopics(switchJson);
+    rebuildDiscoverySwitchMqttTopics(switchJson);
+  }
+   JsonArray &sensors = getStoredSensors();
+  for (int i = 0; i <sensors .size(); i++)
+  {
+     JsonObject &sensorJson = sensors .get<JsonVariant>(i);
+      rebuildSensorMqttTopics(sensorJson);
+        rebuildDiscoverySensorMqttTopics(sensorJson);
+  }
+  
 }
 
 void configGpio(int gpio, int mode)

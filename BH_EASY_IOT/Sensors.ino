@@ -1,6 +1,4 @@
-
-#define TIME_READINGS_DELAY 30000ul
-
+#include <dht_nonblocking.h> // https://github.com/brunohorta82/DHT_nonblocking
 //FUNTIONS
 #define TEMPERATURE_FUNCTION 1
 #define HUMIDITY_FUNCTION 2
@@ -13,27 +11,70 @@
 #define LDR_TYPE 21
 #define DS18B20_TYPE 90
 #define REED_SWITCH_TYPE 56
+ 
 
-int analogReadCount = 0;
-float avg = 0;
+/* Uncomment according to your sensortype. */
+#define DHT_SENSOR_TYPE DHT_TYPE_11
+//#define DHT_SENSOR_TYPE DHT_TYPE_21
+//#define DHT_SENSOR_TYPE DHT_TYPE_22
+
+static const int DHT_SENSOR_PIN = 0;
+
+const String sensorsFilename = "sensors.json";
+
 JsonArray &sns = getJsonArray();
 
 typedef struct
 {
-  unsigned int gpio;
-  unsigned int type;
-  String id;
-  bool disabled;
-  bool lastBinaryRead;
   JsonObject &sensorJson;
-  DHT_nonblocking *dht;
-  OneWire *oneWire;
+  DebounceEvent *binaryDebounce;
+
+} sensor_bin;
+std::vector<sensor_bin> _sensorsBinary;
+int _sensorsBinarySize = 0; 
+
+typedef struct
+{
+  JsonObject &sensorJson;
+  DHT_nonblocking dht;
+  long delayRead;
+  long lastRead;
+  float temperature;
+  float humidity ;
+} sensor_dht;
+std::vector<sensor_dht> _sensorsDHT;
+int _sensorsDHTSize = 0;
+
+
+typedef struct
+{
+  JsonObject &sensorJson;
   DallasTemperature *dallas;
-} sensor_t;
-std::vector<sensor_t> _sensors;
+  long delayRead;
+  long lastRead;
+} sensor_dallas;
+std::vector<sensor_dallas> _sensorsDallas;
+int _sensorsDallasSize = 0;
 
-const String sensorsFilename = "sensors.json";
+typedef struct
+{
+  JsonObject &sensorJson;
+  int gpio;
+  long delayRead;
+  long lastRead;
+  
+} sensor_analog;
+std::vector<sensor_analog> _sensorsAnalog;
+int _sensorsAnalogSize = 0;
 
+
+void callbackBinarySensor(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length){
+    Serial.print("Gpio : "); Serial.print(gpio);
+    Serial.print("Event : "); Serial.print(event);
+    Serial.print(" Count : "); Serial.print(count);
+    Serial.print(" Length: "); Serial.print(length);
+    Serial.println();
+}
 void removeSensor(String _id)
 {
   int sensorFound = false;
@@ -52,8 +93,10 @@ void removeSensor(String _id)
     sns.remove(index);
   }
 
-  persistSensorsFile(false);
+  persistSensorsFile();
 }
+
+
 JsonArray &getStoredSensors()
 {
   return sns;
@@ -61,160 +104,71 @@ JsonArray &getStoredSensors()
 
 void loopSensors()
 {
-  float temperature = -127.0;
-  float humidity = -127.0;
-  float analogReadValue = 0;
-
-  bool motion = false;
-  static unsigned long measurement_timestamp = millis();
-  static unsigned long measurement_timestampldr = millis();
-
-  for (unsigned int i = 0; i < _sensors.size(); i++)
+/*  for (unsigned int i = 0; i <_sensorsBinarySize; i++)
   {
-    if (_sensors[i].disabled){
-      continue;
-    }
-    
-    unsigned int sensorType = _sensors[i].type;
-    switch (sensorType)
-    {
-    case LDR_TYPE:
-      if (millis() - measurement_timestampldr > 100)
-      {
-        analogReadCount++;
-        analogReadValue = analogRead(A0);
-        measurement_timestampldr = millis();
-        avg += analogReadValue;
-      }
-
-      break;
-    case PIR_TYPE:
-      motion = digitalRead(_sensors[i].gpio);
-      break;
-    case REED_SWITCH_TYPE:
-
-      break;
-    case DS18B20_TYPE:
-      if (millis() - measurement_timestamp > TIME_READINGS_DELAY)
-      {
-        _sensors[i].dallas->begin();
-        _sensors[i].dallas->requestTemperatures();
-        measurement_timestamp = millis();
-        temperature = _sensors[i].dallas->getTempCByIndex(0);
-        if (temperature == 85.0 || temperature == (-127.0))
-        {
-          continue;
-        }
-      }
-      break;
-    case DHT_TYPE_11:
-    case DHT_TYPE_21:
-    case DHT_TYPE_22:
-      if (millis() - measurement_timestamp > TIME_READINGS_DELAY)
-      {
-        if (!_sensors[i].dht->measure(&temperature, &humidity))
-        {
-          continue;
-        }
-      }
-
-      break;
-    }
-
-    JsonArray &functions = _sensors[i].sensorJson.get<JsonVariant>("functions");
-    for (int i = 0; i < functions.size(); i++)
-    {
-      JsonObject &f = functions.get<JsonVariant>(i);
-      String _mqttState = f.get<String>("mqttStateTopic");
-      int _type = f.get<unsigned int>("type");
-      bool _retain = f.get<bool>("mqttRetain");
-      if (_type == TEMPERATURE_FUNCTION  && temperature != -127.0)
-      {
-        publishOnMqttQueue(_mqttState, String(temperature, 1), _retain);
-        measurement_timestamp = millis();
-      }
-      else if (_type == HUMIDITY_FUNCTION  && humidity != -127.0)
-      {
-        publishOnMqttQueue(_mqttState, String(humidity, 1), _retain);
-        measurement_timestamp = millis();
-      }
-      else if (_type == MOTION_FUNCTION  && motion != _sensors[i].lastBinaryRead)
-      {
-        _sensors[i].lastBinaryRead = motion;
-        publishOnMqtt(_mqttState, motion ? PAYLOAD_ON : PAYLOAD_OFF, _retain);
-      }
-      else if (_type == ANALOG_FUNCTION )
-      {
-        if (analogReadCount >= 10)
-        {
-          publishOnMqttQueue(_mqttState, String(avg / analogReadCount, 1), false);
-
-          analogReadCount = 0;
-          avg = 0;
-        }
-      }
-    }
+    DebounceEvent *b = _sensorsBinary[i].binaryDebounce;
+    b->loop();
+     Serial.println("llll");
   }
+
+  for (unsigned int i = 0; i <_sensorsAnalogSize; i++){
+     if (_sensorsAnalog[i].lastRead + _sensorsAnalog[i].delayRead < millis()){
+        _sensorsAnalog[i].lastRead = millis();
+        Serial.println(analogRead(_sensorsAnalog[i].gpio));
+      }  
+  }*/
+  
+for (unsigned int i = 0; i <_sensorsDHTSize; i++){
+     if (_sensorsDHT[i].lastRead + _sensorsDHT[i].delayRead < millis()){
+      
+         _sensorsDHT[i].lastRead = millis();
+          if(_sensorsDHT[i].dht.measure( _sensorsDHT[i].temperature, _sensorsDHT[i].humidity )){
+            Serial.println(_sensorsDHT[i].temperature);
+        Serial.println(_sensorsDHT[i].humidity);
+          }else{
+            Serial.println("NONE");
+            }
+        
+        
+      }  
+   
 }
+
+ /* for (unsigned int i = 0; i < _sensorsDallasSize; i++){
+     if (_sensorsDallas[i].lastRead + _sensorsDallas[i].delayRead < millis()){
+         float temperature = -127.0;
+       _sensorsDallas[i].dallas->begin();
+        _sensorsDallas[i].dallas->requestTemperatures();
+       _sensorsDallas[i].lastRead = millis();
+        temperature =_sensorsDallas[i].dallas->getTempCByIndex(0);
+      
+        Serial.println(temperature);
+        
+      }  
+  }*/
+}
+
+ 
+
+
 JsonObject &storeSensor(JsonObject &_sensor)
-{
-  bool sensorFound = false;
-  String _id = _sensor.get<String>("id");
-  for (unsigned int i = 0; i < sns.size(); i++)
-  {
-    JsonObject &sensorJson = sns.get<JsonVariant>(i);
-    if (sensorJson.get<String>("id").equals(_id))
-    {
-      sensorFound = true;
-      String _name = _sensor.get<String>("name");
-      sensorJson.set("gpio", _sensor.get<unsigned int>("gpio"));
-      sensorJson.set("name", _name);
-      sensorJson.set("discoveryDisabled", _sensor.get<bool>("discoveryDisabled"));
-      sensorJson.set("icon", _sensor.get<String>("icon"));
-      sensorJson.set("disabled", _sensor.get<bool>("disabled"));
-      if (sensorJson.get<unsigned int>("type") != _sensor.get<unsigned int>("type"))
-      {
-        sensorJson.remove("functions");
-        JsonArray &functionsJson = getJsonArray();
-        sensorJson.set("type", _sensor.get<unsigned int>("type"));
-        //createFunctions(functionsJson, sensorJson.get<String>("id"), _sensor.get<unsigned int>("type"));
-        sensorJson.set("functions", functionsJson);
-      }
-      JsonArray &functions = sensorJson.get<JsonVariant>("functions");
-      JsonArray &functionsUpdated = _sensor.get<JsonVariant>("functions");
-      for (int i = 0; i < functions.size(); i++)
-      {
-        JsonObject &f = functions.get<JsonVariant>(i);
-        for (int b = 0; b < functionsUpdated.size(); b++)
-        {
-          JsonObject &fu = functionsUpdated.get<JsonVariant>(b);
-          if (f.get<String>("uniqueName").equals(fu.get<String>("uniqueName")) && !fu.get<String>("name").equals(""))
-          {
-            f.set("name", fu.get<String>("name"));
-            f.set("type", fu.get<unsigned int>("type"));
-            f.set("unit", fu.get<String>("unit"));
-            f.set("icon", fu.get<String>("icon"));
-          }
-        }
-      }
-    }
-  }
-  if (!sensorFound)
-  {
-    _sensor.set("id", normalize(_sensor.get<String>("name")));
-     String sn = "";
-     _sensor.printTo(sn);
-     sns.add(getJsonObject(sn.c_str()));
-  }
-  persistSensorsFile(true);
+{  removeSensor(_sensor.get<String>("id"));
+  _sensor.set("id", normalize(_sensor.get<String>("name")));
+  rebuildSensorMqttTopics(_sensor);
+  rebuildDiscoverySensorMqttTopics(_sensor);
+  String sn = "";
+  _sensor.printTo(sn);
+  sns.add(getJsonObject(sn.c_str()));
+  
+  
+  persistSensorsFile();
   return _sensor;
 }
-void persistSensorsFile(boolean rebuild)
+
+
+void persistSensorsFile()
 {
-  if (rebuild)
-  {
-    rebuildAllMqttTopics(false, true);
-  }
+  
   if (SPIFFS.begin())
   {
     logger("[SENSORS] Open " + sensorsFilename);
@@ -293,47 +247,41 @@ void loadStoredSensors()
 
 void applyJsonSensors()
 {
-  _sensors.clear();
+  _sensorsAnalog.clear();
+  _sensorsDHT.clear();
+  _sensorsBinary.clear();
+  _sensorsDallas.clear();
+ 
   for (int i = 0; i < sns.size(); i++)
   {
     JsonObject &sensorJson = sns.get<JsonVariant>(i);
     int gpio = sensorJson.get<unsigned int>("gpio");
     int type = sensorJson.get<unsigned int>("type");
-    int disabled = sensorJson.get<bool>("disabled");
-    String id = sensorJson.get<String>("id");
     switch (type)
     {
     case LDR_TYPE:
-      _sensors.push_back({A0, type, id, disabled, false, sensorJson, NULL, NULL, NULL});
+      _sensorsAnalog.push_back({sensorJson,A0,2000L,0L});
       break;
     case PIR_TYPE:
-      _sensors.push_back({gpio, type, id, disabled, false, sensorJson, NULL, NULL, NULL});
-      configGpio(gpio, INPUT);
-
+      _sensorsBinary.push_back({ sensorJson, new DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH)});
       break;
     case REED_SWITCH_TYPE:
-      if (gpio == 16)
-      {
-        configGpio(gpio, INPUT_PULLDOWN_16);
-      }
-      else
-      {
-        configGpio(gpio, INPUT_PULLUP);
-      }
+    _sensorsBinary.push_back({ sensorJson,new  DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH| BUTTON_SET_PULLUP )});
       break;
+      
     case DHT_TYPE_11:
     case DHT_TYPE_21:
     case DHT_TYPE_22:
-    {
-      DHT_nonblocking *dht_sensor = new DHT_nonblocking(gpio, type);
-      _sensors.push_back({gpio, type, id, disabled, false, sensorJson, dht_sensor, NULL, NULL});
-    }
+     _sensorsDHT.push_back({sensorJson,DHT_nonblocking( DHT_SENSOR_PIN, DHT_SENSOR_TYPE ),4000ul,0L,0L,0L});
     break;
     case DS18B20_TYPE:
-      OneWire *oneWire = new OneWire(gpio);
-      DallasTemperature *sensors = new DallasTemperature(oneWire);
-      _sensors.push_back({gpio, type, id, disabled, false, sensorJson, NULL, oneWire, sensors});
+     _sensorsDallas.push_back({ sensorJson, new DallasTemperature(new OneWire(gpio)),5000L,0L});
       break;
+    
     }
   }
+  _sensorsAnalogSize =_sensorsAnalog.size();
+  _sensorsDHTSize =_sensorsDHT.size();
+  _sensorsBinarySize =_sensorsBinary.size();
+  _sensorsDallasSize = _sensorsDallas.size();
 }

@@ -61,7 +61,7 @@ void setup()
 }
 void loop()
 {
-  MDNS.update();
+ MDNS.update();
   if (autoUpdate)
   {
     autoUpdate = false;
@@ -87,8 +87,8 @@ void loop()
   checkServices();
   mqttMsgDigest();
   loopDiscovery();
+ 
 }
-
 void actualUpdate()
 {
   WiFiClient client;

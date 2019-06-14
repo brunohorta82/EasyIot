@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.81"
+    baseUrl: "http://192.168.1.11"
 };
 
 var switchs;
@@ -193,7 +193,7 @@ function fillSwitches(payload) {
     for (let obj of payload) {
         buildSwitch(obj);
     }
-    console.log(payload.length);
+
 }
 
 function fillRelays(payload) {
@@ -335,14 +335,14 @@ function buildSwitch(obj) {
         "                <div  id=\"type-control-box" + obj.id + "\" class=\"col-xs-5 " + (obj.typeControl === 'mqtt' ? 'hide' : '') + "\">" +
         "                           <select class=\"form-control\" style=\" font-size: 10px;padding: 0px 12px; height: 20px;\"" +
         "                                 id=\"gpioControl_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioControl === 0 ? 'selected' : '') + " value=\"0\">0</option>" +
-        "                            <option " + (obj.gpioControl === 2 ? 'selected' : '') + " value=\"2\">2</option>" +
-        "                            <option " + (obj.gpioControl === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpioControl === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpioControl === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioControl === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioControl === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioControl === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.gpioControl == 0 ? 'selected' : '') + " value=\"0\">0</option>" +
+        "                            <option " + (obj.gpioControl == 2 ? 'selected' : '') + " value=\"2\">2</option>" +
+        "                            <option " + (obj.gpioControl == 4 ? 'selected' : '') + " value=\"4\">4</option>" +
+        "                            <option " + (obj.gpioControl == 5 ? 'selected' : '') + " value=\"5\">5</option>" +
+        "                            <option " + (obj.gpioControl == 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.gpioControl == 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.gpioControl == 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.gpioControl == 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                        </select>" +
         "                </div>" +
         "              </div>" +
@@ -369,14 +369,6 @@ function buildSwitch(obj) {
         "                        <td><span style=\"font-weight: bold; font-size:11px; color:#f39c12\">" + obj.mqttCommandTopic + "</span>" +
         "                        </td>" +
         "" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">AUTO DISCOVERY</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"discovery_" + obj.id + "\">" +
-        "                            <option " + (!obj.discoveryDisabled ? 'selected' : '') + " value=\"false\">SIM</option>" +
-        "                            <option " + (obj.discoveryDisabled ? 'selected' : '') + " value=\"true\">NÃO</option>" +
-        "                        </select></td>" +
         "                    </tr>" +
         "                    </tbody>" +
         "                </table>" +
@@ -420,8 +412,6 @@ function switchTypeRules(e) {
 }
 
 function switchTypeOptions(e) {
-
-
     let type = $('#type_' + e).val();
     if (type !== 'cover') {
         $('.generic_type_' + e).removeClass("hide");
@@ -432,7 +422,6 @@ function switchTypeOptions(e) {
     }
 
     switchModeRules(e);
-
 }
 
 function switchModeRules(e) {
@@ -444,7 +433,6 @@ function switchModeRules(e) {
     } else {
         mode = $('#modec_' + e).val();
     }
-    console.log(mode);
     if (mode === '4' || mode === '5') {
         $('#relay_open_gpio_' + e).removeClass("hide");
         $('#relay_close_gpio_' + e).removeClass("hide");
@@ -540,27 +528,27 @@ function buildSensor(obj) {
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">TIPO</span></td>" +
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                     id=\"type_" + obj.id + "\">" +
-        "                            <option  " + (obj.type === 0 ? 'selected' : '') + " value=\"0\">DHT 11</option>" +
-        "                            <option " + (obj.type === 1 ? 'selected' : '') + " value=\"1\">DHT 21</option>" +
-        "                            <option " + (obj.type === 2 ? 'selected' : '') + " value=\"2\">DHT 22</option>" +
-        "                            <option " + (obj.type === 90 ? 'selected' : '') + " value=\"90\">DS18B20</option>" +
-        "                            <option " + (obj.type === 65 ? 'selected' : '') + " value=\"65\">PIR</option>" +
-        "                            <option " + (obj.type === 21 ? 'selected' : '') + " value=\"21\">LDR</option>" +
-        "                            <option " + (obj.type === 56 ? 'selected' : '') + " value=\"56\">REED SWITCH</option>" +
+        "                            <option  " + (obj.type == 0 ? 'selected' : '') + " value=\"0\">DHT 11</option>" +
+        "                            <option " + (obj.type == 1 ? 'selected' : '') + " value=\"1\">DHT 21</option>" +
+        "                            <option " + (obj.type == 2 ? 'selected' : '') + " value=\"2\">DHT 22</option>" +
+        "                            <option " + (obj.type == 90 ? 'selected' : '') + " value=\"90\">DS18B20</option>" +
+        "                            <option " + (obj.type == 65 ? 'selected' : '') + " value=\"65\">PIR</option>" +
+        "                            <option " + (obj.type == 21 ? 'selected' : '') + " value=\"21\">LDR</option>" +
+        "                            <option " + (obj.type == 56 ? 'selected' : '') + " value=\"56\">REED SWITCH</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO</span></td>" +
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"gpio_" + obj.id + "\">" +
-        "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpio === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                            <option " + (obj.type === 21 ? 'selected' : '') + " value=\"A0\">A0</option>" +
+        "                            <option " + (obj.gpio == 0 ? 'selected' : '') + " value=\"0\">0</option>" +
+        "                            <option " + (obj.gpio == 4 ? 'selected' : '') + " value=\"4\">4</option>" +
+        "                            <option " + (obj.gpio == 5 ? 'selected' : '') + " value=\"5\">5</option>" +
+        "                            <option " + (obj.gpio == 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.gpio == 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.gpio == 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.gpio == 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.type == 21 ? 'selected' : '') + " value=\"A0\">A0</option>" +
         "                        </select></td>" +
         "                    </tr>" + getSensorFunctions(obj) +
 
@@ -582,6 +570,7 @@ function fillSensors(payload) {
 
 
 function getSensorFunctions(obj) {
+    console.log(obj);
     var a = "";
     for (let fun of obj.functions) {
         a += "<tr>" +
@@ -590,6 +579,15 @@ function getSensorFunctions(obj) {
             "<td><span style=\"font-size: 10px;\" class=\"label-device\">MQTT ESTADO</span></td>" +
             "<td><span style=\"font-weight: bold; font-size:11px; color: #00a65a\">" + fun.mqttStateTopic + "</span></td>" +
             "</tr>";
+        if (obj.type == 56) {
+            a += "<tr>" +
+                "<td><span style=\"font-size: 10px;\" class=\"label-device\">Payload Fechado</span></td>" +
+                "<td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + fun.payloadOn + "\" type=\"text\"  id=\"payloadOn_" + obj.id + "_" + fun.uniqueName + "\" placeholder=\"ex: ON\"  required=\"true\"/></td> <tr></tr>" +
+                "<td><span style=\"font-size: 10px;\" class=\"label-device\">Payload Aberto</span></td>" +
+                "<td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + fun.payloadOff + "\" type=\"text\"  id=\"payloadOff_" + obj.id + "_" + fun.uniqueName + "\" placeholder=\"ex: OFF\"  required=\"true\"/></td> <tr></tr>" +
+
+                "</tr>";
+        }
     }
     return a;
 
@@ -669,6 +667,7 @@ function buildSensorDallasTemplate() {
     };
     buildSensor(sensor);
 }
+
 function buildSensorMagTemplate() {
     if ($('#sn_0').length > 0) {
         return
@@ -681,6 +680,8 @@ function buildSensorMagTemplate() {
         "type": 56,
         "class": "binary_sensor",
         "functions": [{
+            "payloadOn": "ON",
+            "payloadOff": "OFF",
             "name": "Janela",
             "uniqueName": "opening",
             "type": 5,
@@ -688,6 +689,7 @@ function buildSensorMagTemplate() {
     };
     buildSensor(sensor);
 }
+
 function buildSensorPirTemplate() {
     if ($('#sn_0').length > 0) {
         return
@@ -740,7 +742,7 @@ function buildRelayTemplate() {
     }
     let device = {
         "id": 0,
-        "name": "Novo Rlé",
+        "name": "Novo Relé",
         "gpio": 0,
         "inverted": false,
         "mode": 1,
@@ -751,48 +753,51 @@ function buildRelayTemplate() {
 
 function saveSwitch(id) {
     var mode = 1;
-    let type = $('#type_' + id).val();
+    let type =  $('#type_' + id).val();
 
     if (type !== 'cover') {
-        mode = $('#modeg_' + id).val();
+        mode =  parseInt($('#modeg_' + id).val());
     } else {
-        mode = $('#modec_' + id).val();
+        mode = parseInt( $('#modec_' + id).val());
     }
     let device = {
         "id": id,
         "name": $('#name_' + id).val(),
-        "gpio": $('#gpio_' + id).val(),
-        "gpioOpen": $('#gpio_open_' + id).val(),
-        "gpioClose": $('#gpio_close_' + id).val(),
-        "pullup": $('#pullup_' + id).val(),
-        "discoveryDisabled": $('#discovery_' + id).val(),
+        "gpio": parseInt($('#gpio_' + id).val()),
+        "gpioOpen": parseInt($('#gpio_open_' + id).val()),
+        "gpioClose":parseInt( $('#gpio_close_' + id).val()),
+        "pullup": ($('#pullup_' + id).val() === "true" ? true : false),
+        "discoveryDisabled": false,
         "type": type,
-        "mode": mode,
+        "mode":mode,
         "typeControl": $('#typeControl_' + id).val(),
-        "gpioControl": $('#gpioControl_' + id).val(),
-        "gpioControlOpenClose": $('#relay_open_' + id).val(),
-        "gpioControlStop": $('#relay_close_' + id).val(),
+        "gpioControl": parseInt($('#gpioControl_' + id).val()),
+        "gpioControlOpenClose":parseInt( $('#relay_open_' + id).val()),
+        "gpioControlStop":parseInt( $('#relay_close_' + id).val()),
         "master": true
-    };
+    }
 
     storeDevice(id, device, "save-switch", "switchs", fillSwitches);
 }
 
 function saveRelay(id) {
     var device = {
+        "id": id,
         "name": $('#name_' + id).val(),
-        "gpio": $('#gpio_' + id).val(),
-        "inverted": $('#inverted_' + id).val()
+        "gpio": parseInt($('#gpio_' + id).val()),
+        "inverted": $('#inverted_' + id).val() === "true" ? true : false
     };
     storeDevice(id, device, "save-relay", "relays", fillRelays);
 }
 
 function saveSensor(id) {
+    let payloadOn = $("#payloadOn_" + id + "_opening").val();
+    let payloadOff = $("#payloadOff_" + id + "_opening").val();
     let temp = $("#name_" + id + "_temperature").val();
     let hum = $("#name_" + id + "_humidity").val();
     let motion = $("#name_" + id + "_motion").val();
     let ldr = $("#name_" + id + "_light_sensor").val();
-    let reed = $("#name_" + id + "opening").val();
+    let reed = $("#name_" + id + "_opening").val();
     let functions = [];
     let type = $('#type_' + id).val();
     let classs = "sensor";
@@ -821,20 +826,25 @@ function saveSensor(id) {
         }];
     } else if ('21' === type) {
         functions = [{
-            "name": ldr, "uniqueName": "light_sensor",
+            "name": ldr,
+            "uniqueName": "light_sensor",
             "unit": "",
             "type": 7
         }];
-    }else if ('56' === type) {
+    } else if ('56' === type) {
         classs = "binary_sensor";
         functions = [{
-            "name": reed, "uniqueName": "opening",
+            "payloadOff": payloadOff,
+            "payloadOn": payloadOn,
+            "name": reed,
+            "uniqueName": "opening",
             "unit": "",
             "type": 5
         }];
     }
 
     let device = {
+        "id": id,
         "class": classs,
         "name": $('#name_' + id).val(),
         "gpio": $('#gpio_' + id).val(),
@@ -986,7 +996,6 @@ function selectNetwork(node) {
 }
 
 function appendWifiLog(log) {
-    console.log(log);
     $('#wifi-log').append('<p>' + log + '</p>');
 
 }

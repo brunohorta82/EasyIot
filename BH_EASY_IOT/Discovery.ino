@@ -31,56 +31,58 @@ void reloadAlexaDiscoveryServices()
     fauxmo.addDevice(_name.c_str());
   }
 }
-void reloadMqttDiscoveryServices(boolean switches, boolean sensors)
+
+void  rebuildDiscoverySwitchMqttTopics(JsonObject &switchJson)
 {
   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
   if (ipMqtt == "")
     return;
   String prefix = getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
-  if(switches){
-  JsonArray &_devices = getStoredSwitchs();
-  for (int i = 0; i < _devices.size(); i++)
-  {
-    JsonObject &switchJson = _devices[i];
     String _id = switchJson.get<String>("id");
     String _name = switchJson.get<String>("name");
     String type = switchJson.get<String>("type");
     if (type.equals("cover"))
     {
       publishOnMqttQueue(prefix + "/cover/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaCover(switchJson), true);
-      publishOnMqttQueue(prefix + "/cover/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+      
+    
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("light"))
     {
       publishOnMqttQueue(prefix + "/light/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaLight(switchJson), true);
-      publishOnMqttQueue(prefix + "/light/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+      
+      
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("switch"))
     {
       publishOnMqttQueue(prefix + "/switch/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaSwitch(switchJson), true);
-      publishOnMqttQueue(prefix + "/switch/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+     
+      
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("lock"))
     {
-      publishOnMqttQueue(prefix + "/lock/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaLock(switchJson), true);
-      publishOnMqttQueue(prefix + "/lock/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+      publishOnMqtt(prefix + "/lock/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaLock(switchJson), true);
+      
+       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("sensor"))
-    {
-      publishOnMqttQueue(prefix + "/binary_sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaBinarySensor(switchJson), true);
-      publishOnMqttQueue(prefix + "/binary_sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+    {  
+      publishOnMqtt(prefix + "/binary_sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaBinarySensor(switchJson), true);
+    
+    
     }
-  }
-  }
-  if(sensors){
-  JsonArray &_sensores = getStoredSensors();
-  for (int i = 0; i < _sensores.size(); i++)
-  {
-    JsonObject &sensorJson = _sensores.get<JsonVariant>(i);
+    logger("[MQTT] RELOAD MQTT SWITCH DISCOVERY OK");
+}
+void  rebuildDiscoverySensorMqttTopics( JsonObject &sensorJson )
+{  
+   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
+   if (ipMqtt == "")
+    return;
+  String prefix = getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
     String _class = sensorJson.get<String>("class");
     JsonArray &functions = sensorJson.get<JsonVariant>("functions");
     for (int i = 0; i < functions.size(); i++)
@@ -89,19 +91,21 @@ void reloadMqttDiscoveryServices(boolean switches, boolean sensors)
       String _id = normalize(f.get<String>("name"));
       if (_class.equals("binary_sensor"))
       {
-        publishOnMqttQueue(prefix + "/binary_sensorr/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaBinarySensor(sensorJson), true);
-        publishOnMqttQueue(prefix + "/binary_sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+        publishOnMqtt(prefix + "/binary_sensorr/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaBinarySensor(sensorJson), true);
+  
       }
       else if (_class.equals("sensor"))
-      {
-        publishOnMqttQueue(prefix + "/sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaSensor(sensorJson), true);
-        publishOnMqttQueue(prefix + "/sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+      { 
+        
+        publishOnMqtt(prefix + "/sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaSensor(sensorJson), true);
+        
+        
+      
       }
     }
+      logger("[MQTT] RELOAD MQTT SENSOR DISCOVERY OK");
   }
-  }
-  logger("[MQTT] RELOAD MQTT DISCOVERY OK");
-}
+
 
 void loopDiscovery()
 {
@@ -169,6 +173,37 @@ String createHaLight(JsonObject &_switchJson)
   switchJson.set("payload_off", String(PAYLOAD_OFF));
   switchJson.printTo(object);
   return object;
+}
+
+void reloadMqttSubscriptions(){
+  
+  String ipMqtt = getConfigJson().get<String>("mqttIpDns");
+  if (ipMqtt == "")
+    return;
+   String prefix = getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix");
+    JsonArray &switches = getStoredSwitchs();
+  for (int i = 0; i < switches.size(); i++)
+  {
+    JsonObject &switchJson = switches.get<JsonVariant>(i);
+    String type = switchJson.get<String>("type");
+    if (type.equals("cover"))
+    {  
+      subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
+    }
+    else if (type.equals("light"))
+    {
+      subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
+    }
+    else if (type.equals("switch"))
+    {
+      subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
+    }
+    else if (type.equals("lock"))
+    { 
+      subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
+    }
+  }
+    logger("[MQTT] RELOAD MQTT SUBSCRIPTIONS OK");
 }
 String createHaCover(JsonObject &_switchJson)
 {

@@ -40,19 +40,14 @@ void onMqttConnect(bool sessionPresent)
 {
   logger("[MQTT] Connected to MQTT.");
   mqttClient.publish(getAvailableTopic().c_str(), 0, true, "1");
-  reloadMqttDiscoveryServices(true, true);
+  reloadMqttSubscriptions();
 }
 
-void rebuildAllMqttTopics(boolean switchs ,boolean sensors)
+void rebuildSwitchMqttTopics(JsonObject &switchJson)
 {
   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
   if (ipMqtt == "")
     return;
-    if(switchs){
-  JsonArray &_devices = getStoredSwitchs();
-  for (int i = 0; i < _devices.size(); i++)
-  {
-    JsonObject &switchJson = _devices[i];
     String _id = switchJson.get<String>("id");
     String type = switchJson.get<String>("type");
     String _class = switchJson.get<String>("class");
@@ -66,13 +61,11 @@ void rebuildAllMqttTopics(boolean switchs ,boolean sensors)
       switchJson.set("mqttTiltStateTopic", getBaseTopic() + "/" + _class + "/" + _id + "/tiltstate");
       switchJson.set("mqttTiltCommandTopic", getBaseTopic() + "/" + _class + "/" + _id + "/tilt");
     }
-  }
-    }
-    if(sensors){
-  JsonArray &_sensores = getStoredSensors();
-  for (int i = 0; i < _sensores.size(); i++)
-  {
-    JsonObject &sensorJson = _sensores.get<JsonVariant>(i);
+}
+void rebuildSensorMqttTopics(JsonObject &sensorJson) {
+String ipMqtt = getConfigJson().get<String>("mqttIpDns");
+  if (ipMqtt == "")
+    return; 
     JsonArray &functions = sensorJson.get<JsonVariant>("functions");
     for (int i = 0; i < functions.size(); i++)
     {
@@ -80,10 +73,8 @@ void rebuildAllMqttTopics(boolean switchs ,boolean sensors)
       String uniqueName = f.get<String>("uniqueName");
       f.set("mqttStateTopic", getBaseTopic() + "/" + uniqueName + "/state");
     }
-  }
-  }
-  logger("[MQTT] REBUILD TOPICS OK");
-  reloadMqttDiscoveryServices(switchs , sensors);
+  
+  
 }
 
 void connectToMqtt()
