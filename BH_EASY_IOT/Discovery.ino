@@ -43,35 +43,35 @@ void  rebuildDiscoverySwitchMqttTopics(JsonObject &switchJson)
     String type = switchJson.get<String>("type");
     if (type.equals("cover"))
     {
-      publishOnMqttQueue(prefix + "/cover/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaCover(switchJson), true);
+      publishOnMqttQueue(prefix + "/cover/" + String(ESP.getChipId())  + _id + "/config", createHaCover(switchJson), true);
       
     
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("light"))
     {
-      publishOnMqttQueue(prefix + "/light/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaLight(switchJson), true);
+      publishOnMqttQueue(prefix + "/light/" + String(ESP.getChipId()) + _id + "/config", createHaLight(switchJson), true);
       
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("switch"))
     {
-      publishOnMqttQueue(prefix + "/switch/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaSwitch(switchJson), true);
+      publishOnMqttQueue(prefix + "/switch/" + String(ESP.getChipId())  + _id + "/config", createHaSwitch(switchJson), true);
      
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("lock"))
     {
-      publishOnMqtt(prefix + "/lock/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaLock(switchJson), true);
+      publishOnMqtt(prefix + "/lock/" + String(ESP.getChipId())  + _id + "/config", createHaLock(switchJson), true);
       
        
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("sensor"))
     {  
-      publishOnMqtt(prefix + "/binary_sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaBinarySensor(switchJson), true);
+      publishOnMqtt(prefix + "/binary_sensor/" + String(ESP.getChipId())  + _id + "/config", createHaBinarySensor(switchJson), true);
     
     
     }
@@ -91,13 +91,13 @@ void  rebuildDiscoverySensorMqttTopics( JsonObject &sensorJson )
       String _id = normalize(f.get<String>("name"));
       if (_class.equals("binary_sensor"))
       {
-        publishOnMqtt(prefix + "/binary_sensorr/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaBinarySensor(sensorJson), true);
+        publishOnMqtt(prefix + "/binary_sensor/" + String(ESP.getChipId())  + _id + "/config", createHaBinarySensor(sensorJson), true);
   
       }
       else if (_class.equals("sensor"))
       { 
         
-        publishOnMqtt(prefix + "/sensor/" + String(ESP.getChipId()) + "/" + _id + "/config", createHaSensor(sensorJson), true);
+        publishOnMqtt(prefix + "/sensor/" + String(ESP.getChipId()) + _id + "/config", createHaSensor(sensorJson, f), true);
         
         
       
@@ -112,14 +112,16 @@ void loopDiscovery()
   fauxmo.handle();
 }
 
-String createHaSensor(JsonObject &_sensorJson)
+String createHaSensor(JsonObject &_sensorJson, JsonObject &_f)
 {
   String object = "";
   JsonObject &sensorJson = getJsonObject();
-  sensorJson.set("name", _sensorJson.get<String>("name"));
+  sensorJson.set("name", _f.get<String>("name"));
   sensorJson.set("state_topic", _sensorJson.get<String>("mqttStateTopic"));
-  sensorJson.set("unit_of_measurement", _sensorJson.get<String>("unit"));
-  sensorJson.set("device_class", _sensorJson.get<String>("functionClass"));
+  sensorJson.set("unit_of_measurement", _f.get<String>("unit"));
+  sensorJson.set("device_class", _f.get<String>("uniqueName"));
+  sensorJson.set("value_template", "{{ value_json."+_f.get<String>("uniqueName")+"}}");
+ 
   sensorJson.printTo(object);
   return object;
 }
@@ -229,5 +231,5 @@ void removeFromAlexaDiscovery(String _name)
 
 void removeFromHaDiscovery(String type, String _id)
 {
-  publishOnMqttQueue(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix") + "/" + type + "/" + String(ESP.getChipId()) + "/" + _id + "/config", "", false);
+  publishOnMqtt(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix") + "/" + type +"/"+ String(ESP.getChipId()) + _id + "/config", "", false);
 }

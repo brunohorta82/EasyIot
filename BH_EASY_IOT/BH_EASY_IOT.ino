@@ -86,7 +86,6 @@ void loop()
   loopWiFi();
   mqttMsgDigest();
   loopDiscovery();
- 
 }
 void actualUpdate()
 {
