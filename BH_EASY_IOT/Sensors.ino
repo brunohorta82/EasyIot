@@ -44,16 +44,17 @@ void callbackBinarySensor(uint8_t gpio, uint8_t event, uint8_t count, uint16_t l
     {
     case PIR_TYPE:
       if(event == EVENT_RELEASED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          
         }else if(event == EVENT_PRESSED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
        }
       break;
     case REED_SWITCH_TYPE:
      if(event == EVENT_RELEASED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
         }else if(event == EVENT_PRESSED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
           
        }
       break;
@@ -71,6 +72,13 @@ void removeSensor(String _id)
     {
       sensorFound = true;
       index = i;
+        JsonArray &functions = sensorJson.get<JsonVariant>("functions");
+    for (int i = 0; i < functions.size(); i++)
+    {
+      JsonObject &f = functions.get<JsonVariant>(i);
+      String _id = normalize(f.get<String>("name"));
+      removeFromHaDiscovery(sensorJson.get<String>("class"), _id);
+    }
     }
   }
   if (sensorFound)
@@ -98,7 +106,7 @@ void loopSensors()
          if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
             logger("[SENSOR LDT] Reading...");
             _sensors[i].lastRead = millis();
-            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String(analogRead(_sensors[i].gpio)).c_str(),false);
+            publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String(analogRead(_sensors[i].gpio)).c_str(),false);
          }
       }
       break;
@@ -119,15 +127,18 @@ void loopSensors()
     case DHT_TYPE_21:
     case DHT_TYPE_22:
     {
+      if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
       if (_sensors[i].dht->measure(&_sensors[i].temperature, &_sensors[i].humidity))
       {
-       if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
+     
             logger("[SENSOR DHT] Reading...");
             _sensors[i].lastRead = millis();
-            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);
-       }
+            
+            publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);
+            
+   }
        
-      } 
+      }
     }
       break;
     case DS18B20_TYPE:
@@ -140,7 +151,7 @@ void loopSensors()
         _sensors[i].dallas->requestTemperatures();
         _sensors[i].lastRead = millis();
         _sensors[i].temperature = _sensors[i].dallas->getTempCByIndex(0);
-        publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}").c_str(),false);
+        publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}").c_str(),false);
         
       }
     }
@@ -258,14 +269,15 @@ void applyJsonSensors()
     case LDR_TYPE:
       _sensors.push_back({type, mqttStateTopic, NULL, NULL, NULL, A0, 2000ul, 0ul, 0ul, 0ul,"",""});
       break;
-    case PIR_TYPE:
-    
+    case PIR_TYPE:{
+    JsonObject &f = functions.get<JsonVariant>(i);
     for (int i = 0; i < functions.size(); i++)
     {
       JsonObject &f = functions.get<JsonVariant>(i);
       String payloadOn = f.get<String>("payloadOn");
       String payloadOff = f.get<String>("payloadOff");
       _sensors.push_back({type, mqttStateTopic, NULL, NULL, new DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH), gpio, 0,0, 0, 0,payloadOn,payloadOff});
+    }
     }
       break;
     case REED_SWITCH_TYPE:
@@ -274,17 +286,21 @@ void applyJsonSensors()
       JsonObject &f = functions.get<JsonVariant>(i);
       String payloadOn = f.get<String>("payloadOn");
       String payloadOff = f.get<String>("payloadOff");
-      _sensors.push_back({type, mqttStateTopic, NULL, NULL, new DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH | BUTTON_SET_PULLUP), gpio, 0,0, 0, 0,payloadOn,payloadOff});
+      int mode = BUTTON_PUSHBUTTON | BUTTON_SET_PULLUP ;
+      if(gpio != 16){
+        mode | BUTTON_DEFAULT_HIGH;
+        }
+      _sensors.push_back({type, mqttStateTopic, NULL, NULL, new DebounceEvent(gpio, callbackBinarySensor, mode), gpio, 0,0, 0, 0,payloadOn,payloadOff});
     }
       break;
 
     case DHT_TYPE_11:
     case DHT_TYPE_21:
     case DHT_TYPE_22:
-      _sensors.push_back({type, mqttStateTopic, new DHT_nonblocking(gpio, type), NULL, NULL, gpio, 60000ul, 0L, 0L, 0L,"",""});
+      _sensors.push_back({type, mqttStateTopic, new DHT_nonblocking(gpio, type), NULL, NULL, gpio, 4000ul, 0L, 0L, 0L,"",""});
       break;
     case DS18B20_TYPE:
-      _sensors.push_back({type, mqttStateTopic, NULL, new DallasTemperature(new OneWire(gpio)), NULL, gpio, 60000L, 0L, 0L, 0L,"",""});
+      _sensors.push_back({type, mqttStateTopic, NULL, new DallasTemperature(new OneWire(gpio)), NULL, gpio, 35000L, 0L, 0L, 0L,"",""});
       break;
     }
   }
