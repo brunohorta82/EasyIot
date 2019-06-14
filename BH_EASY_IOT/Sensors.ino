@@ -11,7 +11,7 @@
 #define LDR_TYPE 21
 #define DS18B20_TYPE 90
 #define REED_SWITCH_TYPE 56
- 
+#define TIME_READINGS_DELAY 3000ul
 
 /* Uncomment according to your sensortype. */
 #define DHT_SENSOR_TYPE DHT_TYPE_11
@@ -36,7 +36,7 @@ int _sensorsBinarySize = 0;
 typedef struct
 {
   JsonObject &sensorJson;
-  DHT_nonblocking dht;
+ DHT_nonblocking* dht;
   long delayRead;
   long lastRead;
   float temperature;
@@ -104,6 +104,7 @@ JsonArray &getStoredSensors()
 
 void loopSensors()
 {
+  static unsigned long measurement_timestamp = millis( );
 /*  for (unsigned int i = 0; i <_sensorsBinarySize; i++)
   {
     DebounceEvent *b = _sensorsBinary[i].binaryDebounce;
@@ -119,19 +120,14 @@ void loopSensors()
   }*/
   
 for (unsigned int i = 0; i <_sensorsDHTSize; i++){
-     if (_sensorsDHT[i].lastRead + _sensorsDHT[i].delayRead < millis()){
+      if( millis( ) - measurement_timestamp > TIME_READINGS_DELAY ){
+          if(!_sensorsDHT[i].dht->measure( &_sensorsDHT[i].temperature, &_sensorsDHT[i].humidity )){
       
-         _sensorsDHT[i].lastRead = millis();
-          if(_sensorsDHT[i].dht.measure( _sensorsDHT[i].temperature, _sensorsDHT[i].humidity )){
-            Serial.println(_sensorsDHT[i].temperature);
-        Serial.println(_sensorsDHT[i].humidity);
-          }else{
-            Serial.println("NONE");
-            }
-        
-        
-      }  
-   
+      continue;
+      }
+       Serial.println(_sensorsDHT[i].temperature);
+      }
+      
 }
 
  /* for (unsigned int i = 0; i < _sensorsDallasSize; i++){
@@ -272,7 +268,10 @@ void applyJsonSensors()
     case DHT_TYPE_11:
     case DHT_TYPE_21:
     case DHT_TYPE_22:
-     _sensorsDHT.push_back({sensorJson,DHT_nonblocking( DHT_SENSOR_PIN, DHT_SENSOR_TYPE ),4000ul,0L,0L,0L});
+     {
+        DHT_nonblocking* dht_sensor = new DHT_nonblocking( gpio,type );
+         _sensorsDHT.push_back({sensorJson,dht_sensor,4000ul,0L,0L,0L});
+      }
     break;
     case DS18B20_TYPE:
      _sensorsDallas.push_back({ sensorJson, new DallasTemperature(new OneWire(gpio)),5000L,0L});

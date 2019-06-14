@@ -50,14 +50,15 @@ void checkServices()
 void setup()
 {
   Serial.begin(115200);
-  loadStoredConfiguration();
+loadStoredConfiguration();
   loadStoredRelays();
   loadStoredSwitchs();
-  loadStoredSensors();
+   loadStoredSensors();
   setupWiFi();
   setupWebserver();
   startAlexaDiscovery();
   reloadAlexaDiscoveryServices();
+ 
 }
 void loop()
 {
@@ -81,7 +82,7 @@ void loop()
     return;
   }
 
-  loopSwitchs();
+ loopSwitchs();
   loopSensors();
   loopWiFi();
   checkServices();
