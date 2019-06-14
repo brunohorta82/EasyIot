@@ -34,8 +34,11 @@ Arduino-Temperature-Control-Library | [GIT](https://github.com/milesburton/Ardui
 
 ## Painel de Controlo <a name="id3"></a>
 
-![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/onofre_v1_dash.png)
-![devices](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/onofre_v1_devices.png)
+![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/node.png)
+![devices](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/devices.png)
+![wifi](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/wifi.png)
+![mqtt](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/mqtt.png)
+![update](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/update.png)
 
 ## Hardware <a name="id2"></a>
 * BH OnOfre Dev Board 3.4
