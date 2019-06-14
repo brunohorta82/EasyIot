@@ -1,16 +1,5 @@
 #include <JustWifi.h>
-bool scan = false;
-void activateScan(){
-  scan = true;
-}
-bool needScan(){
-  return scan;
-}
 
- void stopScan(){
-  scan = false;
- logger("[WIFI] WI-Fi Network's Scanner Stoped");
- }
 
 void reloadWiFiConfig(){
        jw.disconnect(); 
@@ -58,7 +47,7 @@ void scanNewWifiNetworks(){
         }
     }
     WiFi.scanDelete();
-    stopScan();
+  
  }
  void dissableAP(){
   jw.enableAP(false);
@@ -195,4 +184,4 @@ void infoCallback(justwifi_messages_t code, char * parameter) {
       }
       publishOnEventSource("wifi-log",msg);
       logger(msg);
-};
+}

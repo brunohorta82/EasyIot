@@ -1,11 +1,8 @@
 AsyncEventSource events("/events");
 
 JsonObject &configJson = getJsonObject();
-typedef struct
-{
-  int gpio;
-} gpios_t;
-std::vector<gpios_t> inUseGpios;
+
+
 void logger(String payload)
 {
   if (payload.equals(""))
@@ -13,11 +10,6 @@ void logger(String payload)
   Serial.println(payload);
 }
 
-void resetToFactoryConfig()
-{
-  SPIFFS.format();
-  shouldReboot = true;
-}
 
 JsonObject &getConfigJson()
 {
@@ -118,7 +110,6 @@ void loadStoredConfiguration()
 
           configJson.set("configTime", storedConfig.get<long>("configTime"));
           configJson.set("configkey", storedConfig.get<String>("configkey"));
-
           logger("[CONFIG] Apply stored file config with success...");
           cFile.close();
           configFail = false;
@@ -140,7 +131,7 @@ void loadStoredConfiguration()
       configJson.set("apSecret", AP_SECRET);
       configJson.set("hardware", HARDWARE);
       configJson.set("configTime", 0L);
-      configJson.set("firmware",FIRMWARE_VERSION);
+      configJson.set("firmware", FIRMWARE_VERSION);
       configJson.printTo(cFile);
     }
     SPIFFS.end();
@@ -153,16 +144,10 @@ void loadStoredConfiguration()
 
 JsonObject &saveNode(JsonObject &nodeConfig)
 {
-  String nodeId = nodeConfig.get<String>("nodeId");
-
-  if (nodeId != nullptr && !configJson.get<String>("nodeId").equals(nodeId))
-  {
-    nodeId.replace(" ", "");
-    String oldNodeId = configJson.get<String>("nodeId");
-    configJson.set("nodeId", nodeId);
-    reloadMqttConfig();
-  }
-  saveConfig();
+  String nodeId = normalize(nodeConfig.get<String>("nodeId"));
+  configJson.set("nodeIdOld", configJson.get<String>("nodeId"));
+  configJson.set("nodeId", nodeId);
+  requestConfigStorage();
   return configJson;
 }
 
@@ -176,7 +161,8 @@ JsonObject &saveWifi(JsonObject &_config)
   configJson.set("wifiMask", _config.get<String>("wifiMask"));
   configJson.set("wifiGw", _config.get<String>("wifiGw"));
   configJson.set("staticIp", _config.get<bool>("staticIp"));
-  wifiUpdated = true;
+  requestConfigStorage();
+  reloadWiFiConfig();
   return configJson;
 }
 
@@ -197,8 +183,7 @@ JsonObject &adoptControllerConfig(JsonObject &_config, String configkey)
 
   configJson.set("homeAssistantAutoDiscoveryPrefix", _config.get<String>("homeAssistantAutoDiscoveryPrefix"));
 
-  reloadMqttConfig();
-  saveConfig();
+  requestConfigStorage();
   return configJson;
 }
 
@@ -218,14 +203,12 @@ JsonObject &saveMqtt(JsonObject &_config)
   configJson.set("mqttUsername", _config.get<String>("mqttUsername"));
   configJson.set("mqttPassword", _config.get<String>("mqttPassword"));
   configJson.set("mqttEmbedded", _config.get<String>("mqttEmbedded"));
-  reloadMqttConfig();
-  saveConfig();
+  requestConfigStorage();
   return configJson;
 }
 
-void saveConfig()
+void persistConfigFile()
 {
-  
   if (SPIFFS.begin())
   {
     File rFile = SPIFFS.open(CONFIG_FILENAME, "w+");
@@ -245,28 +228,23 @@ void saveConfig()
     logger("[CONFIG] Open file system Error!");
   }
   SPIFFS.end();
-  logger("[CONFIG] New config stored.");
-  
- 
-   JsonArray &switches = getStoredSwitchs();
+  logger("[CONFIG] Config stored.");
+
+  JsonArray &switches = getStoredSwitchs();
   for (int i = 0; i < switches.size(); i++)
   {
     JsonObject &switchJson = switches.get<JsonVariant>(i);
     rebuildSwitchMqttTopics(switchJson);
     rebuildDiscoverySwitchMqttTopics(switchJson);
   }
-   JsonArray &sensors = getStoredSensors();
-  for (int i = 0; i <sensors .size(); i++)
+  JsonArray &sensors = getStoredSensors();
+  for (int i = 0; i < sensors.size(); i++)
   {
-     JsonObject &sensorJson = sensors .get<JsonVariant>(i);
-      rebuildSensorMqttTopics(sensorJson);
-        rebuildDiscoverySensorMqttTopics(sensorJson);
+    JsonObject &sensorJson = sensors.get<JsonVariant>(i);
+    rebuildSensorMqttTopics(sensorJson);
+    rebuildDiscoverySensorMqttTopics(sensorJson);
   }
-  
-}
-
-void configGpio(int gpio, int mode)
-{
-  pinMode(gpio, mode);
-  inUseGpios.push_back({gpio});
+  persistSwitchesFile();
+  persistSensorsFile();
+  setupMQTT();
 }

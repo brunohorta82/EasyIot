@@ -1,5 +1,5 @@
 #define HARDWARE "onofre"
-#define FACTORY_TYPE "light"  //suported types cover light
+#define FACTORY_TYPE "cover"  //suported types cover light
 #define FIRMWARE_VERSION 6.11
 #define FIRMWARE_VERSION_X "6x11"
 const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
@@ -21,12 +21,27 @@ const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+St
 
 
 //CONTROL FLAGS
-bool shouldReboot = false;
-bool reloadMqttConfiguration = false;
-bool wifiUpdated = false;
-bool laodDefaults = false;
-bool adopted = false;
-bool autoUpdate = false;
+bool REBOOT = false;
+bool LOAD_DEFAULTS = false;
+bool AUTO_UPDATE = false;
+bool STORE_CONFIG = false;
+bool WIFI_SCAN = false;
+
+void requestConfigStorage(){
+  STORE_CONFIG = true;
+}
+void requestReboot(){
+  REBOOT = true;
+}
+void requestAutoUpdate(){
+  AUTO_UPDATE = true;
+}
+void requestLoadDefaults(){
+  AUTO_UPDATE = true;
+}
+void requestWifiScan(){
+  WIFI_SCAN = true;
+}
 
 DynamicJsonBuffer jsonBuffer(CONFIG_BUFFER_SIZE);
 

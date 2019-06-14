@@ -227,7 +227,7 @@ void applyJsonRelays()
   {
     JsonObject &relayJson = rls.get<JsonVariant>(i);
     int gpio = relayJson.get<unsigned int>("gpio");
-    configGpio(gpio, OUTPUT);
+    pinMode(gpio, OUTPUT);
   }
 }
 void persistRelaysFile()

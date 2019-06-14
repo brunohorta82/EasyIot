@@ -11,14 +11,6 @@
 #define LDR_TYPE 21
 #define DS18B20_TYPE 90
 #define REED_SWITCH_TYPE 56
-#define TIME_READINGS_DELAY 3000ul
-
-/* Uncomment according to your sensortype. */
-#define DHT_SENSOR_TYPE DHT_TYPE_11
-//#define DHT_SENSOR_TYPE DHT_TYPE_21
-//#define DHT_SENSOR_TYPE DHT_TYPE_22
-
-static const int DHT_SENSOR_PIN = 0;
 
 const String sensorsFilename = "sensors.json";
 
@@ -26,54 +18,47 @@ JsonArray &sns = getJsonArray();
 
 typedef struct
 {
-  JsonObject &sensorJson;
-  DebounceEvent *binaryDebounce;
-
-} sensor_bin;
-std::vector<sensor_bin> _sensorsBinary;
-int _sensorsBinarySize = 0; 
-
-typedef struct
-{
-  JsonObject &sensorJson;
- DHT_nonblocking* dht;
-  long delayRead;
-  long lastRead;
-  float temperature;
-  float humidity ;
-} sensor_dht;
-std::vector<sensor_dht> _sensorsDHT;
-int _sensorsDHTSize = 0;
-
-
-typedef struct
-{
-  JsonObject &sensorJson;
+  int type;
+  String mqttTopicState;
+  DHT_nonblocking *dht;
   DallasTemperature *dallas;
-  long delayRead;
-  long lastRead;
-} sensor_dallas;
-std::vector<sensor_dallas> _sensorsDallas;
-int _sensorsDallasSize = 0;
-
-typedef struct
-{
-  JsonObject &sensorJson;
+  DebounceEvent *binaryDebounce;
   int gpio;
   long delayRead;
   long lastRead;
-  
-} sensor_analog;
-std::vector<sensor_analog> _sensorsAnalog;
-int _sensorsAnalogSize = 0;
+  float temperature;
+  float humidity;
+  String payloadOn;
+  String payloadOff;
+} sensors_t;
+std::vector<sensors_t> _sensors;
+int _sensorsSize = 0;
 
-
-void callbackBinarySensor(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length){
-    Serial.print("Gpio : "); Serial.print(gpio);
-    Serial.print("Event : "); Serial.print(event);
-    Serial.print(" Count : "); Serial.print(count);
-    Serial.print(" Length: "); Serial.print(length);
-    Serial.println();
+void callbackBinarySensor(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
+{
+  for (int i = 0; i < _sensorsSize; i++)
+  {
+    if(_sensors[i].gpio != gpio)continue;
+    
+    switch (_sensors[i].type)
+    {
+    case PIR_TYPE:
+      if(event == EVENT_RELEASED){
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+        }else if(event == EVENT_PRESSED){
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+       }
+      break;
+    case REED_SWITCH_TYPE:
+     if(event == EVENT_RELEASED){
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+        }else if(event == EVENT_PRESSED){
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          
+       }
+      break;
+    }
+  }
 }
 void removeSensor(String _id)
 {
@@ -96,7 +81,6 @@ void removeSensor(String _id)
   persistSensorsFile();
 }
 
-
 JsonArray &getStoredSensors()
 {
   return sns;
@@ -104,67 +88,84 @@ JsonArray &getStoredSensors()
 
 void loopSensors()
 {
-  static unsigned long measurement_timestamp = millis( );
-/*  for (unsigned int i = 0; i <_sensorsBinarySize; i++)
+  for (unsigned int i = 0; i < _sensorsSize; i++)
   {
-    DebounceEvent *b = _sensorsBinary[i].binaryDebounce;
-    b->loop();
-     Serial.println("llll");
-  }
-
-  for (unsigned int i = 0; i <_sensorsAnalogSize; i++){
-     if (_sensorsAnalog[i].lastRead + _sensorsAnalog[i].delayRead < millis()){
-        _sensorsAnalog[i].lastRead = millis();
-        Serial.println(analogRead(_sensorsAnalog[i].gpio));
-      }  
-  }*/
-  
-for (unsigned int i = 0; i <_sensorsDHTSize; i++){
-      if( millis( ) - measurement_timestamp > TIME_READINGS_DELAY ){
-          if(!_sensorsDHT[i].dht->measure( &_sensorsDHT[i].temperature, &_sensorsDHT[i].humidity )){
-      
-      continue;
+   
+    switch (_sensors[i].type)
+    {
+    case LDR_TYPE:
+      {
+         if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
+            logger("[SENSOR LDT] Reading...");
+            _sensors[i].lastRead = millis();
+            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String(analogRead(_sensors[i].gpio)).c_str(),false);
+         }
       }
-       Serial.println(_sensorsDHT[i].temperature);
-      }
-      
-}
+      break;
+    case PIR_TYPE:
+    {
+      DebounceEvent *b = _sensors[i].binaryDebounce;
+      b->loop();
+    }
+    break;
+    case REED_SWITCH_TYPE:
+    {
+      DebounceEvent *b = _sensors[i].binaryDebounce;
+      b->loop();
+    }
+    break;
 
- /* for (unsigned int i = 0; i < _sensorsDallasSize; i++){
-     if (_sensorsDallas[i].lastRead + _sensorsDallas[i].delayRead < millis()){
-         float temperature = -127.0;
-       _sensorsDallas[i].dallas->begin();
-        _sensorsDallas[i].dallas->requestTemperatures();
-       _sensorsDallas[i].lastRead = millis();
-        temperature =_sensorsDallas[i].dallas->getTempCByIndex(0);
-      
-        Serial.println(temperature);
+    case DHT_TYPE_11:
+    case DHT_TYPE_21:
+    case DHT_TYPE_22:
+    {
+      if (_sensors[i].dht->measure(&_sensors[i].temperature, &_sensors[i].humidity))
+      {
+       if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
+            logger("[SENSOR DHT] Reading...");
+            _sensors[i].lastRead = millis();
+            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);
+       }
+       
+      } 
+    }
+      break;
+    case DS18B20_TYPE:
+    {
+     
+      if (_sensors[i].lastRead + _sensors[i].delayRead < millis())
+      {
+        logger("[SENSOR DALLAS] Reading...");
+        _sensors[i].dallas->begin();
+        _sensors[i].dallas->requestTemperatures();
+        _sensors[i].lastRead = millis();
+        _sensors[i].temperature = _sensors[i].dallas->getTempCByIndex(0);
+        publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}").c_str(),false);
         
-      }  
-  }*/
+      }
+    }
+      break;
+    }
+  }
+  
 }
-
- 
-
-
 JsonObject &storeSensor(JsonObject &_sensor)
-{  removeSensor(_sensor.get<String>("id"));
+{
+  removeSensor(_sensor.get<String>("id"));
   _sensor.set("id", normalize(_sensor.get<String>("name")));
   rebuildSensorMqttTopics(_sensor);
   rebuildDiscoverySensorMqttTopics(_sensor);
   String sn = "";
   _sensor.printTo(sn);
   sns.add(getJsonObject(sn.c_str()));
-  
-  
+
   persistSensorsFile();
   return _sensor;
 }
 
-
 void persistSensorsFile()
 {
-  
+
   if (SPIFFS.begin())
   {
     logger("[SENSORS] Open " + sensorsFilename);
@@ -243,44 +244,49 @@ void loadStoredSensors()
 
 void applyJsonSensors()
 {
-  _sensorsAnalog.clear();
-  _sensorsDHT.clear();
-  _sensorsBinary.clear();
-  _sensorsDallas.clear();
- 
+  _sensors.clear();
+
   for (int i = 0; i < sns.size(); i++)
   {
     JsonObject &sensorJson = sns.get<JsonVariant>(i);
     int gpio = sensorJson.get<unsigned int>("gpio");
     int type = sensorJson.get<unsigned int>("type");
+    String mqttStateTopic = sensorJson.get<String>("mqttStateTopic");
+     JsonArray &functions = sensorJson.get<JsonVariant>("functions");
     switch (type)
     {
     case LDR_TYPE:
-      _sensorsAnalog.push_back({sensorJson,A0,2000L,0L});
+      _sensors.push_back({type, mqttStateTopic, NULL, NULL, NULL, A0, 2000ul, 0ul, 0ul, 0ul,"",""});
       break;
     case PIR_TYPE:
-      _sensorsBinary.push_back({ sensorJson, new DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH)});
+    
+    for (int i = 0; i < functions.size(); i++)
+    {
+      JsonObject &f = functions.get<JsonVariant>(i);
+      String payloadOn = f.get<String>("payloadOn");
+      String payloadOff = f.get<String>("payloadOff");
+      _sensors.push_back({type, mqttStateTopic, NULL, NULL, new DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH), gpio, 0,0, 0, 0,payloadOn,payloadOff});
+    }
       break;
     case REED_SWITCH_TYPE:
-    _sensorsBinary.push_back({ sensorJson,new  DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH| BUTTON_SET_PULLUP )});
+    for (int i = 0; i < functions.size(); i++)
+    {
+      JsonObject &f = functions.get<JsonVariant>(i);
+      String payloadOn = f.get<String>("payloadOn");
+      String payloadOff = f.get<String>("payloadOff");
+      _sensors.push_back({type, mqttStateTopic, NULL, NULL, new DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH | BUTTON_SET_PULLUP), gpio, 0,0, 0, 0,payloadOn,payloadOff});
+    }
       break;
-      
+
     case DHT_TYPE_11:
     case DHT_TYPE_21:
     case DHT_TYPE_22:
-     {
-        DHT_nonblocking* dht_sensor = new DHT_nonblocking( gpio,type );
-         _sensorsDHT.push_back({sensorJson,dht_sensor,4000ul,0L,0L,0L});
-      }
-    break;
-    case DS18B20_TYPE:
-     _sensorsDallas.push_back({ sensorJson, new DallasTemperature(new OneWire(gpio)),5000L,0L});
+      _sensors.push_back({type, mqttStateTopic, new DHT_nonblocking(gpio, type), NULL, NULL, gpio, 60000ul, 0L, 0L, 0L,"",""});
       break;
-    
+    case DS18B20_TYPE:
+      _sensors.push_back({type, mqttStateTopic, NULL, new DallasTemperature(new OneWire(gpio)), NULL, gpio, 60000L, 0L, 0L, 0L,"",""});
+      break;
     }
   }
-  _sensorsAnalogSize =_sensorsAnalog.size();
-  _sensorsDHTSize =_sensorsDHT.size();
-  _sensorsBinarySize =_sensorsBinary.size();
-  _sensorsDallasSize = _sensorsDallas.size();
+  _sensorsSize = _sensors.size();
 }

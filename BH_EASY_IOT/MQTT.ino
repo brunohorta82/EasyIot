@@ -65,16 +65,10 @@ void rebuildSwitchMqttTopics(JsonObject &switchJson)
 void rebuildSensorMqttTopics(JsonObject &sensorJson) {
 String ipMqtt = getConfigJson().get<String>("mqttIpDns");
   if (ipMqtt == "")
-    return; 
-    JsonArray &functions = sensorJson.get<JsonVariant>("functions");
-    for (int i = 0; i < functions.size(); i++)
-    {
-      JsonObject &f = functions.get<JsonVariant>(i);
-      String uniqueName = f.get<String>("uniqueName");
-      f.set("mqttStateTopic", getBaseTopic() + "/" + uniqueName + "/state");
-    }
-  
-  
+    return;  
+      String _id = sensorJson.get<String>("id");
+      String _class = sensorJson.get<String>("class");
+      sensorJson.set("mqttStateTopic", getBaseTopic() + "/" + _class + "/" + _id + "/state");
 }
 
 void connectToMqtt()
@@ -136,13 +130,9 @@ void setupMQTT()
   mqttClient.setCleanSession(true);
   mqttClient.setServer(ipDnsMqtt, MQTT_BROKER_PORT);
   connectToMqtt();
-  reloadMqttConfiguration = false;
 }
 
-void reloadMqttConfig()
-{
-  reloadMqttConfiguration = true;
-}
+
 void publishOnMqttQueue(String topic, String payload, bool retain)
 {
   if (mqttClient.connected() && !topic.equals("null"))

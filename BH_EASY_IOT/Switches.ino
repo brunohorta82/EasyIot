@@ -14,9 +14,9 @@ String statesPool[] = {"OPEN", "STOP", "CLOSE", "STOP"};
 JsonArray &sws = getJsonArray();
 
 bool coverNeedsStop;
-long openCloseonTime;
-int _gpioStop;
-
+unsigned long openCloseonTime;
+unsigned int _gpioStop;
+unsigned int swsSize;
 typedef struct
 {
   DebounceEvent *debouncer;
@@ -169,6 +169,7 @@ void applyJsonSwitchs()
       _switchs.push_back({new DebounceEvent(switchJson.get<unsigned int>("gpio"), callback, mode)});
     }
   }
+  swsSize = _switchs.size();
 }
 
 void mqttSwitchControl(String topic, String payload)
@@ -316,7 +317,7 @@ void removeSwitch(String _id)
 
 void loopSwitchs()
 {
-  for (unsigned int i = 0; i < _switchs.size(); i++)
+  for (unsigned int i = 0; i < swsSize; i++)
   {
     DebounceEvent *b = _switchs[i].debouncer;
     b->loop();

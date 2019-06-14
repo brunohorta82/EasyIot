@@ -26,7 +26,7 @@ void setupWebserver()
   });
 
   server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    activateScan();
+    requestWifiScan();
     request->send(200, "application/json", "{\"result\":\"OK\"}");
   });
 
@@ -166,7 +166,7 @@ void setupWebserver()
     request->send(response);
   });
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request) {
-    shouldReboot = true;
+   requestReboot();
     request->redirect("/");
   });
 
@@ -175,11 +175,11 @@ void setupWebserver()
   });
   server.on("/loaddefaults", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200);
-    laodDefaults = true;
+   requestLoadDefaults();
   });
   server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200);
-    autoUpdate = true;
+    requestAutoUpdate();
   });
 
   AsyncCallbackJsonWebHandler *handlerSwitch = new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant &json) {
@@ -314,8 +314,11 @@ void setupWebserver()
   });
   server.addHandler(handlerSensor);
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
-    shouldReboot = !Update.hasError();
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", shouldReboot? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Atualização com sucesso, vai ser redirecionado automaticamente daqui a 20 segundos. Aguarde...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Atualização falhou, poderá ser necessário fazer reset manualmente ao equipamento e tentar novamente.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
+    bool error = Update.hasError();
+    if(error){
+      requestReboot();
+      }
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", error? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Atualização com sucesso, vai ser redirecionado automaticamente daqui a 20 segundos. Aguarde...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Atualização falhou, poderá ser necessário fazer reset manualmente ao equipamento e tentar novamente.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
     response->addHeader("Connection", "close");
     request->send(response); }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     if(!index){

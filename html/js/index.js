@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.11"
+    baseUrl: "http://192.168.1.81"
 };
 
 var switchs;
@@ -550,6 +550,12 @@ function buildSensor(obj) {
         "                            <option " + (obj.gpio == 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                            <option " + (obj.type == 21 ? 'selected' : '') + " value=\"A0\">A0</option>" +
         "                        </select></td>" +
+        "                    <tr>" +
+        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MQTT ESTADO</span></td>" +
+        "                        <td><span style=\"font-weight: bold; font-size:11px; color: #00a65a\">" + obj.mqttStateTopic + "</span>" +
+        "                        </td>" +
+        "" +
+        "                    </tr>" +
         "                    </tr>" + getSensorFunctions(obj) +
 
         "                    </tbody>" +
@@ -576,8 +582,6 @@ function getSensorFunctions(obj) {
         a += "<tr>" +
             "<td><span style=\"font-size: 10px;\" class=\"label-device\">FUNÇÃO</span></td>" +
             "<td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + fun.name + "\" type=\"text\"  id=\"name_" + obj.id + "_" + fun.uniqueName + "\" placeholder=\"ex: sala\"  required=\"true\"/></td> <tr></tr>" +
-            "<td><span style=\"font-size: 10px;\" class=\"label-device\">MQTT ESTADO</span></td>" +
-            "<td><span style=\"font-weight: bold; font-size:11px; color: #00a65a\">" + fun.mqttStateTopic + "</span></td>" +
             "</tr>";
         if (obj.type == 56) {
             a += "<tr>" +
@@ -624,22 +628,19 @@ function buildSensorDHTemplate() {
         "type": 2,
         "class": "sensor",
         "discoveryDisabled": false,
+        "mqttStateTopic": "-",
         "functions": [{
             "name": "Temperatura",
             "uniqueName": "temperature",
             "icon": "fa-thermometer-half",
             "unit": "ºC",
             "type": 1,
-            "mqttStateTopic": "-",
-            "mqttRetain": false
         }, {
             "name": "Humidade",
             "uniqueName": "humidity",
             "icon": "fa-percent",
             "unit": "%",
-            "type": 2,
-            "mqttStateTopic": "-",
-            "mqttRetain": false
+            "type": 2
         }]
     };
     buildSensor(sensor);
@@ -656,13 +657,12 @@ function buildSensorDallasTemplate() {
         "disabled": false,
         "type": 90,
         "class": "sensor",
+        "mqttStateTopic": "-",
         "functions": [{
             "name": "Temperatura",
             "uniqueName": "temperature",
             "unit": "ºC",
-            "type": 1,
-            "mqttStateTopic": "-",
-            "mqttRetain": false
+            "type": 1
         }]
     };
     buildSensor(sensor);
@@ -679,6 +679,7 @@ function buildSensorMagTemplate() {
         "disabled": false,
         "type": 56,
         "class": "binary_sensor",
+        "mqttStateTopic": "-",
         "functions": [{
             "payloadOn": "ON",
             "payloadOff": "OFF",
@@ -701,13 +702,12 @@ function buildSensorPirTemplate() {
         "disabled": false,
         "type": 65,
         "class": "binary_sensor",
+        "mqttStateTopic": "-",
         "functions": [{
             "name": "Movimento",
             "uniqueName": "motion",
             "unit": "",
-            "type": 4,
-            "mqttStateTopic": "-",
-            "mqttRetain": false
+            "type": 4
         }]
     };
     buildSensor(sensor);
@@ -724,13 +724,12 @@ function buildSensorLdrTemplate() {
         "disabled": false,
         "type": 21,
         "class": "sensor",
+        "mqttStateTopic": "-",
         "functions": [{
             "name": "Sensor de Luz",
             "uniqueName": "light_sensor",
             "unit": "",
-            "type": 7,
-            "mqttStateTopic": "-",
-            "mqttRetain": false
+            "type": 7
         }]
     };
     buildSensor(sensor);
