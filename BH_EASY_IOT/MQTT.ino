@@ -21,9 +21,9 @@ boolean reconnect() {
     logger("[MQTT] TRY CONNECTION");
     char *username = strdup(getConfigJson().get<String>("mqttUsername").c_str());
     char *password = strdup(getConfigJson().get<String>("mqttPassword").c_str());
-  if (mqttClient.connect(String(ESP.getChipId()).c_str(),username,password)) {
+  if (mqttClient.connect(String(ESP.getChipId()).c_str(),username,password,getAvailableTopic().c_str(), 0, true, "offline", false)) {
       logger("[MQTT] CONNECTED");
-      publishOnMqtt(getAvailableTopic().c_str() ,"1",true);
+      publishOnMqtt(getAvailableTopic().c_str() ,"online",true);
       reloadMqttSubscriptions();
   }
   
