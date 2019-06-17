@@ -43,21 +43,21 @@ void  rebuildDiscoverySwitchMqttTopics(JsonObject &switchJson)
     String type = switchJson.get<String>("type");
     if (type.equals("cover"))
     {
-      publishOnMqttQueue(prefix + "/cover/" + String(ESP.getChipId())  + _id + "/config", createHaCover(switchJson), true);
+      publishOnMqtt(prefix + "/cover/" + String(ESP.getChipId())  + _id + "/config", createHaCover(switchJson), true);
       
     
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("light"))
     {
-      publishOnMqttQueue(prefix + "/light/" + String(ESP.getChipId()) + _id + "/config", createHaLight(switchJson), true);
+      publishOnMqtt(prefix + "/light/" + String(ESP.getChipId()) + _id + "/config", createHaLight(switchJson), true);
       
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("switch"))
     {
-      publishOnMqttQueue(prefix + "/switch/" + String(ESP.getChipId())  + _id + "/config", createHaSwitch(switchJson), true);
+      publishOnMqtt(prefix + "/switch/" + String(ESP.getChipId())  + _id + "/config", createHaSwitch(switchJson), true);
      
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));

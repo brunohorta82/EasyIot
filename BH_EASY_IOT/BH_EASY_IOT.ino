@@ -19,7 +19,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 #include "Libs.h"
 #include "Config.h"
 
@@ -84,8 +83,8 @@ void loop()
   loopSwitchs();
   loopSensors();
   loopWiFi();
-  mqttMsgDigest();
   loopDiscovery();
+  loopMqtt();
 }
 void actualUpdate()
 {

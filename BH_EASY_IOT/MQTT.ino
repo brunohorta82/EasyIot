@@ -1,10 +1,12 @@
 #define MQTT_BROKER_PORT 1883
 #define MQTT_CONFIG_TOPIC "heleeus/config/#"
-AsyncMqttClient mqttClient;
-Ticker mqttReconnectTimer;
+
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
 
 /**
  * REASONS
+ * 
   TCP_DISCONNECTED = 0,
   MQTT_UNACCEPTABLE_PROTOCOL_VERSION = 1,
   MQTT_IDENTIFIER_REJECTED = 2,
@@ -28,21 +30,21 @@ String getAvailableTopic()
   return getBaseTopic() + "/available";
 }
 
-typedef struct
-{
-  String topic;
-  String payload;
-  bool retain;
-} message_t;
-std::vector<message_t> _messages;
-
-void onMqttConnect(bool sessionPresent)
-{
-  logger("[MQTT] Connected to MQTT.");
-  mqttClient.publish(getAvailableTopic().c_str(), 0, true, "1");
+boolean reconnect() {
+  
+  if (WiFi.status() != WL_CONNECTED || getConfigJson().get<String>("mqttIpDns").equals(""))
+    return false;
+    logger("[MQTT] TRY CONNECTION");
+  if (mqttClient.connect(String(ESP.getChipId()).c_str())) {
+    if( mqttClient.connected()){
+      logger("[MQTT] CONNECTED");
+   publishOnMqtt(getAvailableTopic().c_str() ,"1",true);
   reloadMqttSubscriptions();
+    }
+  }
+  
+  return mqttClient.connected();
 }
-
 void rebuildSwitchMqttTopics(JsonObject &switchJson)
 {
   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
@@ -71,33 +73,20 @@ String ipMqtt = getConfigJson().get<String>("mqttIpDns");
       sensorJson.set("mqttStateTopic", getBaseTopic() + "/" + _class + "/" + _id + "/state");
 }
 
-void connectToMqtt()
+void setupMQTT()
 {
-  logger("[MQTT] Connecting to MQTT [" + getConfigJson().get<String>("mqttIpDns") + "]...");
-  if (!getMqttState())
-  {
-    mqttClient.connect();
-  }
+  logger("[MQTT] SETUP MQTT");
+  if(mqttClient.connected()){
+   mqttClient.disconnect(); 
+   }
+   mqttClient.setServer(getConfigJson().get<String>("mqttIpDns").c_str(), getConfigJson().get<unsigned int>("mqttPort"));
+   mqttClient.setCallback(callbackMqtt);
 }
-bool getMqttState()
-{
-  return mqttClient.connected();
-}
-void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
-{
-  logger("[MQTT] Disconnected from MQTT. Reason: " + String(static_cast<uint8_t>(reason)));
-  if (WiFi.isConnected())
-  {
-    mqttReconnectTimer.once(2, connectToMqtt);
-  }
-}
-
-void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
-{
-  String topicStr = String(topic);
+void callbackMqtt(char* topic, byte* payload, unsigned int length) {
+String topicStr = String(topic);
   logger("[MQTT] TOPIC: " + topicStr);
   String payloadStr = "";
-  for (int i = 0; i < len; i++)
+  for (int i = 0; i < length; i++)
   {
     payloadStr += payload[i];
   }
@@ -105,73 +94,37 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   processMqttAction(topicStr, payloadStr);
 }
 
-void setupMQTT()
+
+void loopMqtt(){
+   static unsigned long lastReconnectAttempt = millis( );
+  if (!mqttClient.connected()) {
+    long now = millis();
+    if (now - lastReconnectAttempt > 5000) {
+      lastReconnectAttempt = now;
+      // Attempt to reconnect
+      if (reconnect()) {
+        lastReconnectAttempt = 0;
+        
+      }
+    }
+  } else {
+    // Client connected
+
+    mqttClient.loop();
+  }
+  
+  }
+
+
+
+void publishOnMqtt(String topic, String payload, bool retain)
 {
   if (mqttClient.connected())
   {
-    mqttClient.disconnect();
+    mqttClient.publish(topic.c_str(), payload.c_str(), retain);
   }
-  if (WiFi.status() != WL_CONNECTED || getConfigJson().get<String>("mqttIpDns").equals(""))
-    return;
-
-  mqttClient.onConnect(onMqttConnect);
-  const static String clientId = String(ESP.getChipId());
-  mqttClient.setClientId(clientId.c_str());
-  mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onMessage(onMqttMessage);
-  char *ipDnsMqtt = strdup(getConfigJson().get<String>("mqttIpDns").c_str());
-
-  if (!(getConfigJson().get<String>("mqttUsername").equals("") && getConfigJson().get<String>("mqttPassword").equals("")))
-  {
-    usernameMqtt = strdup(getConfigJson().get<String>("mqttUsername").c_str());
-    passwordMqtt = strdup(getConfigJson().get<String>("mqttPassword").c_str());
-    mqttClient.setCredentials(usernameMqtt, passwordMqtt);
-  }
-  mqttClient.setCleanSession(true);
-  mqttClient.setServer(ipDnsMqtt, MQTT_BROKER_PORT);
-  connectToMqtt();
 }
 
-
-void publishOnMqttQueue(String topic, String payload, bool retain)
-{
-  if (mqttClient.connected() && !topic.equals("null"))
-  {
-    _messages.push_back({topic, payload, retain});
-  }
-}
-void publishOnMqtt(String topic, String payload, bool retain)
-{
-  if (mqttClient.connected() && !topic.equals("null"))
-  {
-    mqttClient.publish(topic.c_str(), 0, retain, payload.c_str());
-  }
-}
-void publishOnMqtt(String topic, JsonObject &payloadJson, bool retain)
-{
-  if (mqttClient.connected() && !topic.equals("null"))
-  {
-    String payload = "";
-    payloadJson.printTo(payload);
-    mqttClient.publish(topic.c_str(), 0, retain, payload.c_str());
-  }
-}
-long lastMessage = 0;
-void mqttMsgDigest()
-{
-  if (_messages.empty())
-  {
-    lastMessage = 0;
-    return;
-  }
-  if (lastMessage + 500 < millis())
-  {
-    message_t m = _messages.back();
-    mqttClient.publish(m.topic.c_str(), 0, true, m.payload.c_str());
-    _messages.pop_back();
-    lastMessage = millis();
-  }
-}
 void subscribeOnMqtt(String topic)
 {
   mqttClient.subscribe(topic.c_str(), 0);

@@ -37,7 +37,7 @@ void requestAutoUpdate(){
   AUTO_UPDATE = true;
 }
 void requestLoadDefaults(){
-  AUTO_UPDATE = true;
+  LOAD_DEFAULTS = true;
 }
 void requestWifiScan(){
   WIFI_SCAN = true;
