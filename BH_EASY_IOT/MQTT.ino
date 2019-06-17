@@ -1,21 +1,5 @@
-#define MQTT_BROKER_PORT 1883
-#define MQTT_CONFIG_TOPIC "heleeus/config/#"
-
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
-
-/**
- * REASONS
- * 
-  TCP_DISCONNECTED = 0,
-  MQTT_UNACCEPTABLE_PROTOCOL_VERSION = 1,
-  MQTT_IDENTIFIER_REJECTED = 2,
-  MQTT_SERVER_UNAVAILABLE = 3,
-  MQTT_MALFORMED_CREDENTIALS = 4,
-  MQTT_NOT_AUTHORIZED = 5
- */
-char *usernameMqtt = 0;
-char *passwordMqtt = 0;
 String getBaseTopic()
 {
   String username = getConfigJson().get<String>("mqttUsername");
@@ -35,12 +19,12 @@ boolean reconnect() {
   if (WiFi.status() != WL_CONNECTED || getConfigJson().get<String>("mqttIpDns").equals(""))
     return false;
     logger("[MQTT] TRY CONNECTION");
-  if (mqttClient.connect(String(ESP.getChipId()).c_str()),getConfigJson().get<String>("mqttUsername").c_str(),getConfigJson().get<String>("mqttPassword").c_str()) {
-    if( mqttClient.connected()){
+    char *username = strdup(getConfigJson().get<String>("mqttUsername").c_str());
+    char *password = strdup(getConfigJson().get<String>("mqttPassword").c_str());
+  if (mqttClient.connect(String(ESP.getChipId()).c_str(),username,password)) {
       logger("[MQTT] CONNECTED");
-  // publishOnMqtt(getAvailableTopic().c_str() ,"1",true);
-  reloadMqttSubscriptions();
-    }
+      publishOnMqtt(getAvailableTopic().c_str() ,"1",true);
+      reloadMqttSubscriptions();
   }
   
   return mqttClient.connected();
@@ -79,7 +63,10 @@ void setupMQTT()
   if(mqttClient.connected()){
    mqttClient.disconnect(); 
    }
-   mqttClient.setServer(getConfigJson().get<String>("mqttIpDns").c_str(), getConfigJson().get<unsigned int>("mqttPort"));
+   char *ipDnsMqtt = strdup(getConfigJson().get<String>("mqttIpDns").c_str());
+   int port = getConfigJson().get<unsigned int>("mqttPort");
+   
+   mqttClient.setServer(ipDnsMqtt,port);
    mqttClient.setCallback(callbackMqtt);
 }
 void callbackMqtt(char* topic, byte* payload, unsigned int length) {
@@ -101,15 +88,12 @@ void loopMqtt(){
     long now = millis();
     if (now - lastReconnectAttempt > 5000) {
       lastReconnectAttempt = now;
-      // Attempt to reconnect
       if (reconnect()) {
         lastReconnectAttempt = 0;
         
       }
     }
   } else {
-    // Client connected
-
     mqttClient.loop();
   }
   
