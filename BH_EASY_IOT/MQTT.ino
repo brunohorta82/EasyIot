@@ -24,7 +24,7 @@ boolean reconnect() {
   if (mqttClient.connect(String(ESP.getChipId()).c_str(),username,password,getAvailableTopic().c_str(), 0, true, "offline", false)) {
       logger("[MQTT] CONNECTED");
       publishOnMqtt(getAvailableTopic().c_str() ,"online",true);
-      reloadMqttSubscriptions();
+      reloadMqttSubscriptionsAndDiscovery();
   }
   
   return mqttClient.connected();

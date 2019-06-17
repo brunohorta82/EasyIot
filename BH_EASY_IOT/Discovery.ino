@@ -182,7 +182,7 @@ String createHaLight(JsonObject &_switchJson)
   return object;
 }
 
-void reloadMqttSubscriptions(){
+void reloadMqttSubscriptionsAndDiscovery(){
   
   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
   if (ipMqtt == "")
@@ -192,6 +192,7 @@ void reloadMqttSubscriptions(){
   for (int i = 0; i < switches.size(); i++)
   {
     JsonObject &switchJson = switches.get<JsonVariant>(i);
+     
     String type = switchJson.get<String>("type");
     if (type.equals("cover"))
     {  
@@ -209,7 +210,15 @@ void reloadMqttSubscriptions(){
     { 
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
+    rebuildDiscoverySwitchMqttTopics(switchJson);
   }
+    JsonArray &sensors = getStoredSensors();
+  for (int i = 0; i < sensors.size(); i++)
+  {
+    JsonObject& sensorJson = sensors.get<JsonVariant>(i);
+     rebuildDiscoverySensorMqttTopics(sensorJson);
+  }
+  
     logger("[MQTT] RELOAD MQTT SUBSCRIPTIONS OK");
 }
 String createHaCover(JsonObject &_switchJson)

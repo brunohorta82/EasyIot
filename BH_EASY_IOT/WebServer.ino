@@ -18,7 +18,7 @@ void setupWebserver()
   MDNS.addServiceTxt("bhsystems", "tcp", "ssid", getApName());
   MDNS.addServiceTxt("bhsystems", "tcp", "firmware", getConfigJson().get<String>("firmware"));
   server.addHandler(&events);
-  /** HTML  **/
+  
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -68,6 +68,7 @@ void setupWebserver()
     }
     request->send(200);
   });
+  
   server.on("/devices.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", devices_html, sizeof(devices_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -111,6 +112,7 @@ void setupWebserver()
     wifiJSONStatus().printTo(*response);
     request->send(response);
   });
+  
   server.on("/switchs", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getStoredSwitchs().printTo(*response);
@@ -170,9 +172,7 @@ void setupWebserver()
     request->redirect("/");
   });
 
-  server.on("/gpios", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200);
-  });
+  
   server.on("/loaddefaults", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200);
    requestLoadDefaults();
