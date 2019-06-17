@@ -192,12 +192,12 @@ void publishState(JsonObject &switchJson)
   publishOnEventSource("switch", swtr);
   if (switchJson.get<String>("type").equals("cover"))
   {
-    publishOnMqttQueue(switchJson.get<String>("mqttStateTopic").c_str(), switchJson.get<String>("stateControlCover"), switchJson.get<bool>("retain"));
-    publishOnMqtt(switchJson.get<String>("mqttPositionStateTopic").c_str(), switchJson.get<String>("positionControlCover"), switchJson.get<bool>("retain"));
+    publishOnMqtt(switchJson.get<String>("mqttStateTopic").c_str(), switchJson.get<String>("stateControlCover"), switchJson.get<bool>("mqttRetain"));
+    publishOnMqtt(switchJson.get<String>("mqttPositionStateTopic").c_str(), switchJson.get<String>("positionControlCover"), switchJson.get<bool>("mqttRetain"));
   }
   else
   {
-    publishOnMqtt(switchJson.get<String>("mqttStateTopic").c_str(), switchJson.get<String>("statePayload"), switchJson.get<bool>("retain"));
+    publishOnMqtt(switchJson.get<String>("mqttStateTopic"), switchJson.get<String>("statePayload"), switchJson.get<bool>("mqttRetain"));
   }
 }
 

@@ -44,17 +44,17 @@ void callbackBinarySensor(uint8_t gpio, uint8_t event, uint8_t count, uint16_t l
     {
     case PIR_TYPE:
       if(event == EVENT_RELEASED){
-          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
           
         }else if(event == EVENT_PRESSED){
-          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
        }
       break;
     case REED_SWITCH_TYPE:
      if(event == EVENT_RELEASED){
-          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
         }else if(event == EVENT_PRESSED){
-          publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
           
        }
       break;
@@ -106,7 +106,7 @@ void loopSensors()
          if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
             logger("[SENSOR LDT] Reading...");
             _sensors[i].lastRead = millis();
-            publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String(analogRead(_sensors[i].gpio)).c_str(),false);
+            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String(analogRead(_sensors[i].gpio)).c_str(),false);
            
          }
       }
@@ -135,7 +135,7 @@ void loopSensors()
       if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
             logger("[SENSOR DHT] Reading...");
             _sensors[i].lastRead = millis();
-            publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);      
+            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);      
         }
       }
     }
@@ -150,7 +150,7 @@ void loopSensors()
         _sensors[i].dallas->requestTemperatures();
         _sensors[i].lastRead = millis();
         _sensors[i].temperature = _sensors[i].dallas->getTempCByIndex(0);
-        publishOnMqttQueue(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}").c_str(),false);
+        publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}").c_str(),false);
         
       }
     }

@@ -1,7 +1,9 @@
 AsyncEventSource events("/events");
 
 JsonObject &configJson = getJsonObject();
-
+struct Config {
+  String mqttIpDns;
+};
 
 void logger(String payload)
 {

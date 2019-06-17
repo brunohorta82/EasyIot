@@ -1,7 +1,7 @@
 #define HARDWARE "onofre"
-#define FACTORY_TYPE "light"  //suported types cover light
-#define FIRMWARE_VERSION 6.12
-#define FIRMWARE_VERSION_X "6x12"
+#define FACTORY_TYPE "cover"  //suported types cover light
+#define FIRMWARE_VERSION 6.13
+#define FIRMWARE_VERSION_X "6x13"
 const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
 
 #define CONFIG_FILENAME  "/config_bh"+String(HARDWARE)+".json"
@@ -37,7 +37,7 @@ void requestAutoUpdate(){
   AUTO_UPDATE = true;
 }
 void requestLoadDefaults(){
-  AUTO_UPDATE = true;
+  LOAD_DEFAULTS = true;
 }
 void requestWifiScan(){
   WIFI_SCAN = true;

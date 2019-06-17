@@ -43,21 +43,21 @@ void  rebuildDiscoverySwitchMqttTopics(JsonObject &switchJson)
     String type = switchJson.get<String>("type");
     if (type.equals("cover"))
     {
-      publishOnMqttQueue(prefix + "/cover/" + String(ESP.getChipId())  + _id + "/config", createHaCover(switchJson), true);
+      publishOnMqtt(prefix + "/cover/" + String(ESP.getChipId())  + _id + "/config", createHaCover(switchJson), true);
       
     
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("light"))
     {
-      publishOnMqttQueue(prefix + "/light/" + String(ESP.getChipId()) + _id + "/config", createHaLight(switchJson), true);
+      publishOnMqtt(prefix + "/light/" + String(ESP.getChipId()) + _id + "/config", createHaLight(switchJson), true);
       
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("switch"))
     {
-      publishOnMqttQueue(prefix + "/switch/" + String(ESP.getChipId())  + _id + "/config", createHaSwitch(switchJson), true);
+      publishOnMqtt(prefix + "/switch/" + String(ESP.getChipId())  + _id + "/config", createHaSwitch(switchJson), true);
      
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
@@ -119,6 +119,7 @@ String createHaSensor(JsonObject &_sensorJson, JsonObject &_f)
   sensorJson.set("name", _f.get<String>("name"));
   sensorJson.set("state_topic", _sensorJson.get<String>("mqttStateTopic"));
   sensorJson.set("unit_of_measurement", _f.get<String>("unit"));
+  sensorJson.set("availability_topic", getAvailableTopic());
   sensorJson.set("device_class", _f.get<String>("uniqueName"));
   sensorJson.set("value_template", "{{ value_json."+_f.get<String>("uniqueName")+"}}");
  
@@ -133,6 +134,7 @@ String createHaBinarySensor(JsonObject &_sensorJson)
   sensorJson.set("state_topic", _sensorJson.get<String>("mqttStateTopic"));
   sensorJson.set("payload_on", String(PAYLOAD_ON));
   sensorJson.set("payload_off", String(PAYLOAD_OFF));
+  sensorJson.set("availability_topic", getAvailableTopic());
   sensorJson.set("device_class", "opening");
   sensorJson.printTo(object);
   return object;
@@ -145,6 +147,7 @@ String createHaLock(JsonObject &_switchJson)
   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
   switchJson.set("state_topic", _switchJson.get<String>("mqttStateTopic"));
   switchJson.set("retain", _switchJson.get<bool>("retain"));
+  switchJson.set("availability_topic", getAvailableTopic());
   switchJson.set("payload_lock", String(PAYLOAD_LOCK));
   switchJson.set("payload_unlock", String(PAYLOAD_UNLOCK));
   switchJson.printTo(object);
@@ -159,6 +162,7 @@ String createHaSwitch(JsonObject &_switchJson)
   switchJson.set("state_topic", _switchJson.get<String>("mqttStateTopic"));
   switchJson.set("retain", _switchJson.get<bool>("retain"));
   switchJson.set("payload_on", String(PAYLOAD_ON));
+  switchJson.set("availability_topic", getAvailableTopic());
   switchJson.set("payload_off", String(PAYLOAD_OFF));
   switchJson.printTo(object);
   return object;
@@ -171,13 +175,14 @@ String createHaLight(JsonObject &_switchJson)
   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
   switchJson.set("state_topic", _switchJson.get<String>("mqttStateTopic"));
   switchJson.set("retain", _switchJson.get<bool>("retain"));
+  switchJson.set("availability_topic", getAvailableTopic());
   switchJson.set("payload_on", String(PAYLOAD_ON));
   switchJson.set("payload_off", String(PAYLOAD_OFF));
   switchJson.printTo(object);
   return object;
 }
 
-void reloadMqttSubscriptions(){
+void reloadMqttSubscriptionsAndDiscovery(){
   
   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
   if (ipMqtt == "")
@@ -187,6 +192,7 @@ void reloadMqttSubscriptions(){
   for (int i = 0; i < switches.size(); i++)
   {
     JsonObject &switchJson = switches.get<JsonVariant>(i);
+     
     String type = switchJson.get<String>("type");
     if (type.equals("cover"))
     {  
@@ -204,7 +210,15 @@ void reloadMqttSubscriptions(){
     { 
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
+    rebuildDiscoverySwitchMqttTopics(switchJson);
   }
+    JsonArray &sensors = getStoredSensors();
+  for (int i = 0; i < sensors.size(); i++)
+  {
+    JsonObject& sensorJson = sensors.get<JsonVariant>(i);
+     rebuildDiscoverySensorMqttTopics(sensorJson);
+  }
+  
     logger("[MQTT] RELOAD MQTT SUBSCRIPTIONS OK");
 }
 String createHaCover(JsonObject &_switchJson)
@@ -216,6 +230,7 @@ String createHaCover(JsonObject &_switchJson)
   switchJson.set("position_topic", _switchJson.get<String>("mqttPositionStateTopic"));
   switchJson.set("retain", _switchJson.get<bool>("retain"));
   switchJson.set("position_open", 100);
+  switchJson.set("availability_topic", getAvailableTopic());
   switchJson.set("position_closed", 0);
   switchJson.set("payload_open", String(PAYLOAD_OPEN));
   switchJson.set("payload_close", String(PAYLOAD_CLOSE));
