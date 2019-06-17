@@ -2,7 +2,7 @@
 #include <JustWifi.h> //https://github.com/xoseperez/justwifi
 #include <ESP8266mDNS.h>
 #include <DallasTemperature.h> // https://github.com/milesburton/Arduino-Temperature-Control-Library
-#include <PubSubClient.h>
+#include <PubSubClient.h> //Install from Arduino IDE Library Manager
 #include <ArduinoJson.h> //Install from Arduino IDE Library Manager
 #include "FS.h"
 #include <ESPAsyncTCP.h> //https://github.com/me-no-dev/ESPAsyncTCP

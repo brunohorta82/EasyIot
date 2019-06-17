@@ -35,10 +35,10 @@ boolean reconnect() {
   if (WiFi.status() != WL_CONNECTED || getConfigJson().get<String>("mqttIpDns").equals(""))
     return false;
     logger("[MQTT] TRY CONNECTION");
-  if (mqttClient.connect(String(ESP.getChipId()).c_str())) {
+  if (mqttClient.connect(String(ESP.getChipId()).c_str()),getConfigJson().get<String>("mqttUsername").c_str(),getConfigJson().get<String>("mqttPassword").c_str()) {
     if( mqttClient.connected()){
       logger("[MQTT] CONNECTED");
-   publishOnMqtt(getAvailableTopic().c_str() ,"1",true);
+  // publishOnMqtt(getAvailableTopic().c_str() ,"1",true);
   reloadMqttSubscriptions();
     }
   }
