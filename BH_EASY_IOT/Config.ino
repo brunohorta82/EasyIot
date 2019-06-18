@@ -94,7 +94,7 @@ void loadStoredConfiguration()
 
           configJson.set("mqttIpDns", storedConfig.get<String>("mqttIpDns"));
           configJson.set("mqttUsername", storedConfig.get<String>("mqttUsername"));
-          configJson.set("mqttPort", storedConfig.get<unsigned int>("mqttPort"));
+          configJson.set("mqttPort", storedConfig.get<unsigned int>("mqttPort")  == 0 ? 1883 : storedConfig.get<unsigned int>("mqttPort"));
           configJson.set("mqttPassword", storedConfig.get<String>("mqttPassword"));
 
           configJson.set("wifiSSID", storedConfig.get<String>("wifiSSID"));

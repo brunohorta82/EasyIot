@@ -1,7 +1,7 @@
 #define HARDWARE "onofre"
 #define FACTORY_TYPE "cover"  //suported types cover light
-#define FIRMWARE_VERSION 6.13
-#define FIRMWARE_VERSION_X "6x13"
+#define FIRMWARE_VERSION 6.14
+#define FIRMWARE_VERSION_X "6x14"
 const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
 
 #define CONFIG_FILENAME  "/config_bh"+String(HARDWARE)+".json"
