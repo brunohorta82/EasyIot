@@ -75,7 +75,7 @@ String topicStr = String(topic);
   String payloadStr = "";
   for (int i = 0; i < length; i++)
   {
-    payloadStr += payload[i];
+    payloadStr += (char)payload[i];
   }
   logger("[MQTT] PAYLOAD: " + payloadStr);
   processMqttAction(topicStr, payloadStr);
@@ -111,7 +111,7 @@ void publishOnMqtt(String topic, String payload, bool retain)
 
 void subscribeOnMqtt(String topic)
 {
-  mqttClient.subscribe(topic.c_str(), 0);
+  mqttClient.subscribe(topic.c_str());
 }
 void processMqttAction(String topic, String payload)
 {
