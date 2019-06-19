@@ -13,6 +13,10 @@ String getAvailableTopic()
 {
   return getBaseTopic() + "/available";
 }
+String getConfigStatusTopic()
+{
+  return getBaseTopic() + "/config/status";
+}
 
 boolean reconnect() {
   
@@ -23,7 +27,8 @@ boolean reconnect() {
     char *password = strdup(getConfigJson().get<String>("mqttPassword").c_str());
   if (mqttClient.connect(String(ESP.getChipId()).c_str(),username,password,getAvailableTopic().c_str(), 0, true, "offline", false)) {
       logger("[MQTT] CONNECTED");
-      publishOnMqtt(getAvailableTopic().c_str() ,"online",true);
+      publishOnMqtt(getAvailableTopic() ,"online",true);
+      publishOnMqtt(getConfigStatusTopic() ,getConfigStatus(),true);
       reloadMqttSubscriptionsAndDiscovery();
   }
   
@@ -104,13 +109,17 @@ void loopMqtt(){
 void publishOnMqtt(String topic, String payload, bool retain)
 {
   if (mqttClient.connected())
-  {
-    mqttClient.publish(topic.c_str(), payload.c_str(), retain);
+  {static unsigned long retries = 0;
+    while(!mqttClient.publish(topic.c_str(), payload.c_str(), retain) && retries < 3 ){
+      retries++;
+    }
+    retries = 0;
   }
 }
 
 void subscribeOnMqtt(String topic)
 {
+   
   mqttClient.subscribe(topic.c_str());
 }
 void processMqttAction(String topic, String payload)

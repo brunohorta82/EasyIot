@@ -31,7 +31,20 @@ String getHostname()
   }
   return nodeId;
 }
-
+String getConfigStatus()
+{
+  String object = "";
+  const size_t capacity = JSON_OBJECT_SIZE(7);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  JsonObject& configStatus = jsonBuffer.createObject();
+  configStatus.set("firmware", FIRMWARE_VERSION);
+  configStatus.set("nodeId", configJson.get<String>("nodeId"));
+  configStatus.set("configTime", configJson.get<long>("configTime"));
+  configStatus.set("hardwareId", String(ESP.getChipId()));
+  configStatus.set("wifiIp",WiFi.localIP().toString());  
+  configStatus.printTo(object);
+  return object;
+}
 String normalize(String inputStr)
 {
   inputStr.toLowerCase();
@@ -56,6 +69,8 @@ String normalize(String inputStr)
   inputStr.replace(",", "");
   inputStr.replace("\"", "");
   inputStr.replace(" ", "");
+  inputStr.replace("â", "a");
+
   return inputStr;
 }
 String getApName()
@@ -249,4 +264,5 @@ void persistConfigFile()
   persistSwitchesFile();
   persistSensorsFile();
   setupMQTT();
+  publishOnMqtt(getConfigStatusTopic() ,getConfigStatus(),true);
 }

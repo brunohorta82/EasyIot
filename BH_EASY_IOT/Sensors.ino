@@ -44,17 +44,17 @@ void callbackBinarySensor(uint8_t gpio, uint8_t event, uint8_t count, uint16_t l
     {
     case PIR_TYPE:
       if(event == EVENT_RELEASED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOn,false);
           
         }else if(event == EVENT_PRESSED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOff,false);
        }
       break;
     case REED_SWITCH_TYPE:
      if(event == EVENT_RELEASED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOff.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOff,false);
         }else if(event == EVENT_PRESSED){
-          publishOnMqtt(_sensors[i].mqttTopicState.c_str(), _sensors[i].payloadOn.c_str(),false);
+          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOn,false);
           
        }
       break;
@@ -106,7 +106,7 @@ void loopSensors()
          if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
             logger("[SENSOR LDT] Reading...");
             _sensors[i].lastRead = millis();
-            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String(analogRead(_sensors[i].gpio)).c_str(),false);
+            publishOnMqtt(_sensors[i].mqttTopicState, String(analogRead(_sensors[i].gpio)),false);
            
          }
       }
@@ -135,7 +135,7 @@ void loopSensors()
       if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
             logger("[SENSOR DHT] Reading...");
             _sensors[i].lastRead = millis();
-            publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}").c_str(),false);      
+            publishOnMqtt(_sensors[i].mqttTopicState, String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}"),false);      
         }
       }
     }
@@ -150,7 +150,7 @@ void loopSensors()
         _sensors[i].dallas->requestTemperatures();
         _sensors[i].lastRead = millis();
         _sensors[i].temperature = _sensors[i].dallas->getTempCByIndex(0);
-        publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}").c_str(),false);
+        publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}"),false);
         
       }
     }
@@ -162,7 +162,7 @@ void loopSensors()
 JsonObject &storeSensor(JsonObject &_sensor)
 {
   removeSensor(_sensor.get<String>("id"));
-  _sensor.set("id", normalize(_sensor.get<String>("name")));
+  _sensor.set("id", _sensor.get<String>("id") == "0" ?  (String(ESP.getChipId()) +normalize( _sensor.get<String>("name"))) :  _sensor.get<String>("id"));
   rebuildSensorMqttTopics(_sensor);
   rebuildDiscoverySensorMqttTopics(_sensor);
   String sn = "";

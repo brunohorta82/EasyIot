@@ -82,7 +82,7 @@ void callback(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
 JsonObject &storeSwitch(JsonObject &_switch)
 {
   removeSwitch(_switch.get<String>("id"));
- _switch.set("id", normalize(_switch.get<String>("name")));
+ _switch.set("id",_switch.get<String>("id") == "0" ?  (String(ESP.getChipId()) +normalize(_switch.get<String>("name"))) : _switch.get<String>("id"));
  _switch.set("class", "switch");
 
   rebuildSwitchMqttTopics(_switch);
@@ -159,13 +159,13 @@ void stateSwitch(JsonObject &switchJson, String state)
     }
     else if (String(PAYLOAD_ON).equals(state))
     {
-      switchJson.set("stateControl", state.equals("ON"));
+      switchJson.set("stateControl", state.equals("ON") ? true : false);
       switchJson.set("statePayload", state);
       publishState(switchJson);
     }
     else if (String(PAYLOAD_OFF).equals(state))
     {
-       switchJson.set("stateControl", !state.equals("OFF"));
+       switchJson.set("stateControl", state.equals("OFF") ? false : true);
        switchJson.set("statePayload", state);
        publishState(switchJson);
     }
@@ -242,8 +242,8 @@ void publishState(JsonObject &switchJson)
   publishOnEventSource("switch", swtr);
   if (switchJson.get<String>("type").equals("cover"))
   {
-    publishOnMqtt(switchJson.get<String>("mqttStateTopic").c_str(), switchJson.get<String>("stateControlCover"), switchJson.get<bool>("mqttRetain"));
-    publishOnMqtt(switchJson.get<String>("mqttPositionStateTopic").c_str(), switchJson.get<String>("positionControlCover"), switchJson.get<bool>("mqttRetain"));
+    publishOnMqtt(switchJson.get<String>("mqttStateTopic"), switchJson.get<String>("stateControlCover"), switchJson.get<bool>("mqttRetain"));
+    publishOnMqtt(switchJson.get<String>("mqttPositionStateTopic"), switchJson.get<String>("positionControlCover"), switchJson.get<bool>("mqttRetain"));
   }
   else
   {

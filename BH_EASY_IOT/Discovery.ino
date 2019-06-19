@@ -43,35 +43,35 @@ void  rebuildDiscoverySwitchMqttTopics(JsonObject &switchJson)
     String type = switchJson.get<String>("type");
     if (type.equals("cover"))
     {
-      publishOnMqtt(prefix + "/cover/" + String(ESP.getChipId())  + _id + "/config", createHaCover(switchJson), true);
+      publishOnMqtt(prefix + "/cover/" +  _id + "/config", createHaCover(switchJson), true);
       
     
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("light"))
     {
-      publishOnMqtt(prefix + "/light/" + String(ESP.getChipId()) + _id + "/config", createHaLight(switchJson), true);
+      publishOnMqtt(prefix + "/light/" +  _id + "/config", createHaLight(switchJson), true);
       
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("switch"))
     {
-      publishOnMqtt(prefix + "/switch/" + String(ESP.getChipId())  + _id + "/config", createHaSwitch(switchJson), true);
+      publishOnMqtt(prefix + "/switch/" +  _id + "/config", createHaSwitch(switchJson), true);
      
       
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("lock"))
     {
-      publishOnMqtt(prefix + "/lock/" + String(ESP.getChipId())  + _id + "/config", createHaLock(switchJson), true);
+      publishOnMqtt(prefix + "/lock/" +  _id + "/config", createHaLock(switchJson), true);
       
        
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
     else if (type.equals("sensor"))
     {  
-      publishOnMqtt(prefix + "/binary_sensor/" + String(ESP.getChipId())  + _id + "/config", createHaBinarySensor(switchJson), true);
+      publishOnMqtt(prefix + "/binary_sensor/" + _id + "/config", createHaBinarySensor(switchJson), true);
     
     
     }
@@ -91,13 +91,13 @@ void  rebuildDiscoverySensorMqttTopics( JsonObject &sensorJson )
       String _id = normalize(f.get<String>("name"));
       if (_class.equals("binary_sensor"))
       {
-        publishOnMqtt(prefix + "/binary_sensor/" + String(ESP.getChipId())  + _id + "/config", createHaBinarySensor(sensorJson), true);
+        publishOnMqtt(prefix + "/binary_sensor/" + _id + "/config", createHaBinarySensor(sensorJson), true);
   
       }
       else if (_class.equals("sensor"))
       { 
         
-        publishOnMqtt(prefix + "/sensor/" + String(ESP.getChipId()) + _id + "/config", createHaSensor(sensorJson, f), true);
+        publishOnMqtt(prefix + "/sensor/" +  _id + "/config", createHaSensor(sensorJson, f), true);
         
         
       
@@ -115,7 +115,9 @@ void loopDiscovery()
 String createHaSensor(JsonObject &_sensorJson, JsonObject &_f)
 {
   String object = "";
-  JsonObject &sensorJson = getJsonObject();
+  const size_t capacity = JSON_OBJECT_SIZE(6);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  JsonObject& sensorJson = jsonBuffer.createObject();
   sensorJson.set("name", _f.get<String>("name"));
   sensorJson.set("state_topic", _sensorJson.get<String>("mqttStateTopic"));
   sensorJson.set("unit_of_measurement", _f.get<String>("unit"));
@@ -129,7 +131,9 @@ String createHaSensor(JsonObject &_sensorJson, JsonObject &_f)
 String createHaBinarySensor(JsonObject &_sensorJson)
 {
   String object = "";
-  JsonObject &sensorJson = getJsonObject();
+  const size_t capacity = JSON_OBJECT_SIZE(6);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  JsonObject& sensorJson = jsonBuffer.createObject();
   sensorJson.set("name", _sensorJson.get<String>("name"));
   sensorJson.set("state_topic", _sensorJson.get<String>("mqttStateTopic"));
   sensorJson.set("payload_on", String(PAYLOAD_ON));
@@ -142,7 +146,9 @@ String createHaBinarySensor(JsonObject &_sensorJson)
 String createHaLock(JsonObject &_switchJson)
 {
   String object = "";
-  JsonObject &switchJson = getJsonObject();
+   const size_t capacity = JSON_OBJECT_SIZE(7);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  JsonObject& switchJson = jsonBuffer.createObject();
   switchJson.set("name", _switchJson.get<String>("name"));
   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
   switchJson.set("state_topic", _switchJson.get<String>("mqttStateTopic"));
@@ -156,7 +162,9 @@ String createHaLock(JsonObject &_switchJson)
 String createHaSwitch(JsonObject &_switchJson)
 {
   String object = "";
-  JsonObject &switchJson = getJsonObject();
+  const size_t capacity = JSON_OBJECT_SIZE(7);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  JsonObject& switchJson = jsonBuffer.createObject();
   switchJson.set("name", _switchJson.get<String>("name"));
   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
   switchJson.set("state_topic", _switchJson.get<String>("mqttStateTopic"));
@@ -170,7 +178,9 @@ String createHaSwitch(JsonObject &_switchJson)
 String createHaLight(JsonObject &_switchJson)
 {
   String object = "";
-  JsonObject &switchJson = getJsonObject();
+  const size_t capacity = JSON_OBJECT_SIZE(7);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  JsonObject& switchJson = jsonBuffer.createObject();
   switchJson.set("name", _switchJson.get<String>("name"));
   switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
   switchJson.set("state_topic", _switchJson.get<String>("mqttStateTopic"));
@@ -181,7 +191,25 @@ String createHaLight(JsonObject &_switchJson)
   switchJson.printTo(object);
   return object;
 }
-
+String createHaCover(JsonObject &_switchJson)
+{
+  String object = "";
+  const size_t capacity = JSON_OBJECT_SIZE(10);
+  DynamicJsonBuffer jsonBuffer(capacity);
+  JsonObject& switchJson = jsonBuffer.createObject();
+  switchJson.set("name", _switchJson.get<String>("name"));
+  switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
+  switchJson.set("position_topic", _switchJson.get<String>("mqttPositionStateTopic"));
+  switchJson.set("retain", _switchJson.get<bool>("retain"));
+  switchJson.set("position_open", 100);
+  switchJson.set("availability_topic", getAvailableTopic());
+  switchJson.set("position_closed", 0);
+  switchJson.set("payload_open", String(PAYLOAD_OPEN));
+  switchJson.set("payload_close", String(PAYLOAD_CLOSE));
+  switchJson.set("payload_stop", String(PAYLOAD_STOP));
+  switchJson.printTo(object);
+  return object;
+}
 void reloadMqttSubscriptionsAndDiscovery(){
   
   String ipMqtt = getConfigJson().get<String>("mqttIpDns");
@@ -221,23 +249,7 @@ void reloadMqttSubscriptionsAndDiscovery(){
   
     logger("[MQTT] RELOAD MQTT SUBSCRIPTIONS OK");
 }
-String createHaCover(JsonObject &_switchJson)
-{
-  String object = "";
-  JsonObject &switchJson = getJsonObject();
-  switchJson.set("name", _switchJson.get<String>("name"));
-  switchJson.set("command_topic", _switchJson.get<String>("mqttCommandTopic"));
-  switchJson.set("position_topic", _switchJson.get<String>("mqttPositionStateTopic"));
-  switchJson.set("retain", _switchJson.get<bool>("retain"));
-  switchJson.set("position_open", 100);
-  switchJson.set("availability_topic", getAvailableTopic());
-  switchJson.set("position_closed", 0);
-  switchJson.set("payload_open", String(PAYLOAD_OPEN));
-  switchJson.set("payload_close", String(PAYLOAD_CLOSE));
-  switchJson.set("payload_stop", String(PAYLOAD_STOP));
-  switchJson.printTo(object);
-  return object;
-}
+
 
 void removeFromAlexaDiscovery(String _name)
 {
