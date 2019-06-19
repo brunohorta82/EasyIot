@@ -1,5 +1,5 @@
 #define HARDWARE "onofre"
-#define FACTORY_TYPE "cover"  //suported types cover light
+#define FACTORY_TYPE "gate"  //suported types cover light
 #define FIRMWARE_VERSION 6.16
 #define FIRMWARE_VERSION_X "6x16"
 const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
