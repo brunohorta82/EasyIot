@@ -135,6 +135,52 @@ void stateSwitch(JsonObject &switchJson, String state)
     {
       //TODO
     }
+  }else {
+   if (String(PAYLOAD_OPEN).equals(state))
+    {
+      switchJson.set("positionControlCover", 100);
+      switchJson.set("stateControlCover", "OPEN");
+      switchJson.set("statePayload", "open");
+      publishState(switchJson);
+    }
+    else if (String(PAYLOAD_STOP).equals(state))
+    {
+       switchJson.set("positionControlCover", 50);
+       switchJson.set("stateControlCover", "STOP");
+       switchJson.set("statePayload", "");
+       publishState(switchJson);
+    }
+    else if (String(PAYLOAD_CLOSE).equals(state))
+    {
+      switchJson.set("positionControlCover", 0);
+      switchJson.set("stateControlCover", "CLOSE");
+      switchJson.set("statePayload", "closed");
+      publishState(switchJson);
+    }
+    else if (String(PAYLOAD_ON).equals(state))
+    {
+      switchJson.set("stateControl", state.equals("ON"));
+      switchJson.set("statePayload", state);
+      publishState(switchJson);
+    }
+    else if (String(PAYLOAD_OFF).equals(state))
+    {
+       switchJson.set("stateControl", !state.equals("OFF"));
+       switchJson.set("statePayload", state);
+       publishState(switchJson);
+    }
+    else if (String(PAYLOAD_LOCK).equals(state))
+    {
+      switchJson.set("stateControl", state.equals("LOCK"));
+      switchJson.set("statePayload", state);
+      publishState(switchJson);
+    }
+    else if (String(PAYLOAD_UNLOCK).equals(state))
+    {
+       switchJson.set("stateControl", !state.equals("UNLOCK"));
+      switchJson.set("statePayload", state);
+      publishState(switchJson);
+    }
   }
 }
 
@@ -144,6 +190,10 @@ void applyJsonSwitchs()
   for (int i = 0; i < sws.size(); i++)
   {
     JsonObject &switchJson = sws.get<JsonVariant>(i);
+    if(switchJson.get<unsigned int>("gpio") == 99){   
+      continue;
+    }
+    
     uint8_t mode = BUTTON_DEFAULT_HIGH;
     if (switchJson.get<unsigned int>("mode") == OPEN_CLOSE_SWITCH || switchJson.get<unsigned int>("mode") == BUTTON_SWITCH)
     {
