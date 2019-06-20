@@ -31,7 +31,7 @@ void removeRelay(String _id)
 JsonObject &saveRelay( JsonObject &_relay)
 {
   removeRelay(_relay.get<String>("id"));
- _relay.set("id",_relay.get<String>("id") == "0" ?  (String(ESP.getChipId()) +normalize( _relay.get<String>("name"))) :  _relay.get<String>("id"));
+ _relay.set("id",_relay.get<String>("id").equals(NEW_ID) ?  (String(ESP.getChipId()) +normalize( _relay.get<String>("name"))) :  _relay.get<String>("id"));
   String r = "";
   _relay.printTo(r);
   rls.add(getJsonObject(r.c_str()));

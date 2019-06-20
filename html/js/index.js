@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.81"
+    baseUrl: ""
 };
 
 var switchs;
@@ -602,9 +602,9 @@ function buildSwitchTemplate() {
         return
     }
     let device = {
-        "id": 0,
+        "id": "NEW",
         "name": "Novo Interruptor",
-        "gpio": 0,
+        "gpio": 99,
         "pullup": true,
         "mode": 1,
         "typeControl": "mqtt",
@@ -621,7 +621,7 @@ function buildSensorDHTemplate() {
         return
     }
     let sensor = {
-        "id": "0",
+        "id": "NEW",
         "gpio": 14,
         "name": "Temperatura",
         "disabled": true,
@@ -651,7 +651,7 @@ function buildSensorDallasTemplate() {
         return
     }
     let sensor = {
-        "id": "0",
+        "id": "NEW",
         "gpio": 0,
         "name": "Temperatura",
         "disabled": false,
@@ -673,7 +673,7 @@ function buildSensorMagTemplate() {
         return
     }
     let sensor = {
-        "id": "0",
+        "id": "NEW",
         "gpio": 14,
         "name": "Magnético",
         "disabled": false,
@@ -696,7 +696,7 @@ function buildSensorPirTemplate() {
         return
     }
     let sensor = {
-        "id": "0",
+        "id": "NEW",
         "gpio": 0,
         "name": "Movimento",
         "disabled": false,
@@ -706,7 +706,6 @@ function buildSensorPirTemplate() {
         "functions": [{
             "name": "Movimento",
             "uniqueName": "motion",
-            "unit": "",
             "type": 4
         }]
     };
@@ -718,7 +717,7 @@ function buildSensorLdrTemplate() {
         return
     }
     let sensor = {
-        "id": "0",
+        "id": "NEW",
         "gpio": 0,
         "name": "Sensor de Luz",
         "disabled": false,
@@ -727,8 +726,8 @@ function buildSensorLdrTemplate() {
         "mqttStateTopic": "-",
         "functions": [{
             "name": "Sensor de Luz",
-            "uniqueName": "light_sensor",
-            "unit": "",
+            "uniqueName": "illuminance",
+            "unit": "lx",
             "type": 7
         }]
     };
@@ -740,7 +739,7 @@ function buildRelayTemplate() {
         return
     }
     let device = {
-        "id": 0,
+        "id": "NEW",
         "name": "Novo Relé",
         "gpio": 0,
         "inverted": false,
@@ -795,7 +794,7 @@ function saveSensor(id) {
     let temp = $("#name_" + id + "_temperature").val();
     let hum = $("#name_" + id + "_humidity").val();
     let motion = $("#name_" + id + "_motion").val();
-    let ldr = $("#name_" + id + "_light_sensor").val();
+    let ldr = $("#name_" + id + "_illuminance").val();
     let reed = $("#name_" + id + "_opening").val();
     let functions = [];
     let type = $('#type_' + id).val();
@@ -820,14 +819,13 @@ function saveSensor(id) {
         classs = "binary_sensor";
         functions = [{
             "name": motion, "uniqueName": "motion",
-            "unit": "",
             "type": 4
         }];
     } else if ('21' === type) {
         functions = [{
             "name": ldr,
-            "uniqueName": "light_sensor",
-            "unit": "",
+            "uniqueName": "illuminance",
+            "unit": "lx",
             "type": 7
         }];
     } else if ('56' === type) {
@@ -837,7 +835,6 @@ function saveSensor(id) {
             "payloadOn": payloadOn,
             "name": reed,
             "uniqueName": "opening",
-            "unit": "",
             "type": 5
         }];
     }

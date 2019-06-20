@@ -82,7 +82,7 @@ void callback(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
 JsonObject &storeSwitch(JsonObject &_switch)
 {
   removeSwitch(_switch.get<String>("id"));
- _switch.set("id",_switch.get<String>("id") == "0" ?  (String(ESP.getChipId()) +normalize(_switch.get<String>("name"))) : _switch.get<String>("id"));
+ _switch.set("id",_switch.get<String>("id").equals(NEW_ID) ?  (String(ESP.getChipId()) +normalize(_switch.get<String>("name"))) : _switch.get<String>("id"));
  _switch.set("class", "switch");
 
   rebuildSwitchMqttTopics(_switch);

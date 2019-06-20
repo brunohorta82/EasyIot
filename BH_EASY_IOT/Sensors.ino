@@ -6,6 +6,7 @@
 #define OPENING 5
 #define ANALOG_FUNCTION 7
 
+
 //SENSORS
 #define PIR_TYPE 65
 #define LDR_TYPE 21
@@ -76,7 +77,7 @@ void removeSensor(String _id)
     for (int i = 0; i < functions.size(); i++)
     {
       JsonObject &f = functions.get<JsonVariant>(i);
-      String _id = normalize(f.get<String>("name"));
+      String _id = String(ESP.getChipId())+ normalize(f.get<String>("name"));
       removeFromHaDiscovery(sensorJson.get<String>("class"), _id);
     }
     }
@@ -104,9 +105,8 @@ void loopSensors()
     case LDR_TYPE:
       {
          if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
-            logger("[SENSOR LDT] Reading...");
             _sensors[i].lastRead = millis();
-            publishOnMqtt(_sensors[i].mqttTopicState, String(analogRead(_sensors[i].gpio)),false);
+            publishOnMqtt(_sensors[i].mqttTopicState, String("{\"ldr_raw\":"+String(analogRead(_sensors[i].gpio))+"}"),false);
            
          }
       }
@@ -133,7 +133,6 @@ void loopSensors()
       {
       
       if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
-            logger("[SENSOR DHT] Reading...");
             _sensors[i].lastRead = millis();
             publishOnMqtt(_sensors[i].mqttTopicState, String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}"),false);      
         }
@@ -145,7 +144,6 @@ void loopSensors()
      
       if (_sensors[i].lastRead + _sensors[i].delayRead < millis())
       {
-        logger("[SENSOR DALLAS] Reading...");
         _sensors[i].dallas->begin();
         _sensors[i].dallas->requestTemperatures();
         _sensors[i].lastRead = millis();
@@ -162,7 +160,7 @@ void loopSensors()
 JsonObject &storeSensor(JsonObject &_sensor)
 {
   removeSensor(_sensor.get<String>("id"));
-  _sensor.set("id", _sensor.get<String>("id") == "0" ?  (String(ESP.getChipId()) +normalize( _sensor.get<String>("name"))) :  _sensor.get<String>("id"));
+  _sensor.set("id", _sensor.get<String>("id").equals(NEW_ID) ?  (String(ESP.getChipId()) +normalize( _sensor.get<String>("name"))) :  _sensor.get<String>("id"));
   rebuildSensorMqttTopics(_sensor);
   rebuildDiscoverySensorMqttTopics(_sensor);
   String sn = "";

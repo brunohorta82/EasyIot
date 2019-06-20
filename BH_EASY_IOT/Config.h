@@ -1,11 +1,12 @@
 #define HARDWARE "onofre"
-#define FACTORY_TYPE "gate"  //suported types cover light
-#define FIRMWARE_VERSION 6.16
-#define FIRMWARE_VERSION_X "6x16"
+#define FACTORY_TYPE "cover"  //suported types cover light
+#define FIRMWARE_VERSION 6.17
+#define FIRMWARE_VERSION_X "6x17"
 const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
 
 #define CONFIG_FILENAME  "/config_bh"+String(HARDWARE)+".json"
 #define CONFIG_BUFFER_SIZE 1024
+#define NEW_ID "NEW"
 
 //AP PASSWORD  
 #define AP_SECRET "EasyIot@"

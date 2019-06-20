@@ -69,12 +69,7 @@ void  rebuildDiscoverySwitchMqttTopics(JsonObject &switchJson)
        
       subscribeOnMqtt(switchJson.get<String>("mqttCommandTopic"));
     }
-    else if (type.equals("sensor"))
-    {  
-      publishOnMqtt(prefix + "/binary_sensor/" + _id + "/config", createHaBinarySensor(switchJson), true);
     
-    
-    }
     logger("[MQTT] RELOAD MQTT SWITCH DISCOVERY OK");
 }
 void  rebuildDiscoverySensorMqttTopics( JsonObject &sensorJson )
@@ -88,7 +83,7 @@ void  rebuildDiscoverySensorMqttTopics( JsonObject &sensorJson )
     for (int i = 0; i < functions.size(); i++)
     {
       JsonObject &f = functions.get<JsonVariant>(i);
-      String _id = normalize(f.get<String>("name"));
+      String _id =  String(ESP.getChipId())+normalize(f.get<String>("name"));
       if (_class.equals("binary_sensor"))
       {
         publishOnMqtt(prefix + "/binary_sensor/" + _id + "/config", createHaBinarySensor(sensorJson), true);
@@ -258,5 +253,5 @@ void removeFromAlexaDiscovery(String _name)
 
 void removeFromHaDiscovery(String type, String _id)
 {
-  publishOnMqtt(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix") + "/" + type +"/"+ String(ESP.getChipId()) + _id + "/config", "", false);
+  publishOnMqtt(getConfigJson().get<String>("homeAssistantAutoDiscoveryPrefix") + "/" + type +"/" + _id + "/config", "", false);
 }
