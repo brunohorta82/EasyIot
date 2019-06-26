@@ -70,6 +70,9 @@ String ipMqtt = getConfigJson().get<String>("mqttIpDns");
 
 void setupMQTT()
 {
+  if(getConfigJson().get<String>("mqttIpDns").length() == 0){
+    return;
+    }
   logger("[MQTT] SETUP MQTT");
   if(mqttClient.connected()){
    mqttClient.disconnect(); 
@@ -106,6 +109,7 @@ void loopMqtt(){
     }
   } else {
     mqttClient.loop();
+    loopMqttQueue();
   }
   
   }

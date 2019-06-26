@@ -25,6 +25,7 @@ std::vector<switch_t> _switchs;
 
 void callback(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
 {
+  Serial.println(gpio);
   for (unsigned int i = 0; i < sws.size(); i++)
   {
     JsonObject &switchJson = sws.get<JsonVariant>(i);
