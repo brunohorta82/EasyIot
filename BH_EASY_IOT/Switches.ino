@@ -298,10 +298,10 @@ void loadStoredSwitchs()
       logger("[SWITCH] Apply default config...");
       cFile = SPIFFS.open(switchsFilename, "w+");
       if(String(FACTORY_TYPE).equals("cover")){
-        sws.add(getJsonObject(COVER_SWITCH));
+        sws.add(getJsonObject(COVER_SWITCH.c_str()));
       }else if(String(FACTORY_TYPE).equals("light")){
-        sws.add(getJsonObject(LIGHT_ONE));
-        sws.add(getJsonObject(LIGHT_TWO));
+        sws.add(getJsonObject(LIGHT_ONE.c_str()));
+        sws.add(getJsonObject(LIGHT_TWO.c_str()));
        }
       sws.printTo(cFile);
       applyJsonSwitchs();

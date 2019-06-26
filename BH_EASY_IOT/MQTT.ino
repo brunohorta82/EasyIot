@@ -1,5 +1,11 @@
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
+typedef struct {
+    String topic;
+    String payload;
+    bool retain;
+} mqtt_t;
+std::vector<mqtt_t> _queue;
 String getBaseTopic()
 {
   String username = getConfigJson().get<String>("mqttUsername");
@@ -104,17 +110,31 @@ void loopMqtt(){
   
   }
 
-
-
-void publishOnMqtt(String topic, String payload, bool retain)
-{
-  if (mqttClient.connected())
-  {static unsigned long retries = 0;
-    while(!mqttClient.publish(topic.c_str(), payload.c_str(), retain) && retries < 3 ){
+void loopMqttQueue(){
+   if (mqttClient.connected()){
+    static unsigned long lastMessage = 0;
+    if(_queue.empty()){
+      lastMessage = 0;
+      return;
+    }
+    static unsigned long retries = 0;
+     if(lastMessage + 500 < millis()){
+      mqtt_t m =_queue.back();
+      while(!mqttClient.publish(m.topic.c_str(),m.payload.c_str(), m.retain) && retries < 3 ){
       retries++;
     }
     retries = 0;
+    _queue.pop_back();
+    lastMessage = millis();
+    }
+    
   }
+  }
+
+void publishOnMqtt(String topic, String payload, bool retain)
+{ 
+  _queue.push_back({topic,payload,retain});
+ 
 }
 
 void subscribeOnMqtt(String topic)
