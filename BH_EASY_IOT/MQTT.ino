@@ -118,11 +118,11 @@ void loopMqttQueue(){
    if (mqttClient.connected()){
     static unsigned long lastMessage = 0;
     if(_queue.empty()){
-      lastMessage = 0;
+      
       return;
     }
     static unsigned long retries = 0;
-     if(lastMessage + 500 < millis()){
+     if(lastMessage + 1000 < millis()){
       mqtt_t m =_queue.back();
       while(!mqttClient.publish(m.topic.c_str(),m.payload.c_str(), m.retain) && retries < 3 ){
       retries++;

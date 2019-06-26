@@ -91,7 +91,7 @@ void turnOn(JsonObject &switchJson)
   bool state = _turnOn(relay);
   switchJson.set("stateControl", state);
   switchJson.set("statePayload", state ? "ON" : "OFF");
-  publishState(switchJson);
+ // publishState(switchJson);
 }
 
 void turnOff(JsonObject &switchJson)
