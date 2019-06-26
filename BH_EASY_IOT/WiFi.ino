@@ -6,13 +6,11 @@ void reloadWiFiConfig(){
        jw.setHostname(getHostname().c_str());
        jw.cleanNetworks();
        jw.setSoftAP(getHostname().c_str(),getConfigJson().get<String>("apSecret").c_str());
-       char *ssid = strdup(getConfigJson().get<String>("wifiSSID").c_str());
-       char *password = strdup(getConfigJson().get<String>("wifiSecret").c_str());
        if(getConfigJson().get<bool>("staticIp")){
-        jw.addNetwork(ssid, password,getConfigJson().get<String>("wifiIp").c_str(),getConfigJson().get<String>("wifiGw").c_str(),getConfigJson().get<String>("wifiMask").c_str(),getConfigJson().get<String>("wifiGw").c_str());
+        jw.addNetwork(getConfigJson().get<String>("wifiSSID").c_str(), getConfigJson().get<String>("wifiSecret").c_str(),getConfigJson().get<String>("wifiIp").c_str(),getConfigJson().get<String>("wifiGw").c_str(),getConfigJson().get<String>("wifiMask").c_str(),getConfigJson().get<String>("wifiGw").c_str());
         jw.addNetwork(getConfigJson().get<String>("wifiSSID2").c_str(), getConfigJson().get<String>("wifiSecret2").c_str(),getConfigJson().get<String>("wifiIp").c_str(),getConfigJson().get<String>("wifiGw").c_str(),getConfigJson().get<String>("wifiMask").c_str(),getConfigJson().get<String>("wifiGw").c_str());
        }else{
-        jw.addNetwork(ssid, password);
+        jw.addNetwork(getConfigJson().get<String>("wifiSSID").c_str(), getConfigJson().get<String>("wifiSecret").c_str());
         jw.addNetwork(getConfigJson().get<String>("wifiSSID2").c_str(), getConfigJson().get<String>("wifiSecret2").c_str());
       }
  }
