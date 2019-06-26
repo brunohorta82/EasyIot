@@ -9,32 +9,30 @@
 #define AUTO_OFF 6
 const String switchsFilename = "switchs.json";
 
-String statesPool[] = {"OPEN", "STOP", "CLOSE", "STOP"};
-
+String statesPoolCover[] = {"OPEN", "STOP", "CLOSE", "STOP"};
+String statesPoolCover[] = {"ON","OFF"};
 JsonArray &sws = getJsonArray();
 
 bool coverNeedsStop;
 unsigned long openCloseonTime;
 unsigned int _gpioStop;
 unsigned int swsSize;
+
 typedef struct
 {
   Bounce *debouncer;
   bool lastState;
+  unsigned int gpio;
+  char* typeControl;
+  int stateControl
+  
 } switch_t;
 std::vector<switch_t> _switchs;
 
-void callback(uint8_t gpio, uint8_t event)
+void callback(switch_t switchT)
 {
   
-  for (unsigned int i = 0; i < sws.size(); i++)
-  {
-    JsonObject &switchJson = sws.get<JsonVariant>(i);
-    if (switchJson.get<unsigned int>("gpio") == gpio){
-      Serial.println(gpio);
-         //stateSwitch(switchJson, switchJson.get<bool>("stateControl") ? "OFF" : "ON");
-  }
-  }
+   String state =  stateSwitch(switchT,);
 }
 
 JsonObject &storeSwitch(JsonObject &_switch)
@@ -60,10 +58,10 @@ void coverAutoStop(int gpioStop)
   _gpioStop = gpioStop;
 }
 
-void stateSwitch(JsonObject &switchJson, String state)
+void stateSwitch(String type, String state)
 {
-Serial.println(state);
-  if (switchJson.get<String>("typeControl").equals(RELAY_TYPE))
+
+  if (type.equals(RELAY_TYPE))
   {
     if (String(PAYLOAD_OPEN).equals(state))
     {
@@ -166,7 +164,7 @@ void applyJsonSwitchs()
     {
       mode = mode | BUTTON_SET_PULLUP;
     }
-
+char *typeControl = strdup(switchJson.get<String>("typeControl").c_str());
     if (switchJson.get<unsigned int>("mode") == OPEN_CLOSE_SWITCH)
     {   Bounce* debouncer1 = new Bounce();
         Bounce* debouncer2 = new Bounce();
@@ -174,16 +172,17 @@ void applyJsonSwitchs()
         debouncer1->interval(5);
         debouncer2->attach(switchJson.get<unsigned int>("gpioClose"));
        debouncer2->interval(5);
-      _switchs.push_back({debouncer1});
-      _switchs.push_back({debouncer2});
+      _switchs.push_back({debouncer1, false, switchJson.get<unsigned int>("gpioOpen"),typeContro});
+      _switchs.push_back({debouncer2, false,switchJson.get<unsigned int>("gpioClose") ,typeContro});
     }
     else
     {
       Bounce* debouncer3 =  new Bounce();
       pinMode(switchJson.get<unsigned int>("gpio"),INPUT_PULLUP);
-       debouncer3->attach(switchJson.get<unsigned int>("gpio"));
-        debouncer3->interval(5);
-      _switchs.push_back({ debouncer3});
+      debouncer3->attach(switchJson.get<unsigned int>("gpio"));
+      debouncer3->interval(5);
+      unsigned int gpio = switchJson.get<unsigned int>("gpio");
+      _switchs.push_back({ debouncer3, false,gpio ,typeControl});
     }
   }
   swsSize = _switchs.size();
@@ -341,8 +340,8 @@ void loopSwitchs()
    bool value = b->read();
    if(value != _switchs[i].lastState){
     _switchs[i].lastState = value;
-    Serial.println(b->pin);
-    callback(b->pin, EVENT_CHANGED);
+    Serial.println( _switchs[i].gpio);
+    callback( _switchs[i].gpio, EVENT_CHANGED);
     }
   }
 }
