@@ -3,6 +3,7 @@ const endpoint = {
 };
 
 var switchs;
+var config;
 
 function removeDevice(e, id, func) {
     const someUrl = endpoint.baseUrl + "/" + e + "?id=" + id;
@@ -41,15 +42,18 @@ function storeDevice(id, _device, endpointstore, endointget, func) {
     });
 }
 
-function storeConfig(path, newConfig) {
-    const someUrl = endpoint.baseUrl + "/" + path;
+function storeConfig() {
+    console.log(config);
+    const someUrl = endpoint.baseUrl + "/save-config";
     $.ajax({
         type: "POST",
         url: someUrl,
         dataType: "json",
         contentType: "application/json",
-        data: JSON.stringify(newConfig),
+        data: JSON.stringify(config),
         success: function (response) {
+            config = response;
+            fillConfig();
             alert("Configuração Guardada");
         },
         error: function () {
@@ -59,6 +63,7 @@ function storeConfig(path, newConfig) {
         },
         timeout: 2000
     });
+
 }
 
 function toggleAP() {
@@ -97,17 +102,15 @@ function findNetworks() {
     });
 }
 
-function loadConfig(next) {
+function loadConfig() {
     const someUrl = endpoint.baseUrl + "/config";
     $.ajax({
         url: someUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            fillConfig(response);
-            if (next) {
-                next();
-            }
+            config = response;
+            fillConfig();
 
         },
         error: function () {
@@ -139,26 +142,26 @@ function loadDevice(func, e, next) {
     });
 }
 
-function fillConfig(response) {
-    $("#firmwareVersion").text(response.firmware);
-    $(".bh-model").text(response.hardware);
+function fillConfig() {
+    $("#firmwareVersion").text(this.config.firmware);
+    $(".bh-model").text(this.config.hardware);
     $(".bh-onofre-item").removeClass("hide");
-    $("#version_lbl").text(response.firmware);
-    $('input[name="nodeId"]').val(response.nodeId);
-    $('input[name="mqttIpDns"]').val(response.mqttIpDns);
-    $('input[name="mqttUsername"]').val(response.mqttUsername);
-    $('select[name="homeAssistantAutoDiscovery"] option[value="' + response.homeAssistantAutoDiscovery + '"]').attr("selected", "selected");
-    $('input[name="homeAssistantAutoDiscoveryPrefix"]').val(response.homeAssistantAutoDiscoveryPrefix);
-    $('input[name="mqttPassword"]').val(response.mqttPassword);
-    $('input[name="wifiSSID"]').val(response.wifiSSID);
-    $('input[name="wifiSecret"]').val(response.wifiSecret);
-    $('select[name="staticIp"] option[value="' + response.staticIp + '"]').attr("selected", "selected");
-    $('input[name="wifiIp"]').val(response.wifiIp);
-    $('input[name="wifiMask"]').val(response.wifiMask);
-    $('input[name="wifiGw"]').val(response.wifiGw);
-    $('input[name="apSecret"]').val(response.apSecret);
-    $('select[name="notificationInterval"] option[value="' + response.notificationInterval + '"]').attr("selected", "selected");
-    $('select[name="directionCurrentDetection"] option[value="' + response.directionCurrentDetection + '"]').attr("selected", "selected");
+    $("#version_lbl").text(this.config.firmware);
+    $('input[name="nodeId"]').val(this.config.nodeId);
+    $('input[name="mqttIpDns"]').val(this.config.mqttIpDns);
+    $('input[name="mqttUsername"]').val(this.config.mqttUsername);
+    $('select[name="homeAssistantAutoDiscovery"] option[value="' + this.config.homeAssistantAutoDiscovery + '"]').attr("selected", "selected");
+    $('input[name="homeAssistantAutoDiscoveryPrefix"]').val(this.config.homeAssistantAutoDiscoveryPrefix);
+    $('input[name="mqttPassword"]').val(this.config.mqttPassword);
+    $('input[name="wifiSSID"]').val(this.config.wifiSSID);
+    $('input[name="wifiSecret"]').val(this.config.wifiSecret);
+    $('select[name="staticIp"] option[value="' + this.config.staticIp + '"]').attr("selected", "selected");
+    $('input[name="wifiIp"]').val(this.config.wifiIp);
+    $('input[name="wifiMask"]').val(this.config.wifiMask);
+    $('input[name="wifiGw"]').val(this.config.wifiGw);
+    $('input[name="apSecret"]').val(this.config.apSecret);
+    $('select[name="notificationInterval"] option[value="' + this.config.notificationInterval + '"]').attr("selected", "selected");
+    $('select[name="directionCurrentDetection"] option[value="' + this.config.directionCurrentDetection + '"]').attr("selected", "selected");
 
     $('#ff').prop('disabled', false);
 }
@@ -174,13 +177,9 @@ function toggleActive(menu) {
                 });
             });
 
-        } else if (menu === "wifi") {
-            loadConfig(function () {
-                wifiStatus();
-            });
 
         } else {
-            loadConfig();
+         fillConfig();
         }
 
     });
@@ -751,27 +750,27 @@ function buildRelayTemplate() {
 
 function saveSwitch(id) {
     var mode = 1;
-    let type =  $('#type_' + id).val();
+    let type = $('#type_' + id).val();
 
     if (type !== 'cover') {
-        mode =  parseInt($('#modeg_' + id).val());
+        mode = parseInt($('#modeg_' + id).val());
     } else {
-        mode = parseInt( $('#modec_' + id).val());
+        mode = parseInt($('#modec_' + id).val());
     }
     let device = {
         "id": id,
         "name": $('#name_' + id).val(),
         "gpio": parseInt($('#gpio_' + id).val()),
         "gpioOpen": parseInt($('#gpio_open_' + id).val()),
-        "gpioClose":parseInt( $('#gpio_close_' + id).val()),
+        "gpioClose": parseInt($('#gpio_close_' + id).val()),
         "pullup": ($('#pullup_' + id).val() === "true" ? true : false),
         "discoveryDisabled": false,
         "type": type,
-        "mode":mode,
+        "mode": mode,
         "typeControl": $('#typeControl_' + id).val(),
         "gpioControl": parseInt($('#gpioControl_' + id).val()),
-        "gpioControlOpenClose":parseInt( $('#relay_open_' + id).val()),
-        "gpioControlStop":parseInt( $('#relay_close_' + id).val()),
+        "gpioControlOpenClose": parseInt($('#relay_open_' + id).val()),
+        "gpioControlStop": parseInt($('#relay_close_' + id).val()),
         "master": true
     }
 
@@ -853,53 +852,27 @@ function saveSensor(id) {
 }
 
 function saveNode() {
-    let _config = {
-        "nodeId": $('#nodeId').val(),
-        "notificationInterval": $('#notificationInterval').val(),
-        "directionCurrentDetection": $('#directionCurrentDetection').val()
-    };
-    storeConfig("save-node", _config);
+    config.nodeId = $('#nodeId').val();
+    storeConfig();
 }
 
 function saveWifi() {
-    let _config = {
-        "wifiSSID": $('#ssid').val(),
-        "wifiSecret": $('#wifi_secret').val(),
-        "wifiIp": $('#wifiIp').val(),
-        "wifiMask": $('#wifiMask').val(),
-        "wifiGw": $('#wifiGw').val(),
-        "staticIp": $('#staticIp').val(),
-        "apSecret": $('#apSecret').val()
-
-    };
-    const someUrl = endpoint.baseUrl + "/save-wifi";
-    $.ajax({
-        type: "POST",
-        url: someUrl,
-        dataType: "json",
-        contentType: "application/json",
-        data: JSON.stringify(_config),
-        success: function (response) {
-            alert("Configuração Guardada");
-        },
-        error: function () {
-
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
+    config.wifiSSID = $('#ssid').val();
+    config.wifiSecret = $('#wifi_secret').val();
+    config.wifiIp = $('#wifiIp').val();
+    config.wifiMask = $('#wifiMask').val();
+    config.wifiGw = $('#wifiGw').val();
+    config.staticIp = $('#staticIp').val();
+    config.apSecret = $('#apSecret').val();
+    storeConfig();
 
 }
 
 function saveMqtt() {
-    let _config = {
-        "mqttIpDns": $('#mqtt_ip').val(),
-        "mqttUsername": $('#mqtt_username').val(),
-        "mqttPassword": $('#mqtt_password').val()
-
-    };
-    storeConfig("save-mqtt", _config);
+    config.mqttIpDns = $('#mqtt_ip').val();
+    config.mqttUsername = $('#mqtt_username').val();
+    config.mqttPassword = $('#mqtt_password').val();
+    storeConfig();
 }
 
 
@@ -1043,21 +1016,6 @@ function reboot() {
 
 $(document).ready(function () {
     loadConfig();
-    if (!!window.EventSource) {
-        const source = new EventSource(endpoint.baseUrl + '/events');
-        source.addEventListener('switch', function (e) {
-            updateSwitch(JSON.parse(e.data));
-        }, false);
-
-        source.addEventListener('wifi-networks', function (e) {
-            appendNetwork(e.data);
-        }, false);
-        source.addEventListener('wifi-log', function (e) {
-            appendWifiLog(e.data);
-        }, false);
-
-    }
-
     $('#node_id').on('keypress', function (e) {
         if (e.which === 32)
             return false;
@@ -1071,5 +1029,5 @@ $(document).ready(function () {
     });
     wifiStatus();
     toggleActive("node");
-    setInterval(wifiStatus, 3000);
+    setInterval(wifiStatus, 15000);
 });

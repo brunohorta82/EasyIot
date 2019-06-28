@@ -1,0 +1,10 @@
+{
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/brunohorta/.platformio/penv/bin:/Users/brunohorta/.platformio/penv:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "PLATFORMIO_CALLER": "vscode"
+    },
+    "files.associations": {
+        "functional": "cpp",
+        "sstream": "cpp"
+    }
+}
