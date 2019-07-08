@@ -8,9 +8,11 @@ bool STORE_CONFIG = false;
 bool WIFI_SCAN = false;
 
 Config config;
+
 struct Config& getAtualConfig(){
   return config;
 }
+
 String getUpdateUrl()
 {
   return String(UPDATE_URL) + String(FACTORY_TYPE) + ".bin";

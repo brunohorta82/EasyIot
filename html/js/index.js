@@ -172,8 +172,8 @@ function toggleActive(menu) {
     $(".content").load(menu + ".html", function () {
         if (menu === "devices") {
             loadDevice(fillSwitches, "switchs", function () {
-                loadDevice(fillRelays, "relays", function () {
-                    loadDevice(fillSensors, "sensors");
+                loadDevice(fillSensors, "sensors", function () {
+                    
                 });
             });
 
@@ -193,14 +193,6 @@ function fillSwitches(payload) {
         buildSwitch(obj);
     }
 
-}
-
-function fillRelays(payload) {
-    if (!payload) return;
-    $('#relay_config').empty();
-    for (let obj of payload) {
-        buildRelay(obj);
-    }
 }
 
 function btnSwitch(e) {
@@ -325,8 +317,8 @@ function buildSwitch(obj) {
         "                <div class=\"col-xs-5\">" +
         "                        <select onchange=\"switchTypeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px;  padding: 0 12px; height: 20px;\"" +
         "                                 id=\"typeControl_" + obj.id + "\">" +
-        "                            <option " + (obj.typeControl === "relay" ? 'selected' : '') + " value=\"relay\">RELÉ</option>" +
-        "                            <option " + (obj.typeControl === "mqtt" ? 'selected' : '') + " value=\"mqtt\">MQTT</option>" +
+        "                            <option " + (obj.typeControl === 1 ? 'selected' : '') + " value=\"1\">RELÉ</option>" +
+        "                            <option " + (obj.typeControl === 2 ? 'selected' : '') + " value=\"2\">MQTT</option>" +
         "                        </select>" +
         "                        </select>" +
         "                </div>" +
@@ -460,52 +452,6 @@ function switchModeRules(e) {
 
 }
 
-function buildRelay(obj) {
-
-    $('#relay_config').append("<div id=\"rl_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
-        "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\">" +
-        "       " +
-        "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
-        "            </div>" +
-        "        </div>" +
-        "        <div style=\"font-size: 10px; border-radius: 0\" class=\"box\">" +
-        "            <div class=\"box-body no-padding\">" +
-        "                <table class=\"table table-condensed\">" +
-        "                    <tbody>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">NOME</span></td>" +
-        "                        <td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + obj.name + "\" type=\"text\"  id=\"name_" + obj.id + "\" placeholder=\"ex: luz sala\"  required=\"true\"/></td>" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"gpio_" + obj.id + "\">" +
-        "                            <option " + (obj.gpio === 0 ? 'selected' : '') + " value=\"0\">0</option>" +
-        "                            <option " + (obj.gpio === 2 ? 'selected' : '') + " value=\"2\">2</option>" +
-        "                            <option " + (obj.gpio === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpio === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">INVERTIDO</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"inverted_" + obj.id + "\">" +
-        "                            <option " + (obj.inverted ? 'selected' : '') + " value=\"true\">SIM</option>" +
-        "                            <option " + (!obj.inverted ? 'selected' : '') + " value=\"false\">NÃO</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                    </tbody>" +
-        "                </table>" +
-        "                <div class=\"box-footer save\">" +
-        "                    <button onclick=\"removeDevice('remove-relay','" + obj.id + "',fillRelays)\" style=\"font-size: 12px\" class=\"btn btn-danger\">Remover</button>" +
-        "                    <button onclick=\"saveRelay('" + obj.id + "')\" style=\"font-size: 12px\" class=\"btn btn-primary\">Guardar</button>" +
-        "                </div></div></div></div>");
-
-}
 
 function buildSensor(obj) {
     $('#sensor_config').append("<div id=\"sn_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
@@ -606,7 +552,7 @@ function buildSwitchTemplate() {
         "gpio": 99,
         "pullup": true,
         "mode": 1,
-        "typeControl": "mqtt",
+        "typeControl": 1,
         "gpioControl": 0,
         "master": true,
         "mqttCommandTopic": "-",
@@ -733,20 +679,6 @@ function buildSensorLdrTemplate() {
     buildSensor(sensor);
 }
 
-function buildRelayTemplate() {
-    if ($('#rl_0').length > 0) {
-        return
-    }
-    let device = {
-        "id": "NEW",
-        "name": "Novo Relé",
-        "gpio": 0,
-        "inverted": false,
-        "mode": 1,
-        "maxAmp": 2, "state": false, "class": "relay"
-    };
-    buildRelay(device);
-}
 
 function saveSwitch(id) {
     var mode = 1;
@@ -777,15 +709,6 @@ function saveSwitch(id) {
     storeDevice(id, device, "save-switch", "switchs", fillSwitches);
 }
 
-function saveRelay(id) {
-    var device = {
-        "id": id,
-        "name": $('#name_' + id).val(),
-        "gpio": parseInt($('#gpio_' + id).val()),
-        "inverted": $('#inverted_' + id).val() === "true" ? true : false
-    };
-    storeDevice(id, device, "save-relay", "relays", fillRelays);
-}
 
 function saveSensor(id) {
     let payloadOn = $("#payloadOn_" + id + "_opening").val();

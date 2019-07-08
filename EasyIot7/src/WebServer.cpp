@@ -64,11 +64,11 @@ void loadUI()
 void setupWebserverAsync(){
   MDNS.begin(getAtualConfig().hostname);
   MDNS.addService("bhsystems", "tcp", 80);
-  MDNS.addServiceTxt("bhsystems", "tcp", "nodeId", getAtualConfig().nodeId);
+  MDNS.addServiceTxt("bhsystems", "tcp", "nodeId", String(getAtualConfig().nodeId));
   MDNS.addServiceTxt("bhsystems", "tcp", "hardwareId", String(ESP.getChipId()));
   MDNS.addServiceTxt("bhsystems", "tcp", "type", String(FACTORY_TYPE));
   MDNS.addServiceTxt("bhsystems", "tcp", "wifiSignal", String(WiFi.RSSI()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "ssid", getAtualConfig().apName);
+  MDNS.addServiceTxt("bhsystems", "tcp", "ssid", String(getAtualConfig().apName));
   MDNS.addServiceTxt("bhsystems", "tcp", "firmware", String(FIRMWARE_VERSION));
   loadUI();
 

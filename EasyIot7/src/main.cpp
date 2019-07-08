@@ -25,5 +25,7 @@ void loop() {
 void actualUpdate()
 {
   WiFiClient client;
-  ESPhttpUpdate.update(client, getUpdateUrl());
+  const String url = getUpdateUrl();
+  const String version = String(FIRMWARE_VERSION);
+  ESPhttpUpdate.update(client,url , version);
 }
