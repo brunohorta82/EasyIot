@@ -89,11 +89,11 @@ void loopSwitches()
 {
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
-    Bounce *b = _switchs[i].debouncer;
+   
+   SwitchT *sw =  &switchs[i];
+    Bounce *b = sw->debouncer;
     b->update();
     bool value = b->read();
-   SwitchT *sw =  &switchs[i];
-   bool value;
    unsigned int gpio;
    if(value != sw->lastGpioState){
     sw->lastGpioState = value;
