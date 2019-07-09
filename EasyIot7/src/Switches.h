@@ -1,7 +1,9 @@
 #include "Arduino.h"
-#include <Bounce2.h>
+#include "config.h"
 #include "Templates.h"
+#define SWITCHES_TAG "[SWITCHES]"
 #define SWITCH_DEVICE "switch"
+
 #define DELAY_COVER_PROTECTION 50 //50 milliseconds
 
 #define PAYLOAD_ON "ON"
@@ -27,16 +29,12 @@
 #define MODE_AUTO_OFF 6
 
 const String switchsFilename = "switchs.json";
-const String statesPoolCover[] = {"OPEN", "STOP", "CLOSE", "STOP"};
-const int statesPoolCoverSize = 4;
-const String statesPoolSwitch[] = {"ON", "OFF"};
-const int statesPoolSwitchSize = 2;
+const String statesPool[] = {"ON", "OFF","OPEN", "STOP", "CLOSE", "STOP"};
 
 struct SwitchT{
-    Bounce *debouncer;
     unsigned int gpio;
     bool lastGpioState;
-    long lastTimeChange;
+    unsigned long lastTimeChange;
     int typeControl; //MQTT OR RELAY
     unsigned int mode; // MODE_BUTTON_SWITCH, MODE_BUTTON_PUSH, MODE_OPEN_CLOSE_SWITCH, MODE_OPEN_CLOSE_PUSH, MODE_AUTO_OFF
     char stateControl[8]; //ON, OFF, STOP, CLOSE, OPEN
@@ -45,6 +43,7 @@ struct SwitchT{
     char mqttCommandTopic[128];
     char mqttStateTopic[128];
     char mqttPayload[10];
+    bool mqttReatain;
     bool pullup; //USE INTERNAL RESISTOR
     unsigned int gpioSingleControl;  
     unsigned int gpioOpenControl;
@@ -53,13 +52,15 @@ struct SwitchT{
     unsigned int gpioStopControl;
     unsigned int positionControlCover; //COVER PERCENTAGE
     bool inverted;
-    unsigned int statePoolIdx;
-    const String statesPool[];
-    const int statesPoolSize;
-    long autoOffDelay;
+    int statePoolIdx;
+    unsigned int statePoolStart;
+    unsigned int statePoolEnd;
+    unsigned long autoOffDelay;
 };
 
 void loopSwitches();
 void stateSwitch(SwitchT *switchT, String state);
+void setupSwitchs();
+void mqttSwitchControl(String topic, String payload);
 
 

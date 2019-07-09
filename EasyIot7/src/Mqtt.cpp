@@ -1,17 +1,19 @@
 #include "Mqtt.h"
-#define MQTT_TAG "[MQTT]"
+#include "Switches.h"
+
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
+std::vector<String> subscriptions;
 void processMqttAction(String topic, String payload)
 {
-    //mqttSwitchControl(topic, payload);
+    mqttSwitchControl(topic, payload);
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
     String topicStr = String(topic);
     logger(MQTT_TAG, "TOPIC: " + topicStr);
     String payloadStr = "";
-    for (int i = 0; i < length; i++)
+    for (unsigned int i = 0; i < length; i++)
     {
         payloadStr += (char)payload[i];
     }
@@ -43,11 +45,14 @@ boolean reconnect()
     logger(MQTT_TAG, "TRY CONNECTION");
     char *username = strdup(getAtualConfig().mqttUsername);
     char *password = strdup(getAtualConfig().mqttPassword);
-    if (mqttClient.connect(String(ESP.getChipId()).c_str(), "username", "password", getAvailableTopic(username).c_str(), 0, true, "offline", false))
+    if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic(username).c_str(), 0, true, UNAVAILABLE_PAYLOAD, true))
     {
         logger(MQTT_TAG, "CONNECTED");
-        publishOnMqtt(getAvailableTopic(username), "online", true);
-       // publishOnMqtt(getConfigStatusTopic(username), getConfigStatus(String(CONFIG_FILENAME).c_str()), true);
+        publishOnMqtt(getAvailableTopic(username), AVAILABLE_PAYLOAD, true);
+        publishOnMqtt(getConfigStatusTopic(username), getConfigStatus().c_str(), true);
+        for(int i = 0 ; i < subscriptions.size(); i++){
+            mqttClient.subscribe(subscriptions[i].c_str());
+        }
     }
 
     return mqttClient.connected();
@@ -95,13 +100,15 @@ void loopMqtt()
 
 void publishOnMqtt(String topic, String payload, bool retain)
 {
-    static unsigned long retries = 0;
-      while(!mqttClient.publish(topic.c_str(),payload.c_str(), retain));
+    static unsigned int retries = 0;
+    while(!mqttClient.publish(topic.c_str(),payload.c_str(), retain) && retries < 3){
+        retries++;
+    }
     
     retries = 0;
 }
 
 void subscribeOnMqtt(String topic)
 {
-       mqttClient.subscribe(topic.c_str());
+    subscriptions.push_back(topic);
 }

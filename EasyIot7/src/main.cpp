@@ -3,6 +3,7 @@
 #include "WebServer.h"
 #include "WiFi.h"
 #include "Mqtt.h"
+#include "Switches.h"
 #include <ESP8266httpUpdate.h>
 
 
@@ -14,12 +15,14 @@ void setup() {
   setupWebserverAsync();
   setupWiFi();
   setupMQTT();
+  setupSwitchs();
 }
 
 void loop() {
   mDnsLoop();
   loopWiFi();
   loopMqtt();
+  loopSwitches();
 }
 
 void actualUpdate()
