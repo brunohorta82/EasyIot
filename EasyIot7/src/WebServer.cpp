@@ -99,10 +99,25 @@ void setupWebserverAsync(){
       request->send(response);
     
   });
+    server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request) {
+    requestRestart();
+    request->send(200, "application/json", "{\"result\":\"OK\"}");
+  });
+    server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"result\":\"OK\"}");
+   requestLoadDefaults();
+  });
 
   server.addHandler(handlerNode);
-  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Origin"), F("*"));
-  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("PUT, GET"));
+  server.onNotFound([](AsyncWebServerRequest *request) {
+	if (request->method() == HTTP_OPTIONS) {
+		request->send(200);
+	} else {
+		request->send(404);
+	}
+});
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
   server.begin();
 }

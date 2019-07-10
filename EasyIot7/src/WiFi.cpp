@@ -177,7 +177,8 @@ String wifiJSONStatus(){
   const size_t CAPACITY = JSON_OBJECT_SIZE(7);
   StaticJsonDocument<CAPACITY> doc;
   JsonObject object = doc.to<JsonObject>();
-  object["wifiSSID"] = String( jw.getAPSSID().c_str());
+  object["wifiAPSSID"] = String( jw.getAPSSID().c_str());
+  object["wifiSSID"] = WiFi.SSID();
   object["status"] = jw.connected();
   object["signal"] = WiFi.RSSI();
   object["wifiIp"] = WiFi.localIP().toString();

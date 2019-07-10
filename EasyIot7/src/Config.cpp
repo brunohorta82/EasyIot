@@ -6,7 +6,7 @@ bool LOAD_DEFAULTS = false;
 bool AUTO_UPDATE = false;
 bool STORE_CONFIG = false;
 bool WIFI_SCAN = false;
-
+bool restart = false;
 Config config;
 
 struct Config& getAtualConfig(){
@@ -22,7 +22,22 @@ void requestConfigStorage()
 {
   STORE_CONFIG = true;
 }
-void requestReboot()
+
+bool restartRequested(){
+  if( REBOOT){
+    REBOOT = false;
+    return true;
+  }
+  return false;
+}
+bool autoUpdateRequested(){
+  if( LOAD_DEFAULTS){
+    LOAD_DEFAULTS = false;
+    return true;
+  }
+  return false;
+}
+void requestRestart()
 {
   REBOOT = true;
 }
@@ -34,6 +49,7 @@ void requestLoadDefaults()
 {
   LOAD_DEFAULTS = true;
 }
+
 void requestWifiScan()
 {
   WIFI_SCAN = true;
@@ -181,6 +197,7 @@ void saveConfiguration()
   SPIFFS.end();
 }
 void updateConfig(JsonObject doc, bool persist){
+    bool reloadWifi = strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
     strlcpy(config.nodeId, doc["nodeId"] | DEFAULT_NODE_ID.c_str(), sizeof(config.nodeId));
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, doc["homeAssistantAutoDiscoveryPrefix"] | "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
     strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
@@ -204,6 +221,7 @@ void updateConfig(JsonObject doc, bool persist){
     config.firmware = FIRMWARE_VERSION;
     if(persist){
       saveConfiguration();
+      
     }
     
 }

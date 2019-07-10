@@ -42,7 +42,7 @@ String getSwitchesConfigStatus(){
 
  if (!file) {
     Serial.println(F("Failed to read file"));
-    return "[{}]";
+    return "[]";
   }
   while (file.available()) {
     object += (char)file.read();

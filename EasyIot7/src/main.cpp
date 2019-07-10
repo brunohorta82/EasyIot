@@ -6,10 +6,21 @@
 #include "Switches.h"
 #include <ESP8266httpUpdate.h>
 
+void checkInternalRoutines()
+{
+  if (restartRequested())
+  {
+      logger("[SYSTEM]", "Rebooting...");
+      ESP.restart();
+  }
+  if(autoUpdateRequested()){
+     SPIFFS.format();
+    requestRestart();
+  }
+}
 
-
-
-void setup() {
+void setup()
+{
   Serial.begin(115200);
   loadStoredConfiguration();
   setupWebserverAsync();
@@ -18,7 +29,9 @@ void setup() {
   setupSwitchs();
 }
 
-void loop() {
+void loop()
+{
+  checkInternalRoutines();
   mDnsLoop();
   loopWiFi();
   loopMqtt();
@@ -30,5 +43,5 @@ void actualUpdate()
   WiFiClient client;
   const String url = getUpdateUrl();
   const String version = String(FIRMWARE_VERSION);
-  ESPhttpUpdate.update(client,url , version);
+  ESPhttpUpdate.update(client, url, version);
 }

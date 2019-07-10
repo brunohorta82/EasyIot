@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h> 
+#include "WiFi.h"
 #define HARDWARE "onofre"
 #define FACTORY_TYPE "light"  //suported types [cover, light]
 #define FIRMWARE_VERSION 7.0
@@ -42,12 +43,15 @@ struct Config {
   double firmware;
 };
 
+
 void loadStoredConfiguration();
 void saveConfiguration();
 String getUpdateUrl();
 void requestConfigStorage();
-void requestReboot();
+void requestRestart();
+bool restartRequested();
 void requestAutoUpdate();
+bool autoUpdateRequested();
 void requestLoadDefaults();
 void requestWifiScan();
 void logger(String tag, String msg);
@@ -55,4 +59,5 @@ String normalize(String inputStr);
 String getConfigStatus();
 void updateConfig(JsonObject json, bool persist);
 struct Config& getAtualConfig();
+
 #endif

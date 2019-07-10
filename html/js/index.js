@@ -1,9 +1,68 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.187.168"
 };
 
 var switchs;
 var config;
+var WORDS_EN = {
+    "node": "NODE",
+    "update": "UPDATE",
+    "features": "FEATURES",
+    "current-version": "Current version",
+    "new-file": "Choose new version file",
+    "install-new-version": "Install new version",
+    "version": "Version",
+    "save": "Save",
+    "clean-fields": "Clear all Fields",
+    "username": "Username",
+    "password": "Password",
+    "yes": "Yes",
+    "no": "No",
+    "netmask": "Netmask",
+    "system": "System",
+    "name": "Name",
+    "restart": "Restart",
+    "reset-factory": "Load Factory Defaults",
+    "switches": "Switches",
+    "remove": "Remove",
+    "new": "New"
+
+};
+
+var WORDS_PT = {
+    "node": "NÓ",
+    "update": "ATUALIZAR",
+    "features": "FUNÇÕES",
+    "current-version": "Versão atual",
+    "new-file": "Escolher o ficheiro da nova versão",
+    "install-new-version": "Instalar nova versão",
+    "version": "Versão",
+    "save": "Guardar",
+    "clean-fields": "Limpar todos os campos",
+    "username": "Utilizador",
+    "password": "Palavra Passe",
+    "yes": "Sim",
+    "no": "Não",
+    "netmask": "Mascara de Rede",
+    "system": "Sistema",
+    "name": "Nome",
+    "restart": "Reiniciar",
+    "reset-factory": "Carregar Configuração de Fábrica",
+    "switches": "Interruptores",
+    "remove": "Remover",
+    "new": "Criar Novo"
+};
+
+
+function loadsLanguage(lang) {
+    localStorage.setItem('lang', lang);
+    /*fills all the span tags with class=lang pattern*/
+    $('span[class^="lang"]').each(function () {
+        var LangVar = (this.className).replace('lang-', '');
+        var Text = window["WORDS_" + lang][LangVar];
+        $(this).text(Text);
+    });
+}
 
 function removeDevice(e, id, func) {
     const someUrl = endpoint.baseUrl + "/" + e + "?id=" + id;
@@ -52,54 +111,25 @@ function storeConfig() {
         contentType: "application/json",
         data: JSON.stringify(config),
         success: function (response) {
-            config = response;
+            this.config = response;
             fillConfig();
-            alert("Configuração Guardada");
-        },
-        error: function () {
-
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
-
-}
-
-function toggleAP() {
-    if ($('#wifi_status').text() !== 'ligado') {
-        alert("Só é possivel desligar o AP depois de estar ligado com sucesso a uma Rede Wi-Fi")
-        return;
-    }
-    const someUrl = endpoint.baseUrl + "/dissableAP";
-    $.ajax({
-        url: someUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-        },
-        timeout: 2000
-    });
-}
-
-function findNetworks() {
-    $('#networks').empty();
-    $('#status-scan').text('a pesquisar, aguarde...');
-    const someUrl = endpoint.baseUrl + "/scan";
-    $.ajax({
-        url: someUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
+            if (localStorage.getItem('lang') == "PT") {
+                alert("Configuração Guardada");
+            } else {
+                alert("Saved Configuration");
+            }
 
         },
         error: function () {
-            alert("Erro não foi possivel fazer o pedido");
-        }, complete: function () {
-
+            if (localStorage.getItem('lang') == "PT") {
+                alert("Não foi possivel guardar a configuração. Tente novamente.");
+            } else {
+                alert("Unable to save configuration. Try again.");
+            }
         },
         timeout: 2000
     });
+
 }
 
 function loadConfig() {
@@ -114,7 +144,12 @@ function loadConfig() {
 
         },
         error: function () {
-            alert("Erro a carregar configuração");
+
+            if (localStorage.getItem('lang') == "PT") {
+                alert("Erro a carregar configuração");
+            } else {
+                alert("Configuration load failed.");
+            }
         }, complete: function () {
 
         },
@@ -143,6 +178,7 @@ function loadDevice(func, e, next) {
 }
 
 function fillConfig() {
+    if (!this.config) return;
     $("#firmwareVersion").text(this.config.firmware);
     $(".bh-model").text(this.config.hardware);
     $(".bh-onofre-item").removeClass("hide");
@@ -155,7 +191,10 @@ function fillConfig() {
     $('input[name="mqttPassword"]').val(this.config.mqttPassword);
     $('input[name="wifiSSID"]').val(this.config.wifiSSID);
     $('input[name="wifiSecret"]').val(this.config.wifiSecret);
-    $('select[name="staticIp"] option[value="' + this.config.staticIp + '"]').attr("selected", "selected");
+    var staticIp = document.getElementById("staticIp");
+    if (staticIp) {
+        staticIp.checked = !config.staticIp;
+    }
     $('input[name="wifiIp"]').val(this.config.wifiIp);
     $('input[name="wifiMask"]').val(this.config.wifiMask);
     $('input[name="wifiGw"]').val(this.config.wifiGw);
@@ -172,16 +211,16 @@ function toggleActive(menu) {
     $(".content").load(menu + ".html", function () {
         if (menu === "devices") {
             loadDevice(fillSwitches, "switchs", function () {
-                loadDevice(fillSensors, "sensors", function () {
-                    
-                });
+                // loadDevice(fillSensors, "sensors", function () {
+
+                // });
             });
 
 
         } else {
-         fillConfig();
+            fillConfig();
         }
-
+        loadsLanguage(localStorage.getItem('lang'));
     });
 }
 
@@ -215,11 +254,11 @@ function buildSwitch(obj) {
         "                <table class=\"table table-condensed\">" +
         "                    <tbody>" +
         "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">NOME</span></td>" +
+        "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-name\">NOME</span></td>" +
         "                        <td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + obj.name + "\" type=\"text\"  id=\"name_" + obj.id + "\" placeholder=\"ex: luz sala\"  required=\"true\"/></td>" +
         "                    </tr>" +
         "                   <tr  id=\"tipo_" + obj.id + "\" class=\"" + (obj.mode === 4 ? 'hide' : '') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">TIPO</span></td>" +
+        "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-type\">TIPO</span></td>" +
         "                        <td><select onchange=\"switchTypeOptions('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"type_" + obj.id + "\">" +
         "                            <option " + (obj.type === 'switch' ? 'selected' : '') + " value=\"switch\">Interruptor</option>" +
@@ -229,7 +268,7 @@ function buildSwitch(obj) {
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MODO</span></td>" +
+        "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-mode\">MODO</span></td>" +
         "                   <td   id=\"mode_" + obj.id + "\" class=\"generic_type_" + obj.id + " " + (obj.type !== 'cover' ? '' : 'hide') + "\">" +
         "                            <select onchange=\"switchModeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                     id=\"modeg_" + obj.id + "\">" +
@@ -245,14 +284,6 @@ function buildSwitch(obj) {
         "                                <option " + (obj.mode === 5 ? 'selected' : '') + " value=\"5\">OPEN | STOP | CLOSE PUSH/TOUCH</option>" +
         "                            </select>" +
         "                        </td>" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">PULLUP</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"pullup_" + obj.id + "\">" +
-        "                            <option " + (obj.pullup ? 'selected' : '') + " value=\"true\">SIM</option>" +
-        "                            <option " + (!obj.pullup ? 'selected' : '') + " value=\"false\">NÃO</option>" +
-        "                        </select></td>" +
         "                    </tr>" +
         "                   <tr  id=\"single_gpio_" + obj.id + "\" class=\"" + (obj.mode === 4 ? 'hide' : '') + "\">" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO</span></td>" +
@@ -364,8 +395,8 @@ function buildSwitch(obj) {
         "                    </tbody>" +
         "                </table>" +
         "                <div class=\"box-footer save\">" +
-        "                    <button onclick=\"removeDevice('remove-switch','" + obj.id + "',fillSwitches)\" style=\"font-size: 12px\" class=\"btn btn-danger\">Remover</button>" +
-        "                    <button onclick=\"saveSwitch('" + obj.id + "')\" style=\"font-size: 12px\" class=\"btn btn-primary\">Guardar</button>" +
+        "                    <button onclick=\"removeDevice('remove-switch','" + obj.id + "',fillSwitches)\" style=\"font-size: 12px\" class=\"btn btn-danger\"><span class=\"lang-remove\">Remover</span></button>" +
+        "                    <button onclick=\"saveSwitch('" + obj.id + "')\" style=\"font-size: 12px\" class=\"btn btn-primary\"><span class=\"lang-save\">Guardar</span></button>" +
 
         "                </div>" +
         "            </div>" +
@@ -785,7 +816,7 @@ function saveWifi() {
     config.wifiIp = $('#wifiIp').val();
     config.wifiMask = $('#wifiMask').val();
     config.wifiGw = $('#wifiGw').val();
-    config.staticIp = $('#staticIp').val();
+    config.staticIp = !document.getElementById("staticIp").checked;
     config.apSecret = $('#apSecret').val();
     storeConfig();
 
@@ -880,47 +911,31 @@ function wifiStatus() {
 
 }
 
-
-function selectNetwork(node) {
-    $('input[name="wifiSSID"]').val(node.split(": ")[5].trim());
-    $('input[name="wifiSecret"]').val("").focus();
-
-}
-
-function appendWifiLog(log) {
-    $('#wifi-log').append('<p>' + log + '</p>');
-
-}
-
-function appendNetwork(network) {
-    if (network === "No networks found") {
-        $('#status-scan').text('Não foram encontradas redes wi-fi');
-    } else {
-        $('#status-scan').text('resultado da pesquisa: ');
-        $('#networks').append('<a href="#" class="wifi-node"  data-menu="' + network + '">' + network + '</a><p></p>');
-        $('.wifi-node').click(function (e) {
-            var node = $(e.currentTarget).data('menu');
-            selectNetwork(node);
-
-        });
-    }
-}
-
-
 function loadDefaults() {
-    let someUrl = endpoint.baseUrl + "/loaddefaults";
+    let someUrl = endpoint.baseUrl + "/load-defaults";
     $.ajax({
         url: someUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
-        },
-        complete: function () {
-            alert("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point de configuração e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.");
+            if (localStorage.getItem('lang') == "PT") {
+                alert("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.");
+            } else {
+                alert("Factory settings successfully applied. Please reconnect to the Access Point and access the control panel at http://192.168.4.1 in your browser.");
+            }
+        },error: function () {
+                if (localStorage.getItem('lang') == "PT") {
+                    alert("Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.");
+                } else {
+                    alert("Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.");
+                }
+            },
 
-        },
-        timeout: 1000
-    });
+        timeout:1000
+}
+
+)
+;
 }
 
 
@@ -931,13 +946,36 @@ function reboot() {
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            alert("O OnoFre está a reiniciar, ficará disponivel dentro de 10 segundos.");
+            if (localStorage.getItem('lang') == "PT") {
+                alert("O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.");
+            }else {
+                alert("The device is restartin, will be available in 10 seconds.");
+            }
+
+        },error: function () {
+            if (localStorage.getItem('lang') == "PT") {
+                alert("Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.");
+            } else {
+                alert("Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.");
+            }
         },
         timeout: 2000
     });
 }
 
 $(document).ready(function () {
+    var language = window.navigator.userLanguage || window.navigator.language;
+    var lang = localStorage.getItem('lang');
+    if (lang) {
+        loadsLanguage(lang);
+    } else {
+        if (language.startsWith("en")) {
+            loadsLanguage("EN");
+        } else {
+            loadsLanguage("PT");
+        }
+
+    }
     loadConfig();
     $('#node_id').on('keypress', function (e) {
         if (e.which === 32)
@@ -953,4 +991,5 @@ $(document).ready(function () {
     wifiStatus();
     toggleActive("node");
     setInterval(wifiStatus, 15000);
+
 });
