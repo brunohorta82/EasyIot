@@ -150,6 +150,9 @@ void infoCallback(justwifi_messages_t code, char * parameter) {
       break;
       case MESSAGE_SMARTCONFIG_ERROR:
        msg = "Smart Config failed";
+       case MESSAGE_HOSTNAME_ERROR:
+       msg = "Hostname Error";
+       break;
       break;
       
       }

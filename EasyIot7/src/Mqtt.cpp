@@ -50,7 +50,7 @@ boolean reconnect()
         logger(MQTT_TAG, "CONNECTED");
         publishOnMqtt(getAvailableTopic(username), AVAILABLE_PAYLOAD, true);
         publishOnMqtt(getConfigStatusTopic(username), getConfigStatus().c_str(), true);
-        for(int i = 0 ; i < subscriptions.size(); i++){
+        for(unsigned int i = 0 ; i < subscriptions.size(); i++){
             mqttClient.subscribe(subscriptions[i].c_str());
         }
     }

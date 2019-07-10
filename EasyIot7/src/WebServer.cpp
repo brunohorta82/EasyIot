@@ -81,6 +81,11 @@ void setupWebserverAsync(){
     response->print(wifiJSONStatus());
     request->send(response);
   });
+    server.on("/switchs", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->print(getSwitchesConfigStatus());
+    request->send(response);
+  });
    server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->print(getConfigStatus());
@@ -94,6 +99,7 @@ void setupWebserverAsync(){
       request->send(response);
     
   });
+
   server.addHandler(handlerNode);
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Origin"), F("*"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("PUT, GET"));

@@ -12,6 +12,7 @@
 #include <fauxmoESP.h>
 #include <Config.h>
 #include "WiFi.h"
+#include "Switches.h"
 
 void setupWebserverAsync();
 void mDnsLoop();

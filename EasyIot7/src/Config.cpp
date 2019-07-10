@@ -102,7 +102,7 @@ String getConfigStatus(){
 
  if (!file) {
     Serial.println(F("Failed to read file"));
-    return "";
+    return "{}";
   }
   while (file.available()) {
     object += (char)file.read();
@@ -202,8 +202,6 @@ void updateConfig(JsonObject doc, bool persist){
     strlcpy(config.apName, getApName().c_str(),sizeof(config.apName));
     strlcpy(config.hardware, HARDWARE,sizeof(config.firmware));
     config.firmware = FIRMWARE_VERSION;
-    Serial.println("config.wifiSSID");
-    Serial.println(config.wifiSSID);
     if(persist){
       saveConfiguration();
     }
