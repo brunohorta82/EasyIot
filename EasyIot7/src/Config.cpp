@@ -10,8 +10,8 @@ bool WIFI_RELOAD = false;
 bool restart = false;
 
 Config config;
-
-struct Config& getAtualConfig(){
+struct Config &getAtualConfig()
+{
   return config;
 }
 
@@ -20,50 +20,60 @@ String getUpdateUrl()
   return String(UPDATE_URL) + String(FACTORY_TYPE) + ".bin";
 }
 
-void requestConfigStorage()
+void requestReloadWifi()
 {
-  STORE_CONFIG = true;
+  WIFI_RELOAD = true;
 }
-void requestReloadWifi(){
-WIFI_RELOAD = true;
-}
-bool reloadWifiRequested(){
-  if( WIFI_RELOAD){
+bool reloadWifiRequested()
+{
+  if (WIFI_RELOAD)
+  {
     WIFI_RELOAD = false;
     return true;
   }
   return false;
 }
-bool restartRequested(){
-  if( REBOOT){
+
+void requestRestart()
+{
+  REBOOT = true;
+}
+bool restartRequested()
+{
+  if (REBOOT)
+  {
     REBOOT = false;
     return true;
   }
   return false;
 }
-bool autoUpdateRequested(){
-  if( LOAD_DEFAULTS){
-    LOAD_DEFAULTS = false;
-    return true;
-  }
-  return false;
-}
-void requestRestart()
-{
-  REBOOT = true;
-}
+
 void requestAutoUpdate()
 {
   AUTO_UPDATE = true;
 }
+bool autoUpdateRequested()
+{
+  if (AUTO_UPDATE)
+  {
+    AUTO_UPDATE = false;
+    return true;
+  }
+  return false;
+}
+
 void requestLoadDefaults()
 {
   LOAD_DEFAULTS = true;
 }
-
-void requestWifiScan()
+bool loadDefaultsRequested()
 {
-  WIFI_SCAN = true;
+  if (LOAD_DEFAULTS)
+  {
+    LOAD_DEFAULTS = false;
+    return true;
+  }
+  return false;
 }
 
 void logger(String tag, String msg)
@@ -121,20 +131,23 @@ String getApName()
   }
   return nodeId;
 }
-String getConfigStatus(){
+String getConfigStatus()
+{
   String object = "";
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(CONFIG_FILENAME, "r+");
 
- if (!file) {
-    Serial.println(F("Failed to read file"));
-    return "{}";
-  }
-  while (file.available()) {
-    object += (char)file.read();
-  }
-  Serial.println();
+    if (!file)
+    {
+      Serial.println(F("Failed to read file"));
+      return "{}";
+    }
+    while (file.available())
+    {
+      object += (char)file.read();
+    }
+    Serial.println();
     file.close();
   }
   SPIFFS.end();
@@ -157,9 +170,7 @@ void loadStoredConfiguration()
       logger(CONFIG_TAG, "Stored config loaded.");
     }
     file.close();
-    updateConfig(doc.as<JsonObject>(),error);
-    
-   
+    updateConfig(doc.as<JsonObject>(), error);
   }
   SPIFFS.end();
 }
@@ -197,44 +208,49 @@ void saveConfiguration()
       doc["hostname"] = config.hostname;
       doc["apName"] = config.apName;
       doc["firmware"] = config.firmware;
-      if (serializeJson(doc, file) == 0) {
+      if (serializeJson(doc, file) == 0)
+      {
         logger(CONFIG_TAG, "Failed to write Config into file");
-      }else{
+      }
+      else
+      {
         logger(CONFIG_TAG, "Config stored.");
-    }
+      }
     }
     file.close();
   }
   SPIFFS.end();
 }
-void updateConfig(JsonObject doc, bool persist){
-    bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0|| strcmp(config.wifiMask, doc["wifiMask"] | "") != 0|| strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
-    strlcpy(config.nodeId, doc["nodeId"] | DEFAULT_NODE_ID.c_str(), sizeof(config.nodeId));
-    strlcpy(config.homeAssistantAutoDiscoveryPrefix, doc["homeAssistantAutoDiscoveryPrefix"] | "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
-    strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
-    config.mqttPort = doc["mqttPort"] | 1883;
-    strlcpy(config.mqttUsername, doc["mqttUsername"] | "", sizeof(config.mqttUsername));
-    strlcpy(config.mqttPassword, doc["mqttPassword"] | "", sizeof(config.mqttPassword));
-    strlcpy(config.wifiSSID, doc["wifiSSID"] | "", sizeof(config.wifiSSID));
-    strlcpy(config.wifiSSID2,doc["wifiSSID2"] | "", sizeof(config.wifiSSID2));
-    strlcpy(config.wifiSecret, doc["wifiSecret"] | "", sizeof(config.wifiSecret));
-    strlcpy(config.wifiSecret2, doc["wifiSecret2"] | "", sizeof(config.wifiSecret2));
-    strlcpy(config.wifiIp, doc["wifiIp"] | "", sizeof(config.wifiIp));
-    strlcpy(config.wifiMask, doc["wifiMask"] | "", sizeof(config.wifiMask));
-    strlcpy(config.wifiGw, doc["wifiGw"] | "", sizeof(config.wifiGw));
-    config.staticIp = doc["staticIp"];
-    strlcpy(config.apSecret, doc["apSecret"] | AP_SECRET, sizeof(config.apSecret));
-    config.configTime = doc["configTime"];
-    strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
-    strlcpy(config.hostname, getHostname(config).c_str(),sizeof(config.hostname));
-    strlcpy(config.apName, getApName().c_str(),sizeof(config.apName));
-    strlcpy(config.hardware, HARDWARE,sizeof(config.firmware));
-    config.firmware = FIRMWARE_VERSION;
-    if(persist){
-      saveConfiguration();
-    }
-    if(reloadWifi){
-      requestReloadWifi();
-    }
-    
+void updateConfig(JsonObject doc, bool persist)
+{
+  bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0 || strcmp(config.wifiMask, doc["wifiMask"] | "") != 0 || strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
+  strlcpy(config.nodeId, doc["nodeId"] | DEFAULT_NODE_ID.c_str(), sizeof(config.nodeId));
+  strlcpy(config.homeAssistantAutoDiscoveryPrefix, doc["homeAssistantAutoDiscoveryPrefix"] | "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
+  strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
+  config.mqttPort = doc["mqttPort"] | 1883;
+  strlcpy(config.mqttUsername, doc["mqttUsername"] | "", sizeof(config.mqttUsername));
+  strlcpy(config.mqttPassword, doc["mqttPassword"] | "", sizeof(config.mqttPassword));
+  strlcpy(config.wifiSSID, doc["wifiSSID"] | "", sizeof(config.wifiSSID));
+  strlcpy(config.wifiSSID2, doc["wifiSSID2"] | "", sizeof(config.wifiSSID2));
+  strlcpy(config.wifiSecret, doc["wifiSecret"] | "", sizeof(config.wifiSecret));
+  strlcpy(config.wifiSecret2, doc["wifiSecret2"] | "", sizeof(config.wifiSecret2));
+  strlcpy(config.wifiIp, doc["wifiIp"] | "", sizeof(config.wifiIp));
+  strlcpy(config.wifiMask, doc["wifiMask"] | "", sizeof(config.wifiMask));
+  strlcpy(config.wifiGw, doc["wifiGw"] | "", sizeof(config.wifiGw));
+  config.staticIp = doc["staticIp"];
+  strlcpy(config.apSecret, doc["apSecret"] | AP_SECRET, sizeof(config.apSecret));
+  config.configTime = doc["configTime"];
+  strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
+  strlcpy(config.hostname, getHostname(config).c_str(), sizeof(config.hostname));
+  strlcpy(config.apName, getApName().c_str(), sizeof(config.apName));
+  strlcpy(config.hardware, HARDWARE, sizeof(config.firmware));
+  config.firmware = FIRMWARE_VERSION;
+  if (persist)
+  {
+    saveConfiguration();
+  }
+  if (reloadWifi)
+  {
+    requestReloadWifi();
+  }
 }

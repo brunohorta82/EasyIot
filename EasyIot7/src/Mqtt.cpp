@@ -20,21 +20,24 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     logger(MQTT_TAG, "PAYLOAD: " + payloadStr);
     processMqttAction(topicStr, payloadStr);
 }
-String getBaseTopic(String username)
+String getBaseTopic()
 {
+    String username = String(getAtualConfig().mqttUsername);
     if (username == "")
     {
-        username = String(HARDWARE);
+        username = "easyiot";
     }
     return username + "/" + String(ESP.getChipId());
 }
-String getAvailableTopic(String username)
+String getAvailableTopic()
 {
-    return getBaseTopic(username) + "/available";
+    String username = String(getAtualConfig().mqttUsername);
+    return getBaseTopic() + "/available";
 }
-String getConfigStatusTopic(String username)
+String getConfigStatusTopic()
 {
-    return getBaseTopic(username) + "/config/status";
+    String username = String(getAtualConfig().mqttUsername);
+    return getBaseTopic() + "/config/status";
 }
 
 boolean reconnect()
@@ -45,11 +48,11 @@ boolean reconnect()
     logger(MQTT_TAG, "TRY CONNECTION");
     char *username = strdup(getAtualConfig().mqttUsername);
     char *password = strdup(getAtualConfig().mqttPassword);
-    if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic(username).c_str(), 0, true, UNAVAILABLE_PAYLOAD, true))
+    if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic().c_str(), 0, true, UNAVAILABLE_PAYLOAD, true))
     {
         logger(MQTT_TAG, "CONNECTED");
-        publishOnMqtt(getAvailableTopic(username), AVAILABLE_PAYLOAD, true);
-        publishOnMqtt(getConfigStatusTopic(username), getConfigStatus().c_str(), true);
+        publishOnMqtt(getAvailableTopic(), AVAILABLE_PAYLOAD, true);
+        publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
         for(unsigned int i = 0 ; i < subscriptions.size(); i++){
             mqttClient.subscribe(subscriptions[i].c_str());
         }

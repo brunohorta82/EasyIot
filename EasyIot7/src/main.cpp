@@ -10,16 +10,26 @@ void checkInternalRoutines()
 {
   if (restartRequested())
   {
-      logger("[SYSTEM]", "Rebooting...");
-      ESP.restart();
+    logger(SYSTEM_TAG, "Rebooting...");
+    ESP.restart();
   }
-  if(autoUpdateRequested()){
-     SPIFFS.format();
+  if (loadDefaultsRequested())
+  {
+    logger(SYSTEM_TAG, "Loading defaults...");
+    SPIFFS.format();
     requestRestart();
   }
+  if (autoUpdateRequested())
+  {
+    logger(SYSTEM_TAG, "Starting auto update make sure if this device is connected to the internet.");
+    WiFiClient client;
+    ESPhttpUpdate.update(client, getUpdateUrl());
+  }
 
-  if(reloadWifiRequested()){
-     reloadWiFiConfig();
+  if (reloadWifiRequested())
+  {
+    logger(SYSTEM_TAG, "Loading wifi configuration...");
+    reloadWiFiConfig();
   }
 }
 

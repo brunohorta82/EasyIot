@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.168"
+    baseUrl: ""
 };
 
 var switchs;
@@ -260,15 +260,15 @@ function buildSwitch(obj) {
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-type\">TIPO</span></td>" +
         "                        <td><select onchange=\"switchTypeOptions('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"type_" + obj.id + "\">" +
-        "                            <option " + (obj.type === 'switch' ? 'selected' : '') + " value=\"switch\">Interruptor</option>" +
-        "                            <option " + (obj.type === 'light' ? 'selected' : '') + " value=\"light\">Luz</option>" +
-        "                            <option " + (obj.type === 'cover' ? 'selected' : '') + " value=\"cover\">Estore</option>" +
-        "                            <option " + (obj.type === 'lock' ? 'selected' : '') + " value=\"lock\">Fechadura</option>" +
+        "                            <option " + (obj.family === 'switch' ? 'selected' : '') + " value=\"switch\">Interruptor</option>" +
+        "                            <option " + (obj.family === 'light' ? 'selected' : '') + " value=\"light\">Luz</option>" +
+        "                            <option " + (obj.family === 'cover' ? 'selected' : '') + " value=\"cover\">Estore</option>" +
+        "                            <option " + (obj.family === 'lock' ? 'selected' : '') + " value=\"lock\">Fechadura</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-mode\">MODO</span></td>" +
-        "                   <td   id=\"mode_" + obj.id + "\" class=\"generic_type_" + obj.id + " " + (obj.type !== 'cover' ? '' : 'hide') + "\">" +
+        "                   <td   id=\"mode_" + obj.id + "\" class=\"generic_type_" + obj.id + " " + (obj.family !== 'cover' ? '' : 'hide') + "\">" +
         "                            <select onchange=\"switchModeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                     id=\"modeg_" + obj.id + "\">" +
         "                                <option " + (obj.mode === 1 ? 'selected' : '') + " value=\"1\">ON | OFF NORMAL</option>" +
@@ -276,7 +276,7 @@ function buildSwitch(obj) {
         "                                <option " + (obj.mode === 6 ? 'selected' : '') + " value=\"6\">ON | AUTO OFF PUSH/TOUCH</option>" +
         "                            </select>" +
         "                        </td>" +
-        "                   <td   id=\"mode_" + obj.id + "\" class=\"cover_type_" + obj.id + " " + (obj.type === 'cover' ? '' : 'hide') + "\">" +
+        "                   <td   id=\"mode_" + obj.id + "\" class=\"cover_type_" + obj.id + " " + (obj.family === 'cover' ? '' : 'hide') + "\">" +
         "                            <select onchange=\"switchModeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                     id=\"modec_" + obj.id + "\">" +
         "                                <option " + (obj.mode === 4 ? 'selected' : '') + " value=\"4\">OPEN | STOP | CLOSE NORMAL</option>" +
@@ -288,32 +288,32 @@ function buildSwitch(obj) {
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO</span></td>" +
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"gpio_" + obj.id + "\">" +
-        "                            <option " + (obj.gpio === 99 ? 'selected' : '') + " value=\"99\">NENHUM</option>" +
-        "                            <option " + (obj.gpio === 0 ? 'selected' : '') + " value=\"0\">0</option>" +
-        "                            <option " + (obj.gpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.primaryGpio === 99 ? 'selected' : '') + " value=\"99\">NENHUM</option>" +
+        "                            <option " + (obj.primaryGpio === 0 ? 'selected' : '') + " value=\"0\">0</option>" +
+        "                            <option " + (obj.primaryGpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.primaryGpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.primaryGpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.primaryGpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                   <tr  id=\"open_gpio_" + obj.id + "\" class=\"" + (obj.mode !== 4 ? 'hide' : '') + "\">" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO OPEN</span></td>" +
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"gpio_open_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioOpen === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioOpen === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioOpen === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioOpen === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.primaryGpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.primaryGpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.primaryGpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.primaryGpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                   <tr  id=\"close_gpio_" + obj.id + "\" class=\"" + (obj.mode !== 4 ? 'hide' : '') + "\">" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO CLOSE</span></td>" +
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"gpio_close_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioClose === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioClose === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioClose === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioClose === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.secondaryGpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.secondaryGpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.secondaryGpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.secondaryGpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                        </select></td>" +
         "                    </tr>" +
 
@@ -321,24 +321,24 @@ function buildSwitch(obj) {
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">RELÉ OPEN CLOSE</span></td>" +
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"relay_open_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioControlOpenCloseClose === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpioControlOpenClose === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpioControlOpenClose === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioControlOpenClose === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioControlOpenClose === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioControlOpenClose === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.gpioOpenCloseControl === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
+        "                            <option " + (obj.gpioOpenCloseControl === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
+        "                            <option " + (obj.gpioOpenCloseControl === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.gpioOpenCloseControl === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.gpioOpenCloseControl === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.gpioOpenCloseControl === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                   <tr  id=\"relay_close_gpio_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">RELÉ STOP</span></td>" +
         "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
         "                                    id=\"relay_close_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioControlStop === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpioControlStop === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpioControlStop === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioControlStop === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioControlStop === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioControlStop === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.gpioStopControl === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
+        "                            <option " + (obj.gpioStopControl === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
+        "                            <option " + (obj.gpioStopControl === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.gpioStopControl === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.gpioStopControl === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.gpioStopControl === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                        </select></td>" +
         "                    </tr>" +
         "                   <tr  id=\"type_mode_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
@@ -356,28 +356,20 @@ function buildSwitch(obj) {
         "                <div  id=\"type-control-box" + obj.id + "\" class=\"col-xs-5 " + (obj.typeControl === 'mqtt' ? 'hide' : '') + "\">" +
         "                           <select class=\"form-control\" style=\" font-size: 10px;padding: 0px 12px; height: 20px;\"" +
         "                                 id=\"gpioControl_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioControl == 0 ? 'selected' : '') + " value=\"0\">0</option>" +
-        "                            <option " + (obj.gpioControl == 2 ? 'selected' : '') + " value=\"2\">2</option>" +
-        "                            <option " + (obj.gpioControl == 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpioControl == 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpioControl == 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioControl == 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioControl == 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioControl == 16 ? 'selected' : '') + " value=\"16\">16</option>" +
+        "                            <option " + (obj.gpioSingleControl == 0 ? 'selected' : '') + " value=\"0\">0</option>" +
+        "                            <option " + (obj.gpioSingleControl == 2 ? 'selected' : '') + " value=\"2\">2</option>" +
+        "                            <option " + (obj.gpioSingleControl == 4 ? 'selected' : '') + " value=\"4\">4</option>" +
+        "                            <option " + (obj.gpioSingleControl == 5 ? 'selected' : '') + " value=\"5\">5</option>" +
+        "                            <option " + (obj.gpioSingleControl == 12 ? 'selected' : '') + " value=\"12\">12</option>" +
+        "                            <option " + (obj.gpioSingleControl == 13 ? 'selected' : '') + " value=\"13\">13</option>" +
+        "                            <option " + (obj.gpioSingleControl == 14 ? 'selected' : '') + " value=\"14\">14</option>" +
+        "                            <option " + (obj.gpioSingleControl == 16 ? 'selected' : '') + " value=\"16\">16</option>" +
         "                        </select>" +
         "                </div>" +
         "              </div>" +
 
 
         "</td>" +
-        "                    </tr>" +
-        "                   <tr class=\"hide " + (obj.typeControl === 'mqtt' ? 'hide' : '') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MESTRE</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"master_" + obj.id + "\">" +
-        "                            <option " + (!obj.master ? 'selected' : '') + " value=\"true\">SIM</option>" +
-        "                            <option " + (obj.master ? 'selected' : '') + " value=\"false\">NÃO</option>" +
-        "                        </select></td>" +
         "                    </tr>" +
         "                    <tr>" +
         "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MQTT ESTADO</span></td>" +
@@ -577,16 +569,27 @@ function buildSwitchTemplate() {
         return
     }
     let device = {
-        "id": "NEW",
-        "name": "Novo Interruptor",
-        "gpio": 99,
-        "pullup": true,
-        "mode": 1,
-        "typeControl": 1,
-        "gpioControl": 0,
-        "master": true,
-        "mqttCommandTopic": "-",
-        "mqttStateTopic": "-",
+    "name": "Novo Interruptor",
+    "family": "switch",
+    "primaryGpio": 99,
+    "secondaryGpio": 99,
+    "timeBetweenStates": 60000,
+    "autoState": false,
+    "autoStateDelay": 0,
+    "typeControl": 2,
+    "mode": 1,
+    "pullup": false,
+    "mqttReatain": true,
+    "inverted": false,
+    "mqttCommandTopic": "-",
+    "mqttStateTopic": "-",
+    "mqttPositionCommandTopic": "-",
+    "mqttPositionStateTopic": "-",
+    "gpioSingleControl": 99,
+    "gpioOpenControl": 99,
+    "gpioCloseControl": 99,
+    "gpioOpenCloseControl": 99,
+    "gpioStopControl": 99
     };
     buildSwitch(device);
 }

@@ -3,16 +3,74 @@
 
 std::vector<SwitchT> switchs;
 
-void updateSwitches(JsonObject doc, bool persist){
-    
-    
+void removeSwitch(String id)
+{
+  int del = -1;
+  for (unsigned int i = 0; i < switchs.size(); i++)
+  {
+    SwitchT swStored = switchs[i];
+    if (strcmp(id.c_str(), swStored.id) == 0)
+    {
+      del = i;
+    }
+  }
+  if (del > 0)
+  {
+    switchs.erase(switchs.begin() + del);
+  }
+  saveSwitchs();
+}
+void updateSwitches(JsonObject doc, bool persist)
+{
+  unsigned int del = NO_GPIO;
+  for (unsigned int i = 0; i < switchs.size(); i++)
+  {
+    SwitchT swStored = switchs[i];
+    if (strcmp(doc.getMember("id").as<String>().c_str(), swStored.id) == 0)
+    {
+      del = i;
+    }
+  }
+  if (del !=  NO_GPIO)
+  {
+    switchs.erase(switchs.begin() + del);
+  }
+
+  SwitchT sw;
+  String newId = (String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>()));
+  Serial.println(newId);
+  strlcpy(sw.id, newId.c_str(), sizeof(sw.id));
+  strlcpy(sw.name, doc.getMember("name").as<String>().c_str(), sizeof(sw.name));
+  strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
+  sw.primaryGpio = doc["primaryGpio"] | NO_GPIO;
+  sw.secondaryGpio = doc["secondaryGpio"] | NO_GPIO;
+  sw.timeBetweenStates = doc["secondaryGpio"] | 60000;
+  sw.autoState = doc["autoState"] | false;
+  sw.autoStateDelay = doc["autoStateDelay"] | 0;
+  sw.typeControl = doc["typeControl"] | TYPE_MQTT;
+  sw.mode = doc["mode"] | MODE_BUTTON_SWITCH;
+  sw.pullup = doc["pullup"] | true;
+  sw.mqttReatain = doc["mqttReatain"] | true;
+  sw.inverted = doc["inverted"] | false;
+  String baseTopic = getBaseTopic() + "/" + String(sw.family) + "/" + String(sw.id);
+  strlcpy(sw.mqttCommandTopic, String(baseTopic + "/set").c_str(), sizeof(sw.mqttCommandTopic));
+  strlcpy(sw.mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(sw.mqttStateTopic));
+  strlcpy(sw.mqttPositionCommandTopic, String(baseTopic + "/setposition").c_str(), sizeof(sw.mqttPositionCommandTopic));
+  strlcpy(sw.mqttPositionStateTopic, String(baseTopic + "/position").c_str(), sizeof(sw.mqttPositionStateTopic));
+  sw.gpioSingleControl = doc["gpioSingleControl"] | NO_GPIO;
+  sw.gpioOpenControl = doc["gpioOpenControl"] | NO_GPIO;
+  sw.gpioCloseControl = doc["gpioCloseControl"] | NO_GPIO;
+  sw.gpioOpenCloseControl = doc["gpioOpenCloseControl"] | NO_GPIO;
+  sw.gpioStopControl = doc["gpioStopControl"] | NO_GPIO;
+  switchs.push_back(sw);
+  saveSwitchs();
 }
 void loadStoredSwitchs()
 {
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(CONFIG_FILENAME, "r+");
-    const size_t CAPACITY = JSON_OBJECT_SIZE(24) + 512;
+    const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size()) + switchs.size() * JSON_OBJECT_SIZE(33) + 1600;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
     if (error)
@@ -24,30 +82,93 @@ void loadStoredSwitchs()
       logger(SWITCHES_TAG, "Stored switches loaded.");
     }
     file.close();
-    updateSwitches(doc.as<JsonObject>(),error);
-    
-   
+    // updateSwitches(doc.as<JsonObject>(), error);
   }
-  SPIFFS.end();   
+  SPIFFS.end();
 }
 
 void saveSwitchs()
 {
+  if (SPIFFS.begin())
+  {
+    File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "w+");
+    if (!file)
+    {
+      logger(SWITCHES_TAG, "Open Switches config file Error!");
+    }
+    else
+    {
+      const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size()) + switchs.size() * JSON_OBJECT_SIZE(33) + 1600;
+      DynamicJsonDocument doc(CAPACITY);
+      for (unsigned int i = 0; i < switchs.size(); i++)
+      {
+        JsonObject sdoc = doc.createNestedObject();
+        SwitchT sw = switchs[i];
+        sdoc["id"] = sw.id;
+        sdoc["name"] = sw.name;
+        sdoc["family"] = sw.family;
+        sdoc["primaryGpio"] = sw.primaryGpio;
+        sdoc["secondaryGpio"] = sw.secondaryGpio;
+        sdoc["timeBetweenStates"] = sw.timeBetweenStates;
+        sdoc["autoState"] = sw.autoState;
+        sdoc["autoStateDelay"] = sw.autoStateDelay;
+        sdoc["typeControl"] = sw.typeControl;
+        sdoc["mode"] = sw.mode;
+        sdoc["pullup"] = sw.pullup;
+        sdoc["mqttReatain"] = sw.mqttReatain;
+        sdoc["inverted"] = sw.inverted;
+        sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
+        sdoc["mqttStateTopic"] = sw.mqttStateTopic;
+        sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
+        sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
+        sdoc["gpioSingleControl"] = sw.gpioSingleControl;
+        sdoc["gpioOpenControl"] = sw.gpioOpenControl;
+        sdoc["gpioCloseControl"] = sw.gpioCloseControl;
+        sdoc["gpioOpenCloseControl"] = sw.gpioOpenCloseControl;
+        sdoc["gpioStopControl"] = sw.gpioStopControl;
+
+        sdoc["positionControlCover"] = sw.positionControlCover; //COVER PERCENTAGE
+        sdoc["lastPercentage"] = sw.lastPercentage;
+        sdoc["lastPrimaryGpioState"] = sw.lastPrimaryGpioState;
+        sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
+        sdoc["lastTimeChange"] = sw.lastTimeChange;
+        sdoc["percentageRequest"] = sw.percentageRequest;
+        sdoc["onTime"] = sw.onTime;
+        sdoc["statePoolIdx"] = sw.statePoolIdx;
+        sdoc["statePoolStart"] = sw.statePoolStart;
+        sdoc["statePoolEnd"] = sw.statePoolEnd;
+      }
+      if (serializeJson(doc, file) == 0)
+      {
+        logger(SWITCHES_TAG, "Failed to write Switches Config into file");
+      }
+      else
+      {
+        logger(SWITCHES_TAG, "Switches Config stored.");
+      }
+    }
+    file.close();
+  }
+  SPIFFS.end();
 }
-String getSwitchesConfigStatus(){
+
+String getSwitchesConfigStatus()
+{
   String object = "";
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "r+");
 
- if (!file) {
-    Serial.println(F("Failed to read file"));
-    return "[]";
-  }
-  while (file.available()) {
-    object += (char)file.read();
-  }
-  Serial.println();
+    if (!file)
+    {
+      Serial.println(F("Failed to read file"));
+      return "[]";
+    }
+    while (file.available())
+    {
+      object += (char)file.read();
+    }
+    Serial.println();
     file.close();
   }
   SPIFFS.end();
@@ -88,7 +209,7 @@ void setupSwitchs()
   s1.onTime = 0;
   s1.statePoolStart = 0;
   s1.statePoolEnd = 1;
-  s1.percentage = 0;
+  s1.positionControlCover = 0;
   s1.percentageRequest = INT_MAX;
   subscribeOnMqtt(s1.mqttCommandTopic);
   pinMode(s1.gpioSingleControl, OUTPUT);
@@ -98,7 +219,7 @@ void setupSwitchs()
   s1.lastPrimaryGpioState = true;
   s1.lastPercentage = 0;
   s1.lastSecondaryGpioState = true;
-  switchs.push_back(s1);
+ // switchs.push_back(s1);
 }
 void mqttSwitchControl(String topic, String payload)
 {
@@ -137,7 +258,6 @@ void stateSwitch(SwitchT *switchT, String state)
 
   if (String(PAYLOAD_OPEN).equals(state))
   {
-    switchT->positionControlCover = 100;
     strlcpy(switchT->stateControl, PAYLOAD_OPEN, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_OPEN, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
@@ -154,7 +274,6 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_STOP).equals(state))
   {
-    switchT->positionControlCover = 50;
     strlcpy(switchT->stateControl, PAYLOAD_STOP, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_STOP, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
@@ -167,8 +286,6 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_CLOSE).equals(state))
   {
-
-    switchT->positionControlCover = 0;
     strlcpy(switchT->stateControl, PAYLOAD_CLOSE, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_CLOSE, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
@@ -216,7 +333,6 @@ void stateSwitch(SwitchT *switchT, String state)
     {
       pinMode(switchT->gpioSingleControl, OUTPUT);
       digitalWrite(switchT->gpioSingleControl, switchT->inverted ? LOW : HIGH); //TURN ON
-     
     }
   }
   else if (String(PAYLOAD_UNLOCK).equals(state))
@@ -227,13 +343,12 @@ void stateSwitch(SwitchT *switchT, String state)
     {
       pinMode(switchT->gpioSingleControl, OUTPUT);
       digitalWrite(switchT->gpioSingleControl, switchT->inverted ? LOW : HIGH); //TURN ON
-    
     }
   }
   else if (isValidNumber(state))
   {
     switchT->percentageRequest = state.toInt();
-    if (switchT->percentage > switchT->percentageRequest)
+    if (switchT->positionControlCover > switchT->percentageRequest)
     {
       switchT->statePoolIdx = 2;
       stateSwitch(switchT, statesPool[switchT->statePoolIdx]);
@@ -247,11 +362,13 @@ void stateSwitch(SwitchT *switchT, String state)
   publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttReatain);
   switchT->lastTimeChange = millis();
 }
-bool stateTimeout(SwitchT *sw){
-return (sw->autoState && strcmp(sw->autoStateValue, sw->stateControl) != 0 && (sw->lastTimeChange + sw->autoStateDelay) < millis());
+bool stateTimeout(SwitchT *sw)
+{
+  return (sw->autoState && strcmp(sw->autoStateValue, sw->stateControl) != 0 && (sw->lastTimeChange + sw->autoStateDelay) < millis());
 }
-boolean positionDone(SwitchT *sw, int currentPercentage){
-return ((sw->percentage == 0 || sw->percentage == 100 || sw->percentageRequest == sw->percentage) && currentPercentage > 0 && strcmp(sw->autoStateValue, sw->stateControl) != 0);
+boolean positionDone(SwitchT *sw, int currentPercentage)
+{
+  return ((sw->positionControlCover == 0 || sw->positionControlCover == 100 || sw->percentageRequest == sw->positionControlCover) && currentPercentage > 0 && strcmp(sw->autoStateValue, sw->stateControl) != 0);
 }
 void loopSwitches()
 {
@@ -320,20 +437,20 @@ void loopSwitches()
       currentPercentage = (position * 100) / sw->timeBetweenStates;
       if (digitalRead(sw->gpioOpenCloseControl))
       {
-        sw->percentage = max(0, sw->lastPercentage - currentPercentage);
+        sw->positionControlCover = max(0, sw->lastPercentage - currentPercentage);
       }
       else
       {
-        sw->percentage = min(100, currentPercentage + sw->lastPercentage);
+        sw->positionControlCover = min(100, currentPercentage + sw->lastPercentage);
       }
     }
     else
     {
       sw->onTime = 0;
-      sw->lastPercentage = sw->percentage;
+      sw->lastPercentage = sw->positionControlCover;
     }
 
-    if (stateTimeout(sw) || positionDone(sw,currentPercentage))
+    if (stateTimeout(sw) || positionDone(sw, currentPercentage))
     {
       sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolEnd);
       sw->percentageRequest = INT_MAX;

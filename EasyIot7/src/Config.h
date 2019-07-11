@@ -1,5 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
+#define SYSTEM_TAG "[SYSTEM]"
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h> 
@@ -11,7 +12,7 @@
 #define UPDATE_URL "http://release.bhonofre.pt/release_"
 #define CONFIG_FILENAME  "/config_bh"+String(HARDWARE)+".json"
 #define NEW_ID "NEW"
-
+#define NO_GPIO 99
 
 //AP PASSWORD  
 #define AP_SECRET "EasyIot@"
@@ -47,12 +48,16 @@ struct Config {
 void loadStoredConfiguration();
 void saveConfiguration();
 String getUpdateUrl();
-void requestConfigStorage();
+
 void requestRestart();
 bool restartRequested();
+
 void requestAutoUpdate();
 bool autoUpdateRequested();
+
 void requestLoadDefaults();
+bool loadDefaultsRequested();
+
 void requestWifiScan();
 void requestReloadWifi();
 bool reloadWifiRequested();
