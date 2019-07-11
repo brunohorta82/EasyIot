@@ -60,3 +60,143 @@ Arduino-Temperature-Control-Library | [GIT](https://github.com/milesburton/Ardui
 Se gostaste do projeto podes fazer o teu donativo :).
 
 [![Donativo](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/bhonofre)
+
+## API
+h1. EasyIot Api This api allows you to control all your devices that have the EasyIot Firmware installed.
+
+*Version:* 1.0.0
+
+----
+
+{toc:printable=true|style=square|minLevel=2|maxLevel=3|type=list|outline=false|include=.*}
+
+h2. Endpoints
+
+    h3. addInventory
+    {status:colour=Yellow|title=post|subtle=false}
+    {code}
+    post /config
+    {code}
+    *Summary:* adds an inventory item
+    *Description:* Adds an item to the system
+
+
+    h4. Parameters
+
+        h5. Body Parameter
+        ||Name||Description||Required||Default||Pattern||
+        |inventoryItem |Inventory item to add |(x) | |  |
+
+
+
+
+
+
+
+    h4. Responses
+        *Status Code:* 201
+        *Message:*     item created
+        {code:title=Response Type}
+
+        {code}
+        See [#models]
+
+
+
+        {code:title=Response Schema |collapse=true}
+{
+  "description" : "item created"
+}
+        {code}
+        *Status Code:* 400
+        *Message:*     invalid input, object invalid
+        {code:title=Response Type}
+
+        {code}
+        See [#models]
+
+
+
+        {code:title=Response Schema |collapse=true}
+{
+  "description" : "invalid input, object invalid"
+}
+        {code}
+        *Status Code:* 409
+        *Message:*     an existing item already exists
+        {code:title=Response Type}
+
+        {code}
+        See [#models]
+
+
+
+        {code:title=Response Schema |collapse=true}
+{
+  "description" : "an existing item already exists"
+}
+        {code}
+    ----
+
+    h3. getconfig
+    {status:colour=Yellow|title=get|subtle=false}
+    {code}
+    get /config
+    {code}
+    *Summary:* get current config
+    *Description:* Return the current config in use 
+
+
+    h4. Parameters
+
+
+
+
+
+
+
+    h4. Responses
+        *Status Code:* 200
+        *Message:*     configuration
+        {code:title=Response Type}
+Config
+        {code}
+        See [#models]
+
+
+
+        {code:title=Response Schema |collapse=true}
+{
+  "description" : "configuration",
+  "schema" : {
+    "$ref" : "#/definitions/Config"
+  }
+}
+        {code}
+    ----
+
+h2. Models
+
+        h3. Config
+        ||Field Name||Required||Type||Description||
+         |nodeId | |String | |
+ |homeAssistantAutoDiscoveryPrefix | |String | |
+ |mqttIpDns | |String | |
+ |mqttPort | |BigDecimal | |
+ |mqttUsername | |String | |
+ |mqttPassword | |String | |
+ |wifiSSID | |String | |
+ |wifiSSID2 | |String | |
+ |wifiSecret | |String | |
+ |wifiSecret2 | |String | |
+ |wifiIp | |String | |
+ |wifiMask | |String | |
+ |wifiGw | |String | |
+ |staticIp | |Boolean | |
+ |apSecret | |String | |
+ |configTime | |BigDecimal | |
+ |configkey | |String | |
+ |hostname | |String | |
+ |apName | |String | |
+ |firmware | |BigDecimal | |
+
