@@ -54,6 +54,8 @@ void requestAutoUpdate();
 bool autoUpdateRequested();
 void requestLoadDefaults();
 void requestWifiScan();
+void requestReloadWifi();
+bool reloadWifiRequested();
 void logger(String tag, String msg);
 String normalize(String inputStr);
 String getConfigStatus();

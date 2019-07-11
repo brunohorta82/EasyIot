@@ -72,20 +72,15 @@ void setupWebserverAsync(){
   MDNS.addServiceTxt("bhsystems", "tcp", "firmware", String(FIRMWARE_VERSION));
   loadUI();
 
-  server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
-    requestWifiScan();
-    request->send(200, "application/json", "{\"result\":\"OK\"}");
-  });
-  server.on("/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(wifiJSONStatus());
-    request->send(response);
-  });
+
+
     server.on("/switchs", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->print(getSwitchesConfigStatus());
     request->send(response);
   });
+
+  //CONFIG
    server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->print(getConfigStatus());
@@ -99,6 +94,8 @@ void setupWebserverAsync(){
       request->send(response);
     
   });
+
+  //SYSTEM
     server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request) {
     requestRestart();
     request->send(200, "application/json", "{\"result\":\"OK\"}");
@@ -106,6 +103,11 @@ void setupWebserverAsync(){
     server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "application/json", "{\"result\":\"OK\"}");
    requestLoadDefaults();
+  });
+    server.on("/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->print(wifiJSONStatus());
+    request->send(response);
   });
 
   server.addHandler(handlerNode);

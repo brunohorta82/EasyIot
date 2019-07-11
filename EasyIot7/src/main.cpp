@@ -17,6 +17,10 @@ void checkInternalRoutines()
      SPIFFS.format();
     requestRestart();
   }
+
+  if(reloadWifiRequested()){
+     reloadWiFiConfig();
+  }
 }
 
 void setup()

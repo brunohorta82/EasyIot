@@ -6,7 +6,9 @@ bool LOAD_DEFAULTS = false;
 bool AUTO_UPDATE = false;
 bool STORE_CONFIG = false;
 bool WIFI_SCAN = false;
+bool WIFI_RELOAD = false;
 bool restart = false;
+
 Config config;
 
 struct Config& getAtualConfig(){
@@ -22,7 +24,16 @@ void requestConfigStorage()
 {
   STORE_CONFIG = true;
 }
-
+void requestReloadWifi(){
+WIFI_RELOAD = true;
+}
+bool reloadWifiRequested(){
+  if( WIFI_RELOAD){
+    WIFI_RELOAD = false;
+    return true;
+  }
+  return false;
+}
 bool restartRequested(){
   if( REBOOT){
     REBOOT = false;
@@ -197,7 +208,7 @@ void saveConfiguration()
   SPIFFS.end();
 }
 void updateConfig(JsonObject doc, bool persist){
-    bool reloadWifi = strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
+    bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0|| strcmp(config.wifiMask, doc["wifiMask"] | "") != 0|| strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
     strlcpy(config.nodeId, doc["nodeId"] | DEFAULT_NODE_ID.c_str(), sizeof(config.nodeId));
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, doc["homeAssistantAutoDiscoveryPrefix"] | "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
     strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
@@ -221,7 +232,9 @@ void updateConfig(JsonObject doc, bool persist){
     config.firmware = FIRMWARE_VERSION;
     if(persist){
       saveConfiguration();
-      
+    }
+    if(reloadWifi){
+      requestReloadWifi();
     }
     
 }

@@ -56,11 +56,10 @@ var WORDS_PT = {
 
 function loadsLanguage(lang) {
     localStorage.setItem('lang', lang);
-    /*fills all the span tags with class=lang pattern*/
     $('span[class^="lang"]').each(function () {
-        var LangVar = (this.className).replace('lang-', '');
-        var Text = window["WORDS_" + lang][LangVar];
-        $(this).text(Text);
+        var langVar = (this.className).replace('lang-', '');
+        var text = window["WORDS_" + lang][langVar];
+        $(this).text(text);
     });
 }
 

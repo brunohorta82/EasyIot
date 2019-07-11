@@ -174,17 +174,19 @@ void loopWiFi(){
 }
 String wifiJSONStatus(){
   String wifi = "";
-  const size_t CAPACITY = JSON_OBJECT_SIZE(7);
+  const size_t CAPACITY = JSON_OBJECT_SIZE(11)+350;
   StaticJsonDocument<CAPACITY> doc;
   JsonObject object = doc.to<JsonObject>();
-  object["wifiAPSSID"] = String( jw.getAPSSID().c_str());
+  object["wifiIp"] = WiFi.localIP().toString();
+  object["wifiAPSSID"] =jw.getAPSSID();
   object["wifiSSID"] = WiFi.SSID();
   object["status"] = jw.connected();
   object["signal"] = WiFi.RSSI();
-  object["wifiIp"] = WiFi.localIP().toString();
   object["wifiMask"] = WiFi.subnetMask().toString();
-  object["wifiGw"] = WiFi.gatewayIP().toString();;
-  object["apOn"] = WiFi.getMode() & WIFI_AP;
+  object["wifiGw"] =WiFi.gatewayIP().toString();
+  object["mac"] =  WiFi.softAPmacAddress();
+  object["channel"] =  WiFi.channel();
+  object["mode"] = (int) WiFi.getMode();
   serializeJson(doc,wifi);
   return wifi;
 }

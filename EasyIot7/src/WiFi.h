@@ -6,5 +6,6 @@
 #include "WebServer.h"
 void setupWiFi();
 void loopWiFi();
+void reloadWiFiConfig();
 String wifiJSONStatus();
 #endif
