@@ -83,7 +83,7 @@ struct SwitchT{
 
 void loopSwitches();
 void stateSwitch(SwitchT *switchT, String state);
-void setupSwitchs();
+void loadStoredSwitchs();
 void saveSwitchs();
 void removeSwitch(String id);
 void updateSwitches(JsonObject doc, bool persist);

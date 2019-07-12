@@ -1,8 +1,11 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.187.168"
 };
-
-var switchs;
+let sortByProperty = function (property) {
+    return function (x, y) {
+        return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
+    };
+};
 var config;
 var WORDS_EN = {
     "node": "NODE",
@@ -25,10 +28,14 @@ var WORDS_EN = {
     "reset-factory": "Load Factory Defaults",
     "switches": "Switches",
     "remove": "Remove",
-    "new": "New"
+    "new": "New",
+    "family": "Family",
+    "switch":"Switch",
+    "light":"Light",
+    "cover":"Cover",
+    "lock":"Lock"
 
 };
-
 var WORDS_PT = {
     "node": "NÓ",
     "update": "ATUALIZAR",
@@ -50,9 +57,14 @@ var WORDS_PT = {
     "reset-factory": "Carregar Configuração de Fábrica",
     "switches": "Interruptores",
     "remove": "Remover",
-    "new": "Criar Novo"
-};
+    "new": "Criar Novo",
+    "family": "Familia",
+    "switch":"Interruptor",
+    "light":"Luz",
+    "cover":"Estore",
+    "lock":"Fechadura"
 
+};
 
 function loadsLanguage(lang) {
     localStorage.setItem('lang', lang);
@@ -61,94 +73,29 @@ function loadsLanguage(lang) {
         var text = window["WORDS_" + lang][langVar];
         $(this).text(text);
     });
-}
-
-function removeDevice(e, id, func) {
-    const someUrl = endpoint.baseUrl + "/" + e + "?id=" + id;
-    $.ajax({
-        url: someUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            func(response);
-        },
-        error: function () {
-            alert("Erro a ao remover dispositivo");
-        },
-        timeout: 2000
+    $('option[class^="lang"]').each(function () {
+        var langVar = (this.className).replace('lang-', '');
+        var text = window["WORDS_" + lang][langVar];
+        $(this).text(text);
     });
 }
 
-function storeDevice(id, _device, endpointstore, endointget, func) {
-    const someUrl = endpoint.baseUrl + "/" + endpointstore + "?id=" + id;
-    $.ajax({
-        type: "POST",
-        url: someUrl,
-        dataType: "json",
-        contentType: "application/json",
-        data: JSON.stringify(_device),
-        success: function (response) {
-            loadDevice(func, endointget);
-            alert("Configuração Guardada");
-        },
-        error: function () {
-            alert("Erro não foi possivel guardar a configuração");
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
-}
-
-function storeConfig() {
-    console.log(config);
-    const someUrl = endpoint.baseUrl + "/save-config";
-    $.ajax({
-        type: "POST",
-        url: someUrl,
-        dataType: "json",
-        contentType: "application/json",
-        data: JSON.stringify(config),
-        success: function (response) {
-            this.config = response;
-            fillConfig();
-            if (localStorage.getItem('lang') == "PT") {
-                alert("Configuração Guardada");
-            } else {
-                alert("Saved Configuration");
-            }
-
-        },
-        error: function () {
-            if (localStorage.getItem('lang') == "PT") {
-                alert("Não foi possivel guardar a configuração. Tente novamente.");
-            } else {
-                alert("Unable to save configuration. Try again.");
-            }
-        },
-        timeout: 2000
-    });
-
+function showMessage(pt, en) {
+    localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
 }
 
 function loadConfig() {
-    const someUrl = endpoint.baseUrl + "/config";
+    const targetUrl = endpoint.baseUrl + "/config";
     $.ajax({
-        url: someUrl,
+        url: targetUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
             config = response;
             fillConfig();
-
         },
         error: function () {
-
-            if (localStorage.getItem('lang') == "PT") {
-                alert("Erro a carregar configuração");
-            } else {
-                alert("Configuration load failed.");
-            }
+            showMessage("Erro a carregar configuração", "Configuration load failed.")
         }, complete: function () {
 
         },
@@ -157,9 +104,9 @@ function loadConfig() {
 }
 
 function loadDevice(func, e, next) {
-    const someUrl = endpoint.baseUrl + "/" + e;
+    const targetUrl = endpoint.baseUrl + "/" + e;
     $.ajax({
-        url: someUrl,
+        url: targetUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
@@ -167,10 +114,9 @@ function loadDevice(func, e, next) {
             if (next) {
                 next();
             }
-
         },
         error: function () {
-            alert("Erro a carregar configuração dos dispositivos");
+            showMessage("Erro a carregar configuração de funcionalidades.", "Features Configuration load failed.")
         },
         timeout: 2000
     });
@@ -190,7 +136,7 @@ function fillConfig() {
     $('input[name="mqttPassword"]').val(this.config.mqttPassword);
     $('input[name="wifiSSID"]').val(this.config.wifiSSID);
     $('input[name="wifiSecret"]').val(this.config.wifiSecret);
-    var staticIp = document.getElementById("staticIp");
+    let staticIp = document.getElementById("staticIp");
     if (staticIp) {
         staticIp.checked = !config.staticIp;
     }
@@ -200,7 +146,6 @@ function fillConfig() {
     $('input[name="apSecret"]').val(this.config.apSecret);
     $('select[name="notificationInterval"] option[value="' + this.config.notificationInterval + '"]').attr("selected", "selected");
     $('select[name="directionCurrentDetection"] option[value="' + this.config.directionCurrentDetection + '"]').attr("selected", "selected");
-
     $('#ff').prop('disabled', false);
 }
 
@@ -209,14 +154,13 @@ function toggleActive(menu) {
     $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
     $(".content").load(menu + ".html", function () {
         if (menu === "devices") {
-            loadDevice(fillSwitches, "switchs", function () {
+            loadDevice(fillSwitches, "switches", function () {
                 // loadDevice(fillSensors, "sensors", function () {
-
                 // });
+
             });
-
-
         } else {
+            wifiStatus();
             fillConfig();
         }
         loadsLanguage(localStorage.getItem('lang'));
@@ -225,9 +169,8 @@ function toggleActive(menu) {
 
 function fillSwitches(payload) {
     if (!payload) return;
-    switchs = payload;
     $('#switch_config').empty();
-    for (let obj of payload) {
+    for (let obj of payload.sort(sortByProperty('name'))) {
         buildSwitch(obj);
     }
 
@@ -400,10 +343,10 @@ function buildSwitch(obj) {
 }
 
 function stateSwitch(id, state) {
-    const someUrl = endpoint.baseUrl + "/state-switch?state=" + state + "&id=" + id;
+    const targetUrl = endpoint.baseUrl + "/state-switch?state=" + state + "&id=" + id;
     $.ajax({
         type: "POST",
-        url: someUrl,
+        url: targetUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
@@ -533,10 +476,12 @@ function buildSensor(obj) {
         "                </div></div></div></div>");
 }
 
+
 function fillSensors(payload) {
     if (!payload) return;
     $('#sensor_config').empty();
-    for (let obj of payload) {
+
+    for (let obj of payload.sort(sortByProperty('name'))) {
         buildSensor(obj);
     }
 }
@@ -564,35 +509,6 @@ function getSensorFunctions(obj) {
 
 }
 
-function buildSwitchTemplate() {
-    if ($('#bs_0').length > 0) {
-        return
-    }
-    let device = {
-    "name": "Novo Interruptor",
-    "family": "switch",
-    "primaryGpio": 99,
-    "secondaryGpio": 99,
-    "timeBetweenStates": 60000,
-    "autoState": false,
-    "autoStateDelay": 0,
-    "typeControl": 2,
-    "mode": 1,
-    "pullup": false,
-    "mqttReatain": true,
-    "inverted": false,
-    "mqttCommandTopic": "-",
-    "mqttStateTopic": "-",
-    "mqttPositionCommandTopic": "-",
-    "mqttPositionStateTopic": "-",
-    "gpioSingleControl": 99,
-    "gpioOpenControl": 99,
-    "gpioCloseControl": 99,
-    "gpioOpenCloseControl": 99,
-    "gpioStopControl": 99
-    };
-    buildSwitch(device);
-}
 
 function buildSensorDHTemplate() {
     if ($('#sn_0').length > 0) {
@@ -714,32 +630,28 @@ function buildSensorLdrTemplate() {
 
 
 function saveSwitch(id) {
-    var mode = 1;
-    let type = $('#type_' + id).val();
-
-    if (type !== 'cover') {
-        mode = parseInt($('#modeg_' + id).val());
-    } else {
-        mode = parseInt($('#modec_' + id).val());
-    }
     let device = {
         "id": id,
         "name": $('#name_' + id).val(),
-        "gpio": parseInt($('#gpio_' + id).val()),
-        "gpioOpen": parseInt($('#gpio_open_' + id).val()),
-        "gpioClose": parseInt($('#gpio_close_' + id).val()),
-        "pullup": ($('#pullup_' + id).val() === "true" ? true : false),
-        "discoveryDisabled": false,
-        "type": type,
-        "mode": mode,
+        "family": parseInt($('#family' + id).val()),
+        "primaryGpio": parseInt($('#primaryGpio_' + id).val()),
+        "secondaryGpio": parseInt($('#secondaryGpio_' + id).val()),
+        "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()),
+        "autoState": false,
+        "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()),
         "typeControl": $('#typeControl_' + id).val(),
-        "gpioControl": parseInt($('#gpioControl_' + id).val()),
-        "gpioControlOpenClose": parseInt($('#relay_open_' + id).val()),
-        "gpioControlStop": parseInt($('#relay_close_' + id).val()),
-        "master": true
-    }
+        "mode": parseInt($('#mode' + id).val()),
+        "pullup": document.getElementById('#pullup_' + id).checked(),
+        "mqttReatain": document.getElementById('#mqttReatain_' + id).checked(),
+        "inverted": document.getElementById('#inverted_' + id).checked(),
+        "gpioSingleControl": parseInt($('#gpioSingleControl_' + id).val()),
+        "gpioOpenControl": parseInt($('#gpioOpenControl_' + id).val()),
+        "gpioCloseControl": parseInt($('#gpioCloseControl_' + id).val()),
+        "gpioOpenCloseControl": parseInt($('#gpioOpenCloseControl_' + id).val()),
+        "gpioStopControl": parseInt($('#gpioStopControl_' + id).val()),
+    };
 
-    storeDevice(id, device, "save-switch", "switchs", fillSwitches);
+    storeDevice(device, "save-switch", "switches", fillSwitches);
 }
 
 
@@ -807,6 +719,58 @@ function saveSensor(id) {
     storeDevice(id, device, "save-sensor", "sensors", fillSensors);
 }
 
+
+function updateSwitch(obj) {
+    if (!obj) return;
+    let btn = $('#btn_' + obj["id"]);
+    btn.text(obj["stateControl"] ? 'ON' : 'OFF');
+}
+
+
+$(document).ready(function () {
+    let lang = localStorage.getItem('lang');
+    if (lang) {
+        loadsLanguage(lang);
+    } else {
+        window.navigator.language.startsWith("en") ? loadsLanguage("EN") : loadsLanguage("PT");
+    }
+    loadConfig();
+    $('#node_id').on('keypress', function (e) {
+        if (e.which === 32)
+            return false;
+    });
+    $('.menu-item').click(function (e) {
+        let menu = $(e.currentTarget).data('menu');
+        toggleActive(menu);
+
+    });
+    wifiStatus();
+    toggleActive("node");
+    setInterval(wifiStatus, 15000);
+
+});
+
+function storeConfig() {
+    console.log(config);
+    const targetUrl = endpoint.baseUrl + "/save-config";
+    $.ajax({
+        type: "POST",
+        url: targetUrl,
+        dataType: "json",
+        contentType: "application/json",
+        data: JSON.stringify(config),
+        success: function (response) {
+            this.config = response;
+            fillConfig();
+            showMessage("Configuração Guardada", "Config Stored")
+        },
+        error: function () {
+            showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
+        },
+        timeout: 2000
+    });
+}
+
 function saveNode() {
     config.nodeId = $('#nodeId').val();
     storeConfig();
@@ -821,7 +785,6 @@ function saveWifi() {
     config.staticIp = !document.getElementById("staticIp").checked;
     config.apSecret = $('#apSecret').val();
     storeConfig();
-
 }
 
 function saveMqtt() {
@@ -831,167 +794,118 @@ function saveMqtt() {
     storeConfig();
 }
 
-
-function updateSwitch(obj) {
-    if (!obj) return;
-    let btn = $('#btn_' + obj["id"]);
-    btn.text(obj["stateControl"] ? 'ON' : 'OFF');
-}
-
-function wifiStatus() {
-    let someUrl = endpoint.baseUrl + "/wifi-status";
-    let icon = $('#wifi-icon');
+function removeDevice(e, id, func) {
+    const targetUrl = endpoint.baseUrl + "/" + e + "?id=" + id;
     $.ajax({
-        url: someUrl,
+        url: targetUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            $('#ssid_lbl').text(response.wifiSSID);
-            icon.attr('title', response.wifiSSID);
-            if (response.apOn === 1) {
-                $('#ap_control_btn').removeClass("disabled");
-            } else {
-                $('#ap_control_btn').addClass("disabled");
-            }
-            if (response.status) {
-
-                if ($('#staticIp').val() === "false") {
-                    $('input[name="wifiIp"]').val(response.wifiIp);
-                    $('input[name="wifiMask"]').val(response.wifiMask);
-                    $('input[name="wifiGw"]').val(response.wifiGw);
-                }
-                if (window.location.hostname === "192.168.4.1") {
-                    $('#wifi_log_box').removeClass("hidden");
-                    $('#wifi_log_lbl').text("O BH OnOfre já se encontra ligado à sua rede, deve desligar-se do Wi-Fi de configuração e voltar a ligar-se ao seu Wi-Fi pessoal. Pode aceder a este painel via http://" + response.wifiIp + ".");
-                } else {
-                    $('#wifi_log_box').addClass("hidden");
-                    $('#wifi_log_lbl').text("");
-                }
-
-                $('#wifi_status').text('ligado');
-                $('#wifi_status_icon').removeClass('text-danger').addClass('text-ok');
-                var percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
-                $('#wifi-signal').text(percentage + "%");
-                if (percentage > 0 && percentage < 30) {
-                    icon
-                        .removeClass('signal-zero')
-                        .removeClass('signal-med')
-                        .removeClass('signal-good')
-                        .removeClass('signal-bad')
-                        .addClass('signal-bad');
-                } else if (percentage >= 30 && percentage < 61) {
-                    icon
-                        .removeClass('signal-zero')
-                        .removeClass('signal-med')
-                        .removeClass('signal-good')
-                        .removeClass('signal-bad')
-                        .addClass('signal-med');
-                } else if (percentage >= 61) {
-                    icon
-                        .removeClass('signal-zero')
-                        .removeClass('signal-med')
-                        .removeClass('signal-good')
-                        .removeClass('signal-bad')
-                        .addClass('signal-good');
-                }
-            } else {
-                $('#wifi_status_icon').removeClass('text-ok').addClass('text-danger')
-                $('#wifi_status').text('desligado');
-            }
-        }, error: function () {
-            $('#wifi_status_icon').removeClass('text-ok').addClass('text-danger')
-            $('#wifi_status').text('desligado');
-            icon
-                .removeClass('signal-med')
-                .removeClass('signal-good')
-                .removeClass('signal-bad')
-                .addClass('signal-zero');
-            $('#wifi-signal').text("0%");
+            func(response);
         },
-        timeout: 1000
-    });
-
-}
-
-function loadDefaults() {
-    let someUrl = endpoint.baseUrl + "/load-defaults";
-    $.ajax({
-        url: someUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            if (localStorage.getItem('lang') == "PT") {
-                alert("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.");
-            } else {
-                alert("Factory settings successfully applied. Please reconnect to the Access Point and access the control panel at http://192.168.4.1 in your browser.");
-            }
-        },error: function () {
-                if (localStorage.getItem('lang') == "PT") {
-                    alert("Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.");
-                } else {
-                    alert("Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.");
-                }
-            },
-
-        timeout:1000
-}
-
-)
-;
-}
-
-
-function reboot() {
-    let someUrl = endpoint.baseUrl + "/reboot";
-    $.ajax({
-        url: someUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            if (localStorage.getItem('lang') == "PT") {
-                alert("O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.");
-            }else {
-                alert("The device is restartin, will be available in 10 seconds.");
-            }
-
-        },error: function () {
-            if (localStorage.getItem('lang') == "PT") {
-                alert("Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.");
-            } else {
-                alert("Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.");
-            }
+        error: function () {
+            showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")
         },
         timeout: 2000
     });
 }
 
-$(document).ready(function () {
-    var language = window.navigator.userLanguage || window.navigator.language;
-    var lang = localStorage.getItem('lang');
-    if (lang) {
-        loadsLanguage(lang);
-    } else {
-        if (language.startsWith("en")) {
-            loadsLanguage("EN");
-        } else {
-            loadsLanguage("PT");
-        }
+function storeDevice(device, endpointstore, endointget, func) {
+    const targetUrl = endpoint.baseUrl + "/" + endpointstore + "?id=" + device.id;
+    $.ajax({
+        type: "POST",
+        url: targetUrl,
+        dataType: "json",
+        contentType: "application/json",
+        data: JSON.stringify(device),
+        success: function (response) {
+            loadDevice(func, endointget);
+            showMessage("Configuração Guardada", "Config Stored")
 
-    }
-    loadConfig();
-    $('#node_id').on('keypress', function (e) {
-        if (e.which === 32)
-            return false;
+        },
+        error: function () {
+            showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
+        }, complete: function () {
+
+        },
+        timeout: 2000
     });
+}
 
-
-    $('.menu-item').click(function (e) {
-        let menu = $(e.currentTarget).data('menu');
-        toggleActive(menu);
-
+function reboot() {
+    $.ajax({
+        url: endpoint.baseUrl + "/reboot",
+        contentType: "text/plain; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            showMessage("O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.", "The device is restartin, will be available in 10 seconds.")
+        }, error: function () {
+            showMessage("Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
+        },
+        timeout: 2000
     });
-    wifiStatus();
-    toggleActive("node");
-    setInterval(wifiStatus, 15000);
+}
 
-});
+function loadDefaults() {
+    $.ajax({
+        url: endpoint.baseUrl + "/load-defaults",
+        contentType: "text/plain; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            showMessage("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.", "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.")
+        }, error: function () {
+            showMessage("Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
+        },
+        timeout: 1000
+    });
+}
+
+function wifiStatus() {
+    $.ajax({
+        url: endpoint.baseUrl + "/wifi-status",
+        contentType: "text/plain; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            $('#ssid_lbl').text(response.wifiSSID);
+            if (document.getElementById("wifiIp") && $('input[name="wifiIp"]').val().trim().length === 0) {
+                $('input[name="wifiIp"]').val(response.wifiIp);
+                $('input[name="wifiMask"]').val(response.wifiMask);
+                $('input[name="wifiGw"]').val(response.wifiGw);
+            }
+            var percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
+            $('#wifi-signal').text(percentage + "%");
+        }, error: function () {
+            $('#wifi-signal').text("0%");
+        },
+        timeout: 1000
+    });
+}
+
+function buildSwitchTemplate() {
+    if ($('#bs_0').length > 0) return
+    let device = {
+        "id": "NEW",
+        "name": "Novo Interruptor",
+        "family": "switch",
+        "primaryGpio": 99,
+        "secondaryGpio": 99,
+        "timeBetweenStates": 60000,
+        "autoState": false,
+        "autoStateDelay": 0,
+        "typeControl": 2,
+        "mode": 1,
+        "pullup": false,
+        "mqttReatain": true,
+        "inverted": false,
+        "mqttCommandTopic": "-",
+        "mqttStateTopic": "-",
+        "mqttPositionCommandTopic": "-",
+        "mqttPositionStateTopic": "-",
+        "gpioSingleControl": 99,
+        "gpioOpenControl": 99,
+        "gpioCloseControl": 99,
+        "gpioOpenCloseControl": 99,
+        "gpioStopControl": 99
+    };
+    buildSwitch(device);
+}

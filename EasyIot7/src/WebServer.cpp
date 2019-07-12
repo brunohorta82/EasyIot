@@ -142,7 +142,7 @@ void setupWebserverAsync()
     request->send(response);
   }));
   //FEATURES
-  server.on("/switchs", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->print(getSwitchesConfigStatus());
     request->send(response);
