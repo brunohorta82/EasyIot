@@ -24,10 +24,10 @@
 #define TYPE_RELAY 1
 #define TYPE_MQTT 2
 
-#define MODE_BUTTON_SWITCH 1
-#define MODE_BUTTON_PUSH 2
-#define MODE_OPEN_CLOSE_SWITCH 4
-#define MODE_OPEN_CLOSE_PUSH 5
+#define MODE_SWITCH 1
+#define MODE_PUSH 2
+#define MODE_DUAL_SWITCH 4
+#define MODE_DUAL_PUSH 5
 
 #define SWITCHES_CONFIG_FILENAME  "switchs.json"
 const String statesPool[] = {"ON", "OFF","OPEN", "STOP", "CLOSE", "STOP","LOCK","UNLOCK"};
@@ -36,7 +36,7 @@ struct SwitchT{
     char id[32]; //Generated from name without spaces and no special characters
     char name[24];
     char family[10]; //switch, cover
-    unsigned int mode; // MODE_BUTTON_SWITCH, MODE_BUTTON_PUSH, MODE_OPEN_CLOSE_SWITCH, MODE_OPEN_CLOSE_PUSH, MODE_AUTO_OFF
+    unsigned int mode; // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     int typeControl; //MQTT OR RELAY
     
     //GPIOS INPUT
@@ -45,11 +45,8 @@ struct SwitchT{
     bool pullup; //USE INTERNAL RESISTOR
     
     //GPIOS OUTPUT
-    unsigned int gpioSingleControl;  
-    unsigned int gpioOpenControl;
-    unsigned int gpioCloseControl;
-    unsigned int gpioOpenCloseControl;
-    unsigned int gpioStopControl;
+    unsigned int primaryGpioControl;  
+    unsigned int secondaryGpioControl;
     bool inverted;
 
     //AUTOMATIONS
@@ -64,7 +61,7 @@ struct SwitchT{
     char mqttPositionStateTopic[128];
     char mqttPositionCommandTopic[128];
     char mqttPayload[10];
-    bool mqttReatain;
+    bool mqttRetain;
     
     //CONTROL VARIABLES
     char stateControl[8]; //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK

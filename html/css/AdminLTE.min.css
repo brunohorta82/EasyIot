@@ -795,19 +795,20 @@ a:active, a:focus, a:hover {
 }
 
 .info-box {
-    min-height: 90px;
-    background: #79beb8;
+    min-height: 86px;
+    background: #67B26F;
+    background: -webkit-linear-gradient(to right, #4ca2cd, #86bd9a);
+    background: linear-gradient(to right, #4ca2cd, #86bd9a);
     width: 100%;
     box-shadow: 0 1px 1px rgba(0, 0, 0, .1);
-    border-radius: 2px;
-    padding: 10px;
+    border-radius: 0px 20px 0px 0px;
+    padding: 10px 10px 10px 10px;
     color: #fff;
-    font-size: 20px !important
 }
 
 .info-box-text, .progress-description {
     display: block;
-    font-size: 20px;
+    font-size: 16px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis
@@ -2216,7 +2217,7 @@ caption {
     padding: 8px;
     line-height: 1.42857143;
     vertical-align: top;
-    border-top: 1px solid #ddd
+
 }
 
 .table > thead > tr > th {
@@ -2860,12 +2861,12 @@ a.btn.disabled, fieldset[disabled] a.btn {
 .btn-primary.active, .btn-primary:active, .btn-primary:hover, .open > .dropdown-toggle.btn-primary {
     color: #fff;
     background-color: #88bf9c;
-    border-color: #204d74
+    border-color: #222
 }
 
 .btn-primary.active.focus, .btn-primary.active:focus, .btn-primary.active:hover, .btn-primary:active.focus, .btn-primary:active:focus, .btn-primary:active:hover, .open > .dropdown-toggle.btn-primary.focus, .open > .dropdown-toggle.btn-primary:focus, .open > .dropdown-toggle.btn-primary:hover {
     color: #fff;
-    background-color: #204d74;
+    background-color: #222;
     border-color: #122b40
 }
 
@@ -4594,15 +4595,6 @@ a.badge:focus, a.badge:hover, a.label:focus, a.label:hover {
     margin: 10px
 }
 
-
-.box-devices .info-box-icon {
-    width: 110px
-}
-.box-devices .info-box-text {
-    padding-left: 10px;
-    padding-top: 20px
-}
-
 .device-box-bg {
     background: 0 0
 }
@@ -4612,6 +4604,11 @@ a.badge:focus, a.badge:hover, a.label:focus, a.label:hover {
     font-size: 10px;
     font-weight: 700;
     padding-left: 5px
+}
+.label-device-indent {
+    text-transform: uppercase;
+    font-size: 10px;
+    padding-left: 10px
 }
 
 .input-device {
@@ -4635,3 +4632,4 @@ a.badge:focus, a.badge:hover, a.label:focus, a.label:hover {
     padding: 5px 0px 0px 0px;
     border: 3px solid #222;
 }
+

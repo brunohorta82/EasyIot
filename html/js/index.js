@@ -1,11 +1,34 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.168"
+    baseUrl: ""
 };
 let sortByProperty = function (property) {
     return function (x, y) {
         return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
     };
 };
+
+function removeFromSelect(select, value) {
+    $("#" + select + " option[value='" + value + "']").remove();
+}
+
+function addToSelect(select, class_, value) {
+    let sel = document.getElementById(select);
+    if (sel) {
+        var opt = document.createElement('option');
+        opt.appendChild(document.createTextNode(""));
+        opt.value = value;
+        sel.appendChild(opt);
+        $("#" + select + " option[value='" + value + "']").addClass(class_);
+    }
+}
+
+function setOptionOnSelect(select, value) {
+    let sel = document.getElementById(select);
+    if (sel) {
+        sel.selectedIndex = $("#" + select + " option[value='" + value + "']").index();
+    }
+}
+
 var config;
 var WORDS_EN = {
     "node": "NODE",
@@ -30,10 +53,23 @@ var WORDS_EN = {
     "remove": "Remove",
     "new": "New",
     "family": "Family",
-    "switch":"Switch",
-    "light":"Light",
-    "cover":"Cover",
-    "lock":"Lock"
+    "switch": "Switch",
+    "light": "Light",
+    "cover": "Cover",
+    "lock": "Lock",
+    "normal": "Generic",
+    "push": "Push",
+    "dual-push": "Dual Push",
+    "dual-normal": "Dual Generic",
+    "mode": "Mode",
+    "relay-mqtt": "Relay / MQTT",
+    "control": "Output",
+    "pin-in-a": "Input Pin a",
+    "pin-in-b": "Input Pin b",
+    "pin-out-1": "Output Pin 1",
+    "pin-out-2": "Output Pin 2",
+    "none": "None",
+    "retain-message":"Retain Messages"
 
 };
 var WORDS_PT = {
@@ -59,10 +95,23 @@ var WORDS_PT = {
     "remove": "Remover",
     "new": "Criar Novo",
     "family": "Familia",
-    "switch":"Interruptor",
-    "light":"Luz",
-    "cover":"Estore",
-    "lock":"Fechadura"
+    "switch": "Interruptor",
+    "light": "Luz",
+    "cover": "Estore",
+    "lock": "Fechadura",
+    "normal": "Normal",
+    "push": "Pressão",
+    "dual-push": "Duplo Normal",
+    "dual-normal": "Duplo Pressão",
+    "mode": "Mode",
+    "relay-mqtt": "Relé / MQTT",
+    "control": "Saída",
+    "pin-in-a": "Pino Entrada a",
+    "pin-in-b": "Pino Entrada b",
+    "pin-out-1": "Pino Saída 1",
+    "pin-out-2": "Pino Saída 2",
+    "none": "Não atribuido",
+    "retain-message":"Reter Mensagens"
 
 };
 
@@ -175,171 +224,195 @@ function fillSwitches(payload) {
     }
 
 }
-
+function applySwitchFamily(id) {
+    if ($('#family_' + id).val() == "cover") {
+        addToSelect('mode_' + id,"lang-dual-normal",4);
+        addToSelect('mode_' + id,"lang-dual-push",5);
+        removeFromSelect('mode_' + id, 1);
+        console.log(id);
+    } else {
+        addToSelect('mode_' + id,"lang-normal",1);
+        removeFromSelect('mode_' + id, 4);
+        removeFromSelect('mode_' +id, 5);
+    }
+    loadsLanguage(localStorage.getItem('lang'));
+}
 function btnSwitch(e) {
     stateSwitch($(e).attr("data-id"), $(e).text() === "ON" ? "OFF" : "ON");
 }
 
 function buildSwitch(obj) {
-    $('#switch_config').append("<div id=\"bs_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
-        "        <div style=\"margin-bottom: 0\" class=\"info-box bg-aqua\">" +
+    let coverBtnHide = obj.family === "cover" ? "" : "hide";
+    let switchBtnHide = (obj.family === "light" || obj.family === "switch" || obj.family === "lock") ? "" : "hide";
+    let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
+    $('#switch_config').append('<div id="bs_' + obj.id + '" class="col-lg-4 col-md-6 col-xs-12">\n' +
+        '                <div style="margin-bottom: 0" class="info-box bg-aqua">\n' +
+        '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>\n' +
+        '                        <div class="pull-right">\n' +
+        '                            <button class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
+        '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>\n' +
+        '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
+        '                                </svg>\n' +
+        '                            </button>\n' +
+        '                            <button class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
+        '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
+        '                                    <path d="M6 6h12v12H6z"/>\n' +
+        '                                </svg>\n' +
+        '                            </button>\n' +
+        '                            <button class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
+        '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>\n' +
+        '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
+        '                                </svg>\n' +
+        '                            </button>\n' +
+        '                            <button class="' + switchBtnHide + ' btn btn-primary btn-control">\n' +
+        '                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">\n' +
+        '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>\n' +
+        '                                </svg>\n' +
+        '                            </button>\n' +
+        '                        </div>\n' +
+        '                    </div>\n' +
+        '                </div>\n' +
+        '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">\n' +
+        '                    <div class="box-body no-padding">\n' +
+        '                        <table class="table table-condensed">\n' +
+        '                            <tbody>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device"><span\n' +
+        '                                    class="lang-name">NOME</span></span></td>\n' +
+        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"\n' +
+        '                                                            type="text" id="name_' + obj.id + '" placeholder="ex: luz sala"\n' +
+        '                                                            maxlength="30" required/>\n' +
+        '                                </td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-family">FAMILIA</span></span></td>\n' +
+        '                                <td><select onchange="applySwitchFamily(\''+obj.id+'\');" class="form-control select-device" id="family_' + obj.id + '">\n' +
+        '                                    <option class="lang-switch" value="switch">Interruptor</option>\n' +
+        '                                    <option class="lang-light" value="light">Luz</option>\n' +
+        '                                    <option class="lang-cover" value="cover">Estore</option>\n' +
+        '                                    <option class="lang-lock" value="lock">Fechadura</option>\n' +
+        '                                </select></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-mode">MODO</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="mode_' + obj.id + '">\n' +
+        '                                    <option class="lang-normal" value="1">Normal</option>\n' +
+        '                                    <option class="lang-push" value="2">Pressão</option>\n' +
+        '                                    <option class="lang-dual-normal" value="4">Duplo Normal</option>\n' +
+        '                                    <option class="lang-dual-push" value="5">Duplo Pressão</option>\n' +
+        '                                </select></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-control">Controla</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="typeControl_' + obj.id + '">\n' +
+        '                                    <option class="lang-relay-mqtt" value="1">Relé / MQTT</option>\n' +
+        '                                    <option class="lang-mqtt" value="2">MQTT</option>\n' +
+        '                                </select></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr style="  border-top: 1px solid #88bf9c;">\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-pin-in-a">Pinos Entrada A</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="primaryGpio_' + obj.id + '">\n' +
+        '                                    <option class="lang-none" value="99">Nenhum</option>\n' +
+        '                                    <option value="4">4 <-> GND</option>\n' +
+        '                                    <option value="5">5 <-> GND</option>\n' +
+        '                                    <option value="12">12 <-> GND</option>\n' +
+        '                                    <option value="13">13 <-> GND</option>\n' +
+        '                                    <option value="14">14 <-> GND</option>\n' +
+        '                                    <option value="16">16 <-> 3V3</option>\n' +
+        '                                </select></td>\n' +
+        '                                </select></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                                <td><span class="label-device"><span\n' +
+        '                                    class="lang-pin-in-b">Pinos Entrada B</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="secondaryGpio_' + obj.id + '">\n' +
+        '                                    <option class="lang-none" value="99">Nenhum</option>\n' +
+        '                                    <option value="4">4 <-> GND</option>\n' +
+        '                                    <option value="5">5 <-> GND</option>\n' +
+        '                                    <option value="12">12 <-> GND</option>\n' +
+        '                                    <option value="13">13 <-> GND</option>\n' +
+        '                                    <option value="14">14 <-> GND</option>\n' +
+        '                                    <option value="16">16 <-> 3V3</option>\n' +
+        '                                </select></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr style="  border-top: 1px solid #d9534f;">\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-pin-out-1">Pinos Saida 1</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="primaryGpioControl_' + obj.id + '">\n' +
+        '                                    <option class="lang-none" value="99">Nenhum</option>\n' +
+        '                                    <option value="4">4 <-> GND</option>\n' +
+        '                                    <option value="5">5 <-> GND</option>\n' +
+        '                                    <option value="12">12 <-> GND</option>\n' +
+        '                                    <option value="13">13 <-> GND</option>\n' +
+        '                                    <option value="14">14 <-> GND</option>\n' +
+        '                                    <option value="16">16 <-> 3V3</option>\n' +
+        '                                </select></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-pin-out-2">Pinos Saida 2</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="secondaryGpioControl_' + obj.id + '">\n' +
+        '                                    <option class="lang-none" value="99">Nenhum</option>\n' +
+        '                                    <option value="4">4 <-> GND</option>\n' +
+        '                                    <option value="5">5 <-> GND</option>\n' +
+        '                                    <option value="12">12 <-> GND</option>\n' +
+        '                                    <option value="13">13 <-> GND</option>\n' +
+        '                                    <option value="14">14 <-> GND</option>\n' +
+        '                                    <option value="16">16 <-> 3V3</option>\n' +
+        '                                </select></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device-indent">' + obj.mqttCommandTopic + '</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device-indent">' + obj.mqttStateTopic + '</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                                <td><span class="label-device-indent">' + obj.mqttPositionCommandTopic + '</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                                <td><span class="label-device-indent">' + obj.mqttPositionStateTopic + '</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td style="vertical-align: middle"><span class="label-device-indent"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
+        '                                <td><input class="form-control" style="width: 20px; height: 20px;" '+checkedMqttRetain+' type="checkbox" id="mqttRetain_'+obj.id+'" value="'+obj.mqttRetain+'"></td>\n' +
+        '                            </tr>\n' +
+        '                            </tbody>\n' +
+        '                        </table>\n' +
+        '                        <div class="box-footer save">\n' +
+        '                            <button style="font-size: 12px" class="btn btn-danger"><span\n' +
+        '                                class="lang-remove">Remover</span></button>\n' +
+        '                            <button style="font-size: 12px" class="btn btn-primary"><span\n' +
+        '                                class="lang-save">Guardar</span></button>\n' +
+        '                        </div>\n' +
+        '                    </div>\n' +
+        '                </div>\n' +
+        '            </div>');
 
-        "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
-        "<div  id=\"on_off_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
-        "                <button onclick='btnSwitch(this)' id=\"btn_" + obj.id + "\" data-id=\"" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >" + (obj.stateControl ? 'ON' : 'OFF') + "</button>" +
-        "</div><div  id=\"open_close_control_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
-        "<button onclick='stateSwitch(\"" + obj.id + "\",\"OPEN\");' id=\"btn_up_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >ABRIR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"STOP\");' id=\"btn_stop_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >PARAR</button><button onclick='stateSwitch(\"" + obj.id + "\",\"CLOSE\");' id=\"btn_down_" + obj.id + "\" style=\"float: right\" class=\"btn btn-primary\" >FECHAR</button>" +
-        "            </div></div>" +
-        "        </div>" +
-        "        <div style=\"font-size: 10px;  border: 0px solid #08c; border-radius: 0\" class=\"box\">" +
-        "            <div class=\"box-body no-padding\">" +
-        "                <table class=\"table table-condensed\">" +
-        "                    <tbody>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-name\">NOME</span></td>" +
-        "                        <td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + obj.name + "\" type=\"text\"  id=\"name_" + obj.id + "\" placeholder=\"ex: luz sala\"  required=\"true\"/></td>" +
-        "                    </tr>" +
-        "                   <tr  id=\"tipo_" + obj.id + "\" class=\"" + (obj.mode === 4 ? 'hide' : '') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-type\">TIPO</span></td>" +
-        "                        <td><select onchange=\"switchTypeOptions('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"type_" + obj.id + "\">" +
-        "                            <option " + (obj.family === 'switch' ? 'selected' : '') + " value=\"switch\">Interruptor</option>" +
-        "                            <option " + (obj.family === 'light' ? 'selected' : '') + " value=\"light\">Luz</option>" +
-        "                            <option " + (obj.family === 'cover' ? 'selected' : '') + " value=\"cover\">Estore</option>" +
-        "                            <option " + (obj.family === 'lock' ? 'selected' : '') + " value=\"lock\">Fechadura</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device lang-mode\">MODO</span></td>" +
-        "                   <td   id=\"mode_" + obj.id + "\" class=\"generic_type_" + obj.id + " " + (obj.family !== 'cover' ? '' : 'hide') + "\">" +
-        "                            <select onchange=\"switchModeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"modeg_" + obj.id + "\">" +
-        "                                <option " + (obj.mode === 1 ? 'selected' : '') + " value=\"1\">ON | OFF NORMAL</option>" +
-        "                                <option " + (obj.mode === 2 ? 'selected' : '') + " value=\"2\">ON | OFF PUSH/TOUCH</option>" +
-        "                                <option " + (obj.mode === 6 ? 'selected' : '') + " value=\"6\">ON | AUTO OFF PUSH/TOUCH</option>" +
-        "                            </select>" +
-        "                        </td>" +
-        "                   <td   id=\"mode_" + obj.id + "\" class=\"cover_type_" + obj.id + " " + (obj.family === 'cover' ? '' : 'hide') + "\">" +
-        "                            <select onchange=\"switchModeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"modec_" + obj.id + "\">" +
-        "                                <option " + (obj.mode === 4 ? 'selected' : '') + " value=\"4\">OPEN | STOP | CLOSE NORMAL</option>" +
-        "                                <option " + (obj.mode === 5 ? 'selected' : '') + " value=\"5\">OPEN | STOP | CLOSE PUSH/TOUCH</option>" +
-        "                            </select>" +
-        "                        </td>" +
-        "                    </tr>" +
-        "                   <tr  id=\"single_gpio_" + obj.id + "\" class=\"" + (obj.mode === 4 ? 'hide' : '') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"gpio_" + obj.id + "\">" +
-        "                            <option " + (obj.primaryGpio === 99 ? 'selected' : '') + " value=\"99\">NENHUM</option>" +
-        "                            <option " + (obj.primaryGpio === 0 ? 'selected' : '') + " value=\"0\">0</option>" +
-        "                            <option " + (obj.primaryGpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.primaryGpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.primaryGpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.primaryGpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                   <tr  id=\"open_gpio_" + obj.id + "\" class=\"" + (obj.mode !== 4 ? 'hide' : '') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO OPEN</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"gpio_open_" + obj.id + "\">" +
-        "                            <option " + (obj.primaryGpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.primaryGpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.primaryGpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.primaryGpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                   <tr  id=\"close_gpio_" + obj.id + "\" class=\"" + (obj.mode !== 4 ? 'hide' : '') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO CLOSE</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"gpio_close_" + obj.id + "\">" +
-        "                            <option " + (obj.secondaryGpio === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.secondaryGpio === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.secondaryGpio === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.secondaryGpio === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-
-        "                   <tr  id=\"relay_open_gpio_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">RELÉ OPEN CLOSE</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"relay_open_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioOpenCloseControl === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpioOpenCloseControl === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpioOpenCloseControl === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioOpenCloseControl === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioOpenCloseControl === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioOpenCloseControl === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                   <tr  id=\"relay_close_gpio_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? '' : 'hide') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">RELÉ STOP</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"relay_close_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioStopControl === 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpioStopControl === 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpioStopControl === 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioStopControl === 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioStopControl === 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioStopControl === 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                   <tr  id=\"type_mode_" + obj.id + "\" class=\"" + ((obj.mode === 4 || obj.mode === 5) ? 'hide' : '') + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device \">COMUTA</span></td>" +
-        "                        <td><div class=\"row\">" +
-        "                <div class=\"col-xs-5\">" +
-        "                        <select onchange=\"switchTypeRules('" + obj.id + "')\" class=\"form-control\" style=\"font-size: 10px;  padding: 0 12px; height: 20px;\"" +
-        "                                 id=\"typeControl_" + obj.id + "\">" +
-        "                            <option " + (obj.typeControl === 1 ? 'selected' : '') + " value=\"1\">RELÉ</option>" +
-        "                            <option " + (obj.typeControl === 2 ? 'selected' : '') + " value=\"2\">MQTT</option>" +
-        "                        </select>" +
-        "                        </select>" +
-        "                </div>" +
-        "                <div  id=\"type-control-lbl" + obj.id + "\" class=\"col-xs-2 " + (obj.typeControl === 'mqtt' ? 'hide' : '') + "\">ID/GPIO</div>" +
-        "                <div  id=\"type-control-box" + obj.id + "\" class=\"col-xs-5 " + (obj.typeControl === 'mqtt' ? 'hide' : '') + "\">" +
-        "                           <select class=\"form-control\" style=\" font-size: 10px;padding: 0px 12px; height: 20px;\"" +
-        "                                 id=\"gpioControl_" + obj.id + "\">" +
-        "                            <option " + (obj.gpioSingleControl == 0 ? 'selected' : '') + " value=\"0\">0</option>" +
-        "                            <option " + (obj.gpioSingleControl == 2 ? 'selected' : '') + " value=\"2\">2</option>" +
-        "                            <option " + (obj.gpioSingleControl == 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpioSingleControl == 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpioSingleControl == 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpioSingleControl == 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpioSingleControl == 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpioSingleControl == 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                        </select>" +
-        "                </div>" +
-        "              </div>" +
-
-
-        "</td>" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MQTT ESTADO</span></td>" +
-        "                        <td><span style=\"font-weight: bold; font-size:11px; color: #00a65a\">" + obj.mqttStateTopic + "</span>" +
-        "                        </td>" +
-        "" +
-        "                    </tr>" +
-        "                    <tr id=\"mqtt_control" + obj.id + "\">" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MQTT CONTROLO</span></td>" +
-        "                        <td><span style=\"font-weight: bold; font-size:11px; color:#f39c12\">" + obj.mqttCommandTopic + "</span>" +
-        "                        </td>" +
-        "" +
-        "                    </tr>" +
-        "                    </tbody>" +
-        "                </table>" +
-        "                <div class=\"box-footer save\">" +
-        "                    <button onclick=\"removeDevice('remove-switch','" + obj.id + "',fillSwitches)\" style=\"font-size: 12px\" class=\"btn btn-danger\"><span class=\"lang-remove\">Remover</span></button>" +
-        "                    <button onclick=\"saveSwitch('" + obj.id + "')\" style=\"font-size: 12px\" class=\"btn btn-primary\"><span class=\"lang-save\">Guardar</span></button>" +
-
-        "                </div>" +
-        "            </div>" +
-        "        </div>" +
-        "" +
-        "    </div>"
-    );
-
-
+    if (obj.family == "cover") {
+        removeFromSelect('mode_' + obj.id, 1);
+    } else {
+        removeFromSelect('mode_' + obj.id, 4);
+        removeFromSelect('mode_' + obj.id, 5);
+    }
+    setOptionOnSelect('typeControl_' + obj.id, obj.typeControl);
+    setOptionOnSelect('mode_' + obj.id, obj.mode);
+    setOptionOnSelect('family_' + obj.id, obj.family);
+    setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
+    setOptionOnSelect('secondaryGpioControl_' + obj.id, obj.secondaryGpioControl);
+    setOptionOnSelect('primaryGpio' + obj.id, obj.primaryGpio);
+    setOptionOnSelect('secondaryGpio_' + obj.id, obj.secondaryGpio);
+    loadsLanguage(localStorage.getItem('lang'));
 }
 
 function stateSwitch(id, state) {
@@ -359,62 +432,6 @@ function stateSwitch(id, state) {
         },
         timeout: 2000
     });
-}
-
-function switchTypeRules(e) {
-    $('#master_' + e).parent().parent().toggleClass("hide");
-    $('#type-control-lbl' + e).toggleClass("hide");
-    $('#type-control-box' + e).toggleClass("hide");
-}
-
-function switchTypeOptions(e) {
-    let type = $('#type_' + e).val();
-    if (type !== 'cover') {
-        $('.generic_type_' + e).removeClass("hide");
-        $('.cover_type_' + e).addClass("hide");
-    } else {
-        $('.generic_type_' + e).addClass("hide");
-        $('.cover_type_' + e).removeClass("hide");
-    }
-
-    switchModeRules(e);
-}
-
-function switchModeRules(e) {
-    var mode = 0;
-    let type = $('#type_' + e).val();
-
-    if (type !== 'cover') {
-        mode = $('#modeg_' + e).val();
-    } else {
-        mode = $('#modec_' + e).val();
-    }
-    if (mode === '4' || mode === '5') {
-        $('#relay_open_gpio_' + e).removeClass("hide");
-        $('#relay_close_gpio_' + e).removeClass("hide");
-        $('#type_mode_' + e).addClass("hide");
-        $('#on_off_control_' + e).addClass("hide");
-        $('#open_close_control_' + e).removeClass("hide");
-        if (mode === '4') {
-            $('#single_gpio_' + e).addClass("hide");
-            $('#open_gpio_' + e).removeClass("hide");
-            $('#close_gpio_' + e).removeClass("hide");
-        } else {
-            $('#open_gpio_' + e).addClass("hide");
-            $('#close_gpio_' + e).addClass("hide");
-        }
-    } else {
-        $('#on_off_control_' + e).removeClass("hide");
-        $('#open_close_control_' + e).addClass("hide");
-        $('#single_gpio_' + e).removeClass("hide");
-        $('#relay_open_gpio_' + e).addClass("hide");
-        $('#relay_close_gpio_' + e).addClass("hide");
-        $('#type_mode_' + e).removeClass("hide");
-        $('#open_gpio_' + e).addClass("hide");
-        $('#close_gpio_' + e).addClass("hide");
-    }
-
-
 }
 
 
@@ -488,8 +505,7 @@ function fillSensors(payload) {
 
 
 function getSensorFunctions(obj) {
-    console.log(obj);
-    var a = "";
+    let a = "";
     for (let fun of obj.functions) {
         a += "<tr>" +
             "<td><span style=\"font-size: 10px;\" class=\"label-device\">FUNÇÃO</span></td>" +
@@ -633,7 +649,7 @@ function saveSwitch(id) {
     let device = {
         "id": id,
         "name": $('#name_' + id).val(),
-        "family": parseInt($('#family' + id).val()),
+        "family": $('#family_' + id).val(),
         "primaryGpio": parseInt($('#primaryGpio_' + id).val()),
         "secondaryGpio": parseInt($('#secondaryGpio_' + id).val()),
         "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()),
@@ -641,16 +657,12 @@ function saveSwitch(id) {
         "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()),
         "typeControl": $('#typeControl_' + id).val(),
         "mode": parseInt($('#mode' + id).val()),
-        "pullup": document.getElementById('#pullup_' + id).checked(),
-        "mqttReatain": document.getElementById('#mqttReatain_' + id).checked(),
-        "inverted": document.getElementById('#inverted_' + id).checked(),
-        "gpioSingleControl": parseInt($('#gpioSingleControl_' + id).val()),
-        "gpioOpenControl": parseInt($('#gpioOpenControl_' + id).val()),
-        "gpioCloseControl": parseInt($('#gpioCloseControl_' + id).val()),
-        "gpioOpenCloseControl": parseInt($('#gpioOpenCloseControl_' + id).val()),
-        "gpioStopControl": parseInt($('#gpioStopControl_' + id).val()),
+        "pullup": true,
+        "mqttRetain": document.getElementById('#mqttRetain_' + id).checked(),
+        "inverted": false,
+        "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),
+        "secondaryGpioControl": parseInt($('#secondaryGpioControl_' + id).val()),
     };
-
     storeDevice(device, "save-switch", "switches", fillSwitches);
 }
 
@@ -882,7 +894,7 @@ function wifiStatus() {
 }
 
 function buildSwitchTemplate() {
-    if ($('#bs_0').length > 0) return
+    if ($('#bs_NEW').length > 0) return
     let device = {
         "id": "NEW",
         "name": "Novo Interruptor",
@@ -895,17 +907,14 @@ function buildSwitchTemplate() {
         "typeControl": 2,
         "mode": 1,
         "pullup": false,
-        "mqttReatain": true,
+        "mqttRetain": true,
         "inverted": false,
-        "mqttCommandTopic": "-",
-        "mqttStateTopic": "-",
-        "mqttPositionCommandTopic": "-",
-        "mqttPositionStateTopic": "-",
-        "gpioSingleControl": 99,
-        "gpioOpenControl": 99,
-        "gpioCloseControl": 99,
-        "gpioOpenCloseControl": 99,
-        "gpioStopControl": 99
+        "mqttCommandTopic": "../set",
+        "mqttStateTopic": "../state",
+        "mqttPositionCommandTopic": "../setposition",
+        "mqttPositionStateTopic": "../position",
+        "primaryGpioControl": 99,
+        "secondaryGpioControl": 99,
     };
     buildSwitch(device);
 }

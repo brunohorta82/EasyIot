@@ -53,20 +53,17 @@ void updateSwitches(JsonObject doc, bool persist)
   sw.autoState = doc["autoState"] | false;
   sw.autoStateDelay = doc["autoStateDelay"] | 0;
   sw.typeControl = doc["typeControl"] | TYPE_MQTT;
-  sw.mode = doc["mode"] | MODE_BUTTON_SWITCH;
+  sw.mode = doc["mode"] | MODE_SWITCH;
   sw.pullup = doc["pullup"] | true;
-  sw.mqttReatain = doc["mqttReatain"] | true;
+  sw.mqttRetain = doc["mqttRetain"] | true;
   sw.inverted = doc["inverted"] | false;
   String baseTopic = getBaseTopic() + "/" + String(sw.family) + "/" + String(sw.id);
   strlcpy(sw.mqttCommandTopic, String(baseTopic + "/set").c_str(), sizeof(sw.mqttCommandTopic));
   strlcpy(sw.mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(sw.mqttStateTopic));
   strlcpy(sw.mqttPositionCommandTopic, String(baseTopic + "/setposition").c_str(), sizeof(sw.mqttPositionCommandTopic));
   strlcpy(sw.mqttPositionStateTopic, String(baseTopic + "/position").c_str(), sizeof(sw.mqttPositionStateTopic));
-  sw.gpioSingleControl = doc["gpioSingleControl"] | NO_GPIO;
-  sw.gpioOpenControl = doc["gpioOpenControl"] | NO_GPIO;
-  sw.gpioCloseControl = doc["gpioCloseControl"] | NO_GPIO;
-  sw.gpioOpenCloseControl = doc["gpioOpenCloseControl"] | NO_GPIO;
-  sw.gpioStopControl = doc["gpioStopControl"] | NO_GPIO;
+  sw.primaryGpioControl = doc["primaryGpioControl"] | NO_GPIO;
+  sw.secondaryGpioControl = doc["secondaryGpioControl"] | NO_GPIO;
   switchs.push_back(sw);
   if(persist){
     saveSwitchs();
@@ -124,18 +121,14 @@ void saveSwitchs()
         sdoc["typeControl"] = sw.typeControl;
         sdoc["mode"] = sw.mode;
         sdoc["pullup"] = sw.pullup;
-        sdoc["mqttReatain"] = sw.mqttReatain;
+        sdoc["mqttRetain"] = sw.mqttRetain;
         sdoc["inverted"] = sw.inverted;
         sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
         sdoc["mqttStateTopic"] = sw.mqttStateTopic;
         sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
         sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
-        sdoc["gpioSingleControl"] = sw.gpioSingleControl;
-        sdoc["gpioOpenControl"] = sw.gpioOpenControl;
-        sdoc["gpioCloseControl"] = sw.gpioCloseControl;
-        sdoc["gpioOpenCloseControl"] = sw.gpioOpenCloseControl;
-        sdoc["gpioStopControl"] = sw.gpioStopControl;
-
+        sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
+        sdoc["primaryGpioControl"] = sw.primaryGpioControl;
         sdoc["positionControlCover"] = sw.positionControlCover; //COVER PERCENTAGE
         sdoc["lastPercentage"] = sw.lastPercentage;
         sdoc["lastPrimaryGpioState"] = sw.lastPrimaryGpioState;
@@ -274,14 +267,14 @@ void stateSwitch(SwitchT *switchT, String state)
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_OPEN, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
     {
-      pinMode(switchT->gpioStopControl, OUTPUT);
-      pinMode(switchT->gpioOpenCloseControl, OUTPUT);
+      pinMode(switchT->primaryGpioControl, OUTPUT);
+      pinMode(switchT->secondaryGpioControl, OUTPUT);
       delay(DELAY_COVER_PROTECTION);
-      digitalWrite(switchT->gpioStopControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
       delay(DELAY_COVER_PROTECTION);
-      digitalWrite(switchT->gpioOpenCloseControl, switchT->inverted ? LOW : HIGH); //TURN ON -> OPEN REQUEST
+      digitalWrite(switchT->secondaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> OPEN REQUEST
       delay(DELAY_COVER_PROTECTION);
-      digitalWrite(switchT->gpioStopControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
   }
   else if (String(PAYLOAD_STOP).equals(state))
@@ -290,9 +283,9 @@ void stateSwitch(SwitchT *switchT, String state)
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_STOP, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
     {
-      pinMode(switchT->gpioStopControl, OUTPUT);
+      pinMode(switchT->primaryGpioControl, OUTPUT);
       delay(DELAY_COVER_PROTECTION);
-      digitalWrite(switchT->gpioStopControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
       delay(DELAY_COVER_PROTECTION);
     }
   }
@@ -302,14 +295,14 @@ void stateSwitch(SwitchT *switchT, String state)
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_CLOSE, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
     {
-      pinMode(switchT->gpioStopControl, OUTPUT);
-      pinMode(switchT->gpioOpenCloseControl, OUTPUT);
+      pinMode(switchT->primaryGpioControl, OUTPUT);
+      pinMode(switchT->secondaryGpioControl, OUTPUT);
       delay(DELAY_COVER_PROTECTION);
-      digitalWrite(switchT->gpioStopControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
       delay(DELAY_COVER_PROTECTION);
-      digitalWrite(switchT->gpioOpenCloseControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> CLOSE REQUEST
+      digitalWrite(switchT->secondaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> CLOSE REQUEST
       delay(DELAY_COVER_PROTECTION);
-      digitalWrite(switchT->gpioStopControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
   }
   else if (String(PAYLOAD_ON).equals(state))
@@ -320,8 +313,8 @@ void stateSwitch(SwitchT *switchT, String state)
     if (switchT->typeControl == TYPE_RELAY)
     {
 
-      pinMode(switchT->gpioSingleControl, OUTPUT);
-      digitalWrite(switchT->gpioSingleControl, switchT->inverted ? LOW : HIGH); //TURN ON
+      pinMode(switchT->primaryGpioControl, OUTPUT);
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
   }
   else if (String(PAYLOAD_OFF).equals(state))
@@ -332,9 +325,9 @@ void stateSwitch(SwitchT *switchT, String state)
     {
       logger(SWITCHES_TAG, switchT->name);
       logger(SWITCHES_TAG, state);
-      logger(SWITCHES_TAG, String(switchT->gpioSingleControl));
-      pinMode(switchT->gpioSingleControl, OUTPUT);
-      digitalWrite(switchT->gpioSingleControl, switchT->inverted ? HIGH : LOW); //TURN OFF
+      logger(SWITCHES_TAG, String(switchT->primaryGpioControl));
+      pinMode(switchT->primaryGpioControl, OUTPUT);
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
     }
   }
   else if (String(PAYLOAD_LOCK).equals(state))
@@ -343,8 +336,8 @@ void stateSwitch(SwitchT *switchT, String state)
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_LOCK, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
     {
-      pinMode(switchT->gpioSingleControl, OUTPUT);
-      digitalWrite(switchT->gpioSingleControl, switchT->inverted ? LOW : HIGH); //TURN ON
+      pinMode(switchT->primaryGpioControl, OUTPUT);
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
   }
   else if (String(PAYLOAD_UNLOCK).equals(state))
@@ -353,8 +346,8 @@ void stateSwitch(SwitchT *switchT, String state)
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_UNLOCK, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
     {
-      pinMode(switchT->gpioSingleControl, OUTPUT);
-      digitalWrite(switchT->gpioSingleControl, switchT->inverted ? LOW : HIGH); //TURN ON
+      pinMode(switchT->primaryGpioControl, OUTPUT);
+      digitalWrite(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
   }
   else if (isValidNumber(state))
@@ -371,7 +364,7 @@ void stateSwitch(SwitchT *switchT, String state)
       stateSwitch(switchT, statesPool[switchT->statePoolIdx]);
     }
   }
-  publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttReatain);
+  publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttRetain);
   switchT->lastTimeChange = millis();
 }
 bool stateTimeout(SwitchT *sw)
@@ -403,19 +396,18 @@ void loopSwitches()
 
       switch (sw->mode)
       {
-      case MODE_BUTTON_SWITCH:
+      case MODE_SWITCH:
         sw->statePoolIdx = (sw->statePoolIdx + 1 + sw->statePoolStart) % ((sw->statePoolEnd - sw->statePoolStart) + 1);
         stateSwitch(sw, statesPool[sw->statePoolIdx]);
         break;
-      case MODE_BUTTON_PUSH:
-      case MODE_OPEN_CLOSE_PUSH:
+      case MODE_PUSH:
         if (!primaryValue)
         { //PUSHED
           sw->statePoolIdx = (sw->statePoolIdx + 1 + sw->statePoolStart) % ((sw->statePoolEnd - sw->statePoolStart) + 1);
           stateSwitch(sw, statesPool[sw->statePoolIdx]);
         }
         break;
-      case MODE_OPEN_CLOSE_SWITCH:
+      case MODE_DUAL_SWITCH:
         if (primaryValue == true && secondaryValue == true)
         {
           sw->statePoolIdx = sw->statePoolIdx == 2 ? 3 : 5;
@@ -438,7 +430,7 @@ void loopSwitches()
     }
 
     int currentPercentage = 0;
-    if (digitalRead(sw->gpioStopControl))
+    if (digitalRead(sw->primaryGpioControl))
     {
       if (sw->onTime == 0)
       {
@@ -447,7 +439,7 @@ void loopSwitches()
       long currentOffset = sw->timeBetweenStates - millis() - sw->onTime;
       int position = max(0l, (long)(sw->timeBetweenStates - currentOffset));
       currentPercentage = (position * 100) / sw->timeBetweenStates;
-      if (digitalRead(sw->gpioOpenCloseControl))
+      if (digitalRead(sw->secondaryGpioControl))
       {
         sw->positionControlCover = max(0, sw->lastPercentage - currentPercentage);
       }
