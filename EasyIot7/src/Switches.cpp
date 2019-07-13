@@ -104,7 +104,7 @@ void saveSwitchs()
     }
     else
     {
-      const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size()) + switchs.size() * JSON_OBJECT_SIZE(33) + 1600;
+      const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size()) + switchs.size() * JSON_OBJECT_SIZE(33) + 2000;
       DynamicJsonDocument doc(CAPACITY);
       for (unsigned int i = 0; i < switchs.size(); i++)
       {
@@ -141,7 +141,7 @@ void saveSwitchs()
         sdoc["statePoolEnd"] = sw.statePoolEnd;
       }
       
-      if (serializeJson(doc.as<JsonArray>(), file) == 0)
+     if (serializeJson(doc.as<JsonArray>(), file) == 0)
       {
         logger(SWITCHES_TAG, "Failed to write Switches Config into file");
       }
@@ -149,7 +149,7 @@ void saveSwitchs()
       {
         logger(SWITCHES_TAG, "Switches Config stored.");
       }
-    }
+    } 
     file.close();
   }
   SPIFFS.end();
@@ -377,12 +377,14 @@ boolean positionDone(SwitchT *sw, int currentPercentage)
 }
 void loopSwitches()
 {
+  if(true)return;
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
 
     SwitchT *sw = &switchs[i];
-    bool primaryValue = digitalRead(sw->primaryGpio);
-    bool secondaryValue = digitalRead(sw->secondaryGpio);
+    
+    bool primaryValue = sw->primaryGpio == 99 ? false : digitalRead(sw->primaryGpio);
+    bool secondaryValue = sw->secondaryGpio == 99 ? false : digitalRead(sw->secondaryGpio);
     unsigned long currentTime = millis();
 
     bool primaryGpioEvent = primaryValue != sw->lastPrimaryGpioState;

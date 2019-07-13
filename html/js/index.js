@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.187.168"
 };
 let sortByProperty = function (property) {
     return function (x, y) {
@@ -69,7 +69,9 @@ var WORDS_EN = {
     "pin-out-1": "Output Pin 1",
     "pin-out-2": "Output Pin 2",
     "none": "None",
-    "retain-message":"Retain Messages"
+    "retain-message":"Retain Messages",
+    "command":"Command",
+    "state":"State"
 
 };
 var WORDS_PT = {
@@ -111,7 +113,9 @@ var WORDS_PT = {
     "pin-out-1": "Pino Saída 1",
     "pin-out-2": "Pino Saída 2",
     "none": "Não atribuido",
-    "retain-message":"Reter Mensagens"
+    "retain-message":"Reter Mensagens",
+    "command":"Comando",
+    "state":"Estado"
 
 };
 
@@ -236,9 +240,6 @@ function applySwitchFamily(id) {
         removeFromSelect('mode_' +id, 5);
     }
     loadsLanguage(localStorage.getItem('lang'));
-}
-function btnSwitch(e) {
-    stateSwitch($(e).attr("data-id"), $(e).text() === "ON" ? "OFF" : "ON");
 }
 
 function buildSwitch(obj) {
@@ -372,27 +373,32 @@ function buildSwitch(obj) {
         '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
-        '                                <td><span class="label-device-indent">' + obj.mqttCommandTopic + '</span></td>\n' +
+        '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>\n' +
+        '                                <td><span >' + obj.mqttCommandTopic + '</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
-        '                                <td><span class="label-device-indent">' + obj.mqttStateTopic + '</span></td>\n' +
+        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
+        '                                <td><span >' + obj.mqttStateTopic + '</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr class="' + coverBtnHide + '">\n' +
-        '                                <td><span class="label-device-indent">' + obj.mqttPositionCommandTopic + '</span></td>\n' +
+        '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>\n' +
+        '                                <td><span >' + obj.mqttPositionCommandTopic + '</span></td>\n' +
         '                            </tr>\n' +
+
         '                            <tr class="' + coverBtnHide + '">\n' +
-        '                                <td><span class="label-device-indent">' + obj.mqttPositionStateTopic + '</span></td>\n' +
+        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
+        '                                <td><span >' + obj.mqttPositionStateTopic + '</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
-        '                                <td style="vertical-align: middle"><span class="label-device-indent"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
+        '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
         '                                <td><input class="form-control" style="width: 20px; height: 20px;" '+checkedMqttRetain+' type="checkbox" id="mqttRetain_'+obj.id+'" value="'+obj.mqttRetain+'"></td>\n' +
         '                            </tr>\n' +
         '                            </tbody>\n' +
         '                        </table>\n' +
         '                        <div class="box-footer save">\n' +
-        '                            <button style="font-size: 12px" class="btn btn-danger"><span\n' +
+        '                            <button onclick="removeDevice(\'remove-switch\',\''+obj.id+'\',fillSwitches)" style="font-size: 12px" class="btn btn-danger"><span\n' +
         '                                class="lang-remove">Remover</span></button>\n' +
-        '                            <button style="font-size: 12px" class="btn btn-primary"><span\n' +
+        '                            <button  onclick="saveSwitch(\''+obj.id+'\')" style="font-size: 12px" class="btn btn-primary"><span\n' +
         '                                class="lang-save">Guardar</span></button>\n' +
         '                        </div>\n' +
         '                    </div>\n' +
@@ -410,7 +416,7 @@ function buildSwitch(obj) {
     setOptionOnSelect('family_' + obj.id, obj.family);
     setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
     setOptionOnSelect('secondaryGpioControl_' + obj.id, obj.secondaryGpioControl);
-    setOptionOnSelect('primaryGpio' + obj.id, obj.primaryGpio);
+    setOptionOnSelect('primaryGpio_' + obj.id, obj.primaryGpio);
     setOptionOnSelect('secondaryGpio_' + obj.id, obj.secondaryGpio);
     loadsLanguage(localStorage.getItem('lang'));
 }
@@ -655,15 +661,15 @@ function saveSwitch(id) {
         "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()),
         "autoState": false,
         "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()),
-        "typeControl": $('#typeControl_' + id).val(),
-        "mode": parseInt($('#mode' + id).val()),
+        "typeControl": parseInt($('#typeControl_' + id).val()),
+        "mode": parseInt($('#mode_' + id).val()),
         "pullup": true,
-        "mqttRetain": document.getElementById('#mqttRetain_' + id).checked(),
+        "mqttRetain": document.getElementById('mqttRetain_' + id).checked,
         "inverted": false,
         "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),
         "secondaryGpioControl": parseInt($('#secondaryGpioControl_' + id).val()),
     };
-    storeDevice(device, "save-switch", "switches", fillSwitches);
+    storeDevice(device, "save-switch");
 }
 
 
@@ -784,25 +790,25 @@ function storeConfig() {
 }
 
 function saveNode() {
-    config.nodeId = $('#nodeId').val();
+    config.nodeId = $('#nodeId').val().trim();
     storeConfig();
 }
 
 function saveWifi() {
-    config.wifiSSID = $('#ssid').val();
-    config.wifiSecret = $('#wifi_secret').val();
-    config.wifiIp = $('#wifiIp').val();
-    config.wifiMask = $('#wifiMask').val();
-    config.wifiGw = $('#wifiGw').val();
+    config.wifiSSID = $('#ssid').val().trim();
+    config.wifiSecret = $('#wifi_secret').val().trim();
+    config.wifiIp = $('#wifiIp').val().trim();
+    config.wifiMask = $('#wifiMask').val().trim();
+    config.wifiGw = $('#wifiGw').val().trim();
     config.staticIp = !document.getElementById("staticIp").checked;
-    config.apSecret = $('#apSecret').val();
+    config.apSecret = $('#apSecret').val().trim();
     storeConfig();
 }
 
 function saveMqtt() {
-    config.mqttIpDns = $('#mqtt_ip').val();
-    config.mqttUsername = $('#mqtt_username').val();
-    config.mqttPassword = $('#mqtt_password').val();
+    config.mqttIpDns = $('#mqtt_ip').val().trim();
+    config.mqttUsername = $('#mqtt_username').val().trim();
+    config.mqttPassword = $('#mqtt_password').val().trim();
     storeConfig();
 }
 
@@ -822,7 +828,7 @@ function removeDevice(e, id, func) {
     });
 }
 
-function storeDevice(device, endpointstore, endointget, func) {
+function storeDevice(device, endpointstore) {
     const targetUrl = endpoint.baseUrl + "/" + endpointstore + "?id=" + device.id;
     $.ajax({
         type: "POST",
@@ -831,7 +837,9 @@ function storeDevice(device, endpointstore, endointget, func) {
         contentType: "application/json",
         data: JSON.stringify(device),
         success: function (response) {
-            loadDevice(func, endointget);
+            if(endpointstore === "save-switch"){
+                fillSwitches(response);
+            }
             showMessage("Configuração Guardada", "Config Stored")
 
         },

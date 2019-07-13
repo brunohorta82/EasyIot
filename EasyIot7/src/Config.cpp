@@ -84,14 +84,9 @@ void logger(String tag, String msg)
   Serial.println(tag + " " + msg);
 }
 
-String getHostname(Config &config)
+String getHostname()
 {
-  String nodeId = String(config.nodeId);
-  if (nodeId.equals(DEFAULT_NODE_ID))
-  {
-    return DEFAULT_NODE_ID;
-  }
-  return nodeId;
+  return String(config.nodeId);
 }
 
 String normalize(String inputStr)
@@ -124,12 +119,7 @@ String normalize(String inputStr)
 }
 String getApName()
 {
-  String nodeId = String(config.nodeId);
-  if (nodeId.equals(DEFAULT_NODE_ID))
-  {
-    return DEFAULT_NODE_ID;
-  }
-  return nodeId;
+  return "EasyIot-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
 }
 String getConfigStatus()
 {
@@ -224,7 +214,7 @@ void saveConfiguration()
 void updateConfig(JsonObject doc, bool persist)
 {
   bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0 || strcmp(config.wifiMask, doc["wifiMask"] | "") != 0 || strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
-  strlcpy(config.nodeId, doc["nodeId"] | DEFAULT_NODE_ID.c_str(), sizeof(config.nodeId));
+  strlcpy(config.nodeId, normalize(doc["nodeId"] | String(String("MyNode")+String(ESP.getChipId()))).c_str(), sizeof(config.nodeId));
   strlcpy(config.homeAssistantAutoDiscoveryPrefix, doc["homeAssistantAutoDiscoveryPrefix"] | "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
   strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
   config.mqttPort = doc["mqttPort"] | 1883;
@@ -241,7 +231,7 @@ void updateConfig(JsonObject doc, bool persist)
   strlcpy(config.apSecret, doc["apSecret"] | AP_SECRET, sizeof(config.apSecret));
   config.configTime = doc["configTime"];
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
-  strlcpy(config.hostname, getHostname(config).c_str(), sizeof(config.hostname));
+  strlcpy(config.hostname, getHostname().c_str(), sizeof(config.hostname));
   strlcpy(config.apName, getApName().c_str(), sizeof(config.apName));
   strlcpy(config.hardware, HARDWARE, sizeof(config.firmware));
   config.firmware = FIRMWARE_VERSION;

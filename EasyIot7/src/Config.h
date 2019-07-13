@@ -17,13 +17,10 @@
 //AP PASSWORD  
 #define AP_SECRET "EasyIot@"
 
-
-
-const String DEFAULT_NODE_ID = String(HARDWARE) +"-"+String(FACTORY_TYPE)+"-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
 struct Config {
   char nodeId[32];
   char homeAssistantAutoDiscoveryPrefix[32];
-  char mqttIpDns[32];
+  char mqttIpDns[40];
   char mqttUsername[32];
   int mqttPort;
   char mqttPassword[24];
@@ -36,7 +33,7 @@ struct Config {
   char wifiMask[24];
   char wifiGw[24];
   char apSecret[16];
-  char apName[16];
+  char apName[30];
   char hostname[32];
   long configTime;
   char configkey[64];

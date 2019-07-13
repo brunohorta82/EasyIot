@@ -21,15 +21,16 @@
             <div class="box-body">
                 <div class="row">
                     <div class="col-md-4 col-xs-12">
-                        <div class="form-group"><label for="ssid">SSID</label> <input class="form-control"
-                                                                                      autocomplete="off" type="text"
-                                                                                      name="wifiSSID" id="ssid"
-                                                                                      placeholder="ex: meuwifi"/></div>
+                        <div class="form-group"><label for="ssid">SSID</label>
+                            <input class="form-control" maxlength="20"
+                                   autocomplete="off" type="text"
+                                   name="wifiSSID" id="ssid"
+                                   placeholder="ex: meuwifi"/></div>
                     </div>
                     <div class="col-md-4 col-xs-12">
                         <div class="form-group"><label for="wifi_secret"><span
                             class="lang-password">Palavra Passe</span></label> <input class="form-control"
-                                                                                      name="wifiSecret"
+                                                                                      name="wifiSecret"  maxlength="20"
                                                                                       autocomplete="off" type="password"
                                                                                       id="wifi_secret"
                                                                                       placeholder="ex: superpassword"/>
@@ -48,6 +49,7 @@
                     <div class="col-md-4 col-xs-12">
                         <div class="form-group"><label for="ssid">IP</label> <input class="form-control" type="text"
                                                                                     name="wifiIp" id="wifiIp"
+                                                                                    maxlength="15"
                                                                                     placeholder="ex: 192.168.1.20"/>
                         </div>
                     </div>
@@ -55,12 +57,14 @@
                         <div class="form-group"><label for="wifi_secret">Gateway</label> <input class="form-control"
                                                                                                 name="wifiGw"
                                                                                                 id="wifiGw"
+                                                                                                maxlength="15"
                                                                                                 placeholder="ex: 192.168.1.254"/>
                         </div>
                     </div>
                     <div class="col-md-4 col-xs-12">
                         <div class="form-group"><label for="wifi_secret"><span
                             class="lang-netmask">Máscara de Rede</span></label> <input class="form-control"
+                                                                                       maxlength="15"
                                                                                        name="wifiMask" id="wifiMask"
                                                                                        placeholder="ex: 255.255.255.0"/>
                         </div>
