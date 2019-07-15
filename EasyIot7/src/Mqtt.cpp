@@ -45,7 +45,7 @@ boolean reconnect()
 
     if (WiFi.status() != WL_CONNECTED || String(getAtualConfig().mqttIpDns).equals(""))
         return false;
-    logger(MQTT_TAG, "TRY CONNECTION");
+    logger(MQTT_TAG, "TRY CONNECTION " + String(getAtualConfig().mqttIpDns));
     char *username = strdup(getAtualConfig().mqttUsername);
     char *password = strdup(getAtualConfig().mqttPassword);
     if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic().c_str(), 0, true, UNAVAILABLE_PAYLOAD, true))
@@ -53,8 +53,10 @@ boolean reconnect()
         logger(MQTT_TAG, "CONNECTED");
         publishOnMqtt(getAvailableTopic(), AVAILABLE_PAYLOAD, true);
         publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
-        for(unsigned int i = 0 ; i < subscriptions.size(); i++){
+        for (unsigned int i = 0; i < subscriptions.size(); i++)
+        {
             mqttClient.subscribe(subscriptions[i].c_str());
+            logger(MQTT_TAG, "Subscribe on " + subscriptions[i]);
         }
     }
 
@@ -78,7 +80,6 @@ void setupMQTT()
     mqttClient.setServer(ipDnsMqtt, port);
     mqttClient.setCallback(callbackMqtt);
 }
-
 
 void loopMqtt()
 {
@@ -104,14 +105,35 @@ void loopMqtt()
 void publishOnMqtt(String topic, String payload, bool retain)
 {
     static unsigned int retries = 0;
-    while(!mqttClient.publish(topic.c_str(),payload.c_str(), retain) && retries < 3){
+    while (!mqttClient.publish(topic.c_str(), payload.c_str(), retain) && retries < 3)
+    {
         retries++;
     }
-    
+    if (retries < 3)
+    {
+        logger(MQTT_TAG, "Publish in " + topic + " message " + payload);
+    }
+    else
+    {
+        logger(MQTT_TAG, "Error on try publish in " + topic + " message " + payload);
+    }
+
     retries = 0;
 }
 
 void subscribeOnMqtt(String topic)
 {
+    if(mqttClient.connected()){
+         mqttClient.subscribe(topic.c_str());
+    }
     subscriptions.push_back(topic);
+    
+}
+void unsubscribeOnMqtt(String topic)
+{
+    if (mqttClient.connected())
+    {
+        logger(MQTT_TAG, "Unsubscribe on " + topic);
+        mqttClient.unsubscribe(topic.c_str());
+    }
 }

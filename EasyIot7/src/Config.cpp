@@ -117,10 +117,7 @@ String normalize(String inputStr)
 
   return inputStr;
 }
-String getApName()
-{
-  return "EasyIot-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
-}
+
 String getConfigStatus()
 {
   String object = "";
@@ -214,10 +211,11 @@ void saveConfiguration()
 void updateConfig(JsonObject doc, bool persist)
 {
   bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0 || strcmp(config.wifiMask, doc["wifiMask"] | "") != 0 || strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
+  bool reloadMqtt =  strcmp(config.mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(config.mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(config.mqttPassword, doc["mqttPassword"] | "") != 0 || config.mqttPort != (doc["mqttPort"] | DEFAULT_MQTT_PORT);
   strlcpy(config.nodeId, normalize(doc["nodeId"] | String(String("MyNode")+String(ESP.getChipId()))).c_str(), sizeof(config.nodeId));
   strlcpy(config.homeAssistantAutoDiscoveryPrefix, doc["homeAssistantAutoDiscoveryPrefix"] | "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
   strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
-  config.mqttPort = doc["mqttPort"] | 1883;
+  config.mqttPort = doc["mqttPort"] | DEFAULT_MQTT_PORT;
   strlcpy(config.mqttUsername, doc["mqttUsername"] | "", sizeof(config.mqttUsername));
   strlcpy(config.mqttPassword, doc["mqttPassword"] | "", sizeof(config.mqttPassword));
   strlcpy(config.wifiSSID, doc["wifiSSID"] | "", sizeof(config.wifiSSID));
@@ -232,7 +230,6 @@ void updateConfig(JsonObject doc, bool persist)
   config.configTime = doc["configTime"];
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
   strlcpy(config.hostname, getHostname().c_str(), sizeof(config.hostname));
-  strlcpy(config.apName, getApName().c_str(), sizeof(config.apName));
   strlcpy(config.hardware, HARDWARE, sizeof(config.firmware));
   config.firmware = FIRMWARE_VERSION;
   if (persist)
@@ -242,5 +239,9 @@ void updateConfig(JsonObject doc, bool persist)
   if (reloadWifi)
   {
     requestReloadWifi();
+  }
+  if (reloadMqtt)
+  {
+    setupMQTT();
   }
 }

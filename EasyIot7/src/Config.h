@@ -5,6 +5,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h> 
 #include "WiFi.h"
+#include "Mqtt.h"
 #define HARDWARE "onofre"
 #define FACTORY_TYPE "light"  //suported types [cover, light]
 #define FIRMWARE_VERSION 7.0

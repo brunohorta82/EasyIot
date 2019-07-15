@@ -1,38 +1,20 @@
 #include "Switches.h"
 #include "Mqtt.h"
+#include "Discovery.h"
 
 std::vector<SwitchT> switchs;
 
-void removeSwitch(String id)
+void removeSwitch(String id, bool persist)
 {
+  logger(SWITCHES_TAG, "Remove switch " + id);
   unsigned int del = NO_GPIO;
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
     SwitchT swStored = switchs[i];
-    Serial.println("id" + String(id));
-    Serial.println("bd" + String(swStored.id));
     if (strcmp(id.c_str(), swStored.id) == 0)
     {
-      Serial.println("FOUND");
-        del = i;
-    }
-  }
- if (del != NO_GPIO)
-  {
-    Serial.println("INDEX "+String(del));
-    switchs.erase(switchs.begin() + del);
-  }
-  saveSwitchs();
-}
-void updateSwitches(JsonObject doc, bool persist)
-{
-  unsigned int del = NO_GPIO;
-  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ?   String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
-  for (unsigned int i = 0; i < switchs.size(); i++)
-  {
-    SwitchT swStored = switchs[i];
-    if (strcmp(newId.c_str(), swStored.id) == 0)
-    {
+      removeFromHaDiscovery(swStored);
+      unsubscribeOnMqtt(String(swStored.mqttCommandTopic));
       del = i;
     }
   }
@@ -40,11 +22,17 @@ void updateSwitches(JsonObject doc, bool persist)
   {
     switchs.erase(switchs.begin() + del);
   }
-
+  if (persist)
+  {
+    saveSwitchs();
+  }
+}
+void updateSwitches(JsonObject doc, bool persist)
+{
+  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
+  removeSwitch(newId, false);
   SwitchT sw;
- 
-  Serial.println(newId);
-  strlcpy(sw.id,  String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(sw.id));
+  strlcpy(sw.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(sw.id));
   strlcpy(sw.name, doc.getMember("name").as<String>().c_str(), sizeof(sw.name));
   strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
   sw.primaryGpio = doc["primaryGpio"] | NO_GPIO;
@@ -64,10 +52,28 @@ void updateSwitches(JsonObject doc, bool persist)
   strlcpy(sw.mqttPositionStateTopic, String(baseTopic + "/position").c_str(), sizeof(sw.mqttPositionStateTopic));
   sw.primaryGpioControl = doc["primaryGpioControl"] | NO_GPIO;
   sw.secondaryGpioControl = doc["secondaryGpioControl"] | NO_GPIO;
+  if (String(sw.family).equals("cover"))
+  {
+    sw.statePoolStart = 2;
+    sw.statePoolEnd = 5;
+  }
+  else if (String(sw.family).equals("lock"))
+  {
+    sw.statePoolStart = 6;
+    sw.statePoolEnd = 7;
+  }
+  else
+  {
+    sw.statePoolStart = 0;
+    sw.statePoolEnd = 1;
+  }
+
   switchs.push_back(sw);
-  if(persist){
+  if (persist)
+  {
     saveSwitchs();
   }
+  addToHaDiscovery(sw);
 }
 void loadStoredSwitchs()
 {
@@ -86,11 +92,12 @@ void loadStoredSwitchs()
       logger(SWITCHES_TAG, "Stored switches loaded.");
     }
     file.close();
-    
-    JsonArray  ar   = doc.as<JsonArray>();
+
+    JsonArray ar = doc.as<JsonArray>();
     Serial.println(ar.size());
-    for(JsonVariant sw : ar){
-        updateSwitches(sw, error);
+    for (JsonVariant sw : ar)
+    {
+      updateSwitches(sw, error);
     }
   }
   SPIFFS.end();
@@ -143,8 +150,8 @@ void saveSwitchs()
         sdoc["statePoolStart"] = sw.statePoolStart;
         sdoc["statePoolEnd"] = sw.statePoolEnd;
       }
-      
-     if (serializeJson(doc.as<JsonArray>(), file) == 0)
+
+      if (serializeJson(doc.as<JsonArray>(), file) == 0)
       {
         logger(SWITCHES_TAG, "Failed to write Switches Config into file");
       }
@@ -152,7 +159,7 @@ void saveSwitchs()
       {
         logger(SWITCHES_TAG, "Switches Config stored.");
       }
-    } 
+    }
     file.close();
   }
   SPIFFS.end();
@@ -178,7 +185,7 @@ String getSwitchesConfigStatus()
     file.close();
   }
   SPIFFS.end();
-  if(object.equals("") || object.equals("null"))
+  if (object.equals("") || object.equals("null"))
     return "[]";
   return object;
 }
@@ -260,10 +267,6 @@ boolean isValidNumber(String str)
 }
 void stateSwitch(SwitchT *switchT, String state)
 {
-  logger(SWITCHES_TAG, switchT->name);
-  logger(SWITCHES_TAG, state);
-  logger(SWITCHES_TAG, String(switchT->statePoolIdx));
-
   if (String(PAYLOAD_OPEN).equals(state))
   {
     strlcpy(switchT->stateControl, PAYLOAD_OPEN, sizeof(switchT->stateControl));
@@ -380,12 +383,13 @@ boolean positionDone(SwitchT *sw, int currentPercentage)
 }
 void loopSwitches()
 {
-  if(true)return;
+  if (true)
+    return;
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
 
     SwitchT *sw = &switchs[i];
-    
+
     bool primaryValue = sw->primaryGpio == 99 ? false : digitalRead(sw->primaryGpio);
     bool secondaryValue = sw->secondaryGpio == 99 ? false : digitalRead(sw->secondaryGpio);
     unsigned long currentTime = millis();

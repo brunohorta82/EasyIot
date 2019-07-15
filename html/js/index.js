@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.4.1"
+    baseUrl: ""
 };
 let sortByProperty = function (property) {
     return function (x, y) {

@@ -156,7 +156,7 @@ void setupWebserverAsync()
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
-      removeSwitch(request->arg("id"));
+      removeSwitch(request->arg("id"),true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->print(getSwitchesConfigStatus());

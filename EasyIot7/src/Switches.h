@@ -82,7 +82,7 @@ void loopSwitches();
 void stateSwitch(SwitchT *switchT, String state);
 void loadStoredSwitchs();
 void saveSwitchs();
-void removeSwitch(String id);
+void removeSwitch(String id, bool persist);
 void updateSwitches(JsonObject doc, bool persist);
 void mqttSwitchControl(String topic, String payload);
 String getSwitchesConfigStatus();

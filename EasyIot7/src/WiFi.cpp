@@ -1,11 +1,14 @@
 #include "WiFi.h"
 #define WIFI_TAG "[WIFI]"
-
+String getApName()
+{
+  return "EasyIot-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
+}
 void reloadWiFiConfig(){
        jw.disconnect(); 
        jw.setHostname(getAtualConfig().hostname);
        jw.cleanNetworks();
-       jw.setSoftAP(getAtualConfig().hostname,getAtualConfig().apSecret);
+       jw.setSoftAP(getApName().c_str(),getAtualConfig().apSecret);
        
        if(getAtualConfig().staticIp){
         jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret,getAtualConfig().wifiIp,getAtualConfig().wifiGw,getAtualConfig().wifiMask,getAtualConfig().wifiGw);
