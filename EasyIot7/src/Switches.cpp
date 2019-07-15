@@ -49,7 +49,7 @@ void updateSwitches(JsonObject doc, bool persist)
   strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
   sw.primaryGpio = doc["primaryGpio"] | NO_GPIO;
   sw.secondaryGpio = doc["secondaryGpio"] | NO_GPIO;
-  sw.timeBetweenStates = doc["secondaryGpio"] | 60000;
+  sw.timeBetweenStates = doc["timeBetweenStates"] | 60000;
   sw.autoState = doc["autoState"] | false;
   sw.autoStateDelay = doc["autoStateDelay"] | 0;
   sw.typeControl = doc["typeControl"] | TYPE_MQTT;
@@ -73,7 +73,7 @@ void loadStoredSwitchs()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(CONFIG_FILENAME, "r+");
+    File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "r+");
     const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size()) + switchs.size() * JSON_OBJECT_SIZE(33) + 1600;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
@@ -86,7 +86,10 @@ void loadStoredSwitchs()
       logger(SWITCHES_TAG, "Stored switches loaded.");
     }
     file.close();
-    for(JsonObject sw : doc.as<JsonArray>()){
+    
+    JsonArray  ar   = doc.as<JsonArray>();
+    Serial.println(ar.size());
+    for(JsonVariant sw : ar){
         updateSwitches(sw, error);
     }
   }

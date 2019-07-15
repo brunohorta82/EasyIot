@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.168"
+    baseUrl: "http://192.168.4.1"
 };
 let sortByProperty = function (property) {
     return function (x, y) {
@@ -14,11 +14,13 @@ function removeFromSelect(select, value) {
 function addToSelect(select, class_, value) {
     let sel = document.getElementById(select);
     if (sel) {
-        var opt = document.createElement('option');
+        removeFromSelect(select, value);
+        let opt = document.createElement('option');
         opt.appendChild(document.createTextNode(""));
         opt.value = value;
         sel.appendChild(opt);
         $("#" + select + " option[value='" + value + "']").addClass(class_);
+
     }
 }
 
@@ -27,6 +29,14 @@ function setOptionOnSelect(select, value) {
     if (sel) {
         sel.selectedIndex = $("#" + select + " option[value='" + value + "']").index();
     }
+}
+
+function show(id) {
+    $('#' + id).removeClass("hide");
+}
+
+function hide(id) {
+    $('#' + id).addClass("hide");
 }
 
 var config;
@@ -69,9 +79,17 @@ var WORDS_EN = {
     "pin-out-1": "Output Pin 1",
     "pin-out-2": "Output Pin 2",
     "none": "None",
-    "retain-message":"Retain Messages",
-    "command":"Command",
-    "state":"State"
+    "retain-message": "Retain Messages",
+    "command": "Command",
+    "state": "State",
+    "on":"On",
+    "off":"Off",
+    "lock":"Lock",
+    "unlock":"Unlocked",
+    "open":"Open",
+    "close":"Closed",
+    "stop":"Stop",
+    "time":"Time"
 
 };
 var WORDS_PT = {
@@ -113,10 +131,17 @@ var WORDS_PT = {
     "pin-out-1": "Pino Saída 1",
     "pin-out-2": "Pino Saída 2",
     "none": "Não atribuido",
-    "retain-message":"Reter Mensagens",
-    "command":"Comando",
-    "state":"Estado"
-
+    "retain-message": "Reter Mensagens",
+    "command": "Comando",
+    "state": "Estado",
+    "on":"Ligado",
+    "off":"Desligado",
+    "lock":"Trancado",
+    "unlock":"Destrancado",
+    "open":"Aberto",
+    "close":"Fechado",
+    "stop":"Parar",
+    "time":"Tempo"
 };
 
 function loadsLanguage(lang) {
@@ -228,18 +253,62 @@ function fillSwitches(payload) {
     }
 
 }
+
 function applySwitchFamily(id) {
+    hide("mqttPositionCommandTopicRow_" + id);
+    hide("mqttPositionStateTopicRow_" + id);
+    hide("secondaryGpioControlRow_" + id);
+    hide("secondaryGpioRow_" + id);
+    removeFromSelect('mode_' + id, 4);
+    removeFromSelect('mode_' + id, 5);
+
     if ($('#family_' + id).val() == "cover") {
-        addToSelect('mode_' + id,"lang-dual-normal",4);
-        addToSelect('mode_' + id,"lang-dual-push",5);
+        addToSelect('mode_' + id, "lang-dual-normal", 4);
+        addToSelect('mode_' + id, "lang-dual-push", 5);
         removeFromSelect('mode_' + id, 1);
-        console.log(id);
+        show("mqttPositionCommandTopicRow_" + id);
+        show("mqttPositionStateTopicRow_" + id);
+        show("secondaryGpioControlRow_" + id);
+        show("secondaryGpioRow_" + id);
+        setOptionOnSelect('mode_' + id, 4);
+    } else if ($('#family_' + id).val() == "lock") {
+        removeFromSelect('mode_' + id, 1);
+        setOptionOnSelect('mode_' + id, 2);
     } else {
-        addToSelect('mode_' + id,"lang-normal",1);
-        removeFromSelect('mode_' + id, 4);
-        removeFromSelect('mode_' +id, 5);
+        addToSelect('mode_' + id, "lang-normal", 1);
+        setOptionOnSelect('mode_' + id, 1);
     }
+    applyTypeControl(id);
     loadsLanguage(localStorage.getItem('lang'));
+}
+
+function applySwitchMode(id) {
+    if (($('#mode_' + id).val() == 4 || $('#mode_' + id).val() == 5)) {
+        if ($('#typeControl_' + id).val() == 1) {
+            show("secondaryGpioControlRow_" + id)
+        }
+        show("secondaryGpioRow_" + id)
+    } else {
+        setOptionOnSelect('secondaryGpio_' + id, 99);
+        setOptionOnSelect('secondaryGpioControl_' + id, 99);
+        hide("secondaryGpioRow_" + id);
+        hide("secondaryGpioControlRow_" + id);
+
+    }
+
+    loadsLanguage(localStorage.getItem('lang'));
+}
+
+function applyTypeControl(id) {
+    if ($('#typeControl_' + id).val() == 1) {
+        show("primaryGpioControlRow_" + id);
+        applySwitchMode(id);
+    } else {
+        setOptionOnSelect('primaryGpioControl_' + id, 99);
+        setOptionOnSelect('secondaryGpioControl_' + id, 99);
+        hide("secondaryGpioControlRow_" + id);
+        hide("primaryGpioControlRow_" + id);
+    }
 }
 
 function buildSwitch(obj) {
@@ -291,7 +360,7 @@ function buildSwitch(obj) {
         '                            <tr>\n' +
         '                                <td><span class="label-device "><span\n' +
         '                                    class="lang-family">FAMILIA</span></span></td>\n' +
-        '                                <td><select onchange="applySwitchFamily(\''+obj.id+'\');" class="form-control select-device" id="family_' + obj.id + '">\n' +
+        '                                <td><select onchange="applySwitchFamily(\'' + obj.id + '\');" class="form-control select-device" id="family_' + obj.id + '">\n' +
         '                                    <option class="lang-switch" value="switch">Interruptor</option>\n' +
         '                                    <option class="lang-light" value="light">Luz</option>\n' +
         '                                    <option class="lang-cover" value="cover">Estore</option>\n' +
@@ -301,7 +370,7 @@ function buildSwitch(obj) {
         '                            <tr>\n' +
         '                                <td><span class="label-device "><span\n' +
         '                                    class="lang-mode">MODO</span></span></td>\n' +
-        '                                <td><select class="form-control select-device" id="mode_' + obj.id + '">\n' +
+        '                                <td><select onchange="applySwitchMode(\'' + obj.id + '\');" class="form-control select-device" id="mode_' + obj.id + '">\n' +
         '                                    <option class="lang-normal" value="1">Normal</option>\n' +
         '                                    <option class="lang-push" value="2">Pressão</option>\n' +
         '                                    <option class="lang-dual-normal" value="4">Duplo Normal</option>\n' +
@@ -311,7 +380,7 @@ function buildSwitch(obj) {
         '                            <tr>\n' +
         '                                <td><span class="label-device "><span\n' +
         '                                    class="lang-control">Controla</span></span></td>\n' +
-        '                                <td><select class="form-control select-device" id="typeControl_' + obj.id + '">\n' +
+        '                                <td><select onchange="applyTypeControl(\'' + obj.id + '\');" class="form-control select-device" id="typeControl_' + obj.id + '">\n' +
         '                                    <option class="lang-relay-mqtt" value="1">Relé / MQTT</option>\n' +
         '                                    <option class="lang-mqtt" value="2">MQTT</option>\n' +
         '                                </select></td>\n' +
@@ -330,7 +399,7 @@ function buildSwitch(obj) {
         '                                </select></td>\n' +
         '                                </select></td>\n' +
         '                            </tr>\n' +
-        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                            <tr id="secondaryGpioRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
         '                                <td><span class="label-device"><span\n' +
         '                                    class="lang-pin-in-b">Pinos Entrada B</span></span></td>\n' +
         '                                <td><select class="form-control select-device" id="secondaryGpio_' + obj.id + '">\n' +
@@ -343,7 +412,7 @@ function buildSwitch(obj) {
         '                                    <option value="16">16 <-> 3V3</option>\n' +
         '                                </select></td>\n' +
         '                            </tr>\n' +
-        '                            <tr style="  border-top: 1px solid #d9534f;">\n' +
+        '                            <tr id="primaryGpioControlRow_' + obj.id + '" style="  border-top: 1px solid #d9534f;">\n' +
         '                                <td><span class="label-device "><span\n' +
         '                                    class="lang-pin-out-1">Pinos Saida 1</span></span></td>\n' +
         '                                <td><select class="form-control select-device" id="primaryGpioControl_' + obj.id + '">\n' +
@@ -356,7 +425,7 @@ function buildSwitch(obj) {
         '                                    <option value="16">16 <-> 3V3</option>\n' +
         '                                </select></td>\n' +
         '                            </tr>\n' +
-        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                            <tr id="secondaryGpioControlRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
         '                                <td><span class="label-device "><span\n' +
         '                                    class="lang-pin-out-2">Pinos Saida 2</span></span></td>\n' +
         '                                <td><select class="form-control select-device" id="secondaryGpioControl_' + obj.id + '">\n' +
@@ -380,25 +449,58 @@ function buildSwitch(obj) {
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
         '                                <td><span >' + obj.mqttStateTopic + '</span></td>\n' +
         '                            </tr>\n' +
-        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                            <tr id="mqttPositionCommandTopicRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
         '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>\n' +
         '                                <td><span >' + obj.mqttPositionCommandTopic + '</span></td>\n' +
         '                            </tr>\n' +
 
-        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
         '                                <td><span >' + obj.mqttPositionStateTopic + '</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
-        '                                <td><input class="form-control" style="width: 20px; height: 20px;" '+checkedMqttRetain+' type="checkbox" id="mqttRetain_'+obj.id+'" value="'+obj.mqttRetain+'"></td>\n' +
+        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device"><span\n' +
+        '                                    class="lang-time">TEMPO</span></span></td>\n' +
+        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.timeBetweenStates / 1000 + '"\n' +
+        '                                                            type="text" id="timeBetweenStates_' + obj.id + '" placeholder="ex: 12"\n' +
+        '                                                             maxlength="2" required/>\n' +
+        '                                </td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-auto-state">Estado automático</span></span></td>\n' +
+        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="autoState_' + obj.id + '" value="' + obj.autoState + '"></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device"><span\n' +
+        '                                    class="lang-time">TEMPO</span></span></td>\n' +
+        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.autoStateDelay / 1000 + '"\n' +
+        '                                                            type="text" id="autoStateDelay_' + obj.id + '" placeholder="ex: 12"\n' +
+        '                                                             maxlength="2" required/>\n' +
+        '                                </td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-state">Estado</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="autoStateValue_' + obj.id + '">\n' +
+        '                                    <option class="lang-on" value="ON">ON</option>\n' +
+        '                                    <option class="lang-off" value="OFF">OFF</option>\n' +
+        '                                    <option class="lang-stop" value="STOP">STOP</option>\n' +
+        '                                    <option class="lang-close" value="CLOSE">CLOSE</option>\n' +
+        '                                    <option class="lang-open" value="OPEN">OPEN</option>\n' +
+        '                                    <option class="lang-lock" value="LOCK">CLOSE</option>\n' +
+        '                                    <option class="lang-unlock" value="UNLOCK"UNLOCK</option>\n' +
+        '                                </select></td>\n' +
         '                            </tr>\n' +
         '                            </tbody>\n' +
         '                        </table>\n' +
         '                        <div class="box-footer save">\n' +
-        '                            <button onclick="removeDevice(\'remove-switch\',\''+obj.id+'\',fillSwitches)" style="font-size: 12px" class="btn btn-danger"><span\n' +
+        '                            <button onclick="removeDevice(\'remove-switch\',\'' + obj.id + '\',fillSwitches)" style="font-size: 12px" class="btn btn-danger"><span\n' +
         '                                class="lang-remove">Remover</span></button>\n' +
-        '                            <button  onclick="saveSwitch(\''+obj.id+'\')" style="font-size: 12px" class="btn btn-primary"><span\n' +
+        '                            <button  onclick="saveSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span\n' +
         '                                class="lang-save">Guardar</span></button>\n' +
         '                        </div>\n' +
         '                    </div>\n' +
@@ -440,217 +542,6 @@ function stateSwitch(id, state) {
     });
 }
 
-
-function buildSensor(obj) {
-    $('#sensor_config').append("<div id=\"sn_" + obj.id + "\" class=\"col-lg-4 col-md-6 col-xs-12\">" +
-        "        <div style=\"margin-bottom: 0px\" class=\"info-box bg-aqua\">" +
-
-        "            <div class=\"info-box-content\"><span class=\"info-box-text\">" + obj.name + "</span>" +
-        "            </div>" +
-        "        </div>" +
-        "        <div style=\"font-size: 10px; border-radius: 0\" class=\"box\">" +
-        "            <div class=\"box-body no-padding\">" +
-        "                <table class=\"table table-condensed\">" +
-        "                    <tbody>" +
-
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">NOME</span></td>" +
-        "                        <td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + obj.name + "\" type=\"text\"  id=\"name_" + obj.id + "\" placeholder=\"ex: luz sala\"  required=\"true\"/></td>" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">TIPO</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                     id=\"type_" + obj.id + "\">" +
-        "                            <option  " + (obj.type == 0 ? 'selected' : '') + " value=\"0\">DHT 11</option>" +
-        "                            <option " + (obj.type == 1 ? 'selected' : '') + " value=\"1\">DHT 21</option>" +
-        "                            <option " + (obj.type == 2 ? 'selected' : '') + " value=\"2\">DHT 22</option>" +
-        "                            <option " + (obj.type == 90 ? 'selected' : '') + " value=\"90\">DS18B20</option>" +
-        "                            <option " + (obj.type == 65 ? 'selected' : '') + " value=\"65\">PIR</option>" +
-        "                            <option " + (obj.type == 21 ? 'selected' : '') + " value=\"21\">LDR</option>" +
-        "                            <option " + (obj.type == 56 ? 'selected' : '') + " value=\"56\">REED SWITCH</option>" +
-        "                        </select></td>" +
-        "                    </tr>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">GPIO</span></td>" +
-        "                        <td><select class=\"form-control\" style=\"font-size: 10px; padding: 0px 12px; height: 20px;\"" +
-        "                                    id=\"gpio_" + obj.id + "\">" +
-        "                            <option " + (obj.gpio == 0 ? 'selected' : '') + " value=\"0\">0</option>" +
-        "                            <option " + (obj.gpio == 4 ? 'selected' : '') + " value=\"4\">4</option>" +
-        "                            <option " + (obj.gpio == 5 ? 'selected' : '') + " value=\"5\">5</option>" +
-        "                            <option " + (obj.gpio == 12 ? 'selected' : '') + " value=\"12\">12</option>" +
-        "                            <option " + (obj.gpio == 13 ? 'selected' : '') + " value=\"13\">13</option>" +
-        "                            <option " + (obj.gpio == 14 ? 'selected' : '') + " value=\"14\">14</option>" +
-        "                            <option " + (obj.gpio == 16 ? 'selected' : '') + " value=\"16\">16</option>" +
-        "                            <option " + (obj.type == 21 ? 'selected' : '') + " value=\"A0\">A0</option>" +
-        "                        </select></td>" +
-        "                    <tr>" +
-        "                        <td><span style=\"font-size: 10px;\" class=\"label-device\">MQTT ESTADO</span></td>" +
-        "                        <td><span style=\"font-weight: bold; font-size:11px; color: #00a65a\">" + obj.mqttStateTopic + "</span>" +
-        "                        </td>" +
-        "" +
-        "                    </tr>" +
-        "                    </tr>" + getSensorFunctions(obj) +
-
-        "                    </tbody>" +
-        "                </table>" +
-        "                <div class=\"box-footer save\">" +
-        "                    <button onclick=\"removeDevice('remove-sensor','" + obj.id + "',fillSensors)\" style=\"font-size: 12px\" class=\"btn btn-danger\">Remover</button>" +
-        "                    <button onclick=\"saveSensor('" + obj.id + "')\" style=\"font-size: 12px\" class=\"btn btn-primary\">Guardar</button>" +
-        "                </div></div></div></div>");
-}
-
-
-function fillSensors(payload) {
-    if (!payload) return;
-    $('#sensor_config').empty();
-
-    for (let obj of payload.sort(sortByProperty('name'))) {
-        buildSensor(obj);
-    }
-}
-
-
-function getSensorFunctions(obj) {
-    let a = "";
-    for (let fun of obj.functions) {
-        a += "<tr>" +
-            "<td><span style=\"font-size: 10px;\" class=\"label-device\">FUNÇÃO</span></td>" +
-            "<td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + fun.name + "\" type=\"text\"  id=\"name_" + obj.id + "_" + fun.uniqueName + "\" placeholder=\"ex: sala\"  required=\"true\"/></td> <tr></tr>" +
-            "</tr>";
-        if (obj.type == 56) {
-            a += "<tr>" +
-                "<td><span style=\"font-size: 10px;\" class=\"label-device\">Payload Fechado</span></td>" +
-                "<td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + fun.payloadOn + "\" type=\"text\"  id=\"payloadOn_" + obj.id + "_" + fun.uniqueName + "\" placeholder=\"ex: ON\"  required=\"true\"/></td> <tr></tr>" +
-                "<td><span style=\"font-size: 10px;\" class=\"label-device\">Payload Aberto</span></td>" +
-                "<td><input  style=\"font-size: 10px; height: 20px;\"  class=\"form-control\" value=\"" + fun.payloadOff + "\" type=\"text\"  id=\"payloadOff_" + obj.id + "_" + fun.uniqueName + "\" placeholder=\"ex: OFF\"  required=\"true\"/></td> <tr></tr>" +
-
-                "</tr>";
-        }
-    }
-    return a;
-
-}
-
-
-function buildSensorDHTemplate() {
-    if ($('#sn_0').length > 0) {
-        return
-    }
-    let sensor = {
-        "id": "NEW",
-        "gpio": 14,
-        "name": "Temperatura",
-        "disabled": true,
-        "type": 2,
-        "class": "sensor",
-        "discoveryDisabled": false,
-        "mqttStateTopic": "-",
-        "functions": [{
-            "name": "Temperatura",
-            "uniqueName": "temperature",
-            "icon": "fa-thermometer-half",
-            "unit": "ºC",
-            "type": 1,
-        }, {
-            "name": "Humidade",
-            "uniqueName": "humidity",
-            "icon": "fa-percent",
-            "unit": "%",
-            "type": 2
-        }]
-    };
-    buildSensor(sensor);
-}
-
-function buildSensorDallasTemplate() {
-    if ($('#sn_0').length > 0) {
-        return
-    }
-    let sensor = {
-        "id": "NEW",
-        "gpio": 0,
-        "name": "Temperatura",
-        "disabled": false,
-        "type": 90,
-        "class": "sensor",
-        "mqttStateTopic": "-",
-        "functions": [{
-            "name": "Temperatura",
-            "uniqueName": "temperature",
-            "unit": "ºC",
-            "type": 1
-        }]
-    };
-    buildSensor(sensor);
-}
-
-function buildSensorMagTemplate() {
-    if ($('#sn_0').length > 0) {
-        return
-    }
-    let sensor = {
-        "id": "NEW",
-        "gpio": 14,
-        "name": "Magnético",
-        "disabled": false,
-        "type": 56,
-        "class": "binary_sensor",
-        "mqttStateTopic": "-",
-        "functions": [{
-            "payloadOn": "ON",
-            "payloadOff": "OFF",
-            "name": "Janela",
-            "uniqueName": "opening",
-            "type": 5,
-        }]
-    };
-    buildSensor(sensor);
-}
-
-function buildSensorPirTemplate() {
-    if ($('#sn_0').length > 0) {
-        return
-    }
-    let sensor = {
-        "id": "NEW",
-        "gpio": 0,
-        "name": "Movimento",
-        "disabled": false,
-        "type": 65,
-        "class": "binary_sensor",
-        "mqttStateTopic": "-",
-        "functions": [{
-            "name": "Movimento",
-            "uniqueName": "motion",
-            "type": 4
-        }]
-    };
-    buildSensor(sensor);
-}
-
-function buildSensorLdrTemplate() {
-    if ($('#sn_0').length > 0) {
-        return
-    }
-    let sensor = {
-        "id": "NEW",
-        "gpio": 0,
-        "name": "Sensor de Luz",
-        "disabled": false,
-        "type": 21,
-        "class": "sensor",
-        "mqttStateTopic": "-",
-        "functions": [{
-            "name": "Sensor de Luz",
-            "uniqueName": "illuminance",
-            "unit": "lx",
-            "type": 7
-        }]
-    };
-    buildSensor(sensor);
-}
-
-
 function saveSwitch(id) {
     let device = {
         "id": id,
@@ -658,7 +549,7 @@ function saveSwitch(id) {
         "family": $('#family_' + id).val(),
         "primaryGpio": parseInt($('#primaryGpio_' + id).val()),
         "secondaryGpio": parseInt($('#secondaryGpio_' + id).val()),
-        "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()),
+        "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()) * 1000,
         "autoState": false,
         "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()),
         "typeControl": parseInt($('#typeControl_' + id).val()),
@@ -671,79 +562,6 @@ function saveSwitch(id) {
     };
     storeDevice(device, "save-switch");
 }
-
-
-function saveSensor(id) {
-    let payloadOn = $("#payloadOn_" + id + "_opening").val();
-    let payloadOff = $("#payloadOff_" + id + "_opening").val();
-    let temp = $("#name_" + id + "_temperature").val();
-    let hum = $("#name_" + id + "_humidity").val();
-    let motion = $("#name_" + id + "_motion").val();
-    let ldr = $("#name_" + id + "_illuminance").val();
-    let reed = $("#name_" + id + "_opening").val();
-    let functions = [];
-    let type = $('#type_' + id).val();
-    let classs = "sensor";
-    if (type === '0' || type === '1' || type === '2') {
-        functions = [{
-            "name": temp, "uniqueName": "temperature",
-            "unit": "ºC",
-            "type": 1
-        }, {
-            "name": hum, "uniqueName": "humidity",
-            "unit": "%",
-            "type": 2
-        }];
-    } else if (type === '90') {
-        functions = [{
-            "name": temp, "uniqueName": "temperature",
-            "unit": "ºC",
-            "type": 1
-        }];
-    } else if ('65' === type) {
-        classs = "binary_sensor";
-        functions = [{
-            "name": motion, "uniqueName": "motion",
-            "type": 4
-        }];
-    } else if ('21' === type) {
-        functions = [{
-            "name": ldr,
-            "uniqueName": "illuminance",
-            "unit": "lx",
-            "type": 7
-        }];
-    } else if ('56' === type) {
-        classs = "binary_sensor";
-        functions = [{
-            "payloadOff": payloadOff,
-            "payloadOn": payloadOn,
-            "name": reed,
-            "uniqueName": "opening",
-            "type": 5
-        }];
-    }
-
-    let device = {
-        "id": id,
-        "class": classs,
-        "name": $('#name_' + id).val(),
-        "gpio": $('#gpio_' + id).val(),
-        "disabled": false,
-        "discoveryDisabled": false,
-        "type": $('#type_' + id).val(),
-        "functions": functions
-    };
-    storeDevice(id, device, "save-sensor", "sensors", fillSensors);
-}
-
-
-function updateSwitch(obj) {
-    if (!obj) return;
-    let btn = $('#btn_' + obj["id"]);
-    btn.text(obj["stateControl"] ? 'ON' : 'OFF');
-}
-
 
 $(document).ready(function () {
     let lang = localStorage.getItem('lang');
@@ -837,7 +655,7 @@ function storeDevice(device, endpointstore) {
         contentType: "application/json",
         data: JSON.stringify(device),
         success: function (response) {
-            if(endpointstore === "save-switch"){
+            if (endpointstore === "save-switch") {
                 fillSwitches(response);
             }
             showMessage("Configuração Guardada", "Config Stored")
