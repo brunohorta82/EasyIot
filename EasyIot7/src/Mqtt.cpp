@@ -1,6 +1,6 @@
 #include "Mqtt.h"
 #include "Switches.h"
-
+#define MQTT_TAG "[MQTT]"
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 std::vector<String> subscriptions;

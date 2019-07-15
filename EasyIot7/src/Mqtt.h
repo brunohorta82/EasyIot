@@ -1,6 +1,6 @@
 #ifndef MQTT_H
 #define MQTT_H
-#define MQTT_TAG "[MQTT]"
+
 #include "config.h"
 #include <PubSubClient.h>
 #define AVAILABLE_PAYLOAD "online"
@@ -8,6 +8,7 @@
 void publishOnMqtt(String topic, String payload, bool retain);
 void subscribeOnMqtt(String topic);
 String getBaseTopic();
+String getAvailableTopic();
 void setupMQTT();
 void loopMqtt();
 #endif
