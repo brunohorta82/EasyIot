@@ -319,7 +319,7 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_ON).equals(state))
   {
-
+Serial.println("ON");
     strlcpy(switchT->stateControl, PAYLOAD_ON, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_ON, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
@@ -331,6 +331,7 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_OFF).equals(state))
   {
+    Serial.println("OFFF");
     strlcpy(switchT->stateControl, PAYLOAD_OFF, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_OFF, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)

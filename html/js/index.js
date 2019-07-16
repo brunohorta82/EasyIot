@@ -313,7 +313,7 @@ function applyTypeControl(id) {
 
 function buildSwitch(obj) {
     let coverBtnHide = obj.family === "cover" ? "" : "hide";
-    let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "";
+    let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "OFF";
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
     let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
     let switchBtnHide = (obj.family === "light" || obj.family === "switch" || obj.family === "lock") ? "" : "hide";
@@ -527,7 +527,11 @@ function buildSwitch(obj) {
 }
 
 function stateSwitch(id, state) {
-    let toggleState = state === "OFF" ? "ON" : "OFF";
+    let toggleState = state;
+    if($("#btn_on_" + id ).hasClass("ON") || $("#btn_on_" + id ).hasClass("OFF")){
+        console.log("cenas");
+        toggleState = $("#btn_on_" + id ).hasClass("ON") ? "OFF" : "ON";
+    }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
     $.ajax({
         type: "GET",
