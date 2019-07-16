@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.1.84"
 };
 let sortByProperty = function (property) {
     return function (x, y) {
@@ -82,14 +82,14 @@ var WORDS_EN = {
     "retain-message": "Retain Messages",
     "command": "Command",
     "state": "State",
-    "on":"On",
-    "off":"Off",
-    "lock":"Lock",
-    "unlock":"Unlocked",
-    "open":"Open",
-    "close":"Closed",
-    "stop":"Stop",
-    "time":"Time"
+    "on": "On",
+    "off": "Off",
+    "lock": "Lock",
+    "unlock": "Unlocked",
+    "open": "Open",
+    "close": "Closed",
+    "stop": "Stop",
+    "time": "Time"
 
 };
 var WORDS_PT = {
@@ -134,14 +134,14 @@ var WORDS_PT = {
     "retain-message": "Reter Mensagens",
     "command": "Comando",
     "state": "Estado",
-    "on":"Ligado",
-    "off":"Desligado",
-    "lock":"Trancado",
-    "unlock":"Destrancado",
-    "open":"Aberto",
-    "close":"Fechado",
-    "stop":"Parar",
-    "time":"Tempo"
+    "on": "Ligado",
+    "off": "Desligado",
+    "lock": "Trancado",
+    "unlock": "Destrancado",
+    "open": "Aberto",
+    "close": "Fechado",
+    "stop": "Parar",
+    "time": "Tempo"
 };
 
 function loadsLanguage(lang) {
@@ -313,31 +313,34 @@ function applyTypeControl(id) {
 
 function buildSwitch(obj) {
     let coverBtnHide = obj.family === "cover" ? "" : "hide";
+    let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "";
+    let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
+    let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
     let switchBtnHide = (obj.family === "light" || obj.family === "switch" || obj.family === "lock") ? "" : "hide";
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     $('#switch_config').append('<div id="bs_' + obj.id + '" class="col-lg-4 col-md-6 col-xs-12">\n' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">\n' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>\n' +
         '                        <div class="pull-right">\n' +
-        '                            <button class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\''+obj.id+'\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + coverBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
         '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>\n' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
         '                                </svg>\n' +
         '                            </button>\n' +
-        '                            <button class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\''+obj.id+'\',\'STOP\')" id="btn_stop_' + obj.id + '" class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
         '                                    <path d="M6 6h12v12H6z"/>\n' +
         '                                </svg>\n' +
         '                            </button>\n' +
-        '                            <button class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\''+obj.id+'\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close + coverBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
         '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>\n' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
         '                                </svg>\n' +
         '                            </button>\n' +
-        '                            <button class="' + switchBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\''+obj.id+'\',\''+obj.stateControl+'\')" id="btn_on_' + obj.id + '" class="' + on + switchBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">\n' +
         '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>\n' +
         '                                </svg>\n' +
@@ -524,9 +527,10 @@ function buildSwitch(obj) {
 }
 
 function stateSwitch(id, state) {
-    const targetUrl = endpoint.baseUrl + "/state-switch?state=" + state + "&id=" + id;
+    let toggleState = state === "OFF" ? "ON" : "OFF";
+    const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
     $.ajax({
-        type: "POST",
+        type: "GET",
         url: targetUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
@@ -583,11 +587,24 @@ $(document).ready(function () {
     wifiStatus();
     toggleActive("node");
     setInterval(wifiStatus, 15000);
+    if (!!window.EventSource) {
+        let source = new EventSource(endpoint.baseUrl + '/events');
+        source.addEventListener('states', function (e) {
+            let json = JSON.parse(e.data);
+            let state = json.state == "OFF" ? "on" : json.state.toLowerCase();
+            $("#btn_" + state + "_" + json.id ).removeClass("ON");
+            $("#btn_" + state + "_" + json.id ).removeClass("OPEN");
+            $("#btn_" + state + "_" + json.id ).removeClass("CLOSE");
+            $("#btn_" + state + "_" + json.id  ).addClass(json.state);
+            console.log(json.state);
+            console.log("#btn_" + state + "_" + json.id);
+        }, false);
+
+    }
 
 });
 
 function storeConfig() {
-    console.log(config);
     const targetUrl = endpoint.baseUrl + "/save-config";
     $.ajax({
         type: "POST",

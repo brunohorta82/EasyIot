@@ -3,13 +3,12 @@
 #define MQTT_TAG "[MQTT]"
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
-std::vector<String> subscriptions;
 void processMqttAction(String topic, String payload)
 {
     mqttSwitchControl(topic, payload);
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
-{
+    {logger(MQTT_TAG, "MESSSAGE RECEIVEID");
     String topicStr = String(topic);
     logger(MQTT_TAG, "TOPIC: " + topicStr);
     String payloadStr = "";
@@ -53,11 +52,7 @@ boolean reconnect()
         logger(MQTT_TAG, "CONNECTED");
         publishOnMqtt(getAvailableTopic(), AVAILABLE_PAYLOAD, true);
         publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
-        for (unsigned int i = 0; i < subscriptions.size(); i++)
-        {
-            mqttClient.subscribe(subscriptions[i].c_str());
-            logger(MQTT_TAG, "Subscribe on " + subscriptions[i]);
-        }
+        initSwitchesMqttAndDiscovery();
     }
 
     return mqttClient.connected();
@@ -83,12 +78,13 @@ void setupMQTT()
 
 void loopMqtt()
 {
+   if (WiFi.status() != WL_CONNECTED || String(getAtualConfig().mqttIpDns).equals(""))return ;
     static unsigned long lastReconnectAttempt = millis();
     if (!mqttClient.connected())
-    {
+    {   
         long now = millis();
         if (now - lastReconnectAttempt > 5000)
-        {
+        {   logger(MQTT_TAG,"MQTT Disconnected");
             lastReconnectAttempt = now;
             if (reconnect())
             {
@@ -104,6 +100,10 @@ void loopMqtt()
 
 void publishOnMqtt(String topic, String payload, bool retain)
 {
+    if(!mqttClient.connected()){
+        logger(MQTT_TAG,"Mqtt not connected, can't publish message.");
+        return;
+    }
     static unsigned int retries = 0;
     while (!mqttClient.publish(topic.c_str(), payload.c_str(), retain) && retries < 3)
     {
@@ -123,10 +123,7 @@ void publishOnMqtt(String topic, String payload, bool retain)
 
 void subscribeOnMqtt(String topic)
 {
-    if(mqttClient.connected()){
-         mqttClient.subscribe(topic.c_str());
-    }
-    subscriptions.push_back(topic);
+    mqttClient.subscribe(topic.c_str());
     
 }
 void unsubscribeOnMqtt(String topic)

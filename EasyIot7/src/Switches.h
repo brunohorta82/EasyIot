@@ -3,6 +3,7 @@
 #include "Arduino.h"
 #include "config.h"
 #include "Templates.h"
+#include "WebServer.h"
 #define SWITCHES_TAG "[SWITCHES]"
 #define SWITCH_DEVICE "switch"
 
@@ -30,7 +31,7 @@
 #define MODE_DUAL_PUSH 5
 
 #define SWITCHES_CONFIG_FILENAME  "switchs.json"
-const String statesPool[] = {"ON", "OFF","OPEN", "STOP", "CLOSE", "STOP","LOCK","UNLOCK"};
+const String statesPool[] = {"OFF", "ON","STOP","OPEN", "STOP", "CLOSE","LOCK","UNLOCK"};
 
 struct SwitchT{
     char id[32]; //Generated from name without spaces and no special characters
@@ -85,6 +86,9 @@ void saveSwitchs();
 void removeSwitch(String id, bool persist);
 void updateSwitches(JsonObject doc, bool persist);
 void mqttSwitchControl(String topic, String payload);
+void initSwitchesMqttAndDiscovery();
+void sendToServerEvents(String topic, String payload);
+void stateSwitchById(String id, String state);
 String getSwitchesConfigStatus();
 
 

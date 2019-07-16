@@ -99,7 +99,6 @@ void addToHaDiscovery(SwitchT sw)
   {
    payload = createHaLock(sw);
   }
-  Serial.println(payload);
   publishOnMqtt(prefix + "/" + family + "/" + _id + "/config", payload, true);
   subscribeOnMqtt(String(sw.mqttCommandTopic));
   logger(DISCOVERY_TAG, "RELOAD MQTT SWITCH DISCOVERY OK");

@@ -24,7 +24,15 @@ void removeSwitch(String id, bool persist)
   }
   if (persist)
   {
-    saveSwitchs();
+    saveSwitchs();  
+  }
+}
+void initSwitchesMqttAndDiscovery()
+{
+  for (unsigned int i = 0; i < switchs.size(); i++)
+  {
+    publishOnMqtt(switchs[i].mqttStateTopic, switchs[i].mqttPayload, switchs[i].mqttRetain);
+    addToHaDiscovery(switchs[i]);
   }
 }
 void updateSwitches(JsonObject doc, bool persist)
@@ -52,21 +60,42 @@ void updateSwitches(JsonObject doc, bool persist)
   strlcpy(sw.mqttPositionStateTopic, String(baseTopic + "/position").c_str(), sizeof(sw.mqttPositionStateTopic));
   sw.primaryGpioControl = doc["primaryGpioControl"] | NO_GPIO;
   sw.secondaryGpioControl = doc["secondaryGpioControl"] | NO_GPIO;
+  if (sw.pullup)
+  {
+    if (sw.primaryGpio != NO_GPIO)
+    {
+      pinMode(sw.primaryGpio, sw.primaryGpio != 16 ? INPUT_PULLUP : INPUT_PULLDOWN_16);
+    }
+    if (sw.secondaryGpio != NO_GPIO)
+    {
+      pinMode(sw.secondaryGpio, sw.secondaryGpio != 16 ? INPUT_PULLUP : INPUT_PULLDOWN_16);
+    }
+  }
   if (String(sw.family).equals("cover"))
   {
-    sw.statePoolStart = 2;
-    sw.statePoolEnd = 5;
+    sw.statePoolStart = doc["statePoolStart"] | 2;
+    sw.statePoolEnd = doc["statePoolEnd"] | 4;
+    sw.positionControlCover = doc["positionControlCover"] | 0;
+    sw.lastPercentage = doc["lastPercentage"] | 0;
   }
   else if (String(sw.family).equals("lock"))
   {
-    sw.statePoolStart = 6;
-    sw.statePoolEnd = 7;
+    sw.statePoolStart = doc["statePoolStart"] | 6;
+    sw.statePoolEnd = doc["statePoolEnd"] | 7;
   }
   else
   {
-    sw.statePoolStart = 0;
-    sw.statePoolEnd = 1;
+    sw.statePoolStart = doc["statePoolStart"] | 0;
+    sw.statePoolEnd = doc["statePoolEnd"] | 1;
   }
+  sw.statePoolIdx = doc["statePoolIdx"] | sw.statePoolStart;
+  strlcpy(sw.mqttPayload, statesPool[sw.statePoolIdx].c_str(), sizeof(sw.mqttPayload));
+  strlcpy(sw.stateControl, statesPool[sw.statePoolIdx].c_str(), sizeof(sw.stateControl));
+  sw.lastPrimaryGpioState = doc["lastPrimaryGpioState"] | true;
+  sw.lastSecondaryGpioState = doc["lastSecondaryGpioState"] | true;
+  sw.lastTimeChange = doc["lastTimeChange"] | 0;
+  sw.percentageRequest = doc["percentageRequest"] | INT_MAX;
+  sw.onTime = doc["onTime"] | 0;
 
   switchs.push_back(sw);
   if (persist)
@@ -74,6 +103,15 @@ void updateSwitches(JsonObject doc, bool persist)
     saveSwitchs();
   }
   addToHaDiscovery(sw);
+}
+void stateSwitchById(String id, String state){
+  for (unsigned int i = 0; i < switchs.size(); i++)
+  {
+    if(strcmp(id.c_str(),switchs[i].id) == 0){
+      stateSwitch(&switchs[i],state);
+    }
+  }
+
 }
 void loadStoredSwitchs()
 {
@@ -125,7 +163,7 @@ void saveSwitchs()
         sdoc["family"] = sw.family;
         sdoc["primaryGpio"] = sw.primaryGpio;
         sdoc["secondaryGpio"] = sw.secondaryGpio;
-        sdoc["timeBetweenStates"] = sw.timeBetweenStates;
+
         sdoc["autoState"] = sw.autoState;
         sdoc["autoStateDelay"] = sw.autoStateDelay;
         sdoc["typeControl"] = sw.typeControl;
@@ -135,20 +173,30 @@ void saveSwitchs()
         sdoc["inverted"] = sw.inverted;
         sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
         sdoc["mqttStateTopic"] = sw.mqttStateTopic;
-        sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
-        sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
-        sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
+        if (String(sw.family).equals("cover"))
+        {
+          sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
+          sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
+          sdoc["percentageRequest"] = sw.percentageRequest;
+          sdoc["lastPercentage"] = sw.lastPercentage;
+          sdoc["positionControlCover"] = sw.positionControlCover; //COVER PERCENTAGE
+
+          sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
+          sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
+        }
+        sdoc["timeBetweenStates"] = sw.timeBetweenStates;
         sdoc["primaryGpioControl"] = sw.primaryGpioControl;
-        sdoc["positionControlCover"] = sw.positionControlCover; //COVER PERCENTAGE
-        sdoc["lastPercentage"] = sw.lastPercentage;
+
         sdoc["lastPrimaryGpioState"] = sw.lastPrimaryGpioState;
-        sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
+
         sdoc["lastTimeChange"] = sw.lastTimeChange;
-        sdoc["percentageRequest"] = sw.percentageRequest;
+
         sdoc["onTime"] = sw.onTime;
         sdoc["statePoolIdx"] = sw.statePoolIdx;
         sdoc["statePoolStart"] = sw.statePoolStart;
         sdoc["statePoolEnd"] = sw.statePoolEnd;
+        sdoc["mqttPayload"] = sw.mqttPayload;
+        sdoc["stateControl"] = sw.stateControl;
       }
 
       if (serializeJson(doc.as<JsonArray>(), file) == 0)
@@ -201,41 +249,7 @@ int findPoolIdx(String state, unsigned int start, unsigned int end)
   }
   return start;
 }
-void setupSwitchs()
-{
-  /* struct SwitchT s1;
-  s1.primaryGpio = 12;
-  s1.secondaryGpio = 13;
-  pinMode(s1.primaryGpio, INPUT_PULLUP);
-  pinMode(s1.secondaryGpio, INPUT_PULLUP);
-  s1.mode = MODE_BUTTON_PUSH;
-  s1.autoState = true;
-  strlcpy(s1.autoStateValue, "OFF", sizeof(s1.autoStateValue));
-  s1.autoStateDelay = 1000;
-  s1.timeBetweenStates = 9000;
-  strlcpy(s1.name, "Interruptor", sizeof(s1.name));
-  strlcpy(s1.mqttCommandTopic, "cenas/set", sizeof(s1.mqttCommandTopic));
-  strlcpy(s1.mqttStateTopic, "cenas/state", sizeof(s1.mqttStateTopic));
-  s1.mqttReatain = true;
-  s1.gpioOpenCloseControl = 5;
-  s1.gpioStopControl = 4;
-  s1.inverted = false;
-  s1.typeControl = TYPE_RELAY;
-  s1.onTime = 0;
-  s1.statePoolStart = 0;
-  s1.statePoolEnd = 1;
-  s1.positionControlCover = 0;
-  s1.percentageRequest = INT_MAX;
-  subscribeOnMqtt(s1.mqttCommandTopic);
-  pinMode(s1.gpioSingleControl, OUTPUT);
 
-  //STORED STATES
-  s1.statePoolIdx = s1.statePoolStart;
-  s1.lastPrimaryGpioState = true;
-  s1.lastPercentage = 0;
-  s1.lastSecondaryGpioState = true;*/
-  // switchs.push_back(s1);
-}
 void mqttSwitchControl(String topic, String payload)
 {
   for (unsigned int i = 0; i < switchs.size(); i++)
@@ -256,15 +270,7 @@ void mqttSwitchControl(String topic, String payload)
     }
   }
 }
-boolean isValidNumber(String str)
-{
-  for (byte i = 0; i < str.length(); i++)
-  {
-    if (isDigit(str.charAt(i)))
-      return true;
-  }
-  return false;
-}
+
 void stateSwitch(SwitchT *switchT, String state)
 {
   if (String(PAYLOAD_OPEN).equals(state))
@@ -371,7 +377,9 @@ void stateSwitch(SwitchT *switchT, String state)
     }
   }
   publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttRetain);
+  sendToServerEvents("states",String("{\"id\":\"")+String(switchT->id)+String("\",\"state\":\"")+String(switchT->mqttPayload)+String("\"}"));
   switchT->lastTimeChange = millis();
+  saveSwitchs();
 }
 bool stateTimeout(SwitchT *sw)
 {
@@ -383,8 +391,6 @@ boolean positionDone(SwitchT *sw, int currentPercentage)
 }
 void loopSwitches()
 {
-  if (true)
-    return;
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
 

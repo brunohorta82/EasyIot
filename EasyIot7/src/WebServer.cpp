@@ -2,6 +2,7 @@
 #define WEBSERVER_TAG "[WEBSERVER]"
 // SKETCH BEGIN
 AsyncWebServer server(80);
+AsyncEventSource events("/events");
 fauxmoESP fauxmo;
 
 void loadUI()
@@ -77,11 +78,19 @@ void setupWebserverAsync()
   MDNS.addServiceTxt("bhsystems", "tcp", "wifiSignal", String(WiFi.RSSI()));
   MDNS.addServiceTxt("bhsystems", "tcp", "ssid", String(getAtualConfig().apName));
   MDNS.addServiceTxt("bhsystems", "tcp", "firmware", String(FIRMWARE_VERSION));
-
+  events.onConnect([](AsyncEventSourceClient *client) {
+    if (client->lastId())
+    {
+      Serial.printf("Client reconnected! Last message ID that it gat is: %u\n", client->lastId());
+    }
+    //send event with message "hello!", id current millis
+    // and set reconnect delay to 1 second
+    client->send("hello!", NULL, millis(), 1000);
+  });
+  server.addHandler(&events);
   loadUI();
 
   //-------- API ---------
-
 
   //SYSTEM
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -147,20 +156,32 @@ void setupWebserverAsync()
     response->print(getSwitchesConfigStatus());
     request->send(response);
   });
-  server.addHandler( new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
-      updateSwitches(json,true);
-      response->print(getSwitchesConfigStatus());
-      request->send(response);
+  server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    updateSwitches(json, true);
+    response->print(getSwitchesConfigStatus());
+    request->send(response);
   }));
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
-      removeSwitch(request->arg("id"),true);
+      removeSwitch(request->arg("id"), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->print(getSwitchesConfigStatus());
     request->send(response);
+  });
+  server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    if (request->hasArg("id") && request->hasArg("state"))
+    {
+      stateSwitchById(request->arg("id"), request->arg("state"));
+      request->send(200, "application/json", "{\"result\":\"OK\"}");
+    }
+    else
+    {
+      request->send(400, "application/json", "{\"result\":\"MISSING PARAMS\"}");
+    }
   });
   //ALEXA SUPPORT
   server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
@@ -187,7 +208,10 @@ void setupWebserverAsync()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
   server.begin();
 }
-
+void sendToServerEvents(String topic, String payload)
+{
+  events.send(payload.c_str(), topic.c_str(), millis());
+}
 void mDnsLoop()
 {
   MDNS.update();

@@ -50,6 +50,7 @@ void loop()
   loopWiFi();
   loopMqtt();
   loopSwitches();
+  loopMqtt();
 }
 
 void actualUpdate()

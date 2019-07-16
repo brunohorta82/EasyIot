@@ -63,6 +63,7 @@ void logger(String tag, String msg);
 String normalize(String inputStr);
 String getConfigStatus();
 void updateConfig(JsonObject json, bool persist);
+boolean isValidNumber(String str);
 struct Config& getAtualConfig();
 
 #endif

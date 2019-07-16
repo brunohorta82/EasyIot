@@ -19,7 +19,15 @@ String getUpdateUrl()
 {
   return String(UPDATE_URL) + String(FACTORY_TYPE) + ".bin";
 }
-
+boolean isValidNumber(String str)
+{
+  for (byte i = 0; i < str.length(); i++)
+  {
+    if (isDigit(str.charAt(i)))
+      return true;
+  }
+  return false;
+}
 void requestReloadWifi()
 {
   WIFI_RELOAD = true;
