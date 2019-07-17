@@ -158,8 +158,8 @@ void setupWebserverAsync()
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateSwitches(json, true);
-    response->print(getSwitchesConfigStatus());
+    serializeJson(updateSwitches(json,true),*response);
+    
     request->send(response);
   }));
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -172,7 +172,6 @@ void setupWebserverAsync()
     request->send(response);
   });
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
     if (request->hasArg("id") && request->hasArg("state"))
     {
       stateSwitchById(request->arg("id"), request->arg("state"));

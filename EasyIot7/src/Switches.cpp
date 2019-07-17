@@ -3,7 +3,7 @@
 #include "Discovery.h"
 
 std::vector<SwitchT> switchs;
-
+bool requestSaveSwitchs = false;
 void removeSwitch(String id, bool persist)
 {
   logger(SWITCHES_TAG, "Remove switch " + id);
@@ -24,7 +24,7 @@ void removeSwitch(String id, bool persist)
   }
   if (persist)
   {
-    saveSwitchs();  
+    requestSaveSwitchs= true;  
   }
 }
 void initSwitchesMqttAndDiscovery()
@@ -35,7 +35,7 @@ void initSwitchesMqttAndDiscovery()
     addToHaDiscovery(switchs[i]);
   }
 }
-void updateSwitches(JsonObject doc, bool persist)
+JsonObject updateSwitches(JsonObject doc, bool persist)
 {
   String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
   removeSwitch(newId, false);
@@ -54,6 +54,9 @@ void updateSwitches(JsonObject doc, bool persist)
   sw.mqttRetain = doc["mqttRetain"] | true;
   sw.inverted = doc["inverted"] | false;
   String baseTopic = getBaseTopic() + "/" + String(sw.family) + "/" + String(sw.id);
+
+  doc["mqttCommandTopic"] =  String(baseTopic + "/set");
+  doc["mqttStateTopic"] =  String(baseTopic + "/state");
   strlcpy(sw.mqttCommandTopic, String(baseTopic + "/set").c_str(), sizeof(sw.mqttCommandTopic));
   strlcpy(sw.mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(sw.mqttStateTopic));
   strlcpy(sw.mqttPositionCommandTopic, String(baseTopic + "/setposition").c_str(), sizeof(sw.mqttPositionCommandTopic));
@@ -64,11 +67,11 @@ void updateSwitches(JsonObject doc, bool persist)
   {
     if (sw.primaryGpio != NO_GPIO)
     {
-      pinMode(sw.primaryGpio, sw.primaryGpio != 16 ? INPUT_PULLUP : INPUT_PULLDOWN_16);
+      pinMode(sw.primaryGpio, sw.primaryGpio == 16 ? INPUT_PULLDOWN_16 :INPUT_PULLUP  );
     }
     if (sw.secondaryGpio != NO_GPIO)
     {
-      pinMode(sw.secondaryGpio, sw.secondaryGpio != 16 ? INPUT_PULLUP : INPUT_PULLDOWN_16);
+      pinMode(sw.secondaryGpio, sw.secondaryGpio == 16 ? INPUT_PULLDOWN_16 :INPUT_PULLUP  );
     }
   }
   if (String(sw.family).equals("cover"))
@@ -100,9 +103,11 @@ void updateSwitches(JsonObject doc, bool persist)
   switchs.push_back(sw);
   if (persist)
   {
-    saveSwitchs();
+    requestSaveSwitchs = true;
   }
   addToHaDiscovery(sw);
+  doc["id"] = String(sw.id);
+  return doc;
 }
 void stateSwitchById(String id, String state){
   for (unsigned int i = 0; i < switchs.size(); i++)
@@ -229,7 +234,6 @@ String getSwitchesConfigStatus()
     {
       object += (char)file.read();
     }
-    Serial.println();
     file.close();
   }
   SPIFFS.end();
@@ -380,7 +384,7 @@ Serial.println("ON");
   publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttRetain);
   sendToServerEvents("states",String("{\"id\":\"")+String(switchT->id)+String("\",\"state\":\"")+String(switchT->mqttPayload)+String("\"}"));
   switchT->lastTimeChange = millis();
-  saveSwitchs();
+  requestSaveSwitchs= true;
 }
 bool stateTimeout(SwitchT *sw)
 {
@@ -392,6 +396,10 @@ boolean positionDone(SwitchT *sw, int currentPercentage)
 }
 void loopSwitches()
 {
+  if(requestSaveSwitchs){
+    requestSaveSwitchs = false;
+    saveSwitchs();
+  }
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
 

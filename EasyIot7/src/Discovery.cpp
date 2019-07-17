@@ -5,7 +5,7 @@
 String createHaLock(SwitchT sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(8);
+  const size_t capacity = JSON_OBJECT_SIZE(8)+300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
@@ -36,7 +36,7 @@ String createHaSwitch(SwitchT sw)
 String createHaLight(SwitchT sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(8);
+  const size_t capacity = JSON_OBJECT_SIZE(7)+300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
@@ -52,7 +52,7 @@ String createHaLight(SwitchT sw)
 String createHaCover(SwitchT sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(12);
+  const size_t capacity = JSON_OBJECT_SIZE(12)+300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
@@ -74,7 +74,7 @@ String createHaCover(SwitchT sw)
 void addToHaDiscovery(SwitchT sw)
 {
   if (strlen(getAtualConfig().mqttIpDns) == 0){
-    logger(DISCOVERY_TAG,"MQTT NEEDS TO BE CONFIGURED");
+    logger(DISCOVERY_TAG,"Mqtt not configured");
     return;
   }
 

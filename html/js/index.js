@@ -1,6 +1,7 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.84"
+    baseUrl: ""
 };
+var switches = [];
 let sortByProperty = function (property) {
     return function (x, y) {
         return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
@@ -246,6 +247,7 @@ function toggleActive(menu) {
 }
 
 function fillSwitches(payload) {
+    console.log(payload);
     if (!payload) return;
     $('#switch_config').empty();
     for (let obj of payload.sort(sortByProperty('name'))) {
@@ -318,29 +320,31 @@ function buildSwitch(obj) {
     let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
     let switchBtnHide = (obj.family === "light" || obj.family === "switch" || obj.family === "lock") ? "" : "hide";
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
+    let checkedAutoState = obj.autoState ? "checked" : "";
+
     $('#switch_config').append('<div id="bs_' + obj.id + '" class="col-lg-4 col-md-6 col-xs-12">\n' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">\n' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>\n' +
         '                        <div class="pull-right">\n' +
-        '                            <button onclick="stateSwitch(\''+obj.id+'\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + coverBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
         '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>\n' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
         '                                </svg>\n' +
         '                            </button>\n' +
-        '                            <button onclick="stateSwitch(\''+obj.id+'\',\'STOP\')" id="btn_stop_' + obj.id + '" class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'STOP\')" id="btn_stop_' + obj.id + '" class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
         '                                    <path d="M6 6h12v12H6z"/>\n' +
         '                                </svg>\n' +
         '                            </button>\n' +
-        '                            <button onclick="stateSwitch(\''+obj.id+'\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close + coverBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
         '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>\n' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
         '                                </svg>\n' +
         '                            </button>\n' +
-        '                            <button onclick="stateSwitch(\''+obj.id+'\',\''+obj.stateControl+'\')" id="btn_on_' + obj.id + '" class="' + on + switchBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'' + obj.stateControl + '\')" id="btn_on_' + obj.id + '" class="' + on + switchBtnHide + ' btn btn-primary btn-control">\n' +
         '                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">\n' +
         '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>\n' +
         '                                </svg>\n' +
@@ -465,7 +469,7 @@ function buildSwitch(obj) {
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
         '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>\n' +
         '                            </tr>\n' +
-        '                            <tr>\n' +
+        '                            <tr class="' + coverBtnHide + '">\n' +
         '                                <td><span class="label-device"><span\n' +
         '                                    class="lang-time">TEMPO</span></span></td>\n' +
         '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.timeBetweenStates / 1000 + '"\n' +
@@ -475,7 +479,7 @@ function buildSwitch(obj) {
         '                            </tr>\n' +
         '                            <tr>\n' +
         '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-auto-state">Estado automático</span></span></td>\n' +
-        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="autoState_' + obj.id + '" value="' + obj.autoState + '"></td>\n' +
+        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedAutoState + ' type="checkbox" id="autoState_' + obj.id + '" value="' + obj.autoState + '"></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
         '                                <td><span class="label-device"><span\n' +
@@ -528,9 +532,9 @@ function buildSwitch(obj) {
 
 function stateSwitch(id, state) {
     let toggleState = state;
-    if($("#btn_on_" + id ).hasClass("ON") || $("#btn_on_" + id ).hasClass("OFF")){
+    if ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF")) {
         console.log("cenas");
-        toggleState = $("#btn_on_" + id ).hasClass("ON") ? "OFF" : "ON";
+        toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
     }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
     $.ajax({
@@ -596,10 +600,10 @@ $(document).ready(function () {
         source.addEventListener('states', function (e) {
             let json = JSON.parse(e.data);
             let state = json.state == "OFF" ? "on" : json.state.toLowerCase();
-            $("#btn_" + state + "_" + json.id ).removeClass("ON");
-            $("#btn_" + state + "_" + json.id ).removeClass("OPEN");
-            $("#btn_" + state + "_" + json.id ).removeClass("CLOSE");
-            $("#btn_" + state + "_" + json.id  ).addClass(json.state);
+            $("#btn_" + state + "_" + json.id).removeClass("ON");
+            $("#btn_" + state + "_" + json.id).removeClass("OPEN");
+            $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
+            $("#btn_" + state + "_" + json.id).addClass(json.state);
             console.log(json.state);
             console.log("#btn_" + state + "_" + json.id);
         }, false);
@@ -652,13 +656,17 @@ function saveMqtt() {
 }
 
 function removeDevice(e, id, func) {
+
     const targetUrl = endpoint.baseUrl + "/" + e + "?id=" + id;
     $.ajax({
         url: targetUrl,
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            func(response);
+            switches.splice(switches.findIndex(function (item, i) {
+                return item.id === id
+            }), 1);
+            fillSwitches(switches);
         },
         error: function () {
             showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")
@@ -668,6 +676,7 @@ function removeDevice(e, id, func) {
 }
 
 function storeDevice(device, endpointstore) {
+
     const targetUrl = endpoint.baseUrl + "/" + endpointstore + "?id=" + device.id;
     $.ajax({
         type: "POST",
@@ -676,8 +685,15 @@ function storeDevice(device, endpointstore) {
         contentType: "application/json",
         data: JSON.stringify(device),
         success: function (response) {
+            let idx = switches.findIndex(function (item, i) {
+                return item.id === device.id
+            });
+            if(idx >= 0) {
+                switches.splice(idx, 1);
+            }
             if (endpointstore === "save-switch") {
-                fillSwitches(response);
+                switches.push(response);
+                fillSwitches(switches);
             }
             showMessage("Configuração Guardada", "Config Stored")
 

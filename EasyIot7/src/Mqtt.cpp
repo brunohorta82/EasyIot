@@ -8,7 +8,8 @@ void processMqttAction(String topic, String payload)
     mqttSwitchControl(topic, payload);
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
-    {logger(MQTT_TAG, "MESSSAGE RECEIVEID");
+{
+    logger(MQTT_TAG, "MESSSAGE RECEIVEID");
     String topicStr = String(topic);
     logger(MQTT_TAG, "TOPIC: " + topicStr);
     String payloadStr = "";
@@ -78,13 +79,15 @@ void setupMQTT()
 
 void loopMqtt()
 {
-   if (WiFi.status() != WL_CONNECTED || String(getAtualConfig().mqttIpDns).equals(""))return ;
+    if (WiFi.status() != WL_CONNECTED || String(getAtualConfig().mqttIpDns).equals(""))
+        return;
     static unsigned long lastReconnectAttempt = millis();
     if (!mqttClient.connected())
-    {   
+    {
         long now = millis();
         if (now - lastReconnectAttempt > 5000)
-        {   logger(MQTT_TAG,"MQTT Disconnected");
+        {
+            logger(MQTT_TAG, "MQTT Disconnected");
             lastReconnectAttempt = now;
             if (reconnect())
             {
@@ -100,8 +103,14 @@ void loopMqtt()
 
 void publishOnMqtt(String topic, String payload, bool retain)
 {
-    if(!mqttClient.connected()){
-        logger(MQTT_TAG,"Mqtt not connected, can't publish message.");
+    if (strlen(getAtualConfig().mqttIpDns) == 0)
+    {
+        logger(MQTT_TAG, "Configure Mqtt to publish messages");
+        return;
+    }
+    if (!mqttClient.connected())
+    {
+        logger(MQTT_TAG, "Mqtt not connected, can't publish message.");
         return;
     }
     static unsigned int retries = 0;
@@ -124,7 +133,6 @@ void publishOnMqtt(String topic, String payload, bool retain)
 void subscribeOnMqtt(String topic)
 {
     mqttClient.subscribe(topic.c_str());
-    
 }
 void unsubscribeOnMqtt(String topic)
 {

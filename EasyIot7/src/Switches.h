@@ -30,7 +30,7 @@
 #define MODE_DUAL_SWITCH 4
 #define MODE_DUAL_PUSH 5
 
-#define SWITCHES_CONFIG_FILENAME  "switchs.json"
+#define SWITCHES_CONFIG_FILENAME  "switches.json"
 const String statesPool[] = {"OFF", "ON","STOP","OPEN", "STOP", "CLOSE","LOCK","UNLOCK"};
 
 struct SwitchT{
@@ -84,7 +84,7 @@ void stateSwitch(SwitchT *switchT, String state);
 void loadStoredSwitchs();
 void saveSwitchs();
 void removeSwitch(String id, bool persist);
-void updateSwitches(JsonObject doc, bool persist);
+JsonObject updateSwitches(JsonObject doc, bool persist);
 void mqttSwitchControl(String topic, String payload);
 void initSwitchesMqttAndDiscovery();
 void sendToServerEvents(String topic, String payload);
