@@ -1,7 +1,7 @@
 const endpoint = {
     baseUrl: ""
 };
-var switches = [];
+let switches = [];
 let sortByProperty = function (property) {
     return function (x, y) {
         return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
@@ -247,7 +247,6 @@ function toggleActive(menu) {
 }
 
 function fillSwitches(payload) {
-    console.log(payload);
     if (!payload) return;
     $('#switch_config').empty();
     for (let obj of payload.sort(sortByProperty('name'))) {
@@ -259,16 +258,26 @@ function fillSwitches(payload) {
 function applySwitchFamily(id) {
     hide("mqttPositionCommandTopicRow_" + id);
     hide("mqttPositionStateTopicRow_" + id);
+    hide("timeBetweenStatesRow_"+id);
     hide("secondaryGpioControlRow_" + id);
     hide("secondaryGpioRow_" + id);
+    hide("btn_on_"+id);
+    hide("btn_close_"+id);
+    hide("btn_stop_"+id);
+    hide("btn_open_"+id);
     removeFromSelect('mode_' + id, 4);
     removeFromSelect('mode_' + id, 5);
 
     if ($('#family_' + id).val() == "cover") {
+
+        show("btn_close_"+id);
+        show("btn_stop_"+id);
+        show("btn_open_"+id);
         addToSelect('mode_' + id, "lang-dual-normal", 4);
         addToSelect('mode_' + id, "lang-dual-push", 5);
         removeFromSelect('mode_' + id, 1);
         show("mqttPositionCommandTopicRow_" + id);
+        show("timeBetweenStatesRow_"+id);
         show("mqttPositionStateTopicRow_" + id);
         show("secondaryGpioControlRow_" + id);
         show("secondaryGpioRow_" + id);
@@ -276,26 +285,25 @@ function applySwitchFamily(id) {
     } else if ($('#family_' + id).val() == "lock") {
         removeFromSelect('mode_' + id, 1);
         setOptionOnSelect('mode_' + id, 2);
+
+        show("btn_on_"+id);
     } else {
         addToSelect('mode_' + id, "lang-normal", 1);
         setOptionOnSelect('mode_' + id, 1);
+        show("btn_on_"+id);
     }
     applyTypeControl(id);
     loadsLanguage(localStorage.getItem('lang'));
 }
 
 function applySwitchMode(id) {
-    if (($('#mode_' + id).val() == 4 || $('#mode_' + id).val() == 5)) {
-        if ($('#typeControl_' + id).val() == 1) {
-            show("secondaryGpioControlRow_" + id)
+    if ($('#family_' + id).val() == "cover") {
+        if (($('#mode_' + id).val() == 2)) {
+            setOptionOnSelect('secondaryGpio_' + id, 99);
+            hide("secondaryGpioRow_" + id)
+        }else {
+            show("secondaryGpioRow_" + id)
         }
-        show("secondaryGpioRow_" + id)
-    } else {
-        setOptionOnSelect('secondaryGpio_' + id, 99);
-        setOptionOnSelect('secondaryGpioControl_' + id, 99);
-        hide("secondaryGpioRow_" + id);
-        hide("secondaryGpioControlRow_" + id);
-
     }
 
     loadsLanguage(localStorage.getItem('lang'));
@@ -314,11 +322,9 @@ function applyTypeControl(id) {
 }
 
 function buildSwitch(obj) {
-    let coverBtnHide = obj.family === "cover" ? "" : "hide";
     let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "OFF";
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
     let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
-    let switchBtnHide = (obj.family === "light" || obj.family === "switch" || obj.family === "lock") ? "" : "hide";
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     let checkedAutoState = obj.autoState ? "checked" : "";
 
@@ -326,25 +332,26 @@ function buildSwitch(obj) {
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">\n' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>\n' +
         '                        <div class="pull-right">\n' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + coverBtnHide + ' btn btn-primary btn-control">\n' +
-        '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
-        '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>\n' +
-        '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
-        '                                </svg>\n' +
-        '                            </button>\n' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'STOP\')" id="btn_stop_' + obj.id + '" class="' + coverBtnHide + ' btn btn-primary btn-control">\n' +
-        '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
-        '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
-        '                                    <path d="M6 6h12v12H6z"/>\n' +
-        '                                </svg>\n' +
-        '                            </button>\n' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close + coverBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open  + ' btn btn-primary btn-control">\n' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
         '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>\n' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
         '                                </svg>\n' +
         '                            </button>\n' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'' + obj.stateControl + '\')" id="btn_on_' + obj.id + '" class="' + on + switchBtnHide + ' btn btn-primary btn-control">\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'STOP\')" id="btn_stop_' + obj.id + '" class="'  + ' btn btn-primary btn-control">\n' +
+        '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
+        '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
+        '                                    <path d="M6 6h12v12H6z"/>\n' +
+        '                                </svg>\n' +
+        '                            </button>\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close  + ' btn btn-primary btn-control">\n' +
+
+        '                                <svg width="24" height="24" viewBox="0 0 24 24">\n' +
+        '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>\n' +
+        '                                    <path d="M0 0h24v24H0z" fill="none"/>\n' +
+        '                                </svg>\n' +
+        '                            </button>\n' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'' + obj.stateControl + '\')" id="btn_on_' + obj.id + '" class="' + on  + ' btn btn-primary btn-control">\n' +
         '                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">\n' +
         '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>\n' +
         '                                </svg>\n' +
@@ -406,7 +413,7 @@ function buildSwitch(obj) {
         '                                </select></td>\n' +
         '                                </select></td>\n' +
         '                            </tr>\n' +
-        '                            <tr id="secondaryGpioRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
+        '                            <tr id="secondaryGpioRow_' + obj.id + '"">\n' +
         '                                <td><span class="label-device"><span\n' +
         '                                    class="lang-pin-in-b">Pinos Entrada B</span></span></td>\n' +
         '                                <td><select class="form-control select-device" id="secondaryGpio_' + obj.id + '">\n' +
@@ -432,7 +439,7 @@ function buildSwitch(obj) {
         '                                    <option value="16">16 <-> 3V3</option>\n' +
         '                                </select></td>\n' +
         '                            </tr>\n' +
-        '                            <tr id="secondaryGpioControlRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
+        '                            <tr id="secondaryGpioControlRow_' + obj.id + '" ">\n' +
         '                                <td><span class="label-device "><span\n' +
         '                                    class="lang-pin-out-2">Pinos Saida 2</span></span></td>\n' +
         '                                <td><select class="form-control select-device" id="secondaryGpioControl_' + obj.id + '">\n' +
@@ -456,12 +463,12 @@ function buildSwitch(obj) {
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
         '                                <td><span >' + obj.mqttStateTopic + '</span></td>\n' +
         '                            </tr>\n' +
-        '                            <tr id="mqttPositionCommandTopicRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
+        '                            <tr id="mqttPositionCommandTopicRow_' + obj.id + '" ">\n' +
         '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>\n' +
         '                                <td><span >' + obj.mqttPositionCommandTopic + '</span></td>\n' +
         '                            </tr>\n' +
 
-        '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" class="' + coverBtnHide + '">\n' +
+        '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">\n' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
         '                                <td><span >' + obj.mqttPositionStateTopic + '</span></td>\n' +
         '                            </tr>\n' +
@@ -469,7 +476,7 @@ function buildSwitch(obj) {
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
         '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>\n' +
         '                            </tr>\n' +
-        '                            <tr class="' + coverBtnHide + '">\n' +
+        '                            <tr id="timeBetweenStatesRow_'+obj.id+'" >\n' +
         '                                <td><span class="label-device"><span\n' +
         '                                    class="lang-time">TEMPO</span></span></td>\n' +
         '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.timeBetweenStates / 1000 + '"\n' +
@@ -484,7 +491,7 @@ function buildSwitch(obj) {
         '                            <tr>\n' +
         '                                <td><span class="label-device"><span\n' +
         '                                    class="lang-time">TEMPO</span></span></td>\n' +
-        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.autoStateDelay / 1000 + '"\n' +
+        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"\n' +
         '                                                            type="text" id="autoStateDelay_' + obj.id + '" placeholder="ex: 12"\n' +
         '                                                             maxlength="2" required/>\n' +
         '                                </td>\n' +
@@ -527,13 +534,14 @@ function buildSwitch(obj) {
     setOptionOnSelect('secondaryGpioControl_' + obj.id, obj.secondaryGpioControl);
     setOptionOnSelect('primaryGpio_' + obj.id, obj.primaryGpio);
     setOptionOnSelect('secondaryGpio_' + obj.id, obj.secondaryGpio);
+    setOptionOnSelect('autoStateValue_' + obj.id, obj.autoStateValue);
+    applySwitchFamily(obj.id);
     loadsLanguage(localStorage.getItem('lang'));
 }
 
 function stateSwitch(id, state) {
     let toggleState = state;
     if ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF")) {
-        console.log("cenas");
         toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
     }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
@@ -562,8 +570,9 @@ function saveSwitch(id) {
         "primaryGpio": parseInt($('#primaryGpio_' + id).val()),
         "secondaryGpio": parseInt($('#secondaryGpio_' + id).val()),
         "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()) * 1000,
-        "autoState": false,
-        "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()),
+        "autoState": document.getElementById('autoState_' + id).checked,
+        "autoStateValue":  $('#autoStateValue_' + id).val(),
+        "autoStateDelay": parseInt($('#autoStateDelay_' + id).val())*1000,
         "typeControl": parseInt($('#typeControl_' + id).val()),
         "mode": parseInt($('#mode_' + id).val()),
         "pullup": true,
@@ -604,8 +613,6 @@ $(document).ready(function () {
             $("#btn_" + state + "_" + json.id).removeClass("OPEN");
             $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
             $("#btn_" + state + "_" + json.id).addClass(json.state);
-            console.log(json.state);
-            console.log("#btn_" + state + "_" + json.id);
         }, false);
 
     }

@@ -2,6 +2,7 @@
 #define WEBSERVER_O_H
 #include <Arduino.h>
 #include "AsyncJson.h"
+#include "Switches.h"
 #include "ArduinoJson.h"
 #include "StaticSite.h"
 #include "StaticCss.h"
@@ -12,8 +13,10 @@
 #include <fauxmoESP.h>
 #include <Config.h>
 #include "WiFi.h"
-#include "Switches.h"
+
 
 void setupWebserverAsync();
-void mDnsLoop();
+void webserverServicesLoop();
+unsigned char addSwitchToAlexa(char* name);
+void removeSwitchFromAlexa(unsigned char id);
 #endif

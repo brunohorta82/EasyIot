@@ -6,7 +6,6 @@
 #include "Config.h"
 #include "Mqtt.h"
 
-void startAlexaDiscovery(fauxmoESP &fauxmo);
-void addToHaDiscovery(SwitchT sw);
-void removeFromHaDiscovery(SwitchT sw);
+void addToDiscovery(SwitchT *sw);
+void removeFromDiscovery(SwitchT *sw);
 #endif

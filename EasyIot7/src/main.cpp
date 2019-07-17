@@ -46,7 +46,7 @@ void setup()
 void loop()
 {
   checkInternalRoutines();
-  mDnsLoop();
+  webserverServicesLoop();
   loopWiFi();
   loopMqtt();
   loopSwitches();

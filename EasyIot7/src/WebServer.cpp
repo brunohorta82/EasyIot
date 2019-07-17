@@ -46,14 +46,14 @@ void loadUI()
 
   //JS
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/js", index_js, sizeof(index_js));
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Expires", "Mon, 1 Jan 2222 10:10:10 GMT");
     request->send(response);
   });
 
   server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/js", jquery_min_js, sizeof(jquery_min_js));
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Expires", "Mon, 1 Jan 2222 10:10:10 GMT");
     request->send(response);
@@ -68,25 +68,27 @@ void loadUI()
   });
 }
 
+void startAlexaDiscovery()
+{
+  fauxmo.createServer(false);
+  fauxmo.setPort(80); // required for gen3 devices
+  fauxmo.enable(true);
+  fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
+    logger("[ALEXA]","Device id "+String(device_id)+" "+String(device_name)+" "+String(value));
+    stateSwitchByAlexaId(device_id, state ? "ON" : "OFF",value );
+  });
+}
+
 void setupWebserverAsync()
 {
   MDNS.begin(getAtualConfig().hostname);
-  MDNS.addService("bhsystems", "tcp", 80);
-  MDNS.addServiceTxt("bhsystems", "tcp", "nodeId", String(getAtualConfig().nodeId));
-  MDNS.addServiceTxt("bhsystems", "tcp", "hardwareId", String(ESP.getChipId()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "type", String(FACTORY_TYPE));
-  MDNS.addServiceTxt("bhsystems", "tcp", "wifiSignal", String(WiFi.RSSI()));
-  MDNS.addServiceTxt("bhsystems", "tcp", "ssid", String(getAtualConfig().apName));
-  MDNS.addServiceTxt("bhsystems", "tcp", "firmware", String(FIRMWARE_VERSION));
-  events.onConnect([](AsyncEventSourceClient *client) {
-    if (client->lastId())
-    {
-      Serial.printf("Client reconnected! Last message ID that it gat is: %u\n", client->lastId());
-    }
-    //send event with message "hello!", id current millis
-    // and set reconnect delay to 1 second
-    client->send("hello!", NULL, millis(), 1000);
-  });
+  MDNS.addService("easyiot", "tcp", 80);
+  MDNS.addServiceTxt("easyiot", "tcp", "nodeId", String(getAtualConfig().nodeId));
+  MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
+  MDNS.addServiceTxt("easyiot", "tcp", "type", String(FACTORY_TYPE));
+  MDNS.addServiceTxt("easyiot", "tcp", "wifiSignal", String(WiFi.RSSI()));
+  MDNS.addServiceTxt("easyiot", "tcp", "ssid", String(getAtualConfig().apName));
+  MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(FIRMWARE_VERSION));
   server.addHandler(&events);
   loadUI();
 
@@ -206,12 +208,20 @@ void setupWebserverAsync()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
   server.begin();
+  startAlexaDiscovery();
+}
+unsigned char addSwitchToAlexa(char *name){
+   return fauxmo.addDevice(name);
+}
+void removeSwitchFromAlexa(unsigned char id){
+  fauxmo.removeDevice(id);
 }
 void sendToServerEvents(String topic, String payload)
 {
   events.send(payload.c_str(), topic.c_str(), millis());
 }
-void mDnsLoop()
+void webserverServicesLoop()
 {
   MDNS.update();
+  fauxmo.handle();
 }

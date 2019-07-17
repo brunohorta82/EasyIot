@@ -22,6 +22,11 @@
 #define PAYLOAD_UNLOCK "UNLOCK"
 #define PAYLOAD_STATE_UNLOCK "UNLOCK"
 
+#define FAMILY_LIGHT "light"
+#define FAMILY_SWITCH "switch"
+#define FAMILY_COVER "cover"
+#define FAMILY_LOCK "lock"
+
 #define TYPE_RELAY 1
 #define TYPE_MQTT 2
 
@@ -34,6 +39,7 @@
 const String statesPool[] = {"OFF", "ON","STOP","OPEN", "STOP", "CLOSE","LOCK","UNLOCK"};
 
 struct SwitchT{
+    unsigned char alexaId;
     char id[32]; //Generated from name without spaces and no special characters
     char name[24];
     char family[10]; //switch, cover
@@ -89,6 +95,7 @@ void mqttSwitchControl(String topic, String payload);
 void initSwitchesMqttAndDiscovery();
 void sendToServerEvents(String topic, String payload);
 void stateSwitchById(String id, String state);
+void stateSwitchByAlexaId(unsigned char id, String state,unsigned char value);
 String getSwitchesConfigStatus();
 
 

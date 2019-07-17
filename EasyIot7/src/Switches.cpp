@@ -13,7 +13,7 @@ void removeSwitch(String id, bool persist)
     SwitchT swStored = switchs[i];
     if (strcmp(id.c_str(), swStored.id) == 0)
     {
-      removeFromHaDiscovery(swStored);
+      removeFromDiscovery(&swStored);
       unsubscribeOnMqtt(String(swStored.mqttCommandTopic));
       del = i;
     }
@@ -32,12 +32,13 @@ void initSwitchesMqttAndDiscovery()
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
     publishOnMqtt(switchs[i].mqttStateTopic, switchs[i].mqttPayload, switchs[i].mqttRetain);
-    addToHaDiscovery(switchs[i]);
+    addToDiscovery(&switchs[i]);
   }
 }
 JsonObject updateSwitches(JsonObject doc, bool persist)
 {
   String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
+  if(persist)
   removeSwitch(newId, false);
   SwitchT sw;
   strlcpy(sw.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(sw.id));
@@ -48,6 +49,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   sw.timeBetweenStates = doc["timeBetweenStates"] | 60000;
   sw.autoState = doc["autoState"] | false;
   sw.autoStateDelay = doc["autoStateDelay"] | 0;
+  strlcpy(sw.autoStateValue, doc.getMember("autoStateValue").as<String>().c_str(), sizeof(sw.autoStateValue));
   sw.typeControl = doc["typeControl"] | TYPE_MQTT;
   sw.mode = doc["mode"] | MODE_SWITCH;
   sw.pullup = doc["pullup"] | true;
@@ -74,14 +76,14 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
       pinMode(sw.secondaryGpio, sw.secondaryGpio == 16 ? INPUT_PULLDOWN_16 :INPUT_PULLUP  );
     }
   }
-  if (String(sw.family).equals("cover"))
+  if (String(sw.family).equals(String(FAMILY_COVER)))
   {
     sw.statePoolStart = doc["statePoolStart"] | 2;
     sw.statePoolEnd = doc["statePoolEnd"] | 4;
     sw.positionControlCover = doc["positionControlCover"] | 0;
     sw.lastPercentage = doc["lastPercentage"] | 0;
   }
-  else if (String(sw.family).equals("lock"))
+  else if (String(sw.family).equals(String(FAMILY_LOCK)))
   {
     sw.statePoolStart = doc["statePoolStart"] | 6;
     sw.statePoolEnd = doc["statePoolEnd"] | 7;
@@ -105,19 +107,12 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   {
     requestSaveSwitchs = true;
   }
-  addToHaDiscovery(sw);
+  addToDiscovery(&sw);
   doc["id"] = String(sw.id);
+  stateSwitch(&sw,sw.stateControl);
   return doc;
 }
-void stateSwitchById(String id, String state){
-  for (unsigned int i = 0; i < switchs.size(); i++)
-  {
-    if(strcmp(id.c_str(),switchs[i].id) == 0){
-      stateSwitch(&switchs[i],state);
-    }
-  }
 
-}
 void loadStoredSwitchs()
 {
   if (SPIFFS.begin())
@@ -135,9 +130,7 @@ void loadStoredSwitchs()
       logger(SWITCHES_TAG, "Stored switches loaded.");
     }
     file.close();
-
     JsonArray ar = doc.as<JsonArray>();
-    Serial.println(ar.size());
     for (JsonVariant sw : ar)
     {
       updateSwitches(sw, error);
@@ -168,6 +161,7 @@ void saveSwitchs()
         sdoc["family"] = sw.family;
         sdoc["primaryGpio"] = sw.primaryGpio;
         sdoc["secondaryGpio"] = sw.secondaryGpio;
+        sdoc["autoStateValue"] = String(sw.autoStateValue);
 
         sdoc["autoState"] = sw.autoState;
         sdoc["autoStateDelay"] = sw.autoStateDelay;
@@ -176,8 +170,8 @@ void saveSwitchs()
         sdoc["pullup"] = sw.pullup;
         sdoc["mqttRetain"] = sw.mqttRetain;
         sdoc["inverted"] = sw.inverted;
-        sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
-        sdoc["mqttStateTopic"] = sw.mqttStateTopic;
+        sdoc["mqttCommandTopic"] = String(sw.mqttCommandTopic);
+        sdoc["mqttStateTopic"] = String(sw.mqttStateTopic);
         if (String(sw.family).equals("cover"))
         {
           sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
@@ -323,7 +317,6 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_ON).equals(state))
   {
-Serial.println("ON");
     strlcpy(switchT->stateControl, PAYLOAD_ON, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_ON, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
@@ -334,8 +327,7 @@ Serial.println("ON");
     }
   }
   else if (String(PAYLOAD_OFF).equals(state))
-  {
-    Serial.println("OFFF");
+  { 
     strlcpy(switchT->stateControl, PAYLOAD_OFF, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_OFF, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
@@ -386,13 +378,37 @@ Serial.println("ON");
   switchT->lastTimeChange = millis();
   requestSaveSwitchs= true;
 }
+void stateSwitchById(String id, String state){
+  for (unsigned int i = 0; i < switchs.size(); i++)
+  {
+    if(strcmp(id.c_str(),switchs[i].id) == 0){
+      stateSwitch(&switchs[i],state);
+    }
+  }
+}
+void stateSwitchByAlexaId(unsigned char id, String state,unsigned char value){
+for (unsigned int i = 0; i < switchs.size(); i++)
+  {
+    if(switchs[i].alexaId == id){
+      if(strcmp(FAMILY_COVER,switchs[i].family) == 0){
+        stateSwitch(&switchs[i],strcmp(PAYLOAD_ON,state.c_str()) == 0 ? PAYLOAD_OPEN : PAYLOAD_CLOSE);
+      }else if(strcmp(FAMILY_LIGHT,switchs[i].family) == 0 || strcmp(FAMILY_SWITCH,switchs[i].family) == 0){
+      
+        stateSwitch(&switchs[i],state);
+      }
+      
+      
+    }
+  }
+}
+
 bool stateTimeout(SwitchT *sw)
 {
   return (sw->autoState && strcmp(sw->autoStateValue, sw->stateControl) != 0 && (sw->lastTimeChange + sw->autoStateDelay) < millis());
 }
 boolean positionDone(SwitchT *sw, int currentPercentage)
 {
-  return ((sw->positionControlCover == 0 || sw->positionControlCover == 100 || sw->percentageRequest == sw->positionControlCover) && currentPercentage > 0 && strcmp(sw->autoStateValue, sw->stateControl) != 0);
+  return strcmp( sw->family,FAMILY_COVER) == 0 && ((sw->positionControlCover == 0 || sw->positionControlCover == 100 || sw->percentageRequest == sw->positionControlCover) && currentPercentage > 0 && strcmp(sw->autoStateValue, sw->stateControl) != 0);
 }
 void loopSwitches()
 {
@@ -480,8 +496,10 @@ void loopSwitches()
 
     if (stateTimeout(sw) || positionDone(sw, currentPercentage))
     {
+      
       sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolEnd);
       sw->percentageRequest = INT_MAX;
+      logger(SWITCHES_TAG,"AUTO STATE MODE set change switch to -> "+String(statesPool[sw->statePoolIdx]));
       stateSwitch(sw, statesPool[sw->statePoolIdx]);
     }
   }
