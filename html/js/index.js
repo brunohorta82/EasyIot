@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.1.84"
 };
 let switches = [];
 let sortByProperty = function (property) {
@@ -527,21 +527,24 @@ function buildSwitch(obj) {
         removeFromSelect('mode_' + obj.id, 4);
         removeFromSelect('mode_' + obj.id, 5);
     }
+    setOptionOnSelect('family_' + obj.id, obj.family);
+    applySwitchFamily(obj.id);
     setOptionOnSelect('typeControl_' + obj.id, obj.typeControl);
     setOptionOnSelect('mode_' + obj.id, obj.mode);
-    setOptionOnSelect('family_' + obj.id, obj.family);
+    applySwitchMode(obj.id);
+
     setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
     setOptionOnSelect('secondaryGpioControl_' + obj.id, obj.secondaryGpioControl);
     setOptionOnSelect('primaryGpio_' + obj.id, obj.primaryGpio);
     setOptionOnSelect('secondaryGpio_' + obj.id, obj.secondaryGpio);
     setOptionOnSelect('autoStateValue_' + obj.id, obj.autoStateValue);
-    applySwitchFamily(obj.id);
+
     loadsLanguage(localStorage.getItem('lang'));
 }
 
 function stateSwitch(id, state) {
     let toggleState = state;
-    if ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF")) {
+    if ((toggleState ==="ON" || toggleState==="OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
         toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
     }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;

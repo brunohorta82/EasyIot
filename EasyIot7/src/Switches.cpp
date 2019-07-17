@@ -61,8 +61,6 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   doc["mqttStateTopic"] =  String(baseTopic + "/state");
   strlcpy(sw.mqttCommandTopic, String(baseTopic + "/set").c_str(), sizeof(sw.mqttCommandTopic));
   strlcpy(sw.mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(sw.mqttStateTopic));
-  strlcpy(sw.mqttPositionCommandTopic, String(baseTopic + "/setposition").c_str(), sizeof(sw.mqttPositionCommandTopic));
-  strlcpy(sw.mqttPositionStateTopic, String(baseTopic + "/position").c_str(), sizeof(sw.mqttPositionStateTopic));
   sw.primaryGpioControl = doc["primaryGpioControl"] | NO_GPIO;
   sw.secondaryGpioControl = doc["secondaryGpioControl"] | NO_GPIO;
   if (sw.pullup)
@@ -82,6 +80,10 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
     sw.statePoolEnd = doc["statePoolEnd"] | 4;
     sw.positionControlCover = doc["positionControlCover"] | 0;
     sw.lastPercentage = doc["lastPercentage"] | 0;
+    strlcpy(sw.mqttPositionCommandTopic, String(baseTopic + "/setposition").c_str(), sizeof(sw.mqttPositionCommandTopic));
+    strlcpy(sw.mqttPositionStateTopic, String(baseTopic + "/position").c_str(), sizeof(sw.mqttPositionStateTopic));
+    doc["mqttPositionCommandTopic"] = String(baseTopic + "/setposition");
+    doc["mqttPositionStateTopic"] =  String(baseTopic + "/position");
   }
   else if (String(sw.family).equals(String(FAMILY_LOCK)))
   {

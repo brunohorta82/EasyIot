@@ -8,7 +8,7 @@ bool STORE_CONFIG = false;
 bool WIFI_SCAN = false;
 bool WIFI_RELOAD = false;
 bool restart = false;
-
+String configRaw = "";
 Config config;
 struct Config &getAtualConfig()
 {
@@ -128,7 +128,8 @@ String normalize(String inputStr)
 
 String getConfigStatus()
 {
-  String object = "";
+  if(!configRaw.equals(""))return configRaw;
+  
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(CONFIG_FILENAME, "r+");
@@ -140,13 +141,13 @@ String getConfigStatus()
     }
     while (file.available())
     {
-      object += (char)file.read();
+      configRaw += (char)file.read();
     }
     Serial.println();
     file.close();
   }
   SPIFFS.end();
-  return object;
+  return configRaw;
 }
 void loadStoredConfiguration()
 {
@@ -215,6 +216,7 @@ void saveConfiguration()
     file.close();
   }
   SPIFFS.end();
+  configRaw = "";
 }
 void updateConfig(JsonObject doc, bool persist)
 {
