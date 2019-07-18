@@ -37,6 +37,7 @@ void initSwitchesMqttAndDiscovery()
 }
 JsonObject updateSwitches(JsonObject doc, bool persist)
 {
+  logger(SWITCHES_TAG,"Update Environment Switches");
   String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
   if(persist)
   removeSwitch(newId, false);
@@ -46,7 +47,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
   sw.primaryGpio = doc["primaryGpio"] | NO_GPIO;
   sw.secondaryGpio = doc["secondaryGpio"] | NO_GPIO;
-  sw.timeBetweenStates = doc["timeBetweenStates"] | 60000;
+  sw.timeBetweenStates = doc["timeBetweenStates"] | 0;
   sw.autoState = (doc["autoStateDelay"] | 0) > 0 && strlen(doc["autoStateValue"] | "") > 0 ;
   sw.autoStateDelay = doc["autoStateDelay"] | 0;
   strlcpy(sw.autoStateValue, doc.getMember("autoStateValue").as<String>().c_str(), sizeof(sw.autoStateValue));
@@ -102,9 +103,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   sw.lastPrimaryGpioState = doc["lastPrimaryGpioState"] | true;
   sw.lastSecondaryGpioState = doc["lastSecondaryGpioState"] | true;
   sw.lastTimeChange = doc["lastTimeChange"] | 0;
-  sw.percentageRequest = doc["percentageRequest"] | INT_MAX;
-  sw.onTime = doc["onTime"] | 0;
-
+  sw.percentageRequest = doc["percentageRequest"] | -1;
   switchs.push_back(sw);
   if (persist)
   {
@@ -194,7 +193,6 @@ void saveSwitchs()
 
         sdoc["lastTimeChange"] = sw.lastTimeChange;
 
-        sdoc["onTime"] = sw.onTime;
         sdoc["statePoolIdx"] = sw.statePoolIdx;
         sdoc["statePoolStart"] = sw.statePoolStart;
         sdoc["statePoolEnd"] = sw.statePoolEnd;
@@ -278,6 +276,7 @@ void stateSwitch(SwitchT *switchT, String state)
   {
     strlcpy(switchT->stateControl, PAYLOAD_OPEN, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_OPEN, sizeof(switchT->mqttPayload));
+    switchT->percentageRequest = 100;
     if (switchT->typeControl == TYPE_RELAY)
     {
       pinMode(switchT->primaryGpioControl, OUTPUT);
@@ -294,6 +293,7 @@ void stateSwitch(SwitchT *switchT, String state)
   {
     strlcpy(switchT->stateControl, PAYLOAD_STOP, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_STOP, sizeof(switchT->mqttPayload));
+    switchT->percentageRequest = -1;
     if (switchT->typeControl == TYPE_RELAY)
     {
       pinMode(switchT->primaryGpioControl, OUTPUT);
@@ -306,6 +306,7 @@ void stateSwitch(SwitchT *switchT, String state)
   {
     strlcpy(switchT->stateControl, PAYLOAD_CLOSE, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, PAYLOAD_STATE_CLOSE, sizeof(switchT->mqttPayload));
+    switchT->percentageRequest = 0;
     if (switchT->typeControl == TYPE_RELAY)
     {
       pinMode(switchT->primaryGpioControl, OUTPUT);
@@ -367,12 +368,12 @@ void stateSwitch(SwitchT *switchT, String state)
     switchT->percentageRequest = state.toInt();
     if (switchT->positionControlCover > switchT->percentageRequest)
     {
-      switchT->statePoolIdx = 2;
+      switchT->statePoolIdx = OPEN_IDX;
       stateSwitch(switchT, statesPool[switchT->statePoolIdx]);
     }
     else
     {
-      switchT->statePoolIdx = 4;
+      switchT->statePoolIdx = CLOSE_IDX;
       stateSwitch(switchT, statesPool[switchT->statePoolIdx]);
     }
   }
@@ -380,7 +381,7 @@ void stateSwitch(SwitchT *switchT, String state)
   sendToServerEvents("states",String("{\"id\":\"")+String(switchT->id)+String("\",\"state\":\"")+String(switchT->mqttPayload)+String("\"}"));
   switchT->lastTimeChange = millis();
   switchT->statePoolIdx = findPoolIdx(switchT->stateControl,switchT->statePoolStart, switchT->statePoolEnd);
-  requestSaveSwitchs= true;
+  requestSaveSwitchs= String(PAYLOAD_OFF).equals(state) || String(PAYLOAD_ON).equals(state) || String(PAYLOAD_STOP).equals(state);
 }
 void stateSwitchById(String id, String state){
   for (unsigned int i = 0; i < switchs.size(); i++)
@@ -412,7 +413,31 @@ bool stateTimeout(SwitchT *sw)
 }
 boolean positionDone(SwitchT *sw, int currentPercentage)
 {
-  return strcmp( sw->family,FAMILY_COVER) == 0 && ((sw->positionControlCover == 0 || sw->positionControlCover == 100 || sw->percentageRequest == sw->positionControlCover) && currentPercentage > 0 && strcmp(sw->autoStateValue, sw->stateControl) != 0);
+  if(strcmp( sw->family,FAMILY_COVER) != 0){
+    Serial.println("-------------family ");
+    return false;
+  }
+  if(strcmp(PAYLOAD_STOP, sw->stateControl) == 0){
+  return false;
+  }
+  if(sw->timeBetweenStates == 0){
+    Serial.println("----------timeBetweenStates==0 ");
+    return false;
+  }
+  if(sw->positionControlCover >= 100 && strcmp(PAYLOAD_OPEN, sw->stateControl) == 0){
+    Serial.println("----------->= 100 ");
+    return true;
+  }
+    if(sw->positionControlCover <= 0 && strcmp(PAYLOAD_CLOSE, sw->stateControl) == 0){
+       Serial.println("-------------<= 0 ");
+    return true;
+  }
+  if(sw->percentageRequest == sw->positionControlCover){
+    Serial.println("-------------percentageRequest");
+    return true;
+  }
+  return false;
+
 }
 void loopSwitches()
 {
@@ -454,17 +479,17 @@ void loopSwitches()
       case MODE_DUAL_SWITCH:
         if (primaryValue == true && secondaryValue == true)
         {
-          sw->statePoolIdx = sw->statePoolIdx == 2 ? 3 : 5;
+          sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_2_IDX : STOP_1_IDX;
           stateSwitch(sw, statesPool[sw->statePoolIdx]);
         }
         else if (primaryGpioEvent && !primaryValue)
         {
-          sw->statePoolIdx = 2;
+          sw->statePoolIdx = OPEN_IDX;
           stateSwitch(sw, statesPool[sw->statePoolIdx]);
         }
         else if (secondaryGpioEvent && !secondaryValue)
         {
-          sw->statePoolIdx = 4;
+          sw->statePoolIdx = CLOSE_IDX;
           stateSwitch(sw, statesPool[sw->statePoolIdx]);
         }
         break;
@@ -474,35 +499,43 @@ void loopSwitches()
     }
 
     int currentPercentage = 0;
-    if (digitalRead(sw->primaryGpioControl))
+    if (sw->timeBetweenStates  != 0 && digitalRead(sw->primaryGpioControl))
     {
-      if (sw->onTime == 0)
-      {
-        sw->onTime = millis();
-      }
-      long currentOffset = sw->timeBetweenStates - millis() - sw->onTime;
+      long currentOffset =  ((sw->lastPercentage* sw->timeBetweenStates) /100) - (millis() - sw->lastTimeChange);
+      logger("currentOffset",String(currentOffset));
       int position = max(0l, (long)(sw->timeBetweenStates - currentOffset));
+      logger("position",String(position));
       currentPercentage = (position * 100) / sw->timeBetweenStates;
+      logger("currentPercentage",String(currentPercentage));
+      
       if (digitalRead(sw->secondaryGpioControl))
       {
-        sw->positionControlCover = max(0, sw->lastPercentage - currentPercentage);
+        sw->positionControlCover = max(0, sw->positionControlCover - currentPercentage);  
       }
       else
       {
-        sw->positionControlCover = min(100, currentPercentage + sw->lastPercentage);
+       sw->positionControlCover = min(100, sw->positionControlCover + currentPercentage)  ;
       }
+      logger("positionControlCover",String(sw->positionControlCover));
     }
     else
     {
-      sw->onTime = 0;
       sw->lastPercentage = sw->positionControlCover;
     }
 
-    if (stateTimeout(sw) || positionDone(sw, currentPercentage))
+    if (stateTimeout(sw))
     {
       
       sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolEnd);
-      sw->percentageRequest = INT_MAX;
+      sw->percentageRequest = -1;
+      logger(SWITCHES_TAG,"AUTO STATE MODE set change switch to -> "+String(statesPool[sw->statePoolIdx]));
+      stateSwitch(sw, statesPool[sw->statePoolIdx]);
+    }
+    if (positionDone(sw, currentPercentage))
+    {
+      
+      sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_2_IDX : STOP_1_IDX;
+      sw->percentageRequest = -1;
       logger(SWITCHES_TAG,"AUTO STATE MODE set change switch to -> "+String(statesPool[sw->statePoolIdx]));
       stateSwitch(sw, statesPool[sw->statePoolIdx]);
     }

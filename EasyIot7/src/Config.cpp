@@ -228,6 +228,7 @@ void updateConfig(JsonObject doc, bool persist)
   if (persist || config.firmware  !=  FIRMWARE_VERSION)
   {
      config.firmware = FIRMWARE_VERSION;
+     doc["firmware"] = FIRMWARE_VERSION;
     saveConfiguration();
   }
   if (reloadWifi)

@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.1.84"
 };
 var switches = [];
 let sortByProperty = function (property) {
@@ -326,10 +326,10 @@ function applySwitchFamily(id) {
 function applySwitchMode(id) {
     if ($('#family_' + id).val() == "cover") {
         if (($('#mode_' + id).val() == 2)) {
-            setOptionOnSelect('secondaryGpio_' + id, 99);
-            hide("secondaryGpioRow_" + id)
+            setOptionOnSelect('secondaryGpioControlRow_' + id, 99);
+            hide("secondaryGpioControlRow_" + id)
         }else {
-            show("secondaryGpioRow_" + id)
+            show("secondaryGpioControlRow_" + id)
         }
     }
 
@@ -780,11 +780,11 @@ function wifiStatus() {
             var percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
             if(config) {
                 $('#mqtt_lbl').text(config.mqttIpDns);
-                if (response.mqttConnected) {
-                    $('#mqtt-state').text(showText("ligado", "connected"));
-                } else {
-                    $('#mqtt-state').text(showText("desligado", "disconnected"));
-                }
+            }
+            if (response.mqttConnected) {
+                $('#mqtt-state').text(showText("ligado", "connected"));
+            } else {
+                $('#mqtt-state').text(showText("desligado", "disconnected"));
             }
             $('#wifi-signal').text(percentage + "%");
         }, error: function () {
@@ -802,7 +802,7 @@ function buildSwitchTemplate() {
         "family": "switch",
         "primaryGpio": 99,
         "secondaryGpio": 99,
-        "timeBetweenStates": 60000,
+        "timeBetweenStates": 0,
         "autoStateDelay": 0,
         "autoStateValue": "",
         "typeControl": 2,

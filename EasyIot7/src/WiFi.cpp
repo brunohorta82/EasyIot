@@ -177,7 +177,7 @@ void loopWiFi(){
 }
 String wifiJSONStatus(){
   String wifi = "";
-  const size_t CAPACITY = JSON_OBJECT_SIZE(12)+350;
+  const size_t CAPACITY = JSON_OBJECT_SIZE(13)+400;
   StaticJsonDocument<CAPACITY> doc;
   JsonObject object = doc.to<JsonObject>();
   object["wifiIp"] = WiFi.localIP().toString();
@@ -191,6 +191,8 @@ String wifiJSONStatus(){
   object["channel"] =  WiFi.channel();
   object["mode"] = (int) WiFi.getMode();
   object["mqttConnected"] = getMqttState();
+  object["freeHeap"] = String(ESP.getFreeHeap());
+  Serial.println(String(ESP.getFreeHeap()));
   serializeJson(doc,wifi);
   return wifi;
 }

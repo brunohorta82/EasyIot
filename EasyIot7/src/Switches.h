@@ -22,6 +22,8 @@
 #define PAYLOAD_UNLOCK "UNLOCK"
 #define PAYLOAD_STATE_UNLOCK "UNLOCK"
 
+
+
 #define FAMILY_LIGHT "light"
 #define FAMILY_SWITCH "switch"
 #define FAMILY_COVER "cover"
@@ -36,6 +38,14 @@
 #define MODE_DUAL_PUSH 5
 
 #define SWITCHES_CONFIG_FILENAME  "switches.json"
+#define OFF_IDX 0
+#define ON_IDX 1
+#define STOP_1_IDX 2
+#define OPEN_IDX 3
+#define STOP_2_IDX 4
+#define CLOSE_IDX 5
+#define LOCK_IDX 6
+#define UNLOCK_IDX 7
 const String statesPool[] = {"OFF", "ON","STOP","OPEN", "STOP", "CLOSE","LOCK","UNLOCK"};
 
 struct SwitchT{
@@ -72,13 +82,12 @@ struct SwitchT{
     
     //CONTROL VARIABLES
     char stateControl[8]; //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
-    int positionControlCover; //COVER PERCENTAGE
+    int positionControlCover; //COVER PERCENTAGE 100% = open, 0% close
     int lastPercentage;
     bool lastPrimaryGpioState;
     bool lastSecondaryGpioState;
     unsigned long lastTimeChange;
     int percentageRequest;
-    unsigned long onTime;
     int statePoolIdx;
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
