@@ -108,6 +108,6 @@ void addToDiscovery(SwitchT *sw)
 
 void removeFromDiscovery(SwitchT *sw)
 {
-  removeSwitchFromAlexa(sw->alexaId);
+  removeSwitchFromAlexa(sw->name);
   publishOnMqtt(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config", "", true);
 }

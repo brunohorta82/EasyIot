@@ -84,7 +84,7 @@ struct SwitchT{
     unsigned int statePoolEnd;
     
 };
-
+void stateSwitchByName(const char* name, String state,unsigned char value);
 void loopSwitches();
 void stateSwitch(SwitchT *switchT, String state);
 void loadStoredSwitchs();
@@ -95,7 +95,7 @@ void mqttSwitchControl(String topic, String payload);
 void initSwitchesMqttAndDiscovery();
 void sendToServerEvents(String topic, String payload);
 void stateSwitchById(String id, String state);
-void stateSwitchByAlexaId(unsigned char id, String state,unsigned char value);
+
 String getSwitchesConfigStatus();
 
 

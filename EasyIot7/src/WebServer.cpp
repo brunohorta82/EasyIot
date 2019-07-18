@@ -75,7 +75,7 @@ void startAlexaDiscovery()
   fauxmo.enable(true);
   fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
     logger("[ALEXA]","Device id "+String(device_id)+" "+String(device_name)+" "+String(value));
-    stateSwitchByAlexaId(device_id, state ? "ON" : "OFF",value );
+    stateSwitchByName(device_name, state ? "ON" : "OFF",value );
   });
 }
 
@@ -214,8 +214,8 @@ unsigned char addSwitchToAlexa(char *name){
     fauxmo.removeDevice(name);
    return fauxmo.addDevice(name);
 }
-void removeSwitchFromAlexa(unsigned char id){
-  fauxmo.removeDevice(id);
+void removeSwitchFromAlexa( char* name){
+  fauxmo.removeDevice(name);
 }
 void sendToServerEvents(String topic, String payload)
 {

@@ -198,6 +198,7 @@ void saveConfiguration()
     file.close();
   }
   SPIFFS.end();
+  configRaw = "";
   serializeJson(doc, configRaw);
 }
 void updateConfig(JsonObject doc, bool persist)
@@ -237,5 +238,6 @@ void updateConfig(JsonObject doc, bool persist)
   {
     setupMQTT();
   }
+  configRaw = "";
   serializeJson(doc, configRaw);
 }

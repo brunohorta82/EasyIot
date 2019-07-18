@@ -38,9 +38,8 @@ void initSwitchesMqttAndDiscovery()
 JsonObject updateSwitches(JsonObject doc, bool persist)
 {
   String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
-  if(persist){
-    removeSwitch(newId, false);
-  }
+  if(persist)
+  removeSwitch(newId, false);
   SwitchT sw;
   strlcpy(sw.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(sw.id));
   strlcpy(sw.name, doc.getMember("name").as<String>().c_str(), sizeof(sw.name));
@@ -48,7 +47,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   sw.primaryGpio = doc["primaryGpio"] | NO_GPIO;
   sw.secondaryGpio = doc["secondaryGpio"] | NO_GPIO;
   sw.timeBetweenStates = doc["timeBetweenStates"] | 60000;
-  sw.autoState = doc["autoState"] | false;
+  sw.autoState = (doc["autoStateDelay"] | 0) > 0 && strlen(doc["autoStateValue"] | "") > 0 ;
   sw.autoStateDelay = doc["autoStateDelay"] | 0;
   strlcpy(sw.autoStateValue, doc.getMember("autoStateValue").as<String>().c_str(), sizeof(sw.autoStateValue));
   sw.typeControl = doc["typeControl"] | TYPE_MQTT;
@@ -113,7 +112,6 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   }
   addToDiscovery(&sw);
   doc["id"] = String(sw.id);
-  doc["idAlexa"] = sw.alexaId;
   stateSwitch(&sw,sw.stateControl);
   return doc;
 }
@@ -227,7 +225,6 @@ String getSwitchesConfigStatus()
 
     if (!file)
     {
-      Serial.println(F("Failed to read file"));
       return "[]";
     }
     while (file.available())
@@ -393,15 +390,18 @@ void stateSwitchById(String id, String state){
     }
   }
 }
-void stateSwitchByAlexaId(unsigned char id, String state,unsigned char value){
+void stateSwitchByName(const char* name, String state,unsigned char value){
 for (unsigned int i = 0; i < switchs.size(); i++)
   {
-    if(switchs[i].alexaId == id){
+    if(strcasecmp(switchs[i].name,name)== 0){
       if(strcmp(FAMILY_COVER,switchs[i].family) == 0){
         stateSwitch(&switchs[i],strcmp(PAYLOAD_ON,state.c_str()) == 0 ? PAYLOAD_OPEN : PAYLOAD_CLOSE);
       }else if(strcmp(FAMILY_LIGHT,switchs[i].family) == 0 || strcmp(FAMILY_SWITCH,switchs[i].family) == 0){
+      
         stateSwitch(&switchs[i],state);
-      }  
+      }
+      
+      
     }
   }
 }

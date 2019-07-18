@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.84"
+    baseUrl: ""
 };
 var switches = [];
 let sortByProperty = function (property) {
