@@ -129,7 +129,9 @@ void publishOnMqtt(String topic, String payload, bool retain)
 
     retries = 0;
 }
-
+bool getMqttState(){
+    return mqttClient.connected();
+}
 void subscribeOnMqtt(String topic)
 {
     mqttClient.subscribe(topic.c_str());

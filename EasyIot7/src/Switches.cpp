@@ -38,8 +38,9 @@ void initSwitchesMqttAndDiscovery()
 JsonObject updateSwitches(JsonObject doc, bool persist)
 {
   String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
-  if(persist)
-  removeSwitch(newId, false);
+  if(persist){
+    removeSwitch(newId, false);
+  }
   SwitchT sw;
   strlcpy(sw.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(sw.id));
   strlcpy(sw.name, doc.getMember("name").as<String>().c_str(), sizeof(sw.name));
@@ -112,6 +113,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   }
   addToDiscovery(&sw);
   doc["id"] = String(sw.id);
+  doc["idAlexa"] = sw.alexaId;
   stateSwitch(&sw,sw.stateControl);
   return doc;
 }
@@ -398,11 +400,8 @@ for (unsigned int i = 0; i < switchs.size(); i++)
       if(strcmp(FAMILY_COVER,switchs[i].family) == 0){
         stateSwitch(&switchs[i],strcmp(PAYLOAD_ON,state.c_str()) == 0 ? PAYLOAD_OPEN : PAYLOAD_CLOSE);
       }else if(strcmp(FAMILY_LIGHT,switchs[i].family) == 0 || strcmp(FAMILY_SWITCH,switchs[i].family) == 0){
-      
         stateSwitch(&switchs[i],state);
-      }
-      
-      
+      }  
     }
   }
 }

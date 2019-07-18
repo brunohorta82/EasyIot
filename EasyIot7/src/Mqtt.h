@@ -12,4 +12,5 @@ String getAvailableTopic();
 void setupMQTT();
 void loopMqtt();
 void unsubscribeOnMqtt(String topic);
+bool getMqttState();
 #endif

@@ -4,6 +4,7 @@
 #include <JustWifi.h>
 #include "Config.h"
 #include "WebServer.h"
+#include "Mqtt.h"
 void setupWiFi();
 void loopWiFi();
 void reloadWiFiConfig();

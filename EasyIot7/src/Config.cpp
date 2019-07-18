@@ -128,26 +128,7 @@ String normalize(String inputStr)
 
 String getConfigStatus()
 {
-  if(!configRaw.equals(""))return configRaw;
-  
-  if (SPIFFS.begin())
-  {
-    File file = SPIFFS.open(CONFIG_FILENAME, "r+");
-
-    if (!file)
-    {
-      Serial.println(F("Failed to read file"));
-      return "{}";
-    }
-    while (file.available())
-    {
-      configRaw += (char)file.read();
-    }
-    Serial.println();
-    file.close();
-  }
-  SPIFFS.end();
-  return configRaw;
+return configRaw;
 }
 void loadStoredConfiguration()
 {
@@ -172,7 +153,8 @@ void loadStoredConfiguration()
 }
 
 void saveConfiguration()
-{
+{  const size_t CAPACITY = JSON_OBJECT_SIZE(26) + 512;
+    DynamicJsonDocument doc(CAPACITY);
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(CONFIG_FILENAME, "w+");
@@ -182,8 +164,6 @@ void saveConfiguration()
     }
     else
     {
-      const size_t CAPACITY = JSON_OBJECT_SIZE(24) + 512;
-      DynamicJsonDocument doc(CAPACITY);
       doc["nodeId"] = config.nodeId;
       doc["homeAssistantAutoDiscoveryPrefix"] = config.homeAssistantAutoDiscoveryPrefix;
       doc["mqttIpDns"] = config.mqttIpDns;
@@ -204,6 +184,8 @@ void saveConfiguration()
       doc["hostname"] = config.hostname;
       doc["apName"] = config.apName;
       doc["firmware"] = config.firmware;
+      doc["chipId"] = String(ESP.getChipId());
+      doc["mac"] = WiFi.softAPmacAddress();
       if (serializeJson(doc, file) == 0)
       {
         logger(CONFIG_TAG, "Failed to write Config into file");
@@ -216,7 +198,7 @@ void saveConfiguration()
     file.close();
   }
   SPIFFS.end();
-  configRaw = "";
+  serializeJson(doc, configRaw);
 }
 void updateConfig(JsonObject doc, bool persist)
 {
@@ -241,9 +223,10 @@ void updateConfig(JsonObject doc, bool persist)
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
   strlcpy(config.hostname, getHostname().c_str(), sizeof(config.hostname));
   strlcpy(config.hardware, HARDWARE, sizeof(config.firmware));
-  config.firmware = FIRMWARE_VERSION;
-  if (persist)
+  config.firmware = doc["firmware"] | FIRMWARE_VERSION;
+  if (persist || config.firmware  !=  FIRMWARE_VERSION)
   {
+     config.firmware = FIRMWARE_VERSION;
     saveConfiguration();
   }
   if (reloadWifi)
@@ -254,4 +237,5 @@ void updateConfig(JsonObject doc, bool persist)
   {
     setupMQTT();
   }
+  serializeJson(doc, configRaw);
 }

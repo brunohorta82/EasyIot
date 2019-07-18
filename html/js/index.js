@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.28"
+    baseUrl: "http://192.168.1.84"
 };
 var switches = [];
 let sortByProperty = function (property) {
@@ -70,6 +70,8 @@ var WORDS_EN = {
     "light": "Light",
     "cover": "Cover",
     "lock": "Lock",
+    "disconnected":"disconnected",
+    "dconnected":"connected",
     "normal": "Generic",
     "choose":"select",
     "push": "Push",
@@ -111,6 +113,8 @@ var WORDS_PT = {
     "password": "Palavra Passe",
     "yes": "Sim",
     "no": "Não",
+    "disconnected":"desligado",
+    "dconnected":"ligado",
     "netmask": "Mascara de Rede",
     "system": "Sistema",
     "name": "Nome",
@@ -168,7 +172,9 @@ function loadsLanguage(lang) {
 function showMessage(pt, en) {
     localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
 }
-
+function showText(pt, en) {
+  return  localStorage.getItem('lang').toString() === "PT" ? pt : en;
+}
 function loadConfig() {
     const targetUrl = endpoint.baseUrl + "/config";
     $.ajax({
@@ -208,29 +214,32 @@ function loadDevice(func, e, next) {
 }
 
 function fillConfig() {
-    if (!this.config) return;
-    $("#firmwareVersion").text(this.config.firmware);
-    $(".bh-model").text(this.config.hardware);
+    if (!config) return;
+    $("#firmwareVersion").text(config.firmware);
+    $(".bh-model").text(config.hardware);
     $(".bh-onofre-item").removeClass("hide");
-    $("#version_lbl").text(this.config.firmware);
-    $('input[name="nodeId"]').val(this.config.nodeId);
-    $('input[name="mqttIpDns"]').val(this.config.mqttIpDns);
-    $('input[name="mqttUsername"]').val(this.config.mqttUsername);
-    $('select[name="homeAssistantAutoDiscovery"] option[value="' + this.config.homeAssistantAutoDiscovery + '"]').attr("selected", "selected");
-    $('input[name="homeAssistantAutoDiscoveryPrefix"]').val(this.config.homeAssistantAutoDiscoveryPrefix);
-    $('input[name="mqttPassword"]').val(this.config.mqttPassword);
-    $('input[name="wifiSSID"]').val(this.config.wifiSSID);
-    $('input[name="wifiSecret"]').val(this.config.wifiSecret);
+    $("#version_lbl").text(config.firmware);
+    $("#lbl-chip").text(config.chipId);
+    $("#lbl-mac").text(config.mac);
+    $('input[name="nodeId"]').val(config.nodeId);
+    $('input[name="mqttIpDns"]').val(config.mqttIpDns);
+    $('#mqtt_lbl').text(config.mqttIpDns);
+    $('input[name="mqttUsername"]').val(config.mqttUsername);
+    $('select[name="homeAssistantAutoDiscovery"] option[value="' + config.homeAssistantAutoDiscovery + '"]').attr("selected", "selected");
+    $('input[name="homeAssistantAutoDiscoveryPrefix"]').val(config.homeAssistantAutoDiscoveryPrefix);
+    $('input[name="mqttPassword"]').val(config.mqttPassword);
+    $('input[name="wifiSSID"]').val(config.wifiSSID);
+    $('input[name="wifiSecret"]').val(config.wifiSecret);
     let staticIp = document.getElementById("staticIp");
     if (staticIp) {
         staticIp.checked = !config.staticIp;
     }
-    $('input[name="wifiIp"]').val(this.config.wifiIp);
-    $('input[name="wifiMask"]').val(this.config.wifiMask);
-    $('input[name="wifiGw"]').val(this.config.wifiGw);
-    $('input[name="apSecret"]').val(this.config.apSecret);
-    $('select[name="notificationInterval"] option[value="' + this.config.notificationInterval + '"]').attr("selected", "selected");
-    $('select[name="directionCurrentDetection"] option[value="' + this.config.directionCurrentDetection + '"]').attr("selected", "selected");
+    $('input[name="wifiIp"]').val(config.wifiIp);
+    $('input[name="wifiMask"]').val(config.wifiMask);
+    $('input[name="wifiGw"]').val(config.wifiGw);
+    $('input[name="apSecret"]').val(config.apSecret);
+    $('select[name="notificationInterval"] option[value="' + config.notificationInterval + '"]').attr("selected", "selected");
+    $('select[name="directionCurrentDetection"] option[value="' + config.directionCurrentDetection + '"]').attr("selected", "selected");
     $('#ff').prop('disabled', false);
 }
 
@@ -642,7 +651,7 @@ function storeConfig() {
         contentType: "application/json",
         data: JSON.stringify(config),
         success: function (response) {
-            this.config = response;
+            config = response;
             fillConfig();
             showMessage("Configuração Guardada", "Config Stored")
         },
@@ -769,6 +778,14 @@ function wifiStatus() {
                 $('input[name="wifiGw"]').val(response.wifiGw);
             }
             var percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
+            if(config) {
+                $('#mqtt_lbl').text(config.mqttIpDns);
+                if (response.mqttConnected) {
+                    $('#mqtt-state').text(showText("ligado", "connected"));
+                } else {
+                    $('#mqtt-state').text(showText("desligado", "disconnected"));
+                }
+            }
             $('#wifi-signal').text(percentage + "%");
         }, error: function () {
             $('#wifi-signal').text("0%");
