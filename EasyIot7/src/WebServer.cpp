@@ -211,6 +211,7 @@ void setupWebserverAsync()
   startAlexaDiscovery();
 }
 unsigned char addSwitchToAlexa(char *name){
+    fauxmo.removeDevice(name);
    return fauxmo.addDevice(name);
 }
 void removeSwitchFromAlexa(unsigned char id){

@@ -96,6 +96,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
     sw.statePoolEnd = doc["statePoolEnd"] | 1;
   }
   sw.statePoolIdx = doc["statePoolIdx"] | sw.statePoolStart;
+
   strlcpy(sw.mqttPayload, statesPool[sw.statePoolIdx].c_str(), sizeof(sw.mqttPayload));
   strlcpy(sw.stateControl, statesPool[sw.statePoolIdx].c_str(), sizeof(sw.stateControl));
   sw.lastPrimaryGpioState = doc["lastPrimaryGpioState"] | true;
@@ -183,12 +184,13 @@ void saveSwitchs()
           sdoc["positionControlCover"] = sw.positionControlCover; //COVER PERCENTAGE
 
           sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
-          sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
+          
         }
         sdoc["timeBetweenStates"] = sw.timeBetweenStates;
         sdoc["primaryGpioControl"] = sw.primaryGpioControl;
 
         sdoc["lastPrimaryGpioState"] = sw.lastPrimaryGpioState;
+        sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
 
         sdoc["lastTimeChange"] = sw.lastTimeChange;
 
@@ -378,6 +380,7 @@ void stateSwitch(SwitchT *switchT, String state)
   publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttRetain);
   sendToServerEvents("states",String("{\"id\":\"")+String(switchT->id)+String("\",\"state\":\"")+String(switchT->mqttPayload)+String("\"}"));
   switchT->lastTimeChange = millis();
+  switchT->statePoolIdx = findPoolIdx(switchT->stateControl,switchT->statePoolStart, switchT->statePoolEnd);
   requestSaveSwitchs= true;
 }
 void stateSwitchById(String id, String state){
@@ -423,8 +426,8 @@ void loopSwitches()
 
     SwitchT *sw = &switchs[i];
 
-    bool primaryValue = sw->primaryGpio == 99 ? false : digitalRead(sw->primaryGpio);
-    bool secondaryValue = sw->secondaryGpio == 99 ? false : digitalRead(sw->secondaryGpio);
+    bool primaryValue = sw->primaryGpio == 99 ? true : digitalRead(sw->primaryGpio);
+    bool secondaryValue = sw->secondaryGpio == 99 ? true : digitalRead(sw->secondaryGpio);
     unsigned long currentTime = millis();
 
     bool primaryGpioEvent = primaryValue != sw->lastPrimaryGpioState;

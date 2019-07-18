@@ -1,7 +1,7 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.84"
+    baseUrl: "http://192.168.187.28"
 };
-let switches = [];
+var switches = [];
 let sortByProperty = function (property) {
     return function (x, y) {
         return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
@@ -59,6 +59,8 @@ var WORDS_EN = {
     "system": "System",
     "name": "Name",
     "restart": "Restart",
+    "seconds":"seconds",
+    "in":"in",
     "reset-factory": "Load Factory Defaults",
     "switches": "Switches",
     "remove": "Remove",
@@ -69,6 +71,7 @@ var WORDS_EN = {
     "cover": "Cover",
     "lock": "Lock",
     "normal": "Generic",
+    "choose":"select",
     "push": "Push",
     "dual-push": "Dual Push",
     "dual-normal": "Dual Generic",
@@ -102,6 +105,7 @@ var WORDS_PT = {
     "install-new-version": "Instalar nova versão",
     "version": "Versão",
     "save": "Guardar",
+    "choose":"escolher",
     "clean-fields": "Limpar todos os campos",
     "username": "Utilizador",
     "password": "Palavra Passe",
@@ -110,6 +114,8 @@ var WORDS_PT = {
     "netmask": "Mascara de Rede",
     "system": "Sistema",
     "name": "Nome",
+    "in":"em",
+    "seconds":"segundos",
     "restart": "Reiniciar",
     "reset-factory": "Carregar Configuração de Fábrica",
     "switches": "Interruptores",
@@ -233,6 +239,7 @@ function toggleActive(menu) {
     $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
     $(".content").load(menu + ".html", function () {
         if (menu === "devices") {
+            switches = [];
             loadDevice(fillSwitches, "switches", function () {
                 // loadDevice(fillSensors, "sensors", function () {
                 // });
@@ -247,12 +254,12 @@ function toggleActive(menu) {
 }
 
 function fillSwitches(payload) {
+    switches = payload;
     if (!payload) return;
     $('#switch_config').empty();
     for (let obj of payload.sort(sortByProperty('name'))) {
         buildSwitch(obj);
     }
-
 }
 
 function applySwitchFamily(id) {
@@ -267,15 +274,22 @@ function applySwitchFamily(id) {
     hide("btn_open_"+id);
     removeFromSelect('mode_' + id, 4);
     removeFromSelect('mode_' + id, 5);
-
+    removeFromSelect('autoStateValue_' + id, "OPEN");
+    removeFromSelect('autoStateValue_' + id,  "CLOSE");
+    removeFromSelect('autoStateValue_' + id,  "STOP");
+    removeFromSelect('autoStateValue_' + id, "ON");
+    removeFromSelect('autoStateValue_' + id, "OFF");
+    removeFromSelect('autoStateValue_' + id, "UNLOCK");
+    removeFromSelect('autoStateValue_' + id, "LOCK");
     if ($('#family_' + id).val() == "cover") {
-
         show("btn_close_"+id);
         show("btn_stop_"+id);
         show("btn_open_"+id);
         addToSelect('mode_' + id, "lang-dual-normal", 4);
         addToSelect('mode_' + id, "lang-dual-push", 5);
-        removeFromSelect('mode_' + id, 1);
+        addToSelect('autoStateValue_' + id, "lang-open", "OPEN");
+        addToSelect('autoStateValue_' + id, "lang-close", "CLOSE");
+        addToSelect('autoStateValue_' + id, "lang-stop", "STOP");
         show("mqttPositionCommandTopicRow_" + id);
         show("timeBetweenStatesRow_"+id);
         show("mqttPositionStateTopicRow_" + id);
@@ -285,10 +299,14 @@ function applySwitchFamily(id) {
     } else if ($('#family_' + id).val() == "lock") {
         removeFromSelect('mode_' + id, 1);
         setOptionOnSelect('mode_' + id, 2);
+        addToSelect('autoStateValue_' + id, "lang-lock", "LOCK");
+        addToSelect('autoStateValue_' + id, "lang-unlock", "UNLOCK");
 
         show("btn_on_"+id);
     } else {
         addToSelect('mode_' + id, "lang-normal", 1);
+        addToSelect('autoStateValue_' + id, "lang-on", "ON");
+        addToSelect('autoStateValue_' + id, "lang-off", "OFF");
         setOptionOnSelect('mode_' + id, 1);
         show("btn_on_"+id);
     }
@@ -308,7 +326,10 @@ function applySwitchMode(id) {
 
     loadsLanguage(localStorage.getItem('lang'));
 }
-
+function ifdef(value,defaultValue) {
+    if(value) return value;
+    return defaultValue;
+}
 function applyTypeControl(id) {
     if ($('#typeControl_' + id).val() == 1) {
         show("primaryGpioControlRow_" + id);
@@ -326,9 +347,7 @@ function buildSwitch(obj) {
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
     let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
-    let checkedAutoState = obj.autoState ? "checked" : "";
-
-    $('#switch_config').append('<div id="bs_' + obj.id + '" class="col-lg-4 col-md-6 col-xs-12">\n' +
+    $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">\n' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">\n' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>\n' +
         '                        <div class="pull-right">\n' +
@@ -457,20 +476,19 @@ function buildSwitch(obj) {
         '                            </tr>\n' +
         '                            <tr>\n' +
         '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>\n' +
-        '                                <td><span >' + obj.mqttCommandTopic + '</span></td>\n' +
+        '                                <td> <span style="word-break: break-word" >' + obj.mqttCommandTopic + '</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
-        '                                <td><span >' + obj.mqttStateTopic + '</span></td>\n' +
+        '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr id="mqttPositionCommandTopicRow_' + obj.id + '" ">\n' +
         '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>\n' +
-        '                                <td><span >' + obj.mqttPositionCommandTopic + '</span></td>\n' +
+        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionCommandTopic,"../setposition") + '</span></td>\n' +
         '                            </tr>\n' +
-
         '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">\n' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
-        '                                <td><span >' + obj.mqttPositionStateTopic + '</span></td>\n' +
+        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionStateTopic,"../position") + '</span></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
@@ -485,21 +503,13 @@ function buildSwitch(obj) {
         '                                </td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
-        '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-auto-state">Estado automático</span></span></td>\n' +
-        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedAutoState + ' type="checkbox" id="autoState_' + obj.id + '" value="' + obj.autoState + '"></td>\n' +
-        '                            </tr>\n' +
-        '                            <tr>\n' +
         '                                <td><span class="label-device"><span\n' +
-        '                                    class="lang-time">TEMPO</span></span></td>\n' +
-        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"\n' +
+        '                                    class="lang-auto-state">Estádo automático</span></span></td>\n' +
+        '                                <td class="col-xs-8"><span style="float: left" class="lang-in">em</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"\n' +
         '                                                            type="text" id="autoStateDelay_' + obj.id + '" placeholder="ex: 12"\n' +
-        '                                                             maxlength="2" required/>\n' +
-        '                                </td>\n' +
-        '                            </tr>\n' +
-        '                            <tr>\n' +
-        '                                <td><span class="label-device "><span\n' +
-        '                                    class="lang-state">Estado</span></span></td>\n' +
-        '                                <td><select class="form-control select-device" id="autoStateValue_' + obj.id + '">\n' +
+        '                                                             maxlength="2" required/><span style="float: left; margin-left: 5px;" class="lang-seconds">segundos</span> \n' +
+        '                                <select class="form-control select-device" style="float: left; width: 150px; margin-left: 5px;" id="autoStateValue_' + obj.id + '">\n' +
+        '                                    <option class="lang-choose" value="">Escolha</option>\n' +
         '                                    <option class="lang-on" value="ON">ON</option>\n' +
         '                                    <option class="lang-off" value="OFF">OFF</option>\n' +
         '                                    <option class="lang-stop" value="STOP">STOP</option>\n' +
@@ -507,8 +517,10 @@ function buildSwitch(obj) {
         '                                    <option class="lang-open" value="OPEN">OPEN</option>\n' +
         '                                    <option class="lang-lock" value="LOCK">CLOSE</option>\n' +
         '                                    <option class="lang-unlock" value="UNLOCK"UNLOCK</option>\n' +
-        '                                </select></td>\n' +
+        '                                </select>\n' +
+        '                                </td>\n' +
         '                            </tr>\n' +
+
         '                            </tbody>\n' +
         '                        </table>\n' +
         '                        <div class="box-footer save">\n' +
@@ -573,7 +585,6 @@ function saveSwitch(id) {
         "primaryGpio": parseInt($('#primaryGpio_' + id).val()),
         "secondaryGpio": parseInt($('#secondaryGpio_' + id).val()),
         "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()) * 1000,
-        "autoState": document.getElementById('autoState_' + id).checked,
         "autoStateValue":  $('#autoStateValue_' + id).val(),
         "autoStateDelay": parseInt($('#autoStateDelay_' + id).val())*1000,
         "typeControl": parseInt($('#typeControl_' + id).val()),
@@ -752,7 +763,7 @@ function wifiStatus() {
         dataType: "json",
         success: function (response) {
             $('#ssid_lbl').text(response.wifiSSID);
-            if (document.getElementById("wifiIp") && $('input[name="wifiIp"]').val().trim().length === 0) {
+            if (document.getElementById("wifiIp") && ($('input[name="wifiIp"]').val().trim().length === 0 ||  $('input[name="wifiIp"]').val() === "(IP unset)")) {
                 $('input[name="wifiIp"]').val(response.wifiIp);
                 $('input[name="wifiMask"]').val(response.wifiMask);
                 $('input[name="wifiGw"]').val(response.wifiGw);
@@ -775,8 +786,8 @@ function buildSwitchTemplate() {
         "primaryGpio": 99,
         "secondaryGpio": 99,
         "timeBetweenStates": 60000,
-        "autoState": false,
         "autoStateDelay": 0,
+        "autoStateValue": "",
         "typeControl": 2,
         "mode": 1,
         "pullup": false,
