@@ -219,12 +219,11 @@ void updateConfig(JsonObject doc, bool persist)
   config.configTime = doc["configTime"];
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
   strlcpy(config.hostname, getHostname().c_str(), sizeof(config.hostname));
-  strlcpy(config.hardware, HARDWARE, sizeof(config.firmware));
-  config.firmware = doc["firmware"] | FIRMWARE_VERSION;
-  if (persist || config.firmware  !=  FIRMWARE_VERSION)
+  config.firmware = doc["firmware"] | VERSION;
+  if (persist || config.firmware  !=  VERSION)
   {
-     config.firmware = FIRMWARE_VERSION;
-     doc["firmware"] = FIRMWARE_VERSION;
+     config.firmware = VERSION;
+     doc["firmware"] = VERSION;
     saveConfiguration();
   }
   if (reloadWifi)

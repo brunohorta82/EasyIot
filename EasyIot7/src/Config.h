@@ -6,12 +6,8 @@
 #include <ArduinoJson.h> 
 #include "WiFi.h"
 #include "Mqtt.h"
-#define HARDWARE "onofre"
-//#define FACTORY_TYPE "light"  //suported types [cover, light]
-#define FIRMWARE_VERSION 7.0
-#define FIRMWARE_VERSION_X "7x0"
 #define UPDATE_URL "http://release.bhonofre.pt/firmware.bin"
-#define CONFIG_FILENAME  "/config_bh"+String(HARDWARE)+".json"
+#define CONFIG_FILENAME  "/config_bhonofre.json"
 #define NEW_ID "NEW"
 #define NO_GPIO 99
 

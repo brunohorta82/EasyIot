@@ -57,6 +57,6 @@ void actualUpdate()
 {
   WiFiClient client;
   const String url = getUpdateUrl();
-  const String version = String(FIRMWARE_VERSION);
+  const String version = String(VERSION);
   ESPhttpUpdate.update(client, url, version);
 }

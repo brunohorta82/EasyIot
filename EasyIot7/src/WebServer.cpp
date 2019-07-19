@@ -87,7 +87,7 @@ void setupWebserverAsync()
   MDNS.addServiceTxt("easyiot", "tcp", "nodeId", String(getAtualConfig().nodeId));
   MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
   MDNS.addServiceTxt("easyiot", "tcp", "wifiSignal", String(WiFi.RSSI()));
-  MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(FIRMWARE_VERSION));
+  MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION));
   server.addHandler(&events);
   loadUI();
 

@@ -2,7 +2,9 @@
 #define WIFI_TAG "[WIFI]"
 String getApName()
 {
-  return "EasyIot-"+String(ESP.getChipId())+"-"+String(FIRMWARE_VERSION_X);
+  String version = String(VERSION);
+  version.replace(".","x");
+  return "EasyIot-"+String(ESP.getChipId())+"-"+version;
 }
 void reloadWiFiConfig(){
        jw.disconnect(); 
