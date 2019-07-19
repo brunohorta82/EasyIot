@@ -2,7 +2,6 @@
 #define SWITCHES_H
 #include "Arduino.h"
 #include "config.h"
-#include "Templates.h"
 #include "WebServer.h"
 #define SWITCHES_TAG "[SWITCHES]"
 #define SWITCH_DEVICE "switch"
@@ -46,7 +45,13 @@
 #define CLOSE_IDX 5
 #define LOCK_IDX 6
 #define UNLOCK_IDX 7
-const String statesPool[] = {"OFF", "ON","STOP","OPEN", "STOP", "CLOSE","LOCK","UNLOCK"};
+#define COVER_START_IDX 2
+#define COVER_END_IDX 5
+#define SWITCH_START_IDX 0
+#define SWITCH_END_IDX 1
+#define LOCK_START_IDX 6
+#define LOCK_END_IDX 7
+const String statesPool[] = {PAYLOAD_OFF, PAYLOAD_ON,PAYLOAD_STOP,PAYLOAD_OPEN, PAYLOAD_STOP, PAYLOAD_CLOSE,PAYLOAD_LOCK,PAYLOAD_STATE_UNLOCK};
 
 struct SwitchT{
     char id[32]; //Generated from name without spaces and no special characters
@@ -103,7 +108,7 @@ void mqttSwitchControl(String topic, String payload);
 void initSwitchesMqttAndDiscovery();
 void sendToServerEvents(String topic, String payload);
 void stateSwitchById(String id, String state);
-
+void configPIN(uint8_t pin, uint8_t mode);
 String getSwitchesConfigStatus();
 
 

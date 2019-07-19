@@ -45,6 +45,7 @@ var WORDS_EN = {
     "node": "NODE",
     "update": "UPDATE",
     "features": "FEATURES",
+    "memory-free":"Free RAM",
     "current-version": "Current version",
     "new-file": "Choose new version file",
     "install-new-version": "Install new version",
@@ -107,6 +108,7 @@ var WORDS_PT = {
     "install-new-version": "Instalar nova versão",
     "version": "Versão",
     "save": "Guardar",
+    "memory-free":"RAM Livre",
     "choose":"escolher",
     "clean-fields": "Limpar todos os campos",
     "username": "Utilizador",
@@ -325,9 +327,12 @@ function applySwitchFamily(id) {
 
 function applySwitchMode(id) {
     if ($('#family_' + id).val() == "cover") {
+
         if (($('#mode_' + id).val() == 2)) {
-            setOptionOnSelect('secondaryGpioRow_' + id, 99);
+            setOptionOnSelect('secondaryGpio_' + id, 99);
             hide("secondaryGpioRow_" + id)
+        }else{
+            show("secondaryGpioRow_" + id)
         }
         show("secondaryGpioControlRow_" + id)
     }
@@ -785,7 +790,7 @@ function systemStatus() {
             } else {
                 $('#mqtt-state').text(showText("desligado", "disconnected"));
             }
-            $('#lbl-heap').text(response.freeHeap);
+            $('#lbl-heap').text((parseFloat(response.freeHeap/1024).toFixed(2)).toString().concat(" KiB"));
             $('#wifi-signal').text(percentage + "%");
         }, error: function () {
             $('#wifi-signal').text("0%");
