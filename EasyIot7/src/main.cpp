@@ -23,7 +23,7 @@ void checkInternalRoutines()
   {
     logger(SYSTEM_TAG, "Starting auto update make sure if this device is connected to the internet.");
     WiFiClient client;
-    ESPhttpUpdate.update(client, getUpdateUrl());
+    ESPhttpUpdate.update(client, UPDATE_URL);
   }
 
   if (reloadWifiRequested())

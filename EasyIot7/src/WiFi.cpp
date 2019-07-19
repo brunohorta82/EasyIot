@@ -11,8 +11,8 @@ void reloadWiFiConfig(){
        jw.setSoftAP(getApName().c_str(),getAtualConfig().apSecret);
        
        if(getAtualConfig().staticIp){
-        jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret,getAtualConfig().wifiIp,getAtualConfig().wifiGw,getAtualConfig().wifiMask,getAtualConfig().wifiGw);
-        jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2,getAtualConfig().wifiIp,getAtualConfig().wifiGw,getAtualConfig().wifiMask,getAtualConfig().wifiGw);
+        jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret,getAtualConfig().wifiIp,getAtualConfig().wifiGw,getAtualConfig().wifiMask,getAtualConfig().wifiGw, true);
+        jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2,getAtualConfig().wifiIp,getAtualConfig().wifiGw,getAtualConfig().wifiMask,getAtualConfig().wifiGw,false);
        }else{
         jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret);
         jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2);
@@ -25,9 +25,9 @@ void reloadWiFiConfig(){
         logger(WIFI_TAG,"MODE STA -------------------------------------");
         logger(WIFI_TAG,"SSID  "+String(WiFi.SSID().c_str()));
         logger(WIFI_TAG,"BSSID "+String(bssid[0])+":"+String(bssid[1])+":"+String(bssid[2])+":"+String(bssid[3])+":"+String(bssid[4])+":"+String(bssid[5]));
-        logger(WIFI_TAG,"CH  "+ String(WiFi.channel()));
+        logger(WIFI_TAG,"CH    "+ String(WiFi.channel()));
         logger(WIFI_TAG,"RSSI  "+String(WiFi.RSSI()));
-        logger(WIFI_TAG,"IP   "+WiFi.localIP().toString());
+        logger(WIFI_TAG,"IP    "+WiFi.localIP().toString());
         logger(WIFI_TAG,"MAC   "+String( WiFi.macAddress().c_str()));
         logger(WIFI_TAG,"GW    "+WiFi.gatewayIP().toString());
         logger(WIFI_TAG,"MASK  "+WiFi.subnetMask().toString());

@@ -15,10 +15,6 @@ struct Config &getAtualConfig()
   return config;
 }
 
-String getUpdateUrl()
-{
-  return String(UPDATE_URL) + String(FACTORY_TYPE) + ".bin";
-}
 boolean isValidNumber(String str)
 {
   for (byte i = 0; i < str.length(); i++)

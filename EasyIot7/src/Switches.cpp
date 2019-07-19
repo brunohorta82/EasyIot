@@ -128,7 +128,20 @@ void loadStoredSwitchs()
     DeserializationError error = deserializeJson(doc, file);
     if (error)
     {
+
+      file.close();
+      file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "w+");
       logger(SWITCHES_TAG, "Default switches loaded.");
+      #if defined DUAL_SWITCH
+      file.print(String("[{\"id\":\""+String(ESP.getChipId())+"novointerruptor1\",\"name\":\"Novo Interruptor 1\",\"family\":\"light\",\"primaryGpio\":12,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/"+String(ESP.getChipId())+"/light/"+String(ESP.getChipId())+"novointerruptor1/set\",\"mqttStateTopic\":\"easyiot/"+String(ESP.getChipId())+"/light/"+String(ESP.getChipId())+"novointerruptor1/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"},{\"id\":\""+String(ESP.getChipId())+"novointerruptor2\",\"name\":\"Novo Interruptor 2\",\"family\":\"light\",\"primaryGpio\":13,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/"+String(ESP.getChipId())+"/light/"+String(ESP.getChipId())+"novointerruptor2/set\",\"mqttStateTopic\":\"easyiot/"+String(ESP.getChipId())+"/light/"+String(ESP.getChipId())+"novointerruptor2/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":5,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"}]").c_str());
+      #elif defined COVER
+      file.print(String("[{\"id\":\""+String(ESP.getChipId())+"novointerruptor\",\"name\":\"Novo Interruptor\",\"family\":\"cover\",\"primaryGpio\":12,\"secondaryGpio\":13,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":4,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/"+String(ESP.getChipId())+"/cover/"+String(ESP.getChipId())+"novointerruptor/set\",\"mqttStateTopic\":\"easyiot/"+String(ESP.getChipId())+"/cover/"+String(ESP.getChipId())+"novointerruptor/state\",\"mqttPositionCommandTopic\":\"easyiot/"+String(ESP.getChipId())+"/cover/"+String(ESP.getChipId())+"novointerruptor/setposition\",\"mqttPositionStateTopic\":\"easyiot/"+String(ESP.getChipId())+"/cover/"+String(ESP.getChipId())+"novointerruptor/position\",\"percentageRequest\":-1,\"lastPercentage\":0,\"positionControlCover\":0,\"secondaryGpioControl\":5,\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":2,\"statePoolStart\":2,\"statePoolEnd\":4,\"mqttPayload\":\"STOP\",\"stateControl\":\"STOP\"}]").c_str());
+      #else
+      file.print(String("[]").c_str());
+      #endif
+      file.close();
+      SPIFFS.end();
+      loadStoredSwitchs();
     }
     else
     {
