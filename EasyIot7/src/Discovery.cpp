@@ -73,7 +73,7 @@ String createHaCover(SwitchT *sw)
 
 void addToDiscovery(SwitchT *sw)
 {
-  sw->alexaId = addSwitchToAlexa(sw->name);
+  addSwitchToAlexa(sw->name);
   if (strlen(getAtualConfig().mqttIpDns) == 0){
     logger(DISCOVERY_TAG,"Mqtt not configured");
     return;

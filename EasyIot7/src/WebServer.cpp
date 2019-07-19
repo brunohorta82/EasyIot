@@ -74,8 +74,9 @@ void startAlexaDiscovery()
   fauxmo.setPort(80); // required for gen3 devices
   fauxmo.enable(true);
   fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
-    logger("[ALEXA]","Device id "+String(device_id)+" "+String(device_name)+" "+String(value));
-    stateSwitchByName(device_name, state ? "ON" : "OFF",value );
+    String valueStr =state ? String(map((int)value,0,255,0,100)+1) : "0";
+    logger("[ALEXA]","Device id "+String(device_id)+" "+String(device_name)+" "+valueStr+" "+String(state));
+    stateSwitchByName(device_name, state ? "ON" : "OFF",valueStr );
   });
 }
 
@@ -103,9 +104,9 @@ void setupWebserverAsync()
     request->send(200, "application/json", "{\"result\":\"OK\"}");
     requestLoadDefaults();
   });
-  server.on("/wifi-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(wifiJSONStatus());
+    response->print(systemJSONStatus());
     request->send(response);
   });
   server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request) {

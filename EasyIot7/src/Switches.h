@@ -49,7 +49,6 @@
 const String statesPool[] = {"OFF", "ON","STOP","OPEN", "STOP", "CLOSE","LOCK","UNLOCK"};
 
 struct SwitchT{
-    unsigned char alexaId;
     char id[32]; //Generated from name without spaces and no special characters
     char name[24];
     char family[10]; //switch, cover
@@ -93,7 +92,7 @@ struct SwitchT{
     unsigned int statePoolEnd;
     
 };
-void stateSwitchByName(const char* name, String state,unsigned char value);
+void stateSwitchByName(const char* name, String state,String value);
 void loopSwitches();
 void stateSwitch(SwitchT *switchT, String state);
 void loadStoredSwitchs();

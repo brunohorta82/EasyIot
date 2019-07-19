@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.84"
+    baseUrl: ""
 };
 var switches = [];
 let sortByProperty = function (property) {
@@ -255,7 +255,7 @@ function toggleActive(menu) {
 
             });
         } else {
-            wifiStatus();
+            systemStatus();
             fillConfig();
         }
         loadsLanguage(localStorage.getItem('lang'));
@@ -326,11 +326,10 @@ function applySwitchFamily(id) {
 function applySwitchMode(id) {
     if ($('#family_' + id).val() == "cover") {
         if (($('#mode_' + id).val() == 2)) {
-            setOptionOnSelect('secondaryGpioControlRow_' + id, 99);
-            hide("secondaryGpioControlRow_" + id)
-        }else {
-            show("secondaryGpioControlRow_" + id)
+            setOptionOnSelect('secondaryGpioRow_' + id, 99);
+            hide("secondaryGpioRow_" + id)
         }
+        show("secondaryGpioControlRow_" + id)
     }
 
     loadsLanguage(localStorage.getItem('lang'));
@@ -342,13 +341,14 @@ function ifdef(value,defaultValue) {
 function applyTypeControl(id) {
     if ($('#typeControl_' + id).val() == 1) {
         show("primaryGpioControlRow_" + id);
-        applySwitchMode(id);
+
     } else {
         setOptionOnSelect('primaryGpioControl_' + id, 99);
         setOptionOnSelect('secondaryGpioControl_' + id, 99);
         hide("secondaryGpioControlRow_" + id);
         hide("primaryGpioControlRow_" + id);
     }
+    applySwitchMode(id);
 }
 
 function buildSwitch(obj) {
@@ -552,8 +552,7 @@ function buildSwitch(obj) {
     applySwitchFamily(obj.id);
     setOptionOnSelect('typeControl_' + obj.id, obj.typeControl);
     setOptionOnSelect('mode_' + obj.id, obj.mode);
-    applySwitchMode(obj.id);
-
+    applyTypeControl(obj.id);
     setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
     setOptionOnSelect('secondaryGpioControl_' + obj.id, obj.secondaryGpioControl);
     setOptionOnSelect('primaryGpio_' + obj.id, obj.primaryGpio);
@@ -624,9 +623,9 @@ $(document).ready(function () {
         toggleActive(menu);
 
     });
-    wifiStatus();
+    systemStatus();
     toggleActive("node");
-    setInterval(wifiStatus, 15000);
+    setInterval(systemStatus, 15000);
     if (!!window.EventSource) {
         let source = new EventSource(endpoint.baseUrl + '/events');
         source.addEventListener('states', function (e) {
@@ -765,9 +764,9 @@ function loadDefaults() {
     });
 }
 
-function wifiStatus() {
+function systemStatus() {
     $.ajax({
-        url: endpoint.baseUrl + "/wifi-status",
+        url: endpoint.baseUrl + "/system-status",
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
@@ -777,7 +776,7 @@ function wifiStatus() {
                 $('input[name="wifiMask"]').val(response.wifiMask);
                 $('input[name="wifiGw"]').val(response.wifiGw);
             }
-            var percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
+            let percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
             if(config) {
                 $('#mqtt_lbl').text(config.mqttIpDns);
             }
@@ -786,6 +785,7 @@ function wifiStatus() {
             } else {
                 $('#mqtt-state').text(showText("desligado", "disconnected"));
             }
+            $('#lbl-heap').text(response.freeHeap);
             $('#wifi-signal').text(percentage + "%");
         }, error: function () {
             $('#wifi-signal').text("0%");
@@ -808,7 +808,7 @@ function buildSwitchTemplate() {
         "typeControl": 2,
         "mode": 1,
         "pullup": false,
-        "mqttRetain": true,
+        "mqttRetain": false,
         "inverted": false,
         "mqttCommandTopic": "../set",
         "mqttStateTopic": "../state",
