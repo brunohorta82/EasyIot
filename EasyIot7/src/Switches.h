@@ -105,7 +105,7 @@ void saveSwitchs();
 void removeSwitch(String id, bool persist);
 JsonObject updateSwitches(JsonObject doc, bool persist);
 void mqttSwitchControl(String topic, String payload);
-void initSwitchesMqttAndDiscovery();
+void initSwitchesHaDiscovery();
 void sendToServerEvents(String topic, String payload);
 void stateSwitchById(String id, String state);
 void configPIN(uint8_t pin, uint8_t mode);

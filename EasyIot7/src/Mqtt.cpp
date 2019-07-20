@@ -18,7 +18,11 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
         payloadStr += (char)payload[i];
     }
     logger(MQTT_TAG, "PAYLOAD: " + payloadStr);
-    processMqttAction(topicStr, payloadStr);
+    if(topicStr.equals(HOMEASSISTANT_ONLINE_TOPIC) && payloadStr.equals(AVAILABLE_PAYLOAD)){
+        initSwitchesHaDiscovery();
+    }else{
+        processMqttAction(topicStr, payloadStr);
+    }
 }
 String getBaseTopic()
 {
@@ -53,7 +57,8 @@ boolean reconnect()
         logger(MQTT_TAG, "CONNECTED");
         publishOnMqtt(getAvailableTopic(), AVAILABLE_PAYLOAD, true);
         publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
-        initSwitchesMqttAndDiscovery();
+        subscribeOnMqtt(HOMEASSISTANT_ONLINE_TOPIC);
+        
     }
 
     return mqttClient.connected();

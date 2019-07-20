@@ -6,6 +6,8 @@
 #include "Config.h"
 #include "Mqtt.h"
 
-void addToDiscovery(SwitchT *sw);
-void removeFromDiscovery(SwitchT *sw);
+void addToHaDiscovery(SwitchT *sw);
+void removeFromHaDiscovery(SwitchT *sw);
+void addToAlexaDiscovery(SwitchT *sw);
+void removeFromAlexaDiscovery(SwitchT *sw);
 #endif

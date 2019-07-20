@@ -15,7 +15,8 @@ void removeSwitch(String id, bool persist)
     if (strcmp(id.c_str(), swStored.id) == 0)
     {
       publishOnMqtt(swStored.mqttCommandTopic, "", true);
-      removeFromDiscovery(&swStored);
+      removeFromHaDiscovery(&swStored);
+      removeFromAlexaDiscovery(&swStored);
       unsubscribeOnMqtt(String(swStored.mqttCommandTopic));
       del = i;
     }
@@ -29,12 +30,12 @@ void removeSwitch(String id, bool persist)
     saveSwitchs();
   }
 }
-void initSwitchesMqttAndDiscovery()
+void initSwitchesHaDiscovery()
 {
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
+    addToHaDiscovery(&switchs[i]);
     publishOnMqtt(switchs[i].mqttStateTopic, switchs[i].mqttPayload, switchs[i].mqttRetain);
-    addToDiscovery(&switchs[i]);
   }
 }
 JsonObject updateSwitches(JsonObject doc, bool persist)
@@ -119,8 +120,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
 
   sw.lastTimeChange = doc["lastTimeChange"] | 0;
   sw.percentageRequest = doc["percentageRequest"] | -1;
-
-  addToDiscovery(&sw);
+  addToAlexaDiscovery(&sw);
   doc["id"] = String(sw.id);
   doc["stateControl"] = String(sw.stateControl);
   switchs.push_back(sw);
@@ -352,6 +352,10 @@ void stateSwitch(SwitchT *switchT, String state)
       delay(DELAY_COVER_PROTECTION);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
+    
+      publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
+    
+    
   }
   else if (String(PAYLOAD_STOP).equals(state))
   {
@@ -365,6 +369,11 @@ void stateSwitch(SwitchT *switchT, String state)
       delay(DELAY_COVER_PROTECTION);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
       delay(DELAY_COVER_PROTECTION);
+    }
+    if (switchT->timeBetweenStates > 0){
+         publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->lastPercentage), switchT->mqttRetain);
+    }else{
+         publishOnMqtt(switchT->mqttPositionStateTopic, "50", switchT->mqttRetain);
     }
   }
   else if (String(PAYLOAD_CLOSE).equals(state))
@@ -390,6 +399,10 @@ void stateSwitch(SwitchT *switchT, String state)
       delay(DELAY_COVER_PROTECTION);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
+    
+        publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
+    
+    
   }
   else if (String(PAYLOAD_ON).equals(state))
   {
@@ -449,6 +462,7 @@ void stateSwitch(SwitchT *switchT, String state)
     }
   }
   publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttRetain);
+  
   sendToServerEvents("states", String("{\"id\":\"") + String(switchT->id) + String("\",\"state\":\"") + String(switchT->mqttPayload) + String("\"}"));
   switchT->lastTimeChange = millis();
   switchT->statePoolIdx = findPoolIdx(switchT->stateControl, switchT->statePoolIdx, switchT->statePoolStart, switchT->statePoolEnd);

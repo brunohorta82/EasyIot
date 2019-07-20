@@ -10,7 +10,7 @@
 #define CONFIG_FILENAME  "/config_bhonofre.json"
 #define NEW_ID "NEW"
 #define NO_GPIO 99
-
+#define HOMEASSISTANT_ONLINE_TOPIC "hass/status"
 //AP PASSWORD  
 #define AP_SECRET "EasyIot@"
 

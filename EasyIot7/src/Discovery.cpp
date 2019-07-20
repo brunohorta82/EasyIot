@@ -52,7 +52,7 @@ String createHaLight(SwitchT *sw)
 String createHaCover(SwitchT *sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(12)+300;
+  const size_t capacity = JSON_OBJECT_SIZE(14)+300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw->name;
@@ -63,17 +63,21 @@ String createHaCover(SwitchT *sw)
   object["payload_open"] = String(PAYLOAD_OPEN);
   object["payload_close"] = String(PAYLOAD_CLOSE);
   object["payload_stop"] = String(PAYLOAD_STOP);
-  object["position_open"] = 0;
-  object["position_open"] = 100;
-  object["position_topic"] = String(sw->mqttPositionCommandTopic);
-
+  object["device_class"] = "blind";
+    object["position_open"] = 100;
+    object["position_closed"] = 0;
+    object["position_topic"] = String(sw->mqttPositionStateTopic);
+    object["set_position_topic"] = String(sw->mqttPositionCommandTopic);
   serializeJson(object, objectStr);
   return objectStr;
 }
-
-void addToDiscovery(SwitchT *sw)
+void addToAlexaDiscovery(SwitchT *sw)
 {
-  addSwitchToAlexa(sw->name);
+addSwitchToAlexa(sw->name);
+}
+void addToHaDiscovery(SwitchT *sw)
+{
+  
   if (strlen(getAtualConfig().mqttIpDns) == 0){
     logger(DISCOVERY_TAG,"Mqtt not configured");
     return;
@@ -100,14 +104,18 @@ void addToDiscovery(SwitchT *sw)
   {
    payload = createHaLock(sw);
   }
-  publishOnMqtt(prefix + "/" + family + "/" + _id + "/config", payload, true);
+  publishOnMqtt(prefix + "/" + family + "/" + _id + "/config", payload, false);
   subscribeOnMqtt(String(sw->mqttCommandTopic));
-  logger(DISCOVERY_TAG, "RELOAD MQTT SWITCH DISCOVERY OK");
+  logger(DISCOVERY_TAG, "RELOAD HA SWITCH DISCOVERY OK");
 }
 
 
-void removeFromDiscovery(SwitchT *sw)
+void removeFromHaDiscovery(SwitchT *sw)
+{
+  publishOnMqtt(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config", "", false);
+  
+}
+void removeFromAlexaDiscovery(SwitchT *sw)
 {
   removeSwitchFromAlexa(sw->name);
-  publishOnMqtt(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config", "", true);
 }
