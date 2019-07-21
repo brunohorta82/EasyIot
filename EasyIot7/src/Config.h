@@ -40,7 +40,7 @@ struct Config {
 
 
 void loadStoredConfiguration();
-void saveConfiguration();
+String saveConfiguration();
 String getUpdateUrl();
 
 void requestRestart();
@@ -51,14 +51,14 @@ bool autoUpdateRequested();
 
 void requestLoadDefaults();
 bool loadDefaultsRequested();
-
+String getConfigStatus();
 void requestWifiScan();
 void requestReloadWifi();
 bool reloadWifiRequested();
 void logger(String tag, String msg);
 String normalize(String inputStr);
 String getConfigStatus();
-void updateConfig(JsonObject json, bool persist);
+String updateConfig(JsonObject json, bool persist);
 boolean isValidNumber(String str);
 struct Config& getAtualConfig();
 

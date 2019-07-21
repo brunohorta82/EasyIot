@@ -56,7 +56,7 @@ boolean reconnect()
     {
         logger(MQTT_TAG, "CONNECTED");
         publishOnMqtt(getAvailableTopic(), AVAILABLE_PAYLOAD, true);
-        publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
+        //publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
         subscribeOnMqtt(HOMEASSISTANT_ONLINE_TOPIC);
         
     }

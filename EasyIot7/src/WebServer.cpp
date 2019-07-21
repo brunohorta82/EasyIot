@@ -141,21 +141,16 @@ void setupWebserverAsync()
     } });
   //CONFIG
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(getConfigStatus());
-    request->send(response);
+    request->send(200, "application/json",getConfigStatus() );
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateConfig(json, true);
-    response->print(getConfigStatus());
+    response->print(updateConfig(json, true));
     request->send(response);
   }));
   //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(getSwitchesConfigStatus());
-    request->send(response);
+    request->send(200, "application/json",getSwitchesConfigStatus());
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");

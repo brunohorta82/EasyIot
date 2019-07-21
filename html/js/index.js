@@ -283,6 +283,8 @@ function applySwitchFamily(id) {
     hide("btn_close_"+id);
     hide("btn_stop_"+id);
     hide("btn_open_"+id);
+    removeFromSelect('mode_' + id, 1);
+    removeFromSelect('mode_' + id, 2);
     removeFromSelect('mode_' + id, 4);
     removeFromSelect('mode_' + id, 5);
     removeFromSelect('autoStateValue_' + id, "OPEN");
@@ -296,38 +298,37 @@ function applySwitchFamily(id) {
         show("btn_close_"+id);
         show("btn_stop_"+id);
         show("btn_open_"+id);
+        addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('mode_' + id, "lang-dual-normal", 4);
         addToSelect('mode_' + id, "lang-dual-push", 5);
+        show("secondaryGpioControlRow_" + id);
+        show("secondaryGpioRow_" + id);
+        show("mqttPositionCommandTopicRow_" + id);
+        show("mqttPositionStateTopicRow_" + id);
+        show("timeBetweenStatesRow_"+id);
         addToSelect('autoStateValue_' + id, "lang-open", "OPEN");
         addToSelect('autoStateValue_' + id, "lang-close", "CLOSE");
         addToSelect('autoStateValue_' + id, "lang-stop", "STOP");
-        show("mqttPositionCommandTopicRow_" + id);
-        show("timeBetweenStatesRow_"+id);
-        show("mqttPositionStateTopicRow_" + id);
-        show("secondaryGpioControlRow_" + id);
-        show("secondaryGpioRow_" + id);
-        setOptionOnSelect('mode_' + id, 4);
     } else if ($('#family_' + id).val() == "lock") {
-        removeFromSelect('mode_' + id, 1);
-        setOptionOnSelect('mode_' + id, 2);
+        show("btn_on_"+id);
+        addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('autoStateValue_' + id, "lang-lock", "LOCK");
         addToSelect('autoStateValue_' + id, "lang-unlock", "UNLOCK");
-
-        show("btn_on_"+id);
     } else {
+        show("btn_on_"+id);
         addToSelect('mode_' + id, "lang-normal", 1);
+        addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('autoStateValue_' + id, "lang-on", "ON");
         addToSelect('autoStateValue_' + id, "lang-off", "OFF");
-        setOptionOnSelect('mode_' + id, 1);
-        show("btn_on_"+id);
     }
+    applySwitchMode(id);
     applyTypeControl(id);
     loadsLanguage(localStorage.getItem('lang'));
+
 }
 
 function applySwitchMode(id) {
     if ($('#family_' + id).val() == "cover") {
-
         if (($('#mode_' + id).val() == 2)) {
             setOptionOnSelect('secondaryGpio_' + id, 99);
             hide("secondaryGpioRow_" + id)
@@ -336,7 +337,6 @@ function applySwitchMode(id) {
         }
         show("secondaryGpioControlRow_" + id)
     }
-
     loadsLanguage(localStorage.getItem('lang'));
 }
 function ifdef(value,defaultValue) {
@@ -344,16 +344,22 @@ function ifdef(value,defaultValue) {
     return defaultValue;
 }
 function applyTypeControl(id) {
+    hide("secondaryGpioControlRow_" + id);
+    hide("primaryGpioControlRow_" + id);
     if ($('#typeControl_' + id).val() == 1) {
         show("primaryGpioControlRow_" + id);
-
+        if ($('#family_' + id).val() == "cover") {
+            if ($('#mode_' + id).val() != 2) {
+                show("secondaryGpioControlRow_" + id);
+            }
+        }
     } else {
         setOptionOnSelect('primaryGpioControl_' + id, 99);
         setOptionOnSelect('secondaryGpioControl_' + id, 99);
         hide("secondaryGpioControlRow_" + id);
         hide("primaryGpioControlRow_" + id);
     }
-    applySwitchMode(id);
+
 }
 
 function buildSwitch(obj) {
@@ -418,10 +424,6 @@ function buildSwitch(obj) {
         '                                <td><span class="label-device "><span\n' +
         '                                    class="lang-mode">MODO</span></span></td>\n' +
         '                                <td><select onchange="applySwitchMode(\'' + obj.id + '\');" class="form-control select-device" id="mode_' + obj.id + '">\n' +
-        '                                    <option class="lang-normal" value="1">Normal</option>\n' +
-        '                                    <option class="lang-push" value="2">Pressão</option>\n' +
-        '                                    <option class="lang-dual-normal" value="4">Duplo Normal</option>\n' +
-        '                                    <option class="lang-dual-push" value="5">Duplo Pressão</option>\n' +
         '                                </select></td>\n' +
         '                            </tr>\n' +
         '                            <tr>\n' +
@@ -524,13 +526,7 @@ function buildSwitch(obj) {
         '                                                             maxlength="2" required/><span style="float: left; margin-left: 5px;" class="lang-seconds">segundos</span> \n' +
         '                                <select class="form-control select-device" style="float: left; width: 150px; margin-left: 5px;" id="autoStateValue_' + obj.id + '">\n' +
         '                                    <option class="lang-choose" value="">Escolha</option>\n' +
-        '                                    <option class="lang-on" value="ON">ON</option>\n' +
-        '                                    <option class="lang-off" value="OFF">OFF</option>\n' +
-        '                                    <option class="lang-stop" value="STOP">STOP</option>\n' +
-        '                                    <option class="lang-close" value="CLOSE">CLOSE</option>\n' +
-        '                                    <option class="lang-open" value="OPEN">OPEN</option>\n' +
-        '                                    <option class="lang-lock" value="LOCK">CLOSE</option>\n' +
-        '                                    <option class="lang-unlock" value="UNLOCK"UNLOCK</option>\n' +
+
         '                                </select>\n' +
         '                                </td>\n' +
         '                            </tr>\n' +
