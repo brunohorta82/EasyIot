@@ -7,7 +7,7 @@
 #define SWITCH_DEVICE "switch"
 
 #define DELAY_COVER_PROTECTION 50 //50 milliseconds
-
+#define COVER_AUTO_STOP_PROTECTION 90000 // after 90 seconds turn off all relay to enhance the life cycle 
 #define PAYLOAD_ON "ON"
 #define PAYLOAD_OFF "OFF"
 #define PAYLOAD_CLOSE "CLOSE"
@@ -20,8 +20,6 @@
 #define PAYLOAD_STATE_LOCK "LOCK"
 #define PAYLOAD_UNLOCK "UNLOCK"
 #define PAYLOAD_STATE_UNLOCK "UNLOCK"
-
-
 
 #define FAMILY_LIGHT "light"
 #define FAMILY_SWITCH "switch"

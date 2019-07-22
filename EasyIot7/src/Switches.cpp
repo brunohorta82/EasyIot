@@ -148,6 +148,8 @@ void loadStoredSwitchs()
       file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor1\",\"name\":\"Novo Interruptor 1\",\"family\":\"light\",\"primaryGpio\":12,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor1/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor1/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"},{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor2\",\"name\":\"Novo Interruptor 2\",\"family\":\"light\",\"primaryGpio\":13,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor2/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor2/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":5,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"}]").c_str());
 #elif defined COVER
       file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor\",\"name\":\"Novo Interruptor\",\"family\":\"cover\",\"primaryGpio\":12,\"secondaryGpio\":13,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":4,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/state\",\"mqttPositionCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/setposition\",\"mqttPositionStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/position\",\"percentageRequest\":-1,\"lastPercentage\":0,\"positionControlCover\":0,\"secondaryGpioControl\":5,\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":2,\"statePoolStart\":" + String(COVER_START_IDX) + ",\"statePoolEnd\":" + String(COVER_END_IDX) + ",\"mqttPayload\":\"STOP\",\"stateControl\":\"STOP\"}]").c_str());
+#elif defined LOCK
+      file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "fechadura1\",\"name\":\"Fechadura 1\",\"family\":\"lock\",\"primaryGpio\":13,\"secondaryGpio\":99,\"autoStateValue\":\"UNLOCK\",\"autoState\":true,\"autoStateDelay\":1000,\"typeControl\":1,\"mode\":2,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":5,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":431400,\"statePoolIdx\":7,\"statePoolStart\":6,\"statePoolEnd\":7,\"mqttPayload\":\"UNLOCK\",\"stateControl\":\"UNLOCK\"}]"));
 #else
       file.print(String("[]").c_str());
 #endif
@@ -352,10 +354,8 @@ void stateSwitch(SwitchT *switchT, String state)
       delay(DELAY_COVER_PROTECTION);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
-    
-      publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
-    
-    
+
+    publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
   }
   else if (String(PAYLOAD_STOP).equals(state))
   {
@@ -365,15 +365,23 @@ void stateSwitch(SwitchT *switchT, String state)
     switchT->lastPercentage = switchT->positionControlCover;
     if (switchT->typeControl == TYPE_RELAY)
     {
+      
       configPIN(switchT->primaryGpioControl, OUTPUT);
       delay(DELAY_COVER_PROTECTION);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
       delay(DELAY_COVER_PROTECTION);
+      configPIN(switchT->secondaryGpioControl, OUTPUT);
+      delay(DELAY_COVER_PROTECTION);
+      writeToPIN(switchT->secondaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> PROTECT RELAY LIFE
+      delay(DELAY_COVER_PROTECTION);
     }
-    if (switchT->timeBetweenStates > 0){
-         publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->lastPercentage), switchT->mqttRetain);
-    }else{
-         publishOnMqtt(switchT->mqttPositionStateTopic, "50", switchT->mqttRetain);
+    if (switchT->timeBetweenStates > 0)
+    {
+      publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->lastPercentage), switchT->mqttRetain);
+    }
+    else
+    {
+      publishOnMqtt(switchT->mqttPositionStateTopic, "50", switchT->mqttRetain);
     }
   }
   else if (String(PAYLOAD_CLOSE).equals(state))
@@ -399,10 +407,8 @@ void stateSwitch(SwitchT *switchT, String state)
       delay(DELAY_COVER_PROTECTION);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
-    
-        publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
-    
-    
+
+    publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
   }
   else if (String(PAYLOAD_ON).equals(state))
   {
@@ -410,7 +416,6 @@ void stateSwitch(SwitchT *switchT, String state)
     strlcpy(switchT->mqttPayload, PAYLOAD_ON, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
     {
-
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
@@ -421,7 +426,6 @@ void stateSwitch(SwitchT *switchT, String state)
     strlcpy(switchT->mqttPayload, PAYLOAD_OFF, sizeof(switchT->mqttPayload));
     if (switchT->typeControl == TYPE_RELAY)
     {
-
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
     }
@@ -462,7 +466,7 @@ void stateSwitch(SwitchT *switchT, String state)
     }
   }
   publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttRetain);
-  
+
   sendToServerEvents("states", String("{\"id\":\"") + String(switchT->id) + String("\",\"state\":\"") + String(switchT->mqttPayload) + String("\"}"));
   switchT->lastTimeChange = millis();
   switchT->statePoolIdx = findPoolIdx(switchT->stateControl, switchT->statePoolIdx, switchT->statePoolStart, switchT->statePoolEnd);
@@ -517,6 +521,9 @@ boolean positionDone(SwitchT *sw)
   if (strcmp(PAYLOAD_STOP, sw->stateControl) == 0)
   {
     return false;
+  }
+  if(sw->lastTimeChange + COVER_AUTO_STOP_PROTECTION < millis()){
+    return true;
   }
   if (sw->timeBetweenStates == 0)
   {
@@ -615,7 +622,7 @@ void loopSwitches()
         }
       }
     }
-
+  
     if (stateTimeout(sw))
     {
       sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolIdx, sw->statePoolEnd);

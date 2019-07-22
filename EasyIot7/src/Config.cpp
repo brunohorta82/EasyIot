@@ -224,6 +224,7 @@ String saveConfiguration()
   serializeJson(doc, output);
   return output;
 }
+
 String updateConfig(JsonObject doc, bool persist)
 {
   String output = "";
