@@ -10,7 +10,7 @@ String createHaLock(SwitchT *sw)
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw->name;
   object["command_topic"] = sw->mqttCommandTopic;
-  object["state_topic"] = sw->mqttStateTopic;
+  //object["state_topic"] = sw->mqttStateTopic; //TODO CHECK STATE FROM SENSOR
   object["retain"] = sw->mqttRetain;
   object["availability_topic"] = getAvailableTopic();
   object["payload_lock"] = String(PAYLOAD_LOCK);

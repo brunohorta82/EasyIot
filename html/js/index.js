@@ -71,6 +71,7 @@ var WORDS_EN = {
     "light": "Light",
     "cover": "Cover",
     "lock": "Lock",
+    "released":"Released",
     "disconnected":"disconnected",
     "dconnected":"connected",
     "normal": "Generic",
@@ -101,6 +102,7 @@ var WORDS_EN = {
 };
 var WORDS_PT = {
     "node": "NÓ",
+    "released":"Libertar",
     "update": "ATUALIZAR",
     "features": "FUNÇÕES",
     "current-version": "Versão atual",
@@ -312,8 +314,7 @@ function applySwitchFamily(id) {
     } else if ($('#family_' + id).val() == "lock") {
         show("btn_on_"+id);
         addToSelect('mode_' + id, "lang-push", 2);
-        addToSelect('autoStateValue_' + id, "lang-lock", "LOCK");
-        addToSelect('autoStateValue_' + id, "lang-unlock", "UNLOCK");
+        addToSelect('autoStateValue_' + id, "lang-released", "RELEASED");
     } else {
         show("btn_on_"+id);
         addToSelect('mode_' + id, "lang-normal", 1);
@@ -567,6 +568,9 @@ function stateSwitch(id, state) {
     let toggleState = state;
     if ((toggleState ==="ON" || toggleState==="OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
         toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
+    }
+    if (toggleState ==="RELEASED" ) {
+        toggleState = "LOCK";
     }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
     $.ajax({

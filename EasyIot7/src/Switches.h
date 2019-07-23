@@ -20,6 +20,8 @@
 #define PAYLOAD_STATE_LOCK "LOCK"
 #define PAYLOAD_UNLOCK "UNLOCK"
 #define PAYLOAD_STATE_UNLOCK "UNLOCK"
+#define PAYLOAD_RELEASED "RELEASED"
+
 
 #define FAMILY_LIGHT "light"
 #define FAMILY_SWITCH "switch"
@@ -48,8 +50,8 @@
 #define SWITCH_START_IDX 0
 #define SWITCH_END_IDX 1
 #define LOCK_START_IDX 6
-#define LOCK_END_IDX 7
-const String statesPool[] = {PAYLOAD_OFF, PAYLOAD_ON,PAYLOAD_STOP,PAYLOAD_OPEN, PAYLOAD_STOP, PAYLOAD_CLOSE,PAYLOAD_LOCK,PAYLOAD_STATE_UNLOCK};
+#define LOCK_END_IDX 8
+const String statesPool[] = {PAYLOAD_OFF, PAYLOAD_ON,PAYLOAD_STOP,PAYLOAD_OPEN, PAYLOAD_STOP, PAYLOAD_CLOSE,PAYLOAD_RELEASED,PAYLOAD_UNLOCK,PAYLOAD_STATE_LOCK};
 
 struct SwitchT{
     char id[32]; //Generated from name without spaces and no special characters
@@ -83,7 +85,7 @@ struct SwitchT{
     bool mqttRetain;
     
     //CONTROL VARIABLES
-    char stateControl[8]; //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
+    char stateControl[10]; //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
     int positionControlCover; //COVER PERCENTAGE 100% = open, 0% close
     int lastPercentage;
     bool lastPrimaryGpioState;

@@ -149,7 +149,7 @@ void loadStoredSwitchs()
 #elif defined COVER
       file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor\",\"name\":\"Novo Interruptor\",\"family\":\"cover\",\"primaryGpio\":12,\"secondaryGpio\":13,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":4,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/state\",\"mqttPositionCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/setposition\",\"mqttPositionStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/position\",\"percentageRequest\":-1,\"lastPercentage\":0,\"positionControlCover\":0,\"secondaryGpioControl\":5,\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":2,\"statePoolStart\":" + String(COVER_START_IDX) + ",\"statePoolEnd\":" + String(COVER_END_IDX) + ",\"mqttPayload\":\"STOP\",\"stateControl\":\"STOP\"}]").c_str());
 #elif defined LOCK
-      file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "fechadura1\",\"name\":\"Fechadura 1\",\"family\":\"lock\",\"primaryGpio\":13,\"secondaryGpio\":99,\"autoStateValue\":\"UNLOCK\",\"autoState\":true,\"autoStateDelay\":1000,\"typeControl\":1,\"mode\":2,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":5,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":431400,\"statePoolIdx\":7,\"statePoolStart\":6,\"statePoolEnd\":7,\"mqttPayload\":\"UNLOCK\",\"stateControl\":\"UNLOCK\"}]"));
+      file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "fechadura1\",\"name\":\"Fechadura 1\",\"family\":\"lock\",\"primaryGpio\":99,\"secondaryGpio\":99,\"autoStateValue\":\"RELEASED\",\"autoState\":true,\"autoStateDelay\":1000,\"typeControl\":1,\"mode\":2,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":5,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":6,\"statePoolStart\":6,\"statePoolEnd\":8,\"mqttPayload\":\"\",\"stateControl\":\"RELEASED\"}]"));
 #else
       file.print(String("[]").c_str());
 #endif
@@ -268,7 +268,7 @@ String getSwitchesConfigStatus()
 }
 int findPoolIdx(String state, unsigned int currentIdx, unsigned int start, unsigned int end)
 {
-  int max = end - start + 1;
+  int max = (end - start)*2 ;
   unsigned int p = currentIdx;
   while (max > 0)
   {
@@ -430,24 +430,23 @@ void stateSwitch(SwitchT *switchT, String state)
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
     }
   }
-  else if (String(PAYLOAD_LOCK).equals(state))
+  else if (String(PAYLOAD_LOCK).equals(state) || String(PAYLOAD_UNLOCK).equals(state))
   {
-    strlcpy(switchT->stateControl, PAYLOAD_LOCK, sizeof(switchT->stateControl));
-    strlcpy(switchT->mqttPayload, PAYLOAD_STATE_LOCK, sizeof(switchT->mqttPayload));
+    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl));//TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->mqttPayload, state.c_str(), sizeof(switchT->mqttPayload));//TODO CHECK STATE FROM SENSOR
     if (switchT->typeControl == TYPE_RELAY)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
-  }
-  else if (String(PAYLOAD_UNLOCK).equals(state))
+  }else if (String(PAYLOAD_RELEASED).equals(state) )
   {
-    strlcpy(switchT->stateControl, PAYLOAD_UNLOCK, sizeof(switchT->stateControl));
-    strlcpy(switchT->mqttPayload, PAYLOAD_STATE_UNLOCK, sizeof(switchT->mqttPayload));
+    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl));//TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->mqttPayload,  PAYLOAD_LOCK,sizeof(switchT->mqttPayload));//TODO CHECK STATE FROM SENSOR
     if (switchT->typeControl == TYPE_RELAY)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
-      writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
+      writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
     }
   }
   else if (isValidNumber(state))
@@ -625,8 +624,7 @@ void loopSwitches()
   
     if (stateTimeout(sw))
     {
-      sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolIdx, sw->statePoolEnd);
-      sw->percentageRequest = -1;
+      sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolStart, sw->statePoolEnd);
       logger(SWITCHES_TAG, "AUTO STATE MODE set change switch to -> " + String(statesPool[sw->statePoolIdx]));
       stateSwitch(sw, statesPool[sw->statePoolIdx]);
     }
