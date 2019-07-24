@@ -118,8 +118,8 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   strlcpy(sw.stateControl, statesPool[sw.statePoolIdx].c_str(), sizeof(sw.stateControl));
   sw.lastPrimaryGpioState = doc["lastPrimaryGpioState"] | true;
 
-  sw.lastTimeChange = doc["lastTimeChange"] | 0;
-  sw.percentageRequest = doc["percentageRequest"] | -1;
+  sw.lastTimeChange = 0;
+  sw.percentageRequest =  -1;
   addToAlexaDiscovery(&sw);
   doc["id"] = String(sw.id);
   doc["stateControl"] = String(sw.stateControl);
@@ -221,8 +221,7 @@ void saveSwitchs()
         sdoc["lastPrimaryGpioState"] = sw.lastPrimaryGpioState;
         sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
 
-        sdoc["lastTimeChange"] = sw.lastTimeChange;
-
+      
         sdoc["statePoolIdx"] = sw.statePoolIdx;
         sdoc["statePoolStart"] = sw.statePoolStart;
         sdoc["statePoolEnd"] = sw.statePoolEnd;
