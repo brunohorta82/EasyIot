@@ -121,6 +121,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   sw.lastTimeChange = 0;
   sw.percentageRequest =  -1;
   addToAlexaDiscovery(&sw);
+  addToHaDiscovery(&sw);
   doc["id"] = String(sw.id);
   doc["stateControl"] = String(sw.stateControl);
   switchs.push_back(sw);
@@ -133,7 +134,7 @@ void loadStoredSwitchs()
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "r+");
-    const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size() + 1) + switchs.size() * JSON_OBJECT_SIZE(36) + 2200;
+    const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size() + 1) + switchs.size() * JSON_OBJECT_SIZE(36) + 4000;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
     if (error)
