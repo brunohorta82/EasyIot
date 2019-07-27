@@ -75,6 +75,10 @@ void addToAlexaDiscovery(SwitchT *sw)
 {
 addSwitchToAlexa(sw->name);
 }
+void addToHaDiscovery(SensorT *s)
+{
+  //TODO
+}
 void addToHaDiscovery(SwitchT *sw)
 {
   
@@ -113,6 +117,11 @@ void addToHaDiscovery(SwitchT *sw)
 void removeFromHaDiscovery(SwitchT *sw)
 {
   publishOnMqtt(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config", "", false);
+  
+}
+void removeFromHaDiscovery(SensorT *s)
+{
+  publishOnMqtt(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s->family) + "/" + String(s->id) + "/config", "", false);
   
 }
 void removeFromAlexaDiscovery(SwitchT *sw)

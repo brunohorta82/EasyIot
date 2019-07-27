@@ -1,7 +1,6 @@
 #ifndef SWITCHES_H
 #define SWITCHES_H
 #include "Arduino.h"
-#include "config.h"
 #include "WebServer.h"
 #define SWITCHES_TAG "[SWITCHES]"
 #define SWITCH_DEVICE "switch"

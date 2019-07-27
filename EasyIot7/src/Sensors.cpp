@@ -1,94 +1,41 @@
-#include <dht_nonblocking.h> // https://github.com/brunohorta82/DHT_nonblocking
-//FUNTIONS
-#define TEMPERATURE_FUNCTION 1
-#define HUMIDITY_FUNCTION 2
-#define MOTION_FUNCTION 4
-#define OPENING 5
-#define ANALOG_FUNCTION 7
+#include "Discovery.h"
 
+std::vector<SensorT> sensors;
+void saveSensors(){
 
-//SENSORS
-#define PIR_TYPE 65
-#define LDR_TYPE 21
-#define DS18B20_TYPE 90
-#define REED_SWITCH_TYPE 56
-
-const String sensorsFilename = "sensors.json";
-
-JsonArray &sns = getJsonArray();
-
-typedef struct
+}
+void removeSensor(String id, bool persist)
 {
-  int type;
-  String mqttTopicState;
-  DHT_nonblocking *dht;
-  DallasTemperature *dallas;
-  DebounceEvent *binaryDebounce;
-  int gpio;
-  long delayRead;
-  long lastRead;
-  float temperature;
-  float humidity;
-  String payloadOn;
-  String payloadOff;
-} sensors_t;
-std::vector<sensors_t> _sensors;
-int _sensorsSize = 0;
+  logger(SENSORS_TAG, "Remove sensor " + id);
 
-void callbackBinarySensor(uint8_t gpio, uint8_t event, uint8_t count, uint16_t length)
-{
-  for (int i = 0; i < _sensorsSize; i++)
+  unsigned int del = NO_GPIO;
+  for (unsigned int i = 0; i < sensors.size(); i++)
   {
-    if(_sensors[i].gpio != gpio)continue;
-    
-    switch (_sensors[i].type)
+    SensorT sStored = sensors[i];
+    if (strcmp(id.c_str(), sStored.id) == 0)
     {
-    case PIR_TYPE:
-      if(event == EVENT_RELEASED){
-          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOn,false);
-          
-        }else if(event == EVENT_PRESSED){
-          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOff,false);
-       }
-      break;
-    case REED_SWITCH_TYPE:
-     if(event == EVENT_RELEASED){
-          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOff,false);
-        }else if(event == EVENT_PRESSED){
-          publishOnMqtt(_sensors[i].mqttTopicState, _sensors[i].payloadOn,false);
-          
-       }
-      break;
+      removeFromHaDiscovery(&sStored);
+      del = i;
     }
+  }
+  if (del != NO_GPIO)
+  {
+    sensors.erase(sensors.begin() + del);
+  }
+  if (persist)
+  {
+    saveSensors();
   }
 }
-void removeSensor(String _id)
+void initSensorsHaDiscovery()
 {
-  int sensorFound = false;
-  int index = 0;
-  for (unsigned int i = 0; i < sns.size(); i++)
+  for (unsigned int i = 0; i < sensors.size(); i++)
   {
-    JsonObject &sensorJson = sns.get<JsonVariant>(i);
-    if (sensorJson.get<String>("id").equals(_id))
-    {
-      sensorFound = true;
-      index = i;
-        JsonArray &functions = sensorJson.get<JsonVariant>("functions");
-    for (int i = 0; i < functions.size(); i++)
-    {
-      JsonObject &f = functions.get<JsonVariant>(i);
-      String _id = String(ESP.getChipId())+ normalize(f.get<String>("name"));
-      removeFromHaDiscovery(sensorJson.get<String>("class"), _id);
-    }
-    }
+    addToHaDiscovery(&sensors[i]);
+    publishOnMqtt(sensors[i].mqttStateTopic, sensors[i].mqttPayload, sensors[i].mqttRetain);
   }
-  if (sensorFound)
-  {
-    sns.remove(index);
-  }
-
-  persistSensorsFile();
 }
+/*
 
 JsonArray &getStoredSensors()
 {
@@ -302,4 +249,4 @@ void applyJsonSensors()
     }
   }
   _sensorsSize = _sensors.size();
-}
+} */
