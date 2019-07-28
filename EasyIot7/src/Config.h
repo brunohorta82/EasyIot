@@ -61,5 +61,7 @@ String getConfigStatus();
 String updateConfig(JsonObject json, bool persist);
 boolean isValidNumber(String str);
 struct Config& getAtualConfig();
-
+void configPIN(uint8_t pin, uint8_t mode);
+void writeToPIN(uint8_t pin, uint8_t val);
+bool readPIN(uint8_t pin);
 #endif

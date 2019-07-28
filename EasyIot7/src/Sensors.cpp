@@ -1,9 +1,7 @@
 #include "Discovery.h"
 
 std::vector<SensorT> sensors;
-void saveSensors(){
 
-}
 void removeSensor(String id, bool persist)
 {
   logger(SENSORS_TAG, "Remove sensor " + id);
@@ -35,218 +33,207 @@ void initSensorsHaDiscovery()
     publishOnMqtt(sensors[i].mqttStateTopic, sensors[i].mqttPayload, sensors[i].mqttRetain);
   }
 }
-/*
-
-JsonArray &getStoredSensors()
+JsonObject updateSensors(JsonObject doc, bool persist)
 {
-  return sns;
+
+  logger(SENSORS_TAG, "Update Environment Sensors");
+  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
+  if (persist)
+    removeSensor(doc.getMember("id").as<String>(), false);
+  SensorT ss;
+  strlcpy(ss.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(ss.id));
+  strlcpy(ss.name, doc.getMember("name").as<String>().c_str(), sizeof(ss.name));
+  strlcpy(ss.family, doc.getMember("family").as<String>().c_str(), sizeof(ss.family));
+  strlcpy(ss.mqttStateTopic, doc.getMember("mqttStateTopic").as<String>().c_str(), sizeof(ss.mqttStateTopic));
+  String baseTopic = getBaseTopic() + "/" + String(ss.family) + "/" + String(ss.id);
+  addToHaDiscovery(&ss);
+  ss.lastBinaryState = false;
+  ss.lastRead = 0;
+  ss.dht = NULL;
+  ss.dallas = NULL;
+  doc["id"] = String(ss.id);
+  int gpio = doc["gpio"] | NO_GPIO;
+  int type = doc["type"];
+  switch (type)
+  {
+  case TYPE_LDR:
+    ss.delayRead = 20000ul;
+    break;
+  case TYPE_PIR:
+  case TYPE_REED_SWITCH:
+    configPIN(gpio, gpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    strlcpy(ss.payloadOn, doc.getMember("payloadOff").as<String>().c_str(), sizeof(ss.payloadOff));
+    strlcpy(ss.payloadOff, doc.getMember("payloadOff").as<String>().c_str(), sizeof(ss.payloadOff));
+    break;
+  case TYPE_DHT_11:
+  case TYPE_DHT_21:
+  case TYPE_DHT_22:
+    ss.delayRead = 60000ul;
+    ss.dht = new DHT_nonblocking(gpio, type);
+    break;
+  case TYPE_DS18B20:
+    ss.dallas = new DallasTemperature(new OneWire(gpio));
+    break;
+  }
+
+  sensors.push_back(ss);
+  return doc;
+}
+void loadStoredSensors()
+{
+  if (SPIFFS.begin())
+  {
+    File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "r+");
+    int sensorsSize = 2; //TODO GET THIS VALUE FROM FILE
+    const size_t CAPACITY = JSON_ARRAY_SIZE(sensorsSize + 1) + sensorsSize * JSON_OBJECT_SIZE(20) + 2000;
+    DynamicJsonDocument doc(CAPACITY);
+    DeserializationError error = deserializeJson(doc, file);
+    if (error)
+    {
+      file.close();
+      file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "w+");
+      logger(SENSORS_TAG, "Default sensors loaded.");
+      file.print(String("[]").c_str());
+      file.close();
+      SPIFFS.end();
+      loadStoredSensors();
+    }
+    else
+    {
+      logger(SENSORS_TAG, "Stored ssitches loaded.");
+    }
+    file.close();
+    JsonArray ar = doc.as<JsonArray>();
+    for (JsonVariant ss : ar)
+    {
+      updateSensors(ss.as<JsonObject>(), error);
+    }
+  }
+  SPIFFS.end();
+}
+void saveSensors()
+{
+  if (SPIFFS.begin())
+  {
+    File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "w+");
+    if (!file)
+    {
+      logger(SWITCHES_TAG, "Open Sensors config file Error!");
+    }
+    else
+    {
+      const size_t CAPACITY = JSON_ARRAY_SIZE(sensors.size() + 1) + sensors.size() * JSON_OBJECT_SIZE(36) + 2200;
+      ;
+      DynamicJsonDocument doc(CAPACITY);
+      for (unsigned int i = 0; i < sensors.size(); i++)
+      {
+        JsonObject sdoc = doc.createNestedObject();
+        SensorT ss = sensors[i];
+        sdoc["id"] = ss.id;
+        sdoc["name"] = ss.name;
+        sdoc["family"] = ss.family;
+        sdoc["mqttStateTopic"] = String(ss.mqttStateTopic);
+      }
+
+      if (serializeJson(doc.as<JsonArray>(), file) == 0)
+      {
+        logger(SENSORS_TAG, "Failed to write Sensors Config into file");
+      }
+      else
+      {
+        logger(SENSORS_TAG, "Sensors Config stored.");
+      }
+    }
+    file.close();
+  }
+  SPIFFS.end();
+}
+String getSensorsConfigStatus()
+{
+  String object = "";
+  if (SPIFFS.begin())
+  {
+    File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "r+");
+
+    if (!file)
+    {
+      return "[]";
+    }
+    while (file.available())
+    {
+      object += (char)file.read();
+    }
+    file.close();
+  }
+  SPIFFS.end();
+  if (object.equals("") || object.equals("null"))
+    return "[]";
+  return object;
 }
 
 void loopSensors()
 {
-  for (unsigned int i = 0; i < _sensorsSize; i++)
+  for (unsigned int i = 0; i < sensors.size(); i++)
   {
-   
-    switch (_sensors[i].type)
+    SensorT *ss = &sensors[i];
+    switch (sensors[i].type)
     {
-    case LDR_TYPE:
+    case TYPE_LDR:
+    {
+      if (ss->lastRead + ss->delayRead < millis())
       {
-         if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
-            _sensors[i].lastRead = millis();
-            publishOnMqtt(_sensors[i].mqttTopicState, String("{\"ldr_raw\":"+String(analogRead(_sensors[i].gpio))+"}"),false);
-           
-         }
+        ss->lastRead = millis();
+        publishOnMqtt(ss->mqttStateTopic, String("{\"ldr_raw\":" + String(analogRead(A0)) + "}"), ss->mqttRetain);
       }
-      break;
-    case PIR_TYPE:
-    {
-      DebounceEvent *b = _sensors[i].binaryDebounce;
-      b->loop();
     }
     break;
-    case REED_SWITCH_TYPE:
+    case TYPE_PIR:
     {
-      DebounceEvent *b = _sensors[i].binaryDebounce;
-      b->loop();
+      bool binaryState = readPIN(ss->gpio);
+      if (ss->lastBinaryState != binaryState)
+      {
+        publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}"), ss->mqttRetain);
+      }
+    }
+    break;
+    case TYPE_REED_SWITCH:
+    {
+      bool binaryState = readPIN(ss->gpio);
+      if (ss->lastBinaryState != binaryState)
+      {
+        publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}"), ss->mqttRetain);
+      }
     }
     break;
 
-    case DHT_TYPE_11:
-    case DHT_TYPE_21:
-    case DHT_TYPE_22:
+    case TYPE_DHT_11:
+    case TYPE_DHT_21:
+    case TYPE_DHT_22:
     {
 
-      if (_sensors[i].dht->measure(&_sensors[i].temperature, &_sensors[i].humidity) == true)
-      {
-      
-      if(_sensors[i].lastRead + _sensors[i].delayRead < millis()){
-            _sensors[i].lastRead = millis();
-            publishOnMqtt(_sensors[i].mqttTopicState, String("{\"temperature\":"+String(_sensors[i].temperature)+",\"humidity\":"+String(_sensors[i].humidity)+"}"),false);      
-        }
-      }
-    }
-      break;
-    case DS18B20_TYPE:
-    {
-     
-      if (_sensors[i].lastRead + _sensors[i].delayRead < millis())
-      {
-        _sensors[i].dallas->begin();
-        _sensors[i].dallas->requestTemperatures();
-        _sensors[i].lastRead = millis();
-        _sensors[i].temperature = _sensors[i].dallas->getTempCByIndex(0);
-        publishOnMqtt(_sensors[i].mqttTopicState.c_str(), String("{\"temperature\":"+String(_sensors[i].temperature)+"}"),false);
-        
-      }
-    }
-      break;
-    }
-  }
-  
-}
-JsonObject &storeSensor(JsonObject &_sensor)
-{
-  removeSensor(_sensor.get<String>("id"));
-  _sensor.set("id", _sensor.get<String>("id").equals(NEW_ID) ?  (String(ESP.getChipId()) +normalize( _sensor.get<String>("name"))) :  _sensor.get<String>("id"));
-  rebuildSensorMqttTopics(_sensor);
-  rebuildDiscoverySensorMqttTopics(_sensor);
-  String sn = "";
-  _sensor.printTo(sn);
-  sns.add(getJsonObject(sn.c_str()));
-
-  persistSensorsFile();
-  return _sensor;
-}
-
-void persistSensorsFile()
-{
-
-  if (SPIFFS.begin())
-  {
-    logger("[SENSORS] Open " + sensorsFilename);
-    File rFile = SPIFFS.open(sensorsFilename, "w+");
-    if (!rFile)
-    {
-      logger("[SENSORS] Open sensors file Error!");
-    }
-    else
-    {
-      sns.printTo(rFile);
-    }
-    rFile.close();
-  }
-  else
-  {
-    logger("[SENSORS] Open file system Error!");
-  }
-  SPIFFS.end();
-  applyJsonSensors();
-  logger("[SENSORS] New sensors config loaded.");
-}
-void loadStoredSensors()
-{
-  bool loadDefaults = false;
-  if (SPIFFS.begin())
-  {
-    File cFile;
-
-    if (SPIFFS.exists(sensorsFilename))
-    {
-      cFile = SPIFFS.open(sensorsFilename, "r+");
-      if (!cFile)
-      {
-        logger("[SENSORS] Create file Sensor Error!");
-        return;
-      }
-      logger("[SENSORS] Read stored file config...");
-      JsonArray &storedSensors = getJsonArray(cFile);
-      if (!storedSensors.success())
-      {
-        logger("[SENSORS] Json file parse Error!");
-        loadDefaults = true;
-      }
-      else
+      if (ss->dht->measure(&ss->temperature, &ss->humidity) == true)
       {
 
-        logger("[SENSORS] Apply stored file config...");
-        for (int i = 0; i < storedSensors.size(); i++)
+        if (ss->lastRead + ss->delayRead < millis())
         {
-          sns.add(storedSensors.get<JsonVariant>(i));
+          ss->lastRead = millis();
+          publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}"), ss->mqttRetain);
         }
-        applyJsonSensors();
       }
     }
-    else
+    break;
+    case TYPE_DS18B20:
     {
-      loadDefaults = true;
+      if (ss->lastRead + ss->delayRead < millis())
+      {
+        ss->dallas->begin();
+        ss->dallas->requestTemperatures();
+        ss->lastRead = millis();
+        ss->temperature = ss->dallas->getTempCByIndex(0);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + "}"), ss->mqttRetain);
+      }
     }
-    cFile.close();
-    if (loadDefaults)
-    {
-      logger("[SENSORS] Apply default config...");
-      cFile = SPIFFS.open(sensorsFilename, "w+");
-      sns.printTo(cFile);
-      applyJsonSensors();
-      cFile.close();
+    break;
     }
   }
-  else
-  {
-    logger("[SWITCH] Open file system Error!");
-  }
-  SPIFFS.end();
 }
-
-void applyJsonSensors()
-{
-  _sensors.clear();
-
-  for (int i = 0; i < sns.size(); i++)
-  {
-    JsonObject &sensorJson = sns.get<JsonVariant>(i);
-    int gpio = sensorJson.get<unsigned int>("gpio");
-    int type = sensorJson.get<unsigned int>("type");
-    String mqttStateTopic = sensorJson.get<String>("mqttStateTopic");
-     JsonArray &functions = sensorJson.get<JsonVariant>("functions");
-    switch (type)
-    {
-    case LDR_TYPE:
-      _sensors.push_back({type, mqttStateTopic, NULL, NULL, NULL, A0, 2000ul, 0ul, 0ul, 0ul,"",""});
-      break;
-    case PIR_TYPE:{
-    JsonObject &f = functions.get<JsonVariant>(i);
-    for (int i = 0; i < functions.size(); i++)
-    {
-      JsonObject &f = functions.get<JsonVariant>(i);
-      String payloadOn = f.get<String>("payloadOn");
-      String payloadOff = f.get<String>("payloadOff");
-      _sensors.push_back({type, mqttStateTopic, NULL, NULL, new DebounceEvent(gpio, callbackBinarySensor, BUTTON_PUSHBUTTON | BUTTON_DEFAULT_HIGH), gpio, 0,0, 0, 0,payloadOn,payloadOff});
-    }
-    }
-      break;
-    case REED_SWITCH_TYPE:
-    for (int i = 0; i < functions.size(); i++)
-    {
-      JsonObject &f = functions.get<JsonVariant>(i);
-      String payloadOn = f.get<String>("payloadOn");
-      String payloadOff = f.get<String>("payloadOff");
-      int mode = BUTTON_PUSHBUTTON | BUTTON_SET_PULLUP ;
-      if(gpio != 16){
-        mode | BUTTON_DEFAULT_HIGH;
-        }
-      _sensors.push_back({type, mqttStateTopic, NULL, NULL, new DebounceEvent(gpio, callbackBinarySensor, mode), gpio, 0,0, 0, 0,payloadOn,payloadOff});
-    }
-      break;
-
-    case DHT_TYPE_11:
-    case DHT_TYPE_21:
-    case DHT_TYPE_22:
-      _sensors.push_back({type, mqttStateTopic, new DHT_nonblocking(gpio, type), NULL, NULL, gpio, 60000ul, 0L, 0L, 0L,"",""});
-      break;
-    case DS18B20_TYPE:
-      _sensors.push_back({type, mqttStateTopic, NULL, new DallasTemperature(new OneWire(gpio)), NULL, gpio, 60000L, 0L, 0L, 0L,"",""});
-      break;
-    }
-  }
-  _sensorsSize = _sensors.size();
-} */

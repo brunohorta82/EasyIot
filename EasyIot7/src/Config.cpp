@@ -64,7 +64,31 @@ bool autoUpdateRequested()
   }
   return false;
 }
+void configPIN(uint8_t pin, uint8_t mode)
+{
+  if (pin == NO_GPIO)
+  {
+    return;
+  }
+  pinMode(pin, mode);
+}
+void writeToPIN(uint8_t pin, uint8_t val)
+{
+  if (pin == NO_GPIO)
+  {
+    return;
+  }
+  digitalWrite(pin, val);
+}
 
+bool readPIN(uint8_t pin)
+{
+  if (pin == NO_GPIO)
+  {
+    return true;
+  }
+  return digitalRead(pin);
+}
 void requestLoadDefaults()
 {
   LOAD_DEFAULTS = true;

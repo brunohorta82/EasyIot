@@ -117,7 +117,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   sw.lastPrimaryGpioState = doc["lastPrimaryGpioState"] | true;
 
   sw.lastTimeChange = 0;
-  sw.percentageRequest =  -1;
+  sw.percentageRequest = -1;
   addToAlexaDiscovery(&sw);
   addToHaDiscovery(&sw);
   doc["id"] = String(sw.id);
@@ -132,12 +132,12 @@ void loadStoredSwitchs()
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "r+");
-    const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size() + 1) + switchs.size() * JSON_OBJECT_SIZE(36) + 4000;
+    int switchesSize = 3; //TODO GET THIS VALUE FROM FILE
+    const size_t CAPACITY = JSON_ARRAY_SIZE(switchesSize + 1) + switchesSize * JSON_OBJECT_SIZE(36) + 3000;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
     if (error)
     {
-
       file.close();
       file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "w+");
       logger(SWITCHES_TAG, "Default switches loaded.");
@@ -220,7 +220,6 @@ void saveSwitchs()
         sdoc["lastPrimaryGpioState"] = sw.lastPrimaryGpioState;
         sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
 
-      
         sdoc["statePoolIdx"] = sw.statePoolIdx;
         sdoc["statePoolStart"] = sw.statePoolStart;
         sdoc["statePoolEnd"] = sw.statePoolEnd;
@@ -266,7 +265,7 @@ String getSwitchesConfigStatus()
 }
 int findPoolIdx(String state, unsigned int currentIdx, unsigned int start, unsigned int end)
 {
-  int max = (end - start)*2 ;
+  int max = (end - start) * 2;
   unsigned int p = currentIdx;
   while (max > 0)
   {
@@ -300,30 +299,7 @@ void mqttSwitchControl(String topic, String payload)
     }
   }
 }
-void configPIN(uint8_t pin, uint8_t mode)
-{
-  if (pin == NO_GPIO)
-  {
-    return;
-  }
-  pinMode(pin, mode);
-}
-void writeToPIN(uint8_t pin, uint8_t val)
-{
-  if (pin == NO_GPIO)
-  {
-    return;
-  }
-  digitalWrite(pin, val);
-}
-bool readPIN(uint8_t pin)
-{
-  if (pin == NO_GPIO)
-  {
-    return true;
-  }
-  return digitalRead(pin);
-}
+
 void stateSwitch(SwitchT *switchT, String state)
 {
   logger(SWITCHES_TAG, "Name:      " + String(switchT->name));
@@ -363,7 +339,7 @@ void stateSwitch(SwitchT *switchT, String state)
     switchT->lastPercentage = switchT->positionControlCover;
     if (switchT->typeControl == TYPE_RELAY)
     {
-      
+
       configPIN(switchT->primaryGpioControl, OUTPUT);
       delay(DELAY_COVER_PROTECTION);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
@@ -430,17 +406,18 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_LOCK).equals(state) || String(PAYLOAD_UNLOCK).equals(state))
   {
-    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl));//TODO CHECK STATE FROM SENSOR
-    strlcpy(switchT->mqttPayload, state.c_str(), sizeof(switchT->mqttPayload));//TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->mqttPayload, state.c_str(), sizeof(switchT->mqttPayload));   //TODO CHECK STATE FROM SENSOR
     if (switchT->typeControl == TYPE_RELAY)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
-  }else if (String(PAYLOAD_RELEASED).equals(state) )
+  }
+  else if (String(PAYLOAD_RELEASED).equals(state))
   {
-    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl));//TODO CHECK STATE FROM SENSOR
-    strlcpy(switchT->mqttPayload,  PAYLOAD_LOCK,sizeof(switchT->mqttPayload));//TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->mqttPayload, PAYLOAD_LOCK, sizeof(switchT->mqttPayload));    //TODO CHECK STATE FROM SENSOR
     if (switchT->typeControl == TYPE_RELAY)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
@@ -519,7 +496,8 @@ boolean positionDone(SwitchT *sw)
   {
     return false;
   }
-  if(sw->lastTimeChange + COVER_AUTO_STOP_PROTECTION < millis()){
+  if (sw->lastTimeChange + COVER_AUTO_STOP_PROTECTION < millis())
+  {
     return true;
   }
   if (sw->timeBetweenStates == 0)
@@ -619,7 +597,7 @@ void loopSwitches()
         }
       }
     }
-  
+
     if (stateTimeout(sw))
     {
       sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolStart, sw->statePoolEnd);
