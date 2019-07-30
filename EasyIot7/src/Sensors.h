@@ -1,8 +1,7 @@
 #ifndef SENSORS_S_H
 #define SENSORS_S_H
 #include <Arduino.h>
-#include "Config.h"
-#include "Discovery.h"
+#include "WebServer.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #define SENSORS_TAG "[SENSORS]"
@@ -54,4 +53,7 @@ struct SensorT
   
 };
 void saveSensors();
+String getSensorsConfigStatus();
+JsonObject updateSensor(JsonObject doc, bool persist);
+void removeSensor(String id, bool persist);
 #endif

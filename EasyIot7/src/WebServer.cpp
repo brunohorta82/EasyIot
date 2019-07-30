@@ -154,7 +154,7 @@ void setupWebserverAsync()
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(updateSwitches(json,true),*response);
+    serializeJson(updateSwitch(json,true),*response);
     
     request->send(response);
   }));
@@ -177,6 +177,24 @@ void setupWebserverAsync()
     {
       request->send(400, "application/json", "{\"result\":\"MISSING PARAMS\"}");
     }
+  });
+server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json",getSensorsConfigStatus());
+  });
+  server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(updateSensor(json,true),*response);
+    
+    request->send(response);
+  }));
+  server.on("/remove-sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (request->hasArg("id"))
+    {
+      removeSensor(request->arg("id"), true);
+    }
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->print(getSensorsConfigStatus());
+    request->send(response);
   });
   //ALEXA SUPPORT
   server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {

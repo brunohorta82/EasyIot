@@ -98,10 +98,10 @@ struct SwitchT
 void stateSwitchByName(const char *name, String state, String value);
 void loopSwitches();
 void stateSwitch(SwitchT *switchT, String state);
-void loadStoredSwitchs();
+void loadStoredSwitches();
 void saveSwitchs();
 void removeSwitch(String id, bool persist);
-JsonObject updateSwitches(JsonObject doc, bool persist);
+JsonObject updateSwitch(JsonObject doc, bool persist);
 void mqttSwitchControl(String topic, String payload);
 void initSwitchesHaDiscovery();
 void sendToServerEvents(String topic, String payload);

@@ -33,7 +33,7 @@ void initSensorsHaDiscovery()
     publishOnMqtt(sensors[i].mqttStateTopic, sensors[i].mqttPayload, sensors[i].mqttRetain);
   }
 }
-JsonObject updateSensors(JsonObject doc, bool persist)
+JsonObject updateSensor(JsonObject doc, bool persist)
 {
 
   logger(SENSORS_TAG, "Update Environment Sensors");
@@ -106,7 +106,7 @@ void loadStoredSensors()
     JsonArray ar = doc.as<JsonArray>();
     for (JsonVariant ss : ar)
     {
-      updateSensors(ss.as<JsonObject>(), error);
+      updateSensor(ss.as<JsonObject>(), error);
     }
   }
   SPIFFS.end();

@@ -4,6 +4,7 @@
 #include "WiFi.h"
 #include "Mqtt.h"
 #include "Switches.h"
+#include "Sensors.h"
 #include <ESP8266httpUpdate.h>
 
 void checkInternalRoutines()
@@ -37,7 +38,7 @@ void setup()
 {
   Serial.begin(115200);
   loadStoredConfiguration();
-  loadStoredSwitchs();
+  loadStoredSwitches();
   setupWebserverAsync();
   setupWiFi();
   setupMQTT();

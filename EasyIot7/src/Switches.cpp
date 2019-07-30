@@ -36,7 +36,7 @@ void initSwitchesHaDiscovery()
     publishOnMqtt(switchs[i].mqttStateTopic, switchs[i].mqttPayload, switchs[i].mqttRetain);
   }
 }
-JsonObject updateSwitches(JsonObject doc, bool persist)
+JsonObject updateSwitch(JsonObject doc, bool persist)
 {
 
   logger(SWITCHES_TAG, "Update Environment Switches");
@@ -127,7 +127,7 @@ JsonObject updateSwitches(JsonObject doc, bool persist)
   return doc;
 }
 
-void loadStoredSwitchs()
+void loadStoredSwitches()
 {
   if (SPIFFS.begin())
   {
@@ -154,7 +154,7 @@ void loadStoredSwitchs()
 #endif
       file.close();
       SPIFFS.end();
-      loadStoredSwitchs();
+      loadStoredSwitches();
     }
     else
     {
@@ -164,7 +164,7 @@ void loadStoredSwitchs()
     JsonArray ar = doc.as<JsonArray>();
     for (JsonVariant sw : ar)
     {
-      updateSwitches(sw.as<JsonObject>(), error);
+      updateSwitch(sw.as<JsonObject>(), error);
     }
   }
   SPIFFS.end();

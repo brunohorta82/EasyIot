@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "AsyncJson.h"
 #include "Switches.h"
+#include "Sensors.h"
 #include "ArduinoJson.h"
 #include "StaticSite.h"
 #include "StaticCss.h"
