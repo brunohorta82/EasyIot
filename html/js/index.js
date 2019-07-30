@@ -1,7 +1,8 @@
 const endpoint = {
-    baseUrl: "http://192.168.4.1"
+    baseUrl: "http://192.168.1.84"
 };
 var switches = [];
+var sensors = [];
 let sortByProperty = function (property) {
     return function (x, y) {
         return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
@@ -24,7 +25,19 @@ function addToSelect(select, class_, value) {
 
     }
 }
-
+function buildSensorTemplate(type) {
+    if ($('#bss_NEW').length > 0) return
+    let device = {
+        "id": "NEW",
+        "name": "Novo Sensor",
+        "primaryGpio": 99,
+        "type": type,
+        "mqttRetain": true,
+        "mqttStateTopic": "../state",
+        "delayRead":2000
+    };
+    buildSwitch(device);
+}
 function setOptionOnSelect(select, value) {
     let sel = document.getElementById(select);
     if (sel) {
@@ -43,6 +56,7 @@ function hide(id) {
 var config;
 var WORDS_EN = {
     "node": "NODE",
+    "sensors":"Sensors",
     "update": "UPDATE",
     "features": "FEATURES",
     "memory-free":"Free RAM",
@@ -102,6 +116,7 @@ var WORDS_EN = {
 };
 var WORDS_PT = {
     "node": "NÓ",
+    "sensors":"Sensores",
     "released":"Libertar",
     "update": "ATUALIZAR",
     "features": "FUNÇÕES",
@@ -274,6 +289,14 @@ function fillSwitches(payload) {
         buildSwitch(obj);
     }
 }
+function fillSensors(payload) {
+    switches = payload;
+    if (!payload) return;
+    $('#sensors_config').empty();
+    for (let obj of payload.sort(sortByProperty('name'))) {
+        buildSensor(obj);
+    }
+}
 
 function applySwitchFamily(id) {
     hide("mqttPositionCommandTopicRow_" + id);
@@ -362,7 +385,77 @@ function applyTypeControl(id) {
     }
 
 }
+function buildSensor(obj) {
+    let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
+    $('#sensor_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">\n' +
+        '                <div style="margin-bottom: 0" class="info-box bg-aqua">\n' +
+        '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>\n' +
+        '                        <div class="pull-right">\n' +
+        '                        </div>\n' +
+        '                    </div>\n' +
+        '                </div>\n' +
+        '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">\n' +
+        '                    <div class="box-body no-padding">\n' +
+        '                        <table class="table table-condensed">\n' +
+        '                            <tbody>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device"><span\n' +
+        '                                    class="lang-name">NOME</span></span></td>\n' +
+        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"\n' +
+        '                                                            type="text" id="name_' + obj.id + '" placeholder="ex: sala"\n' +
+        '                                                            maxlength="30" required/>\n' +
+        '                                </td>\n' +
+        '                            </tr>\n' +
+        '                            <tr style="  border-top: 1px solid #88bf9c;">\n' +
+        '                                <td><span class="label-device "><span\n' +
+        '                                    class="lang-pin-in-a">Pinos Entrada</span></span></td>\n' +
+        '                                <td><select class="form-control select-device" id="primaryGpio_' + obj.id + '">\n' +
+        '                                    <option class="lang-none" value="99">Nenhum</option>\n' +
+        '                                    <option value="4">4 <-> GND</option>\n' +
+        '                                    <option value="5">5 <-> GND</option>\n' +
+        '                                    <option value="12">12 <-> GND</option>\n' +
+        '                                    <option value="13">13 <-> GND</option>\n' +
+        '                                    <option value="14">14 <-> GND</option>\n' +
+        '                                    <option value="16">16 <-> 3V3</option>\n' +
+        '                                </select></td>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
+        '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">\n' +
+        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>\n' +
+        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttStateTopic,"../state") + '</span></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr>\n' +
+        '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>\n' +
+        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>\n' +
+        '                            </tr>\n' +
+        '                            <tr >\n' +
+        '                                <td><span class="label-device"><span\n' +
+        '                                    class="lang-time">TEMPO</span></span></td>\n' +
+        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.delayRead / 1000 + '"\n' +
+        '                                                            type="text" id="delayRead_' + obj.id + '" placeholder="ex: 12"\n' +
+        '                                                             maxlength="2" required/>\n' +
+        '                                </td>\n' +
+        '                            </tr>\n' +
+        '                            </tbody>\n' +
+        '                        </table>\n' +
+        '                        <div class="box-footer save">\n' +
+        '                            <button onclick="removeSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span\n' +
+        '                                class="lang-remove">Remover</span></button>\n' +
+        '                            <button  onclick="saveSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span\n' +
+        '                                class="lang-save">Guardar</span></button>\n' +
+        '                        </div>\n' +
+        '                    </div>\n' +
+        '                </div>\n' +
+        '            </div>');
 
+    setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
+    loadsLanguage(localStorage.getItem('lang'));
+}
 function buildSwitch(obj) {
     let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "OFF";
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
@@ -446,7 +539,6 @@ function buildSwitch(obj) {
         '                                    <option value="13">13 <-> GND</option>\n' +
         '                                    <option value="14">14 <-> GND</option>\n' +
         '                                    <option value="16">16 <-> 3V3</option>\n' +
-        '                                </select></td>\n' +
         '                                </select></td>\n' +
         '                            </tr>\n' +
         '                            <tr id="secondaryGpioRow_' + obj.id + '"">\n' +
@@ -535,7 +627,7 @@ function buildSwitch(obj) {
         '                            </tbody>\n' +
         '                        </table>\n' +
         '                        <div class="box-footer save">\n' +
-        '                            <button onclick="removeDevice(\'remove-switch\',\'' + obj.id + '\',fillSwitches)" style="font-size: 12px" class="btn btn-danger"><span\n' +
+        '                            <button onclick="removeSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span\n' +
         '                                class="lang-remove">Remover</span></button>\n' +
         '                            <button  onclick="saveSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span\n' +
         '                                class="lang-save">Guardar</span></button>\n' +
@@ -590,6 +682,9 @@ function stateSwitch(id, state) {
     });
 }
 
+function saveSensor(id) {
+
+}
 function saveSwitch(id) {
     let device = {
         "id": id,
@@ -689,9 +784,8 @@ function saveMqtt() {
     storeConfig();
 }
 
-function removeDevice(e, id, func) {
-
-    const targetUrl = endpoint.baseUrl + "/" + e + "?id=" + id;
+function removeSwitch(id) {
+    const targetUrl = endpoint.baseUrl + "/remove-switch?id=" + id;
     $.ajax({
         url: targetUrl,
         contentType: "text/plain; charset=utf-8",
@@ -701,6 +795,24 @@ function removeDevice(e, id, func) {
                 return item.id === id
             }), 1);
             fillSwitches(switches);
+        },
+        error: function () {
+            showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")
+        },
+        timeout: 2000
+    });
+}
+function removeSensor(id) {
+    const targetUrl = endpoint.baseUrl + "/remove-sensor?id=" + id;
+    $.ajax({
+        url: targetUrl,
+        contentType: "text/plain; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            sensors.splice(sensors.findIndex(function (item, i) {
+                return item.id === id
+            }), 1);
+            fillSensors(sensors);
         },
         error: function () {
             showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")

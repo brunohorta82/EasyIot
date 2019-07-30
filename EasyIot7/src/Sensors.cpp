@@ -189,7 +189,7 @@ void loopSensors()
     break;
     case TYPE_PIR:
     {
-      bool binaryState = readPIN(ss->gpio);
+      bool binaryState = readPIN(ss->primaryGpio);
       if (ss->lastBinaryState != binaryState)
       {
         publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}"), ss->mqttRetain);
@@ -198,7 +198,7 @@ void loopSensors()
     break;
     case TYPE_REED_SWITCH:
     {
-      bool binaryState = readPIN(ss->gpio);
+      bool binaryState = readPIN(ss->primaryGpio);
       if (ss->lastBinaryState != binaryState)
       {
         publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}"), ss->mqttRetain);

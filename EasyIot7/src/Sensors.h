@@ -29,7 +29,7 @@ struct SensorT
   bool mqttRetain;
 
   //INPUT GPIO
-  int gpio;
+  int primaryGpio;
   bool pullup; //USE INTERNAL RESISTOR
 
   //TEMPERATURE AND HUMIDITY SENSORS

@@ -255,7 +255,6 @@ String updateConfig(JsonObject doc, bool persist)
   bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0 || strcmp(config.wifiMask, doc["wifiMask"] | "") != 0 || strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
   bool reloadMqtt =  strcmp(config.mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(config.mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(config.mqttPassword, doc["mqttPassword"] | "") != 0 || config.mqttPort != (doc["mqttPort"] | DEFAULT_MQTT_PORT);
   strlcpy(config.nodeId, normalize(doc["nodeId"] | String(String("MyNode")+String(ESP.getChipId()))).c_str(), sizeof(config.nodeId));
-  strlcpy(config.homeAssistantAutoDiscoveryPrefix, doc["homeAssistantAutoDiscoveryPrefix"] | "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
   strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
   config.mqttPort = doc["mqttPort"] | DEFAULT_MQTT_PORT;
   strlcpy(config.mqttUsername, doc["mqttUsername"] | "", sizeof(config.mqttUsername));
@@ -273,6 +272,13 @@ String updateConfig(JsonObject doc, bool persist)
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
   strlcpy(config.hostname, getHostname().c_str(), sizeof(config.hostname));
   config.firmware = doc["firmware"] | VERSION;
+  if(strcmp(MQTT_CLOUD_URL,config.mqttIpDns) == 0){
+    strlcpy(config.homeAssistantAutoDiscoveryPrefix, config.mqttUsername, sizeof(config.homeAssistantAutoDiscoveryPrefix));
+  }else
+  {
+    strlcpy(config.homeAssistantAutoDiscoveryPrefix, "homeassistant", sizeof(config.homeAssistantAutoDiscoveryPrefix));
+  }
+  
   if (persist || config.firmware  !=  VERSION)
   {
      config.firmware = VERSION;

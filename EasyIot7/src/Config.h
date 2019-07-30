@@ -7,6 +7,7 @@
 #include "WiFi.h"
 #include "Mqtt.h"
 #define UPDATE_URL "http://release.bhonofre.pt/firmware.bin"
+#define MQTT_CLOUD_URL "mqtt.bhonofre.pt"
 #define CONFIG_FILENAME  "/config_bhonofre.json"
 #define NEW_ID "NEW"
 #define NO_GPIO 99
