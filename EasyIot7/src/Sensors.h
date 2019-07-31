@@ -9,6 +9,7 @@
 
 //SENSORS
 #define TYPE_PIR 65
+#define RCWL_0516 66
 #define TYPE_LDR 21
 #define TYPE_DS18B20 90
 #define TYPE_REED_SWITCH 56

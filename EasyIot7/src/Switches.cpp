@@ -526,7 +526,7 @@ void loopSwitches()
     bool primaryGpioEvent = primaryValue != sw->lastPrimaryGpioState;
     bool secondaryGpioEvent = secondaryValue != sw->lastSecondaryGpioState;
 
-    if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw->lastTimeChange >= 5)
+    if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw->lastTimeChange >= DELAY_DEBOUCE)
     {
       sw->lastPrimaryGpioState = primaryValue;
       sw->lastSecondaryGpioState = secondaryValue;

@@ -151,7 +151,7 @@ void loadStoredConfiguration()
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(CONFIG_FILENAME, "r+");
-    const size_t CAPACITY = JSON_OBJECT_SIZE(24) + 512;
+    const size_t CAPACITY = JSON_OBJECT_SIZE(24) + 700;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
     if (error)

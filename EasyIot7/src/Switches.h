@@ -4,7 +4,7 @@
 #include "WebServer.h"
 #define SWITCHES_TAG "[SWITCHES]"
 #define SWITCH_DEVICE "switch"
-
+#define DELAY_DEBOUCE 50
 #define DELAY_COVER_PROTECTION 50        //50 milliseconds
 #define COVER_AUTO_STOP_PROTECTION 90000 // after 90 seconds turn off all relay to enhance the life cycle
 #define PAYLOAD_ON "ON"
