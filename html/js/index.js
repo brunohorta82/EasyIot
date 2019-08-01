@@ -25,6 +25,7 @@ function addToSelect(select, class_, value) {
 
     }
 }
+
 function buildSensorTemplate() {
     if ($('#bss_NEW').length > 0) return
     let device = {
@@ -34,10 +35,11 @@ function buildSensorTemplate() {
         "type": 65,
         "mqttRetain": true,
         "mqttStateTopic": "../state",
-        "delayRead":2000
+        "delayRead": 2000
     };
     buildSensor(device);
 }
+
 function setOptionOnSelect(select, value) {
     let sel = document.getElementById(select);
     if (sel) {
@@ -56,11 +58,11 @@ function hide(id) {
 var config;
 var WORDS_EN = {
     "node": "NODE",
-    "reading-interval":"Readings every",
-    "sensors":"Sensors",
+    "reading-interval": "Readings every",
+    "sensors": "Sensors",
     "update": "UPDATE",
     "features": "FEATURES",
-    "memory-free":"Free RAM",
+    "memory-free": "Free RAM",
     "current-version": "Current version",
     "new-file": "Choose new version file",
     "install-new-version": "Install new version",
@@ -75,8 +77,8 @@ var WORDS_EN = {
     "system": "System",
     "name": "Name",
     "restart": "Restart",
-    "seconds":"seconds",
-    "in":"in",
+    "seconds": "seconds",
+    "in": "in",
     "reset-factory": "Load Factory Defaults",
     "switches": "Switches",
     "remove": "Remove",
@@ -86,11 +88,11 @@ var WORDS_EN = {
     "light": "Light",
     "cover": "Cover",
     "lock": "Lock",
-    "released":"Released",
-    "disconnected":"disconnected",
-    "dconnected":"connected",
+    "released": "Released",
+    "disconnected": "disconnected",
+    "dconnected": "connected",
     "normal": "Generic",
-    "choose":"select",
+    "choose": "select",
     "push": "Push",
     "dual-push": "Dual Push",
     "dual-normal": "Dual Generic",
@@ -117,9 +119,9 @@ var WORDS_EN = {
 };
 var WORDS_PT = {
     "node": "NÓ",
-    "sensors":"Sensores",
-    "released":"Libertar",
-    "reading-interval":"Leituras a cada",
+    "sensors": "Sensores",
+    "released": "Libertar",
+    "reading-interval": "Leituras a cada",
     "update": "ATUALIZAR",
     "features": "FUNÇÕES",
     "current-version": "Versão atual",
@@ -127,20 +129,20 @@ var WORDS_PT = {
     "install-new-version": "Instalar nova versão",
     "version": "Versão",
     "save": "Guardar",
-    "memory-free":"RAM Livre",
-    "choose":"escolher",
+    "memory-free": "RAM Livre",
+    "choose": "escolher",
     "clean-fields": "Limpar todos os campos",
     "username": "Utilizador",
     "password": "Palavra Passe",
     "yes": "Sim",
     "no": "Não",
-    "disconnected":"desligado",
-    "dconnected":"ligado",
+    "disconnected": "desligado",
+    "dconnected": "ligado",
     "netmask": "Mascara de Rede",
     "system": "Sistema",
     "name": "Nome",
-    "in":"em",
-    "seconds":"segundos",
+    "in": "em",
+    "seconds": "segundos",
     "restart": "Reiniciar",
     "reset-factory": "Carregar Configuração de Fábrica",
     "switches": "Interruptores",
@@ -193,9 +195,11 @@ function loadsLanguage(lang) {
 function showMessage(pt, en) {
     localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
 }
+
 function showText(pt, en) {
-  return  localStorage.getItem('lang').toString() === "PT" ? pt : en;
+    return localStorage.getItem('lang').toString() === "PT" ? pt : en;
 }
+
 function loadConfig() {
     const targetUrl = endpoint.baseUrl + "/config";
     $.ajax({
@@ -291,6 +295,7 @@ function fillSwitches(payload) {
         buildSwitch(obj);
     }
 }
+
 function fillSensors(payload) {
     switches = payload;
     if (!payload) return;
@@ -303,28 +308,28 @@ function fillSensors(payload) {
 function applySwitchFamily(id) {
     hide("mqttPositionCommandTopicRow_" + id);
     hide("mqttPositionStateTopicRow_" + id);
-    hide("timeBetweenStatesRow_"+id);
+    hide("timeBetweenStatesRow_" + id);
     hide("secondaryGpioControlRow_" + id);
     hide("secondaryGpioRow_" + id);
-    hide("btn_on_"+id);
-    hide("btn_close_"+id);
-    hide("btn_stop_"+id);
-    hide("btn_open_"+id);
+    hide("btn_on_" + id);
+    hide("btn_close_" + id);
+    hide("btn_stop_" + id);
+    hide("btn_open_" + id);
     removeFromSelect('mode_' + id, 1);
     removeFromSelect('mode_' + id, 2);
     removeFromSelect('mode_' + id, 4);
     removeFromSelect('mode_' + id, 5);
     removeFromSelect('autoStateValue_' + id, "OPEN");
-    removeFromSelect('autoStateValue_' + id,  "CLOSE");
-    removeFromSelect('autoStateValue_' + id,  "STOP");
+    removeFromSelect('autoStateValue_' + id, "CLOSE");
+    removeFromSelect('autoStateValue_' + id, "STOP");
     removeFromSelect('autoStateValue_' + id, "ON");
     removeFromSelect('autoStateValue_' + id, "OFF");
     removeFromSelect('autoStateValue_' + id, "UNLOCK");
     removeFromSelect('autoStateValue_' + id, "LOCK");
     if ($('#family_' + id).val() == "cover") {
-        show("btn_close_"+id);
-        show("btn_stop_"+id);
-        show("btn_open_"+id);
+        show("btn_close_" + id);
+        show("btn_stop_" + id);
+        show("btn_open_" + id);
         addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('mode_' + id, "lang-dual-normal", 4);
         addToSelect('mode_' + id, "lang-dual-push", 5);
@@ -332,16 +337,16 @@ function applySwitchFamily(id) {
         show("secondaryGpioRow_" + id);
         show("mqttPositionCommandTopicRow_" + id);
         show("mqttPositionStateTopicRow_" + id);
-        show("timeBetweenStatesRow_"+id);
+        show("timeBetweenStatesRow_" + id);
         addToSelect('autoStateValue_' + id, "lang-open", "OPEN");
         addToSelect('autoStateValue_' + id, "lang-close", "CLOSE");
         addToSelect('autoStateValue_' + id, "lang-stop", "STOP");
     } else if ($('#family_' + id).val() == "lock") {
-        show("btn_on_"+id);
+        show("btn_on_" + id);
         addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('autoStateValue_' + id, "lang-released", "RELEASED");
     } else {
-        show("btn_on_"+id);
+        show("btn_on_" + id);
         addToSelect('mode_' + id, "lang-normal", 1);
         addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('autoStateValue_' + id, "lang-on", "ON");
@@ -358,17 +363,19 @@ function applySwitchMode(id) {
         if (($('#mode_' + id).val() == 2)) {
             setOptionOnSelect('secondaryGpio_' + id, 99);
             hide("secondaryGpioRow_" + id)
-        }else{
+        } else {
             show("secondaryGpioRow_" + id)
         }
         show("secondaryGpioControlRow_" + id)
     }
     loadsLanguage(localStorage.getItem('lang'));
 }
-function ifdef(value,defaultValue) {
-    if(value) return value;
+
+function ifdef(value, defaultValue) {
+    if (value) return value;
     return defaultValue;
 }
+
 function applyTypeControl(id) {
     hide("secondaryGpioControlRow_" + id);
     hide("primaryGpioControlRow_" + id);
@@ -387,13 +394,14 @@ function applyTypeControl(id) {
     }
 
 }
+
 function buildSensor(obj) {
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     $('#sensors_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
         '                        <div class="pull-right">' +
-        '                        </div>'+
+        '                        </div>' +
         '                    </div>' +
         '                </div>' +
         '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">' +
@@ -403,7 +411,7 @@ function buildSensor(obj) {
         '                            <tr style="  border-top: 1px solid #88bf9c;">' +
         '                                <td><span class="label-device "><span' +
         '                                    class="lang-sensor">Sensor</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="type_' + obj.id + '">' +
+        '                                <td><select class="form-control select-device" id="s_type_' + obj.id + '">' +
         '                                    <option value="65">PIR</option>' +
         '                                    <option value="66">RCWL-0516</option>' +
         '                                    <option value="21">LDR</option>' +
@@ -418,7 +426,7 @@ function buildSensor(obj) {
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-name">NOME</span></span></td>' +
         '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"' +
-        '                                                            type="text" id="name_' + obj.id + '" placeholder="ex: sala"' +
+        '                                                            type="text" id="s_name_' + obj.id + '" placeholder="ex: sala"' +
         '                                                            maxlength="30" required/>' +
         '                                </td>' +
         '                            </tr>' +
@@ -426,7 +434,7 @@ function buildSensor(obj) {
         '                            <tr style="  border-top: 1px solid #88bf9c;">' +
         '                                <td><span class="label-device "><span' +
         '                                    class="lang-pin-in-a">Pinos Entrada</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="primaryGpio_' + obj.id + '">' +
+        '                                <td><select class="form-control select-device" id="s_primaryGpio_' + obj.id + '">' +
         '                                    <option class="lang-none" value="99">Nenhum</option>' +
         '                                    <option value="4">4 <-> GND</option>' +
         '                                    <option value="5">5 <-> GND</option>' +
@@ -444,17 +452,17 @@ function buildSensor(obj) {
         '                            </tr>' +
         '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttStateTopic,"../state") + '</span></td>' +
+        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttStateTopic, "../state") + '</span></td>' +
         '                            </tr>' +
         '                            <tr>' +
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
-        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
+        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="s_mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
         '                            </tr>' +
         '                            <tr >' +
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-reading-interval">Leituras a cada </span></span></td>' +
         '                                <td class="col-xs-8"><input style="float: left; width: 70%;" class="input-device form-control" value="' + obj.delayRead / 1000 + '"' +
-        '                                                            type="text" id="delayRead_' + obj.id + '" placeholder="ex: 12"' +
+        '                                                            type="text" id="s_delayRead_' + obj.id + '" placeholder="ex: 12"' +
         '                                                             maxlength="2" required/><span style=" margin-left' +
         ':10px; float: left;" ' +
         '                                    class="lang-seconds">Segundos</span> ' +
@@ -475,6 +483,7 @@ function buildSensor(obj) {
     setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
     loadsLanguage(localStorage.getItem('lang'));
 }
+
 function buildSwitch(obj) {
     let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "OFF";
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
@@ -484,26 +493,26 @@ function buildSwitch(obj) {
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
         '                        <div class="pull-right">' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open  + ' btn btn-primary btn-control">' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + ' btn btn-primary btn-control">' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
         '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>' +
         '                                </svg>' +
         '                            </button>' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'STOP\')" id="btn_stop_' + obj.id + '" class="'  + ' btn btn-primary btn-control">' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'STOP\')" id="btn_stop_' + obj.id + '" class="' + ' btn btn-primary btn-control">' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>' +
         '                                    <path d="M6 6h12v12H6z"/>' +
         '                                </svg>' +
         '                            </button>' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close  + ' btn btn-primary btn-control">' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close + ' btn btn-primary btn-control">' +
 
         '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
         '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>' +
         '                                    <path d="M0 0h24v24H0z" fill="none"/>' +
         '                                </svg>' +
         '                            </button>' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'' + obj.stateControl + '\')" id="btn_on_' + obj.id + '" class="' + on  + ' btn btn-primary btn-control">' +
+        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'' + obj.stateControl + '\')" id="btn_on_' + obj.id + '" class="' + on + ' btn btn-primary btn-control">' +
         '                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">' +
         '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>' +
         '                                </svg>' +
@@ -612,17 +621,17 @@ function buildSwitch(obj) {
         '                            </tr>' +
         '                            <tr id="mqttPositionCommandTopicRow_' + obj.id + '" ">' +
         '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>' +
-        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionCommandTopic,"../setposition") + '</span></td>' +
+        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionCommandTopic, "../setposition") + '</span></td>' +
         '                            </tr>' +
         '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionStateTopic,"../position") + '</span></td>' +
+        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionStateTopic, "../position") + '</span></td>' +
         '                            </tr>' +
         '                            <tr>' +
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
         '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
         '                            </tr>' +
-        '                            <tr id="timeBetweenStatesRow_'+obj.id+'" >' +
+        '                            <tr id="timeBetweenStatesRow_' + obj.id + '" >' +
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-time">TEMPO</span></span></td>' +
         '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.timeBetweenStates / 1000 + '"' +
@@ -677,10 +686,10 @@ function buildSwitch(obj) {
 
 function stateSwitch(id, state) {
     let toggleState = state;
-    if ((toggleState ==="ON" || toggleState==="OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
+    if ((toggleState === "ON" || toggleState === "OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
         toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
     }
-    if (toggleState ==="RELEASED" ) {
+    if (toggleState === "RELEASED") {
         toggleState = "LOCK";
     }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
@@ -702,8 +711,43 @@ function stateSwitch(id, state) {
 }
 
 function saveSensor(id) {
+    let device = {
+        "id": id,
+        "name":$('#s_name_' + id).val(),
+        "primaryGpio": parseInt($('#s_primaryGpio_' + id).val()),
+        "type": parseInt($('#s_type_' + id).val()),
+        "mqttRetain":   document.getElementById('s_mqttRetain_' + id).checked,
+        "delayRead": parseInt($('#s_delayRead_' + id).val()) * 1000,
 
+    };
+    const targetUrl = endpoint.baseUrl + "/save-sensor?id=" + device.id;
+    $.ajax({
+        type: "POST",
+        url: targetUrl,
+        dataType: "json",
+        contentType: "application/json",
+        data: JSON.stringify(device),
+        success: function (response) {
+            let idx = sensors.findIndex(function (item, i) {
+                return item.id === device.id
+            });
+            if (idx >= 0) {
+                sensors.splice(idx, 1);
+            }
+            sensors.push(response);
+            fillSensors(switches);
+            showMessage("Configuração Guardada", "Config Stored")
+
+        },
+        error: function () {
+            showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
+        }, complete: function () {
+
+        },
+        timeout: 2000
+    });
 }
+
 function saveSwitch(id) {
     let device = {
         "id": id,
@@ -712,8 +756,8 @@ function saveSwitch(id) {
         "primaryGpio": parseInt($('#primaryGpio_' + id).val()),
         "secondaryGpio": parseInt($('#secondaryGpio_' + id).val()),
         "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()) * 1000,
-        "autoStateValue":  $('#autoStateValue_' + id).val(),
-        "autoStateDelay": parseInt($('#autoStateDelay_' + id).val())*1000,
+        "autoStateValue": $('#autoStateValue_' + id).val(),
+        "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()) * 1000,
         "typeControl": parseInt($('#typeControl_' + id).val()),
         "mode": parseInt($('#mode_' + id).val()),
         "pullup": true,
@@ -722,7 +766,32 @@ function saveSwitch(id) {
         "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),
         "secondaryGpioControl": parseInt($('#secondaryGpioControl_' + id).val()),
     };
-    storeDevice(device, "save-switch");
+    const targetUrl = endpoint.baseUrl + "/save-switch?id=" + device.id;
+    $.ajax({
+        type: "POST",
+        url: targetUrl,
+        dataType: "json",
+        contentType: "application/json",
+        data: JSON.stringify(device),
+        success: function (response) {
+            let idx = switches.findIndex(function (item, i) {
+                return item.id === device.id
+            });
+            if (idx >= 0) {
+                switches.splice(idx, 1);
+            }
+            switches.push(response);
+            fillSwitches(switches);
+            showMessage("Configuração Guardada", "Config Stored")
+
+        },
+        error: function () {
+            showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
+        }, complete: function () {
+
+        },
+        timeout: 2000
+    });
 }
 
 $(document).ready(function () {
@@ -821,6 +890,7 @@ function removeSwitch(id) {
         timeout: 2000
     });
 }
+
 function removeSensor(id) {
     const targetUrl = endpoint.baseUrl + "/remove-sensor?id=" + id;
     $.ajax({
@@ -840,37 +910,6 @@ function removeSensor(id) {
     });
 }
 
-function storeDevice(device, endpointstore) {
-
-    const targetUrl = endpoint.baseUrl + "/" + endpointstore + "?id=" + device.id;
-    $.ajax({
-        type: "POST",
-        url: targetUrl,
-        dataType: "json",
-        contentType: "application/json",
-        data: JSON.stringify(device),
-        success: function (response) {
-            let idx = switches.findIndex(function (item, i) {
-                return item.id === device.id
-            });
-            if(idx >= 0) {
-                switches.splice(idx, 1);
-            }
-            if (endpointstore === "save-switch") {
-                switches.push(response);
-                fillSwitches(switches);
-            }
-            showMessage("Configuração Guardada", "Config Stored")
-
-        },
-        error: function () {
-            showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
-}
 
 function reboot() {
     $.ajax({
@@ -907,13 +946,13 @@ function systemStatus() {
         dataType: "json",
         success: function (response) {
             $('#ssid_lbl').text(response.wifiSSID);
-            if (document.getElementById("wifiIp") && ($('input[name="wifiIp"]').val().trim().length === 0 ||  $('input[name="wifiIp"]').val() === "(IP unset)")) {
+            if (document.getElementById("wifiIp") && ($('input[name="wifiIp"]').val().trim().length === 0 || $('input[name="wifiIp"]').val() === "(IP unset)")) {
                 $('input[name="wifiIp"]').val(response.wifiIp);
                 $('input[name="wifiMask"]').val(response.wifiMask);
                 $('input[name="wifiGw"]').val(response.wifiGw);
             }
             let percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
-            if(config) {
+            if (config) {
                 $('#mqtt_lbl').text(config.mqttIpDns);
             }
             if (response.mqttConnected) {
@@ -921,7 +960,7 @@ function systemStatus() {
             } else {
                 $('#mqtt-state').text(showText("desligado", "disconnected"));
             }
-            $('#lbl-heap').text((parseFloat(response.freeHeap/1024).toFixed(2)).toString().concat(" KiB"));
+            $('#lbl-heap').text((parseFloat(response.freeHeap / 1024).toFixed(2)).toString().concat(" KiB"));
             $('#wifi-signal').text(percentage + "%");
         }, error: function () {
             $('#wifi-signal').text("0%");

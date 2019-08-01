@@ -77,6 +77,7 @@ JsonObject updateSensor(JsonObject doc, bool persist)
   }
 
   sensors.push_back(ss);
+  saveSensors();
   return doc;
 }
 void loadStoredSensors()
