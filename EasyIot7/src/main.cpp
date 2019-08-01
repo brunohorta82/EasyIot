@@ -39,6 +39,7 @@ void setup()
   Serial.begin(115200);
   loadStoredConfiguration();
   loadStoredSwitches();
+  loadStoredSensors();
   setupWebserverAsync();
   setupWiFi();
   setupMQTT();

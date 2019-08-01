@@ -187,7 +187,7 @@ server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
     
     request->send(response);
   }));
-  server.on("/remove-sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
       removeSensor(request->arg("id"), true);

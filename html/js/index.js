@@ -275,8 +275,8 @@ function toggleActive(menu) {
         if (menu === "devices") {
             switches = [];
             loadDevice(fillSwitches, "switches", function () {
-                // loadDevice(fillSensors, "sensors", function () {
-                // });
+                 loadDevice(fillSensors, "sensors", function () {
+                 });
 
             });
         } else {
@@ -297,7 +297,7 @@ function fillSwitches(payload) {
 }
 
 function fillSensors(payload) {
-    switches = payload;
+    sensors = payload;
     if (!payload) return;
     $('#sensors_config').empty();
     for (let obj of payload.sort(sortByProperty('name'))) {
@@ -449,10 +449,6 @@ function buildSensor(obj) {
         '                            <tr>' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
         '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>' +
-        '                            </tr>' +
-        '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">' +
-        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttStateTopic, "../state") + '</span></td>' +
         '                            </tr>' +
         '                            <tr>' +
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
@@ -735,7 +731,7 @@ function saveSensor(id) {
                 sensors.splice(idx, 1);
             }
             sensors.push(response);
-            fillSensors(switches);
+            fillSensors(sensors);
             showMessage("Configuração Guardada", "Config Stored")
 
         },
