@@ -36,7 +36,9 @@ void checkInternalRoutines()
 
 void setup()
 {
+  #ifdef DEBUG
   Serial.begin(115200);
+  #endif
   loadStoredConfiguration();
   loadStoredSwitches();
   loadStoredSensors();

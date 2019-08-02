@@ -8,7 +8,7 @@ String getApName()
 }
 void reloadWiFiConfig(){
        jw.disconnect(); 
-       jw.setHostname(getAtualConfig().hostname);
+       jw.setHostname(getAtualConfig().nodeId);
        jw.cleanNetworks();
        jw.setSoftAP(getApName().c_str(),getAtualConfig().apSecret);
        
@@ -164,7 +164,7 @@ void infoCallback(justwifi_messages_t code, char * parameter) {
       logger(WIFI_TAG,msg);
 }
 void setupWiFi(){
-  jw.setHostname(getAtualConfig().hostname);
+  jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);
   jw.setSoftAP(getAtualConfig().apName,getAtualConfig().apSecret);
   jw.enableAP(false);
@@ -177,8 +177,7 @@ void setupWiFi(){
 void loopWiFi(){
   jw.loop();
 }
-String systemJSONStatus(){
-  String wifi = "";
+size_t systemJSONStatus(Print &output){
   const size_t CAPACITY = JSON_OBJECT_SIZE(13)+400;
   StaticJsonDocument<CAPACITY> doc;
   JsonObject object = doc.to<JsonObject>();
@@ -194,8 +193,8 @@ String systemJSONStatus(){
   object["mode"] = (int) WiFi.getMode();
   object["mqttConnected"] = getMqttState();
   object["freeHeap"] = String(ESP.getFreeHeap());
-  serializeJson(doc,wifi);
-  return wifi;
+  return serializeJson(doc,output);
+  
 }
 
 

@@ -5,7 +5,7 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 void processMqttAction(String topic, String payload)
 {
-    mqttSwitchControl(topic, payload);
+    mqttSwitchControl(topic.c_str(), payload.c_str());
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
@@ -55,8 +55,8 @@ boolean reconnect()
     if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic().c_str(), 0, true, UNAVAILABLE_PAYLOAD, true))
     {
         logger(MQTT_TAG, "CONNECTED");
-        publishOnMqtt(getAvailableTopic(), AVAILABLE_PAYLOAD, true);
-        publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
+        publishOnMqtt(getAvailableTopic().c_str(), AVAILABLE_PAYLOAD, true);
+        //publishOnMqtt(getConfigStatusTopic(), getConfigStatus().c_str(), true);
         subscribeOnMqtt(HOMEASSISTANT_ONLINE_TOPIC);
         
     }
@@ -106,7 +106,7 @@ void loopMqtt()
     }
 }
 
-void publishOnMqtt(String topic, String payload, bool retain)
+void publishOnMqtt(const char* topic,const  String& payload, bool retain)
 {
     if (strlen(getAtualConfig().mqttIpDns) == 0)
     {
@@ -119,17 +119,17 @@ void publishOnMqtt(String topic, String payload, bool retain)
         return;
     }
     static unsigned int retries = 0;
-    while (!mqttClient.publish(topic.c_str(), payload.c_str(), retain) && retries < 3)
+    while (!mqttClient.publish(topic, payload.c_str(), retain) && retries < 3)
     {
         retries++;
     }
     if (retries < 3)
     {
-        logger(MQTT_TAG, "Publish in " + topic + " message " + payload);
+        logger(MQTT_TAG, "Publish in " + String(topic) + " message " + payload);
     }
     else
     {
-        logger(MQTT_TAG, "Error on try publish in " + topic + " message " + payload);
+        logger(MQTT_TAG, "Error on try publish in " + String(topic) + " message " + payload);
     }
 
     retries = 0;
@@ -137,15 +137,15 @@ void publishOnMqtt(String topic, String payload, bool retain)
 bool getMqttState(){
     return mqttClient.connected();
 }
-void subscribeOnMqtt(String topic)
+void subscribeOnMqtt(const char* topic)
 {
-    mqttClient.subscribe(topic.c_str());
+    mqttClient.subscribe(topic);
 }
-void unsubscribeOnMqtt(String topic)
+void unsubscribeOnMqtt(const char* topic)
 {
     if (mqttClient.connected())
     {
-        logger(MQTT_TAG, "Unsubscribe on " + topic);
-        mqttClient.unsubscribe(topic.c_str());
+        logger(MQTT_TAG, "Unsubscribe on " + String(topic));
+        mqttClient.unsubscribe(topic);
     }
 }

@@ -32,7 +32,6 @@ struct Config {
   char wifiGw[24];
   char apSecret[16];
   char apName[30];
-  char hostname[32];
   long configTime;
   char configkey[64];
   char hardware[24];
@@ -41,7 +40,7 @@ struct Config {
 
 
 void loadStoredConfiguration();
-String saveConfiguration();
+void saveConfiguration();
 String getUpdateUrl();
 
 void requestRestart();
@@ -52,15 +51,14 @@ bool autoUpdateRequested();
 
 void requestLoadDefaults();
 bool loadDefaultsRequested();
-String getConfigStatus();
+size_t  serializeConfigStatus(Print& output);
 void requestWifiScan();
 void requestReloadWifi();
 bool reloadWifiRequested();
-void logger(String tag, String msg);
-String normalize(String inputStr);
-String getConfigStatus();
-String updateConfig(JsonObject json, bool persist);
-boolean isValidNumber(String str);
+void logger(const String& tag,const  String& msg);
+void normalize(String  &inputStr);
+void updateConfig(JsonObject doc, bool persist);
+boolean isValidNumber(const char *str);
 struct Config& getAtualConfig();
 void configPIN(uint8_t pin, uint8_t mode);
 void writeToPIN(uint8_t pin, uint8_t val);

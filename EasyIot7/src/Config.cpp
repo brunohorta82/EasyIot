@@ -14,11 +14,12 @@ struct Config &getAtualConfig()
   return config;
 }
 
-boolean isValidNumber(String str)
+boolean isValidNumber(const char *str)
 {
-  for (byte i = 0; i < str.length(); i++)
+  size_t length = strlen(str);
+  for (byte i = 0; i < length; i++)
   {
-    if (isDigit(str.charAt(i)))
+    if (isDigit(str[i]))
       return true;
   }
   return false;
@@ -103,20 +104,17 @@ bool loadDefaultsRequested()
   return false;
 }
 
-void logger(String tag, String msg)
+void logger(const String& tag,const  String& msg)
 {
   if (msg.equals(""))
     return;
-
+  #ifdef DEBUG
   Serial.println(tag + " " + msg);
+  #endif
 }
 
-String getHostname()
-{
-  return String(config.nodeId);
-}
 
-String normalize(String inputStr)
+void normalize(String  &inputStr)
 {
   inputStr.toLowerCase();
   inputStr.trim();
@@ -141,8 +139,6 @@ String normalize(String inputStr)
   inputStr.replace("\"", "");
   inputStr.replace(" ", "");
   inputStr.replace("â", "a");
-
-  return inputStr;
 }
 
 
@@ -168,10 +164,10 @@ void loadStoredConfiguration()
   }
 
 }
-String getConfigStatus(){
+size_t  serializeConfigStatus(Print &output){
   const size_t CAPACITY = JSON_OBJECT_SIZE(26) + 512;
     DynamicJsonDocument doc(CAPACITY);
-      doc["nodeId"] = config.nodeId;
+      doc["nodeId"] = String(config.nodeId);
       doc["homeAssistantAutoDiscoveryPrefix"] = config.homeAssistantAutoDiscoveryPrefix;
       doc["mqttIpDns"] = config.mqttIpDns;
       doc["mqttPort"] = config.mqttPort;
@@ -188,18 +184,14 @@ String getConfigStatus(){
       doc["apSecret"] = config.apSecret;
       doc["configTime"] = config.configTime;
       doc["configkey"] = config.configkey;
-      doc["hostname"] = config.hostname;
       doc["apName"] = config.apName;
       doc["firmware"] = config.firmware;
       doc["chipId"] = String(ESP.getChipId());
       doc["mac"] = WiFi.softAPmacAddress();
-      String output = "";
-      serializeJson(doc, output) ;
-      return output;
+      return serializeJson(doc,output);
 }
-String saveConfiguration()
-{  const size_t CAPACITY = JSON_OBJECT_SIZE(26) + 512;
-    DynamicJsonDocument doc(CAPACITY);
+void saveConfiguration()
+{
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(CONFIG_FILENAME, "w+");
@@ -209,29 +201,7 @@ String saveConfiguration()
     }
     else
     {
-      doc["nodeId"] = config.nodeId;
-      doc["homeAssistantAutoDiscoveryPrefix"] = config.homeAssistantAutoDiscoveryPrefix;
-      doc["mqttIpDns"] = config.mqttIpDns;
-      doc["mqttPort"] = config.mqttPort;
-      doc["mqttUsername"] = config.mqttUsername;
-      doc["mqttPassword"] = config.mqttPassword;
-      doc["wifiSSID"] = config.wifiSSID;
-      doc["wifiSSID2"] = config.wifiSSID2;
-      doc["wifiSecret"] = config.wifiSecret;
-      doc["wifiSecret2"] = config.wifiSecret2;
-      doc["wifiIp"] = config.wifiIp;
-      doc["wifiMask"] = config.wifiMask;
-      doc["wifiGw"] = config.wifiGw;
-      doc["staticIp"] = config.staticIp;
-      doc["apSecret"] = config.apSecret;
-      doc["configTime"] = config.configTime;
-      doc["configkey"] = config.configkey;
-      doc["hostname"] = config.hostname;
-      doc["apName"] = config.apName;
-      doc["firmware"] = config.firmware;
-      doc["chipId"] = String(ESP.getChipId());
-      doc["mac"] = WiFi.softAPmacAddress();
-      if (serializeJson(doc, file) == 0)
+      if (serializeConfigStatus(file) == 0)
       {
         logger(CONFIG_TAG, "Failed to write Config into file");
       }
@@ -244,17 +214,16 @@ String saveConfiguration()
     file.close();
   }
   SPIFFS.end();
-  String output = "";
-  serializeJson(doc, output);
-  return output;
 }
 
-String updateConfig(JsonObject doc, bool persist)
+void updateConfig(JsonObject doc, bool persist)
 {
-  String output = "";
+  
   bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0 || strcmp(config.wifiMask, doc["wifiMask"] | "") != 0 || strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
   bool reloadMqtt =  strcmp(config.mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(config.mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(config.mqttPassword, doc["mqttPassword"] | "") != 0 || config.mqttPort != (doc["mqttPort"] | DEFAULT_MQTT_PORT);
-  strlcpy(config.nodeId, normalize(doc["nodeId"] | String(String("MyNode")+String(ESP.getChipId()))).c_str(), sizeof(config.nodeId));
+  String n_name = doc["nodeId"] | String(String("MyNode")+String(ESP.getChipId()));
+  normalize(n_name);
+  strlcpy(config.nodeId, n_name.c_str(), sizeof(config.nodeId));
   strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
   config.mqttPort = doc["mqttPort"] | DEFAULT_MQTT_PORT;
   strlcpy(config.mqttUsername, doc["mqttUsername"] | "", sizeof(config.mqttUsername));
@@ -270,7 +239,6 @@ String updateConfig(JsonObject doc, bool persist)
   strlcpy(config.apSecret, doc["apSecret"] | AP_SECRET, sizeof(config.apSecret));
   config.configTime = doc["configTime"];
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
-  strlcpy(config.hostname, getHostname().c_str(), sizeof(config.hostname));
   config.firmware = doc["firmware"] | VERSION;
   if(strcmp(MQTT_CLOUD_URL,config.mqttIpDns) == 0){
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, config.mqttUsername, sizeof(config.homeAssistantAutoDiscoveryPrefix));
@@ -282,8 +250,7 @@ String updateConfig(JsonObject doc, bool persist)
   if (persist || config.firmware  !=  VERSION)
   {
      config.firmware = VERSION;
-     doc["firmware"] = VERSION;
-  output =  saveConfiguration();
+     saveConfiguration();
   }
   if (reloadWifi)
   {
@@ -293,5 +260,4 @@ String updateConfig(JsonObject doc, bool persist)
   {
     setupMQTT();
   }
- return output;
 }

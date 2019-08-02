@@ -40,12 +40,13 @@ JsonObject updateSensor(JsonObject doc, bool persist)
   int type = doc["type"] | -1;
   if (type < 0)
     return doc;
-
-  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
+  String n_name = doc["name"] ;
+  normalize(n_name);
+  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
   if (persist)
     removeSensor(doc.getMember("id").as<String>(), false);
   SensorT ss;
-  strlcpy(ss.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(ss.id));
+  strlcpy(ss.id, String(String(ESP.getChipId()) + n_name).c_str(), sizeof(ss.id));
   strlcpy(ss.name, doc.getMember("name").as<String>().c_str(), sizeof(ss.name));
   strlcpy(ss.deviceClass, doc["deviceClass"] | NONE_CLASS, sizeof(ss.deviceClass));
   ss.type = type;

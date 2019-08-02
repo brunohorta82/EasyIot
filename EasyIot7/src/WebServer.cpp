@@ -60,8 +60,8 @@ void loadUI()
   });
 
   //CSS
-  server.on("/css/AdminLTE.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", AdminLTE_min_css, sizeof(AdminLTE_min_css));
+  server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css",styles_min_css, sizeof(styles_min_css));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Expires", "Mon, 1 Jan 2222 10:10:10 GMT");
     request->send(response);
@@ -76,13 +76,13 @@ void startAlexaDiscovery()
   fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
     String valueStr =state ? String(map((int)value,0,255,0,100)+1) : "0";
     logger("[ALEXA]","Device id "+String(device_id)+" "+String(device_name)+" "+valueStr+" "+String(state));
-    stateSwitchByName(device_name, state ? "ON" : "OFF",valueStr );
+    stateSwitchByName(device_name, state ? "ON" : "OFF",valueStr.c_str() );
   });
 }
 
 void setupWebserverAsync()
 {
-  MDNS.begin(getAtualConfig().hostname);
+  MDNS.begin(getAtualConfig().nodeId);
   MDNS.addService("easyiot", "tcp", 80);
   MDNS.addServiceTxt("easyiot", "tcp", "nodeId", String(getAtualConfig().nodeId));
   MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
@@ -104,7 +104,7 @@ void setupWebserverAsync()
   });
   server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(systemJSONStatus());
+    systemJSONStatus(*response);
     request->send(response);
   });
   server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -141,12 +141,15 @@ void setupWebserverAsync()
     } });
   //CONFIG
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json",getConfigStatus() );
+      AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeConfigStatus(*response);
+    request->send( response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(updateConfig(json, true));
-    request->send(response);
+    updateConfig(json, true);
+    serializeConfigStatus(*response);
+    request->send( response);
   }));
   //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -161,7 +164,7 @@ void setupWebserverAsync()
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
-      removeSwitch(request->arg("id"), true);
+      removeSwitch(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->print(getSwitchesConfigStatus());
@@ -170,7 +173,7 @@ void setupWebserverAsync()
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id") && request->hasArg("state"))
     {
-      stateSwitchById(request->arg("id"), request->arg("state"));
+      stateSwitchById(request->arg("id").c_str(), request->arg("state").c_str());
       request->send(200, "application/json", "{\"result\":\"OK\"}");
     }
     else

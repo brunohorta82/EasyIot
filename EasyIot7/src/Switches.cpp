@@ -2,20 +2,20 @@
 
 std::vector<SwitchT> switchs;
 
-void removeSwitch(String id, bool persist)
+void removeSwitch(const char *id, bool persist)
 {
-  logger(SWITCHES_TAG, "Remove switch " + id);
+  logger(SWITCHES_TAG, "Remove switch " + String(id));
 
   unsigned int del = NO_GPIO;
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
     SwitchT swStored = switchs[i];
-    if (strcmp(id.c_str(), swStored.id) == 0)
+    if (strcmp(id, swStored.id) == 0)
     {
       publishOnMqtt(swStored.mqttCommandTopic, "", true);
       removeFromHaDiscovery(&swStored);
       removeFromAlexaDiscovery(&swStored);
-      unsubscribeOnMqtt(String(swStored.mqttCommandTopic));
+      unsubscribeOnMqtt(swStored.mqttCommandTopic);
       del = i;
     }
   }
@@ -40,11 +40,13 @@ JsonObject updateSwitch(JsonObject doc, bool persist)
 {
 
   logger(SWITCHES_TAG, "Update Environment Switches");
-  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
+  String n_name = doc["name"];
+  normalize(n_name);
+  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
   if (persist)
-    removeSwitch(doc.getMember("id").as<String>(), false);
+    removeSwitch(doc["id"], false);
   SwitchT sw;
-  strlcpy(sw.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(sw.id));
+  strlcpy(sw.id, String(String(ESP.getChipId()) + n_name).c_str(), sizeof(sw.id));
   strlcpy(sw.name, doc.getMember("name").as<String>().c_str(), sizeof(sw.name));
   strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
   sw.primaryGpio = doc["primaryGpio"] | NO_GPIO;
@@ -86,7 +88,7 @@ JsonObject updateSwitch(JsonObject doc, bool persist)
       configPIN(sw.secondaryGpio, sw.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     }
   }
-  if (String(sw.family).equals(String(FAMILY_COVER)))
+  if (strcmp(sw.family,FAMILY_COVER) == 0)
   {
     sw.secondaryGpioControl = doc["secondaryGpioControl"] | NO_GPIO;
     sw.statePoolStart = doc["statePoolStart"] | COVER_START_IDX;
@@ -98,7 +100,7 @@ JsonObject updateSwitch(JsonObject doc, bool persist)
     doc["mqttPositionCommandTopic"] = String(baseTopic + "/setposition");
     doc["mqttPositionStateTopic"] = String(baseTopic + "/position");
   }
-  else if (String(sw.family).equals(String(FAMILY_LOCK)))
+  else if (strcmp(sw.family,FAMILY_LOCK) == 0)
   {
     sw.secondaryGpioControl = NO_GPIO;
     sw.statePoolStart = doc["statePoolStart"] | LOCK_START_IDX;
@@ -120,8 +122,8 @@ JsonObject updateSwitch(JsonObject doc, bool persist)
   sw.percentageRequest = -1;
   addToAlexaDiscovery(&sw);
   addToHaDiscovery(&sw);
-  doc["id"] = String(sw.id);
-  doc["stateControl"] = String(sw.stateControl);
+  doc["id"] = sw.id;
+  doc["stateControl"] = sw.stateControl;
   switchs.push_back(sw);
   stateSwitch(&sw, sw.stateControl);
   return doc;
@@ -204,7 +206,7 @@ void saveSwitchs()
         sdoc["inverted"] = sw.inverted;
         sdoc["mqttCommandTopic"] = String(sw.mqttCommandTopic);
         sdoc["mqttStateTopic"] = String(sw.mqttStateTopic);
-        if (String(sw.family).equals("cover"))
+        if (strcmp(sw.family,FAMILY_COVER) == 0)
         {
           sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
           sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
@@ -263,13 +265,13 @@ String getSwitchesConfigStatus()
     return "[]";
   return object;
 }
-int findPoolIdx(String state, unsigned int currentIdx, unsigned int start, unsigned int end)
+int findPoolIdx(const char* state, unsigned int currentIdx, unsigned int start, unsigned int end)
 {
   int max = (end - start) * 2;
   unsigned int p = currentIdx;
   while (max > 0)
   {
-    if (strcmp(state.c_str(), statesPool[p].c_str()) == 0)
+    if (strcmp(state, statesPool[p].c_str()) == 0)
     {
       return p;
     }
@@ -279,19 +281,19 @@ int findPoolIdx(String state, unsigned int currentIdx, unsigned int start, unsig
   return start;
 }
 
-void mqttSwitchControl(String topic, String payload)
+void mqttSwitchControl(const char *topic, const char *payload)
 {
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
-    if (strcmp(switchs[i].mqttCommandTopic, topic.c_str()) == 0)
+    if (strcmp(switchs[i].mqttCommandTopic, topic) == 0)
     {
 
       for (unsigned int p = switchs[i].statePoolStart; p <= switchs[i].statePoolEnd; p++)
       {
-        if (strcmp(payload.c_str(), statesPool[p].c_str()) == 0)
+        if (strcmp(payload, statesPool[p].c_str()) == 0)
         {
           switchs[i].statePoolIdx = p;
-          stateSwitch(&switchs[i], statesPool[p]);
+          stateSwitch(&switchs[i], statesPool[p].c_str());
           return;
         }
       }
@@ -300,7 +302,7 @@ void mqttSwitchControl(String topic, String payload)
   }
 }
 
-void stateSwitch(SwitchT *switchT, String state)
+void stateSwitch(SwitchT *switchT, const char *state)
 {
   logger(SWITCHES_TAG, "Name:      " + String(switchT->name));
   logger(SWITCHES_TAG, "State:     " + String(state));
@@ -406,8 +408,8 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_LOCK).equals(state) || String(PAYLOAD_UNLOCK).equals(state))
   {
-    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
-    strlcpy(switchT->mqttPayload, state.c_str(), sizeof(switchT->mqttPayload));   //TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->stateControl, state, sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->mqttPayload, state, sizeof(switchT->mqttPayload));   //TODO CHECK STATE FROM SENSOR
     if (switchT->typeControl == TYPE_RELAY)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
@@ -416,7 +418,7 @@ void stateSwitch(SwitchT *switchT, String state)
   }
   else if (String(PAYLOAD_RELEASED).equals(state))
   {
-    strlcpy(switchT->stateControl, state.c_str(), sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->stateControl, state, sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
     strlcpy(switchT->mqttPayload, PAYLOAD_LOCK, sizeof(switchT->mqttPayload));    //TODO CHECK STATE FROM SENSOR
     if (switchT->typeControl == TYPE_RELAY)
     {
@@ -427,16 +429,16 @@ void stateSwitch(SwitchT *switchT, String state)
   else if (isValidNumber(state))
   {
 
-    switchT->percentageRequest = max(0l, min(100l, state.toInt()));
+    switchT->percentageRequest = max(0, min(100, atoi(state)));
     if (switchT->positionControlCover > switchT->percentageRequest)
     {
       switchT->statePoolIdx = CLOSE_IDX;
-      stateSwitch(switchT, statesPool[switchT->statePoolIdx]);
+      stateSwitch(switchT, statesPool[switchT->statePoolIdx].c_str());
     }
     else
     {
       switchT->statePoolIdx = OPEN_IDX;
-      stateSwitch(switchT, statesPool[switchT->statePoolIdx]);
+      stateSwitch(switchT, statesPool[switchT->statePoolIdx].c_str());
     }
   }
   publishOnMqtt(switchT->mqttStateTopic, switchT->mqttPayload, switchT->mqttRetain);
@@ -446,17 +448,17 @@ void stateSwitch(SwitchT *switchT, String state)
   switchT->statePoolIdx = findPoolIdx(switchT->stateControl, switchT->statePoolIdx, switchT->statePoolStart, switchT->statePoolEnd);
   saveSwitchs();
 }
-void stateSwitchById(String id, String state)
+void stateSwitchById(const char *id, const char *state)
 {
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
-    if (strcmp(id.c_str(), switchs[i].id) == 0)
+    if (strcmp(id, switchs[i].id) == 0)
     {
       stateSwitch(&switchs[i], state);
     }
   }
 }
-void stateSwitchByName(const char *name, String state, String value)
+void stateSwitchByName(const char *name, const char *state,const char *value)
 {
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
@@ -537,42 +539,42 @@ void loopSwitches()
       {
       case MODE_SWITCH:
         sw->statePoolIdx = ((sw->statePoolIdx - sw->statePoolStart + 1) % poolSize) + sw->statePoolStart;
-        stateSwitch(sw, statesPool[sw->statePoolIdx]);
+        stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         break;
       case MODE_PUSH:
         if (!primaryValue)
         { //PUSHED
           sw->statePoolIdx = ((sw->statePoolIdx - sw->statePoolStart + 1) % poolSize) + sw->statePoolStart;
-          stateSwitch(sw, statesPool[sw->statePoolIdx]);
+          stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         break;
       case MODE_DUAL_SWITCH:
         if (primaryValue == true && secondaryValue == true)
         {
           sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_2_IDX : STOP_1_IDX;
-          stateSwitch(sw, statesPool[sw->statePoolIdx]);
+          stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         else if (primaryGpioEvent && !primaryValue)
         {
           sw->statePoolIdx = OPEN_IDX;
-          stateSwitch(sw, statesPool[sw->statePoolIdx]);
+          stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         else if (secondaryGpioEvent && !secondaryValue)
         {
           sw->statePoolIdx = CLOSE_IDX;
-          stateSwitch(sw, statesPool[sw->statePoolIdx]);
+          stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         break;
       case MODE_DUAL_PUSH:
         if (!primaryValue)
         { //PUSHED
           sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_1_IDX : OPEN_IDX;
-          stateSwitch(sw, statesPool[sw->statePoolIdx]);
+          stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         if (!secondaryValue)
         { //PUSHED
           sw->statePoolIdx = sw->statePoolIdx == CLOSE_IDX ? STOP_2_IDX : CLOSE_IDX;
-          stateSwitch(sw, statesPool[sw->statePoolIdx]);
+          stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         break;
       default:
@@ -602,7 +604,7 @@ void loopSwitches()
     {
       sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolStart, sw->statePoolEnd);
       logger(SWITCHES_TAG, "AUTO STATE MODE set change switch to -> " + String(statesPool[sw->statePoolIdx]));
-      stateSwitch(sw, statesPool[sw->statePoolIdx]);
+      stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
     }
     if (positionDone(sw))
     {
@@ -610,7 +612,7 @@ void loopSwitches()
       sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_2_IDX : STOP_1_IDX;
       sw->percentageRequest = -1;
       logger(SWITCHES_TAG, "AUTO STATE MODE set change switch to -> " + String(statesPool[sw->statePoolIdx]));
-      stateSwitch(sw, statesPool[sw->statePoolIdx]);
+      stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
     }
   }
 }

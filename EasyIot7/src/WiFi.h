@@ -8,5 +8,5 @@
 void setupWiFi();
 void loopWiFi();
 void reloadWiFiConfig();
-String systemJSONStatus();
+size_t systemJSONStatus(Print &output);
 #endif

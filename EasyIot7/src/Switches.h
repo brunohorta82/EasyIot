@@ -95,17 +95,17 @@ struct SwitchT
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
 };
-void stateSwitchByName(const char *name, String state, String value);
+void stateSwitchByName(const char *name, const char *state, const char *value);
 void loopSwitches();
-void stateSwitch(SwitchT *switchT, String state);
+void stateSwitch(SwitchT *switchT, const char *state);
 void loadStoredSwitches();
 void saveSwitchs();
-void removeSwitch(String id, bool persist);
+void removeSwitch(const char *id, bool persist);
 JsonObject updateSwitch(JsonObject doc, bool persist);
-void mqttSwitchControl(String topic, String payload);
+void mqttSwitchControl(const char *topic, const char *payload);
 void initSwitchesHaDiscovery();
 void sendToServerEvents(String topic, String payload);
-void stateSwitchById(String id, String state);
+void stateSwitchById(const char *id, const char *state);
 String getSwitchesConfigStatus();
 
 #endif

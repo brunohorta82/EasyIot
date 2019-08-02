@@ -5,12 +5,12 @@
 #define AVAILABLE_PAYLOAD "online"
 #define UNAVAILABLE_PAYLOAD "offline"
 #define DEFAULT_MQTT_PORT 1883
-void publishOnMqtt(String topic, String payload, bool retain);
-void subscribeOnMqtt(String topic);
+void publishOnMqtt(const char* topic,const String& payload, bool retain);
+void subscribeOnMqtt(const char* topic);
 String getBaseTopic();
 String getAvailableTopic();
 void setupMQTT();
 void loopMqtt();
-void unsubscribeOnMqtt(String topic);
+void unsubscribeOnMqtt(const char* topic);
 bool getMqttState();
 #endif

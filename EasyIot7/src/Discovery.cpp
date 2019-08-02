@@ -108,20 +108,20 @@ void addToHaDiscovery(SwitchT *sw)
   {
    payload = createHaLock(sw);
   }
-  publishOnMqtt(prefix + "/" + family + "/" + _id + "/config", payload, false);
-  subscribeOnMqtt(String(sw->mqttCommandTopic));
+  publishOnMqtt(String(prefix + "/" + family + "/" + _id + "/config").c_str(), payload, false);
+  subscribeOnMqtt(sw->mqttCommandTopic);
   logger(DISCOVERY_TAG, "RELOAD HA SWITCH DISCOVERY OK");
 }
 
 
 void removeFromHaDiscovery(SwitchT *sw)
 {
-  publishOnMqtt(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config", "", false);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config").c_str(), "", false);
   
 }
 void removeFromHaDiscovery(SensorT *s)
 {
-  publishOnMqtt(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s->family) + "/" + String(s->id) + "/config", "", false);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s->family) + "/" + String(s->id) + "/config").c_str(), "", false);
   
 }
 void removeFromAlexaDiscovery(SwitchT *sw)
