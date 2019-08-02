@@ -35,47 +35,63 @@ void initSensorsHaDiscovery()
 }
 JsonObject updateSensor(JsonObject doc, bool persist)
 {
-
+  serializeJson(doc, Serial);
   logger(SENSORS_TAG, "Update Environment Sensors");
+  int type = doc["type"] | -1;
+  if (type < 0)
+    return doc;
+
   String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())) : doc.getMember("id").as<String>();
   if (persist)
     removeSensor(doc.getMember("id").as<String>(), false);
   SensorT ss;
   strlcpy(ss.id, String(String(ESP.getChipId()) + normalize(doc.getMember("name").as<String>())).c_str(), sizeof(ss.id));
   strlcpy(ss.name, doc.getMember("name").as<String>().c_str(), sizeof(ss.name));
-  strlcpy(ss.family, doc.getMember("family").as<String>().c_str(), sizeof(ss.family));
-  strlcpy(ss.mqttStateTopic, doc.getMember("mqttStateTopic").as<String>().c_str(), sizeof(ss.mqttStateTopic));
-  String baseTopic = getBaseTopic() + "/" + String(ss.family) + "/" + String(ss.id);
+  strlcpy(ss.deviceClass, doc["deviceClass"] | NONE_CLASS, sizeof(ss.deviceClass));
+  ss.type = type;
+
   addToHaDiscovery(&ss);
   ss.lastBinaryState = false;
   ss.lastRead = 0;
   ss.dht = NULL;
   ss.dallas = NULL;
   doc["id"] = String(ss.id);
-  int gpio = doc["gpio"] | NO_GPIO;
-  int type = doc["type"];
+  int primaryGpio = doc["primaryGpio"] | NO_GPIO;
+  ss.primaryGpio = primaryGpio;
+  ss.delayRead = doc["delayRead"];
+  ss.mqttRetain = doc["mqttRetain"] | true;
   switch (type)
   {
   case TYPE_LDR:
-    ss.delayRead = 20000ul;
+    strlcpy(ss.family, SENSOR_FAMILY, sizeof(ss.family));
     break;
   case TYPE_PIR:
+  case RCWL_0516:
+   strlcpy(ss.family, BINARY_SENSOR_FAMILY, sizeof(ss.family));
+    configPIN(primaryGpio, INPUT);
+    strlcpy(ss.payloadOn, doc["payloadOn"] | "ON", sizeof(ss.payloadOff));
+    strlcpy(ss.payloadOff, doc["payloadOff"] | "OFF", sizeof(ss.payloadOff));
+  break;
   case TYPE_REED_SWITCH:
-    configPIN(gpio, gpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-    strlcpy(ss.payloadOn, doc.getMember("payloadOff").as<String>().c_str(), sizeof(ss.payloadOff));
-    strlcpy(ss.payloadOff, doc.getMember("payloadOff").as<String>().c_str(), sizeof(ss.payloadOff));
+    strlcpy(ss.family, BINARY_SENSOR_FAMILY, sizeof(ss.family));
+    configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    strlcpy(ss.payloadOn, doc["payloadOn"] | "ON", sizeof(ss.payloadOff));
+    strlcpy(ss.payloadOff, doc["payloadOff"] | "OFF", sizeof(ss.payloadOff));
     break;
   case TYPE_DHT_11:
   case TYPE_DHT_21:
   case TYPE_DHT_22:
-    ss.delayRead = 60000ul;
-    ss.dht = new DHT_nonblocking(gpio, type);
+    strlcpy(ss.family, SENSOR_FAMILY, sizeof(ss.family));
+    ss.dht = new DHT_nonblocking(primaryGpio, type);
     break;
   case TYPE_DS18B20:
-    ss.dallas = new DallasTemperature(new OneWire(gpio));
+    strlcpy(ss.family, SENSOR_FAMILY, sizeof(ss.family));
+    ss.dallas = new DallasTemperature(new OneWire(primaryGpio));
     break;
   }
-
+  String baseTopic = getBaseTopic() + "/" + String(ss.family) + "/" + String(ss.id);
+  doc["mqttStateTopic"] = String(baseTopic + "/state");
+  strlcpy(ss.mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(ss.mqttStateTopic));
   sensors.push_back(ss);
   saveSensors();
   return doc;
@@ -86,7 +102,7 @@ void loadStoredSensors()
   {
     File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "r+");
     int sensorsSize = 2; //TODO GET THIS VALUE FROM FILE
-    const size_t CAPACITY = JSON_ARRAY_SIZE(sensorsSize + 1) + sensorsSize * JSON_OBJECT_SIZE(20) + 2000;
+    const size_t CAPACITY = JSON_ARRAY_SIZE(sensorsSize + 1) + sensorsSize * JSON_OBJECT_SIZE(11) + 500;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
     if (error)
@@ -105,6 +121,7 @@ void loadStoredSensors()
     }
     file.close();
     JsonArray ar = doc.as<JsonArray>();
+    serializeJson(ar, Serial);
     for (JsonVariant ss : ar)
     {
       updateSensor(ss.as<JsonObject>(), error);
@@ -123,8 +140,7 @@ void saveSensors()
     }
     else
     {
-      const size_t CAPACITY = JSON_ARRAY_SIZE(sensors.size() + 1) + sensors.size() * JSON_OBJECT_SIZE(36) + 2200;
-      ;
+      const size_t CAPACITY = JSON_ARRAY_SIZE(sensors.size() + 1) + sensors.size() * JSON_OBJECT_SIZE(10) + 500;
       DynamicJsonDocument doc(CAPACITY);
       for (unsigned int i = 0; i < sensors.size(); i++)
       {
@@ -134,6 +150,11 @@ void saveSensors()
         sdoc["name"] = ss.name;
         sdoc["family"] = ss.family;
         sdoc["mqttStateTopic"] = String(ss.mqttStateTopic);
+        sdoc["delayRead"] = ss.delayRead;
+        sdoc["primaryGpio"] = ss.primaryGpio;
+        sdoc["type"] = ss.type;
+        sdoc["deviceClass"] = ss.deviceClass;
+        sdoc["mqttRetain"] = ss.mqttRetain;
       }
 
       if (serializeJson(doc.as<JsonArray>(), file) == 0)
@@ -144,6 +165,7 @@ void saveSensors()
       {
         logger(SENSORS_TAG, "Sensors Config stored.");
       }
+      serializeJson(doc, Serial);
     }
     file.close();
   }
@@ -177,6 +199,8 @@ void loopSensors()
   for (unsigned int i = 0; i < sensors.size(); i++)
   {
     SensorT *ss = &sensors[i];
+    if (ss->primaryGpio == NO_GPIO)
+      continue;
     switch (sensors[i].type)
     {
     case TYPE_LDR:
@@ -184,25 +208,22 @@ void loopSensors()
       if (ss->lastRead + ss->delayRead < millis())
       {
         ss->lastRead = millis();
-        publishOnMqtt(ss->mqttStateTopic, String("{\"ldr_raw\":" + String(analogRead(A0)) + "}"), ss->mqttRetain);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"ldr_raw\":" + String(analogRead(ss->primaryGpio)) + "}"), ss->mqttRetain);
+        logger(SENSORS_TAG, String("{\"ldr_raw\":" + String(analogRead(ss->primaryGpio)) + "}"));
       }
     }
     break;
+
     case TYPE_PIR:
-    {
-      bool binaryState = readPIN(ss->primaryGpio);
-      if (ss->lastBinaryState != binaryState)
-      {
-        publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}"), ss->mqttRetain);
-      }
-    }
-    break;
     case TYPE_REED_SWITCH:
+    case RCWL_0516:
     {
       bool binaryState = readPIN(ss->primaryGpio);
       if (ss->lastBinaryState != binaryState)
       {
+        ss->lastBinaryState = binaryState;
         publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}"), ss->mqttRetain);
+        logger(SENSORS_TAG, String("{\"binary_state\":" + String(binaryState) + "}"));
       }
     }
     break;
@@ -219,6 +240,7 @@ void loopSensors()
         {
           ss->lastRead = millis();
           publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}"), ss->mqttRetain);
+          logger(SENSORS_TAG, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}"));
         }
       }
     }
@@ -232,6 +254,7 @@ void loopSensors()
         ss->lastRead = millis();
         ss->temperature = ss->dallas->getTempCByIndex(0);
         publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + "}"), ss->mqttRetain);
+        logger(SENSORS_TAG, String("{\"temperature\":" + String(ss->temperature) + "}"));
       }
     }
     break;

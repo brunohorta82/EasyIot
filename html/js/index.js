@@ -436,6 +436,7 @@ function buildSensor(obj) {
         '                                    class="lang-pin-in-a">Pinos Entrada</span></span></td>' +
         '                                <td><select class="form-control select-device" id="s_primaryGpio_' + obj.id + '">' +
         '                                    <option class="lang-none" value="99">Nenhum</option>' +
+        '                                    <option value="17">A0 <-> GND</option>' +
         '                                    <option value="4">4 <-> GND</option>' +
         '                                    <option value="5">5 <-> GND</option>' +
         '                                    <option value="12">12 <-> GND</option>' +
@@ -476,7 +477,8 @@ function buildSensor(obj) {
         '                </div>' +
         '            </div>');
 
-    setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
+    setOptionOnSelect('s_primaryGpio_' + obj.id, obj.primaryGpio);
+    setOptionOnSelect('s_type_' + obj.id, obj.type);
     loadsLanguage(localStorage.getItem('lang'));
 }
 

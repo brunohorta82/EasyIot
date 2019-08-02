@@ -17,20 +17,25 @@
 #define TYPE_DHT_21 DHT_TYPE_21 //1
 #define TYPE_DHT_22 DHT_TYPE_22 //2
 
+#define NONE_CLASS "None"
+
+#define SENSOR_FAMILY "sensor"
+#define BINARY_SENSOR_FAMILY "binary_sensor"
+
 struct SensorT
 {
   char id[32]; //Generated from name without spaces and no special characters
   char name[24];
   char family[16]; //sensor, binary_sensor
   int type; //TYPE_PIR, TYPE_LDR, TYPE_DS18B20, TYPE_REED_SWITCH
-
+  char deviceClass[32];
   //MQTT
   char mqttStateTopic[128];
   char mqttPayload[128];
   bool mqttRetain;
 
   //INPUT GPIO
-  int primaryGpio;
+  unsigned int primaryGpio;
   bool pullup; //USE INTERNAL RESISTOR
 
   //TEMPERATURE AND HUMIDITY SENSORS
@@ -55,6 +60,7 @@ struct SensorT
 };
 void saveSensors();
 void loadStoredSensors();
+void loopSensors();
 String getSensorsConfigStatus();
 JsonObject updateSensor(JsonObject doc, bool persist);
 void removeSensor(String id, bool persist);

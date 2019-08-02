@@ -52,6 +52,7 @@ void loop()
   loopWiFi();
   loopMqtt();
   loopSwitches();
+  loopSensors();
   loopMqtt();
 }
 
