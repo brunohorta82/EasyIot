@@ -33,13 +33,13 @@ void initSensorsHaDiscovery()
     publishOnMqtt(sensors[i].mqttStateTopic, sensors[i].mqttPayload, sensors[i].mqttRetain);
   }
 }
-JsonObject updateSensor(JsonObject doc, bool persist)
+void updateSensor(JsonObject doc, bool persist)
 {
   serializeJson(doc, Serial);
   logger(SENSORS_TAG, "Update Environment Sensors");
   int type = doc["type"] | -1;
   if (type < 0)
-    return doc;
+    return ;
   String n_name = doc["name"] ;
   normalize(n_name);
   String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
@@ -95,7 +95,7 @@ JsonObject updateSensor(JsonObject doc, bool persist)
   strlcpy(ss.mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(ss.mqttStateTopic));
   sensors.push_back(ss);
   saveSensors();
-  return doc;
+  
 }
 void loadStoredSensors()
 {
@@ -171,28 +171,6 @@ void saveSensors()
     file.close();
   }
   SPIFFS.end();
-}
-String getSensorsConfigStatus()
-{
-  String object = "";
-  if (SPIFFS.begin())
-  {
-    File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "r+");
-
-    if (!file)
-    {
-      return "[]";
-    }
-    while (file.available())
-    {
-      object += (char)file.read();
-    }
-    file.close();
-  }
-  SPIFFS.end();
-  if (object.equals("") || object.equals("null"))
-    return "[]";
-  return object;
 }
 
 void loopSensors()

@@ -101,11 +101,9 @@ void stateSwitch(SwitchT *switchT, const char *state);
 void loadStoredSwitches();
 void saveSwitchs();
 void removeSwitch(const char *id, bool persist);
-JsonObject updateSwitch(JsonObject doc, bool persist);
+void updateSwitch(JsonObject doc, bool persist);
 void mqttSwitchControl(const char *topic, const char *payload);
 void initSwitchesHaDiscovery();
 void sendToServerEvents(String topic, String payload);
 void stateSwitchById(const char *id, const char *state);
-String getSwitchesConfigStatus();
-
 #endif

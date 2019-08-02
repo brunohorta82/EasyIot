@@ -63,4 +63,5 @@ struct Config& getAtualConfig();
 void configPIN(uint8_t pin, uint8_t mode);
 void writeToPIN(uint8_t pin, uint8_t val);
 bool readPIN(uint8_t pin);
+void serializeFile(const char* filename, Print &output);
 #endif

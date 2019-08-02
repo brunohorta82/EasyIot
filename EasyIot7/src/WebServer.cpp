@@ -153,12 +153,14 @@ void setupWebserverAsync()
   }));
   //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json",getSwitchesConfigStatus());
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+   serializeFile(SWITCHES_CONFIG_FILENAME,*response);
+    request->send( response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(updateSwitch(json,true),*response);
-    
+    updateSwitch(json,true);
+    serializeJson(json,*response);
     request->send(response);
   }));
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -167,7 +169,7 @@ void setupWebserverAsync()
       removeSwitch(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(getSwitchesConfigStatus());
+    serializeFile(SWITCHES_CONFIG_FILENAME,*response);
     request->send(response);
   });
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -182,12 +184,14 @@ void setupWebserverAsync()
     }
   });
 server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "application/json",getSensorsConfigStatus());
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeFile(SENSORS_CONFIG_FILENAME,*response);
+    request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(updateSensor(json,true),*response);
-    
+    updateSensor(json,true);
+    serializeJson(json,*response);
     request->send(response);
   }));
   server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -196,7 +200,7 @@ server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
       removeSensor(request->arg("id"), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->print(getSensorsConfigStatus());
+    serializeFile(SENSORS_CONFIG_FILENAME,*response);
     request->send(response);
   });
   //ALEXA SUPPORT

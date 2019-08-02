@@ -36,7 +36,7 @@ void initSwitchesHaDiscovery()
     publishOnMqtt(switchs[i].mqttStateTopic, switchs[i].mqttPayload, switchs[i].mqttRetain);
   }
 }
-JsonObject updateSwitch(JsonObject doc, bool persist)
+void updateSwitch(JsonObject doc, bool persist)
 {
 
   logger(SWITCHES_TAG, "Update Environment Switches");
@@ -126,7 +126,7 @@ JsonObject updateSwitch(JsonObject doc, bool persist)
   doc["stateControl"] = sw.stateControl;
   switchs.push_back(sw);
   stateSwitch(&sw, sw.stateControl);
-  return doc;
+
 }
 
 void loadStoredSwitches()
@@ -243,28 +243,7 @@ void saveSwitchs()
   SPIFFS.end();
 }
 
-String getSwitchesConfigStatus()
-{
-  String object = "";
-  if (SPIFFS.begin())
-  {
-    File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "r+");
 
-    if (!file)
-    {
-      return "[]";
-    }
-    while (file.available())
-    {
-      object += (char)file.read();
-    }
-    file.close();
-  }
-  SPIFFS.end();
-  if (object.equals("") || object.equals("null"))
-    return "[]";
-  return object;
-}
 int findPoolIdx(const char* state, unsigned int currentIdx, unsigned int start, unsigned int end)
 {
   int max = (end - start) * 2;

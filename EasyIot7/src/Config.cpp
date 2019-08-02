@@ -215,7 +215,20 @@ void saveConfiguration()
   }
   SPIFFS.end();
 }
+void serializeFile(const char* filename, Print &output)
+{
+  if (SPIFFS.begin())
+  {
+    File file = SPIFFS.open(filename, "r+");
+    while (file.available())
+    {
+      output.write((char)file.read());
+    }
+    file.close();
+  }
+  SPIFFS.end();
 
+}
 void updateConfig(JsonObject doc, bool persist)
 {
   

@@ -61,7 +61,6 @@ struct SensorT
 void saveSensors();
 void loadStoredSensors();
 void loopSensors();
-String getSensorsConfigStatus();
-JsonObject updateSensor(JsonObject doc, bool persist);
+void updateSensor(JsonObject doc, bool persist);
 void removeSensor(String id, bool persist);
 #endif

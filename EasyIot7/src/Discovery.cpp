@@ -5,7 +5,7 @@
 String createHaLock(SwitchT *sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(8)+300;
+  const size_t capacity = JSON_OBJECT_SIZE(8) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw->name;
@@ -21,7 +21,7 @@ String createHaLock(SwitchT *sw)
 String createHaSwitch(SwitchT *sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(7)+300;
+  const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw->name;
@@ -36,7 +36,7 @@ String createHaSwitch(SwitchT *sw)
 String createHaLight(SwitchT *sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(7)+300;
+  const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw->name;
@@ -52,7 +52,7 @@ String createHaLight(SwitchT *sw)
 String createHaCover(SwitchT *sw)
 {
   String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(14)+300;
+  const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw->name;
@@ -64,16 +64,16 @@ String createHaCover(SwitchT *sw)
   object["payload_close"] = String(PAYLOAD_CLOSE);
   object["payload_stop"] = String(PAYLOAD_STOP);
   object["device_class"] = "blind";
-    object["position_open"] = 100;
-    object["position_closed"] = 0;
-    object["position_topic"] = String(sw->mqttPositionStateTopic);
-    object["set_position_topic"] = String(sw->mqttPositionCommandTopic);
+  object["position_open"] = 100;
+  object["position_closed"] = 0;
+  object["position_topic"] = String(sw->mqttPositionStateTopic);
+  object["set_position_topic"] = String(sw->mqttPositionCommandTopic);
   serializeJson(object, objectStr);
   return objectStr;
 }
 void addToAlexaDiscovery(SwitchT *sw)
 {
-addSwitchToAlexa(sw->name);
+  addSwitchToAlexa(sw->name);
 }
 void addToHaDiscovery(SensorT *s)
 {
@@ -81,48 +81,42 @@ void addToHaDiscovery(SensorT *s)
 }
 void addToHaDiscovery(SwitchT *sw)
 {
-  
-  if (strlen(getAtualConfig().mqttIpDns) == 0){
-    logger(DISCOVERY_TAG,"Mqtt not configured");
+
+  if (strlen(getAtualConfig().mqttIpDns) == 0)
+  {
+    logger(DISCOVERY_TAG, "Mqtt not configured");
     return;
   }
 
-  String prefix = String(getAtualConfig().homeAssistantAutoDiscoveryPrefix);
-  String _id = String(sw->id);
-  String _name = String(sw->name);
-  String family = String(sw->family);
   String payload = "";
-  if (family.equals(String(FAMILY_COVER)))
+  if (strcmp(sw->family, FAMILY_COVER) == 0)
   {
-     payload =  createHaCover(sw);
+    payload = createHaCover(sw);
   }
-  else if (family.equals(String(FAMILY_LIGHT)))
+  else if (strcmp(sw->family, FAMILY_LIGHT) == 0)
   {
-     payload =  createHaLight(sw);
+    payload = createHaLight(sw);
   }
-  else if (family.equals(String(FAMILY_SWITCH)))
+  else if (strcmp(sw->family, FAMILY_SWITCH) == 0)
   {
     payload = createHaSwitch(sw);
   }
-  else if (family.equals(String(FAMILY_LOCK)))
+  else if (strcmp(sw->family, FAMILY_LOCK) == 0)
   {
-   payload = createHaLock(sw);
+    payload = createHaLock(sw);
   }
-  publishOnMqtt(String(prefix + "/" + family + "/" + _id + "/config").c_str(), payload, false);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config").c_str(), payload, false);
   subscribeOnMqtt(sw->mqttCommandTopic);
   logger(DISCOVERY_TAG, "RELOAD HA SWITCH DISCOVERY OK");
 }
 
-
 void removeFromHaDiscovery(SwitchT *sw)
 {
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config").c_str(), "", false);
-  
 }
 void removeFromHaDiscovery(SensorT *s)
 {
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s->family) + "/" + String(s->id) + "/config").c_str(), "", false);
-  
 }
 void removeFromAlexaDiscovery(SwitchT *sw)
 {
