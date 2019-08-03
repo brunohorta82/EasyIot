@@ -3,9 +3,10 @@
 #include <Arduino.h>
 #include <fauxmoESP.h>
 #include "Config.h"
-#include "Sensors.h"
-#include "Switches.h"
 #include "Mqtt.h"
+
+struct SensorT;
+struct SwitchT;
 
 void removeFromHaDiscovery(SensorT *ss);
 void removeFromAlexaDiscovery(SwitchT *sw);

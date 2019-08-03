@@ -1,3 +1,4 @@
+#include "Sensors.h"
 #include "Discovery.h"
 
 std::vector<SensorT> sensors;
@@ -20,6 +21,7 @@ void removeSensor(String id, bool persist)
   {
     sensors.erase(sensors.begin() + del);
   }
+  
   if (persist)
   {
     saveSensors();
@@ -67,7 +69,7 @@ void updateSensor(JsonObject doc, bool persist)
     strlcpy(ss.family, SENSOR_FAMILY, sizeof(ss.family));
     break;
   case TYPE_PIR:
-  case RCWL_0516:
+  case TYPE_RCWL_0516:
    strlcpy(ss.family, BINARY_SENSOR_FAMILY, sizeof(ss.family));
     configPIN(primaryGpio, INPUT);
     strlcpy(ss.payloadOn, doc["payloadOn"] | "ON", sizeof(ss.payloadOff));
@@ -97,11 +99,13 @@ void updateSensor(JsonObject doc, bool persist)
   saveSensors();
   
 }
+
 void loadStoredSensors()
 {
   if (SPIFFS.begin())
   {
     File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "r+");
+    
     int sensorsSize = 2; //TODO GET THIS VALUE FROM FILE
     const size_t CAPACITY = JSON_ARRAY_SIZE(sensorsSize + 1) + sensorsSize * JSON_OBJECT_SIZE(11) + 500;
     DynamicJsonDocument doc(CAPACITY);
@@ -187,7 +191,7 @@ void loopSensors()
       if (ss->lastRead + ss->delayRead < millis())
       {
         ss->lastRead = millis();
-        publishOnMqtt(ss->mqttStateTopic, String("{\"ldr_raw\":" + String(analogRead(ss->primaryGpio)) + "}"), ss->mqttRetain);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"ldr_raw\":" + String(analogRead(ss->primaryGpio)) + "}").c_str(), ss->mqttRetain);
         logger(SENSORS_TAG, String("{\"ldr_raw\":" + String(analogRead(ss->primaryGpio)) + "}"));
       }
     }
@@ -195,13 +199,13 @@ void loopSensors()
 
     case TYPE_PIR:
     case TYPE_REED_SWITCH:
-    case RCWL_0516:
+    case TYPE_RCWL_0516:
     {
       bool binaryState = readPIN(ss->primaryGpio);
       if (ss->lastBinaryState != binaryState)
       {
         ss->lastBinaryState = binaryState;
-        publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}"), ss->mqttRetain);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}").c_str(), ss->mqttRetain);
         logger(SENSORS_TAG, String("{\"binary_state\":" + String(binaryState) + "}"));
       }
     }
@@ -218,7 +222,7 @@ void loopSensors()
         if (ss->lastRead + ss->delayRead < millis())
         {
           ss->lastRead = millis();
-          publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}"), ss->mqttRetain);
+          publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}").c_str(), ss->mqttRetain);
           logger(SENSORS_TAG, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}"));
         }
       }
@@ -232,7 +236,7 @@ void loopSensors()
         ss->dallas->requestTemperatures();
         ss->lastRead = millis();
         ss->temperature = ss->dallas->getTempCByIndex(0);
-        publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + "}"), ss->mqttRetain);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + "}").c_str(), ss->mqttRetain);
         logger(SENSORS_TAG, String("{\"temperature\":" + String(ss->temperature) + "}"));
       }
     }

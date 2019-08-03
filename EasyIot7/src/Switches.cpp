@@ -1,3 +1,4 @@
+#include "Switches.h"
 #include "Discovery.h"
 
 std::vector<SwitchT> switchs;
@@ -310,7 +311,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
 
-    publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
+    publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest).c_str(), switchT->mqttRetain);
   }
   else if (String(PAYLOAD_STOP).equals(state))
   {
@@ -332,7 +333,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
     }
     if (switchT->timeBetweenStates > 0)
     {
-      publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->lastPercentage), switchT->mqttRetain);
+      publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->lastPercentage).c_str(), switchT->mqttRetain);
     }
     else
     {
@@ -363,7 +364,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
 
-    publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest), switchT->mqttRetain);
+    publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest).c_str(), switchT->mqttRetain);
   }
   else if (String(PAYLOAD_ON).equals(state))
   {
@@ -494,7 +495,6 @@ boolean positionDone(SwitchT *sw)
 }
 void loopSwitches()
 {
-
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
 

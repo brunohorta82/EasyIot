@@ -1,6 +1,8 @@
 
 
 #include "Discovery.h"
+#include "Sensors.h"
+
 #define DISCOVERY_TAG "[DISCOVERY]"
 String createHaLock(SwitchT *sw)
 {
@@ -75,9 +77,36 @@ void addToAlexaDiscovery(SwitchT *sw)
 {
   addSwitchToAlexa(sw->name);
 }
+
+/*    name: "RSSI"
+    state_topic: "home/sensor1/infojson"
+    unit_of_measurement: 'dBm'
+    value_template: "{{ value_json.RSSI }}"
+    availability_topic: "home/sensor1/status"
+    payload_available: "online"
+    payload_not_available: "offline"
+    json_attributes_topic: "home/sensor1/attributes" */
 void addToHaDiscovery(SensorT *s)
 {
   //TODO
+  switch (s->type)
+  {
+  case TYPE_DHT_11:
+  case TYPE_DHT_21:
+  case TYPE_DHT_22:
+    break;
+  case TYPE_DS18B20:
+    break;
+  case TYPE_LDR:
+  break;
+  case TYPE_PIR:
+  case TYPE_REED_SWITCH:
+  case TYPE_RCWL_0516:
+  break;
+
+  default:
+    break;
+  }
 }
 void addToHaDiscovery(SwitchT *sw)
 {
@@ -105,7 +134,10 @@ void addToHaDiscovery(SwitchT *sw)
   {
     payload = createHaLock(sw);
   }
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config").c_str(), payload, false);
+
+  
+
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config").c_str(), payload.c_str(), false);
   subscribeOnMqtt(sw->mqttCommandTopic);
   logger(DISCOVERY_TAG, "RELOAD HA SWITCH DISCOVERY OK");
 }

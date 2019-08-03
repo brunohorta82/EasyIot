@@ -17,13 +17,24 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     {
         payloadStr += (char)payload[i];
     }
+    
+    // VLAs and esps
+    char *payload_as_string = (char*) malloc(length + 1);
+    memcpy(payload_as_string, (char*)payload, length);
+    payload_as_string[length] = 0;
+
+
+
     logger(MQTT_TAG, "PAYLOAD: " + payloadStr);
-    if(topicStr.equals(HOMEASSISTANT_ONLINE_TOPIC) && payloadStr.equals(AVAILABLE_PAYLOAD)){
+    if (topicStr.equals(HOMEASSISTANT_ONLINE_TOPIC) && payloadStr.equals(AVAILABLE_PAYLOAD)) {
         initSwitchesHaDiscovery();
-    }else{
-        processMqttAction(topicStr, payloadStr);
+    } else {
+        processMqttAction(topicStr, payload_as_string);
     }
+
+    free(payload_as_string);
 }
+
 String getBaseTopic()
 {
     String username = String(getAtualConfig().mqttUsername);
@@ -106,7 +117,7 @@ void loopMqtt()
     }
 }
 
-void publishOnMqtt(const char* topic,const  String& payload, bool retain)
+void publishOnMqtt(const char* topic,  const char* payload, bool retain)
 {
     if (strlen(getAtualConfig().mqttIpDns) == 0)
     {
@@ -119,7 +130,7 @@ void publishOnMqtt(const char* topic,const  String& payload, bool retain)
         return;
     }
     static unsigned int retries = 0;
-    while (!mqttClient.publish(topic, payload.c_str(), retain) && retries < 3)
+    while (!mqttClient.publish(topic, payload, retain) && retries < 3)
     {
         retries++;
     }
