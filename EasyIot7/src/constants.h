@@ -4,6 +4,7 @@ namespace constantsMqtt
 {
 constexpr const char *mqttCloudURL{"mqtt.bhonofre.pt"};
 constexpr const char *availablePayload{"online"};
+constexpr const char *homeAssistantAutoDiscoveryPrefix{"homeassistant"};
 constexpr const char *unavailablePayload{"offline"};
 constexpr const int defaultPort{1883};
 constexpr const char *homeassistantOnlineTopic{"hass/status"};
@@ -28,7 +29,7 @@ constexpr const char *webserver{"[WEBSERVER]"};
 } // namespace tags
 namespace configFilenames
 {
-constexpr const char *config{"/config_bhonofre.json"};
+auto constexpr config = "config.bin";
 constexpr const char *sensors{"/sensors.json"};
 constexpr const char *switches{"/switches.json"};
 } // namespace configFilenames

@@ -9,11 +9,11 @@
 #include <ArduinoLog.h>
 
 struct Config {
-  char nodeId[32];
-  char homeAssistantAutoDiscoveryPrefix[32];
+  char nodeId[32] ;
+  char homeAssistantAutoDiscoveryPrefix[32] ;
   char mqttIpDns[40];
   char mqttUsername[32];
-  int mqttPort;
+  int mqttPort ;
   char mqttPassword[24];
   char wifiSSID[32];
   char wifiSecret[24];
@@ -29,12 +29,14 @@ struct Config {
   char configkey[64];
   char hardware[24];
   double firmware;
+ void update(JsonObject doc, bool persist);
+ void save(File& file ) const;
+ void load(File& file );
 };
 
-
+struct Config& getAtualConfig();
 void loadStoredConfiguration();
-void saveConfiguration();
-String getUpdateUrl();
+size_t  serializeConfigStatus(Print& output);
 
 void requestRestart();
 bool restartRequested();
@@ -44,16 +46,14 @@ bool autoUpdateRequested();
 
 void requestLoadDefaults();
 bool loadDefaultsRequested();
-size_t  serializeConfigStatus(Print& output);
-void requestWifiScan();
-void requestReloadWifi();
+
 bool reloadWifiRequested();
+
 void normalize(String  &inputStr);
-void updateConfig(JsonObject doc, bool persist);
 boolean isValidNumber(const char *str);
-struct Config& getAtualConfig();
+
 void configPIN(uint8_t pin, uint8_t mode);
 void writeToPIN(uint8_t pin, uint8_t val);
 bool readPIN(uint8_t pin);
-void serializeFile(const char* filename, Print &output);
+
 #endif

@@ -148,14 +148,14 @@ void setupWebserverAsync()
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateConfig(json, true);
+    getAtualConfig().update(json, true);
     serializeConfigStatus(*response);
     request->send( response);
   }));
   //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-   serializeFile(configFilenames::switches,*response);
+   //serializeFile(configFilenames::switches,*response);
     request->send( response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
@@ -170,7 +170,7 @@ void setupWebserverAsync()
       removeSwitch(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeFile(configFilenames::switches,*response);
+  //  serializeFile(configFilenames::switches,*response);
     request->send(response);
   });
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -186,7 +186,7 @@ void setupWebserverAsync()
   });
 server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeFile(configFilenames::sensors,*response);
+   // serializeFile(configFilenames::sensors,*response);
     request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
@@ -201,7 +201,7 @@ server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
       removeSensor(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeFile(configFilenames::sensors,*response);
+   // serializeFile(configFilenames::sensors,*response);
     request->send(response);
   });
   //ALEXA SUPPORT

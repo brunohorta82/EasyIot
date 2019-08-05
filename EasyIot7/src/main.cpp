@@ -12,35 +12,35 @@ void checkInternalRoutines()
 {
   if (restartRequested())
   {
-    Log.notice( "%s Rebooting...",tags::system);
+    Log.notice("%s Rebooting...", tags::system);
     ESP.restart();
   }
   if (loadDefaultsRequested())
   {
-    Log.notice("%s Loading defaults...",tags::system);
+    Log.notice("%s Loading defaults...", tags::system);
     SPIFFS.format();
     requestRestart();
   }
   if (autoUpdateRequested())
   {
-    Log.notice("%s Starting auto update make sure if this device is connected to the internet.",tags::system);
+    Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
     WiFiClient client;
     ESPhttpUpdate.update(client, constantsConfig::updateURL);
   }
 
   if (reloadWifiRequested())
   {
-    Log.notice("%s Loading wifi configuration...",tags::system);
+    Log.notice("%s Loading wifi configuration...", tags::system);
     reloadWiFiConfig();
   }
 }
 
 void setup()
 {
-  #ifdef DEBUG
+#ifdef DEBUG
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
-  #endif
+#endif
   loadStoredConfiguration();
   loadStoredSwitches();
   loadStoredSensors();
@@ -63,7 +63,5 @@ void loop()
 void actualUpdate()
 {
   WiFiClient client;
-  const String url = getUpdateUrl();
-  const String version = String(VERSION);
-  ESPhttpUpdate.update(client, url, version);
+  ESPhttpUpdate.update(client, constantsConfig::updateURL, VERSION);
 }
