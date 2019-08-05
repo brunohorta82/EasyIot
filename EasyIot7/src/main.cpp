@@ -6,30 +6,31 @@
 #include "Switches.h"
 #include "Sensors.h"
 #include <ESP8266httpUpdate.h>
+#include "constants.h"
 
 void checkInternalRoutines()
 {
   if (restartRequested())
   {
-    logger(SYSTEM_TAG, "Rebooting...");
+    Log.notice( "%s Rebooting...",tags::system);
     ESP.restart();
   }
   if (loadDefaultsRequested())
   {
-    logger(SYSTEM_TAG, "Loading defaults...");
+    Log.notice("%s Loading defaults...",tags::system);
     SPIFFS.format();
     requestRestart();
   }
   if (autoUpdateRequested())
   {
-    logger(SYSTEM_TAG, "Starting auto update make sure if this device is connected to the internet.");
+    Log.notice("%s Starting auto update make sure if this device is connected to the internet.",tags::system);
     WiFiClient client;
-    ESPhttpUpdate.update(client, UPDATE_URL);
+    ESPhttpUpdate.update(client, constantsConfig::updateURL);
   }
 
   if (reloadWifiRequested())
   {
-    logger(SYSTEM_TAG, "Loading wifi configuration...");
+    Log.notice("%s Loading wifi configuration...",tags::system);
     reloadWiFiConfig();
   }
 }
@@ -38,6 +39,7 @@ void setup()
 {
   #ifdef DEBUG
   Serial.begin(115200);
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
   #endif
   loadStoredConfiguration();
   loadStoredSwitches();

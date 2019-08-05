@@ -1,5 +1,6 @@
 #include "WebServer.h"
-#define WEBSERVER_TAG "[WEBSERVER]"
+#include "constants.h"
+
 // SKETCH BEGIN
 AsyncWebServer server(80);
 AsyncEventSource events("/events");
@@ -75,7 +76,7 @@ void startAlexaDiscovery()
   fauxmo.enable(true);
   fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
     String valueStr =state ? String(map((int)value,0,255,0,100)+1) : "0";
-    logger("[ALEXA]","Device id "+String(device_id)+" "+String(device_name)+" "+valueStr+" "+String(state));
+    Log.notice("%s Device id: %s, name: %s, value: %s, state: %t" CR, tags::alexa, device_id,device_name,valueStr.c_str(),state);
     stateSwitchByName(device_name, state ? "ON" : "OFF",valueStr.c_str() );
   });
 }
@@ -120,7 +121,7 @@ void setupWebserverAsync()
     response->addHeader("Connection", "close");
     request->send(response); }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     if(!index){
-      logger(SYSTEM_TAG,"Update Start: "+ filename);
+      Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
       Update.runAsync(true);
       if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
         Update.printError(Serial);
@@ -133,7 +134,7 @@ void setupWebserverAsync()
     }
     if(final){
       if(Update.end(true)){
-        logger(SYSTEM_TAG,"Update Success: "+String( index+len));
+        Log.notice("%s Update Success: %d" CR, tags::system, index+len);
         requestRestart();
       } else {
          requestRestart();
@@ -197,7 +198,7 @@ server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
   server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
-      removeSensor(request->arg("id"), true);
+      removeSensor(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeFile(SENSORS_CONFIG_FILENAME,*response);

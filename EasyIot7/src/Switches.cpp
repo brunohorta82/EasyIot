@@ -1,13 +1,14 @@
 #include "Switches.h"
 #include "Discovery.h"
+#include "constants.h"
 
 std::vector<SwitchT> switchs;
 
 void removeSwitch(const char *id, bool persist)
 {
-  logger(SWITCHES_TAG, "Remove switch " + String(id));
+  Log.notice("%s Remove id %s " CR,tags::switches, id);
 
-  unsigned int del = NO_GPIO;
+  unsigned int del = constantsConfig::noGPIO;
   for (unsigned int i = 0; i < switchs.size(); i++)
   {
     SwitchT swStored = switchs[i];
@@ -20,7 +21,7 @@ void removeSwitch(const char *id, bool persist)
       del = i;
     }
   }
-  if (del != NO_GPIO)
+  if (del != constantsConfig::noGPIO)
   {
     switchs.erase(switchs.begin() + del);
   }
@@ -40,26 +41,26 @@ void initSwitchesHaDiscovery()
 void updateSwitch(JsonObject doc, bool persist)
 {
 
-  logger(SWITCHES_TAG, "Update Environment Switches");
+  Log.notice("%s Update Environment" CR, tags::switches);
   String n_name = doc["name"];
   normalize(n_name);
-  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
+  String newId = doc.getMember("id").as<String>().equals(constantsConfig::newID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
   if (persist)
     removeSwitch(doc["id"], false);
   SwitchT sw;
   strlcpy(sw.id, String(String(ESP.getChipId()) + n_name).c_str(), sizeof(sw.id));
   strlcpy(sw.name, doc.getMember("name").as<String>().c_str(), sizeof(sw.name));
   strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
-  sw.primaryGpio = doc["primaryGpio"] | NO_GPIO;
+  sw.primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
   sw.mode = doc["mode"] | MODE_SWITCH;
   if (sw.mode == MODE_PUSH || sw.mode == MODE_SWITCH)
   {
-    sw.secondaryGpio = NO_GPIO;
+    sw.secondaryGpio = constantsConfig::noGPIO;
     sw.lastSecondaryGpioState = true;
   }
   else if (sw.mode == MODE_DUAL_PUSH || sw.mode == MODE_DUAL_SWITCH)
   {
-    sw.secondaryGpio = doc["secondaryGpio"] | NO_GPIO;
+    sw.secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
     sw.lastSecondaryGpioState = doc["lastSecondaryGpioState"] | true;
   }
   sw.timeBetweenStates = doc["timeBetweenStates"] | 0;
@@ -76,22 +77,22 @@ void updateSwitch(JsonObject doc, bool persist)
   doc["mqttStateTopic"] = String(baseTopic + "/state");
   strlcpy(sw.mqttCommandTopic, String(baseTopic + "/set").c_str(), sizeof(sw.mqttCommandTopic));
   strlcpy(sw.mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(sw.mqttStateTopic));
-  sw.primaryGpioControl = doc["primaryGpioControl"] | NO_GPIO;
+  sw.primaryGpioControl = doc["primaryGpioControl"] | constantsConfig::noGPIO;
 
   if (sw.pullup)
   {
-    if (sw.primaryGpio != NO_GPIO)
+    if (sw.primaryGpio != constantsConfig::noGPIO)
     {
       configPIN(sw.primaryGpio, sw.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     }
-    if (sw.secondaryGpio != NO_GPIO)
+    if (sw.secondaryGpio != constantsConfig::noGPIO)
     {
       configPIN(sw.secondaryGpio, sw.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     }
   }
   if (strcmp(sw.family,FAMILY_COVER) == 0)
   {
-    sw.secondaryGpioControl = doc["secondaryGpioControl"] | NO_GPIO;
+    sw.secondaryGpioControl = doc["secondaryGpioControl"] | constantsConfig::noGPIO;
     sw.statePoolStart = doc["statePoolStart"] | COVER_START_IDX;
     sw.statePoolEnd = doc["statePoolEnd"] | COVER_END_IDX;
     sw.positionControlCover = doc["positionControlCover"] | 0;
@@ -103,13 +104,13 @@ void updateSwitch(JsonObject doc, bool persist)
   }
   else if (strcmp(sw.family,FAMILY_LOCK) == 0)
   {
-    sw.secondaryGpioControl = NO_GPIO;
+    sw.secondaryGpioControl = constantsConfig::noGPIO;
     sw.statePoolStart = doc["statePoolStart"] | LOCK_START_IDX;
     sw.statePoolEnd = doc["statePoolEnd"] | LOCK_END_IDX;
   }
   else
   {
-    sw.secondaryGpioControl = NO_GPIO;
+    sw.secondaryGpioControl = constantsConfig::noGPIO;
     sw.statePoolStart = doc["statePoolStart"] | SWITCH_START_IDX;
     sw.statePoolEnd = doc["statePoolEnd"] | SWITCH_END_IDX;
   }
@@ -143,7 +144,7 @@ void loadStoredSwitches()
     {
       file.close();
       file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "w+");
-      logger(SWITCHES_TAG, "Default switches loaded.");
+      Log.warning("%s Default values was loaded." CR, tags::switches);
 #if defined SINGLE_SWITCH
       file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor\",\"name\":\"Novo Interruptor\",\"family\":\"light\",\"primaryGpio\":12,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"}]").c_str());
 #elif defined DUAL_SWITCH
@@ -161,7 +162,7 @@ void loadStoredSwitches()
     }
     else
     {
-      logger(SWITCHES_TAG, "Stored switches loaded.");
+      Log.notice("%s Stored values was loaded." CR, tags::switches);
     }
     file.close();
     JsonArray ar = doc.as<JsonArray>();
@@ -180,7 +181,7 @@ void saveSwitchs()
     File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "w+");
     if (!file)
     {
-      logger(SWITCHES_TAG, "Open Switches config file Error!");
+      Log.warning("%s Open Switches config file Error!." CR, tags::switches);
     }
     else
     {
@@ -232,11 +233,12 @@ void saveSwitchs()
 
       if (serializeJson(doc.as<JsonArray>(), file) == 0)
       {
-        logger(SWITCHES_TAG, "Failed to write Switches Config into file");
+        Log.error("%s Failed to write Switches Config into file" CR, tags::switches);
+        
       }
       else
       {
-        logger(SWITCHES_TAG, "Switches Config stored.");
+        Log.notice("%s Switches Config stored." CR, tags::switches);
       }
     }
     file.close();
@@ -284,9 +286,9 @@ void mqttSwitchControl(const char *topic, const char *payload)
 
 void stateSwitch(SwitchT *switchT, const char *state)
 {
-  logger(SWITCHES_TAG, "Name:      " + String(switchT->name));
-  logger(SWITCHES_TAG, "State:     " + String(state));
-  logger(SWITCHES_TAG, "State IDX: " + String(switchT->statePoolIdx));
+  Log.notice("%s Name:      %s" CR, tags::switches, switchT->name);
+  Log.notice("%s State:     %s" CR, tags::switches,state);
+  Log.notice("%s State IDX: %d" CR ,tags::switches,switchT->statePoolIdx);
 
   if (String(PAYLOAD_OPEN).equals(state))
   {
@@ -561,11 +563,11 @@ void loopSwitches()
       }
     }
 
-    if (sw->primaryGpioControl != NO_GPIO && sw->timeBetweenStates != 0 && digitalRead(sw->primaryGpioControl))
+    if (sw->primaryGpioControl != constantsConfig::noGPIO && sw->timeBetweenStates != 0 && digitalRead(sw->primaryGpioControl))
     {
       unsigned long offset = ((sw->lastPercentage * sw->timeBetweenStates) / 100);
       unsigned long deltaTime = (millis() - sw->lastTimeChange);
-      if (sw->secondaryGpioControl != NO_GPIO)
+      if (sw->secondaryGpioControl != constantsConfig::noGPIO)
       {
         if (digitalRead(sw->secondaryGpioControl))
         {
@@ -582,15 +584,14 @@ void loopSwitches()
     if (stateTimeout(sw))
     {
       sw->statePoolIdx = findPoolIdx(sw->autoStateValue, sw->statePoolIdx, sw->statePoolStart, sw->statePoolEnd);
-      logger(SWITCHES_TAG, "AUTO STATE MODE set change switch to -> " + String(statesPool[sw->statePoolIdx]));
+      Log.notice("%s State Timeout set change switch to %s " CR, statesPool[sw->statePoolIdx].c_str());
       stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
     }
     if (positionDone(sw))
     {
-
       sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_2_IDX : STOP_1_IDX;
       sw->percentageRequest = -1;
-      logger(SWITCHES_TAG, "AUTO STATE MODE set change switch to -> " + String(statesPool[sw->statePoolIdx]));
+      Log.notice("%s Control Positon set change switch to  %s" CR, tags::switches,statesPool[sw->statePoolIdx].c_str());
       stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
     }
   }

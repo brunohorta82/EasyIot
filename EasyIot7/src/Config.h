@@ -1,20 +1,11 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-#define SYSTEM_TAG "[SYSTEM]"
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h> 
 #include "WiFi.h"
 #include "Mqtt.h"
-#define UPDATE_URL "http://release.bhonofre.pt/firmware.bin"
-#define MQTT_CLOUD_URL "mqtt.bhonofre.pt"
-#define CONFIG_FILENAME  "/config_bhonofre.json"
-#define NEW_ID "NEW"
-#define NO_GPIO 99
-#define HOMEASSISTANT_ONLINE_TOPIC "hass/status"
-//AP PASSWORD  
-#define AP_SECRET "EasyIot@"
-
+#include <ArduinoLog.h>
 struct Config {
   char nodeId[32];
   char homeAssistantAutoDiscoveryPrefix[32];
@@ -55,7 +46,6 @@ size_t  serializeConfigStatus(Print& output);
 void requestWifiScan();
 void requestReloadWifi();
 bool reloadWifiRequested();
-void logger(const String& tag,const  String& msg);
 void normalize(String  &inputStr);
 void updateConfig(JsonObject doc, bool persist);
 boolean isValidNumber(const char *str);

@@ -4,7 +4,6 @@
 #include "WebServer.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
-#define SENSORS_TAG "[SENSORS]"
 #define SENSORS_CONFIG_FILENAME "sensors.json"
 
 //SENSORS
@@ -61,6 +60,7 @@ struct SensorT
 void saveSensors();
 void loadStoredSensors();
 void loopSensors();
+void removeSensor(const char* id, bool persist);
 void updateSensor(JsonObject doc, bool persist);
-void removeSensor(String id, bool persist);
+
 #endif

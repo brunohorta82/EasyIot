@@ -1,5 +1,6 @@
 #include "Config.h"
-#define CONFIG_TAG "[CONFIG]"
+#include "constants.h"
+
 //CONTROL FLAGS
 bool REBOOT = false;
 bool LOAD_DEFAULTS = false;
@@ -67,7 +68,7 @@ bool autoUpdateRequested()
 }
 void configPIN(uint8_t pin, uint8_t mode)
 {
-  if (pin == NO_GPIO)
+  if (pin == constantsConfig::noGPIO)
   {
     return;
   }
@@ -75,7 +76,7 @@ void configPIN(uint8_t pin, uint8_t mode)
 }
 void writeToPIN(uint8_t pin, uint8_t val)
 {
-  if (pin == NO_GPIO)
+  if (pin == constantsConfig::noGPIO)
   {
     return;
   }
@@ -84,7 +85,7 @@ void writeToPIN(uint8_t pin, uint8_t val)
 
 bool readPIN(uint8_t pin)
 {
-  if (pin == NO_GPIO)
+  if (pin == constantsConfig::noGPIO)
   {
     return true;
   }
@@ -104,14 +105,6 @@ bool loadDefaultsRequested()
   return false;
 }
 
-void logger(const String& tag,const  String& msg)
-{
-  if (msg.equals(""))
-    return;
-  #ifdef DEBUG
-  Serial.println(tag + " " + msg);
-  #endif
-}
 
 
 void normalize(String  &inputStr)
@@ -146,17 +139,17 @@ void loadStoredConfiguration()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(CONFIG_FILENAME, "r+");
+    File file = SPIFFS.open(constantsConfig::configFileName, "r+");
     const size_t CAPACITY = JSON_OBJECT_SIZE(24) + 700;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
     if (error)
     {
-      logger(CONFIG_TAG, "Default config will be loaded loaded.");
+      Log.warning("%s Default config will be loaded loaded." CR,tags::config);
     }
     else
     {
-      logger(CONFIG_TAG, "Stored config loaded.");
+      Log.notice("%s Stored config loaded." CR, tags::config);
     }
     file.close();
     SPIFFS.end();
@@ -194,20 +187,20 @@ void saveConfiguration()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(CONFIG_FILENAME, "w+");
+    File file = SPIFFS.open(constantsConfig::configFileName, "w+");
     if (!file)
     {
-      logger(CONFIG_TAG, "Open config file Error!");
+      Log.error("%s Open config file Error!" CR, tags::config);
     }
     else
     {
       if (serializeConfigStatus(file) == 0)
       {
-        logger(CONFIG_TAG, "Failed to write Config into file");
+        Log.error("%s Failed to write Config into file" CR,tags::config);
       }
       else
       {
-        logger(CONFIG_TAG, "Config stored.");
+        Log.notice("%s Config stored." CR, tags::config);
       }
     }
     
@@ -249,11 +242,11 @@ void updateConfig(JsonObject doc, bool persist)
   strlcpy(config.wifiMask, doc["wifiMask"] | "", sizeof(config.wifiMask));
   strlcpy(config.wifiGw, doc["wifiGw"] | "", sizeof(config.wifiGw));
   config.staticIp = doc["staticIp"];
-  strlcpy(config.apSecret, doc["apSecret"] | AP_SECRET, sizeof(config.apSecret));
+  strlcpy(config.apSecret, doc["apSecret"] | constantsConfig::apSecret, sizeof(config.apSecret));
   config.configTime = doc["configTime"];
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
   config.firmware = doc["firmware"] | VERSION;
-  if(strcmp(MQTT_CLOUD_URL,config.mqttIpDns) == 0){
+  if(strcmp(constantsConfig::mqttCloudURL,config.mqttIpDns) == 0){
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, config.mqttUsername, sizeof(config.homeAssistantAutoDiscoveryPrefix));
   }else
   {

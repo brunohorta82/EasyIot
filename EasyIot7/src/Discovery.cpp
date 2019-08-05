@@ -113,7 +113,7 @@ void addToHaDiscovery(SwitchT *sw)
 
   if (strlen(getAtualConfig().mqttIpDns) == 0)
   {
-    logger(DISCOVERY_TAG, "Mqtt not configured");
+    Log.warning("%s Mqtt not configured" CR, DISCOVERY_TAG);
     return;
   }
 
@@ -139,7 +139,7 @@ void addToHaDiscovery(SwitchT *sw)
 
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw->family) + "/" + String(sw->id) + "/config").c_str(), payload.c_str(), false);
   subscribeOnMqtt(sw->mqttCommandTopic);
-  logger(DISCOVERY_TAG, "RELOAD HA SWITCH DISCOVERY OK");
+  Log.notice("%s RELOAD HA SWITCH DISCOVERY OK" CR, DISCOVERY_TAG);
 }
 
 void removeFromHaDiscovery(SwitchT *sw)

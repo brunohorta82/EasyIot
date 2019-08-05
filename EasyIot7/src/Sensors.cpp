@@ -1,23 +1,23 @@
 #include "Sensors.h"
 #include "Discovery.h"
-
+#include "constants.h"
 std::vector<SensorT> sensors;
 
-void removeSensor(String id, bool persist)
+void removeSensor(const char* id, bool persist)
 {
-  logger(SENSORS_TAG, "Remove sensor " + id);
+  Log.notice("%s Remove id: %s" CR, tags::sensors , id);
 
-  unsigned int del = NO_GPIO;
+  unsigned int del = constantsConfig::noGPIO;
   for (unsigned int i = 0; i < sensors.size(); i++)
   {
     SensorT sStored = sensors[i];
-    if (strcmp(id.c_str(), sStored.id) == 0)
+    if (strcmp(id, sStored.id) == 0)
     {
       removeFromHaDiscovery(&sStored);
       del = i;
     }
   }
-  if (del != NO_GPIO)
+  if (del != constantsConfig::noGPIO)
   {
     sensors.erase(sensors.begin() + del);
   }
@@ -37,16 +37,15 @@ void initSensorsHaDiscovery()
 }
 void updateSensor(JsonObject doc, bool persist)
 {
-  serializeJson(doc, Serial);
-  logger(SENSORS_TAG, "Update Environment Sensors");
+  Log.notice("%s Update Environment" CR, tags::sensors);
   int type = doc["type"] | -1;
   if (type < 0)
     return ;
   String n_name = doc["name"] ;
   normalize(n_name);
-  String newId = doc.getMember("id").as<String>().equals(NEW_ID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
+  String newId = doc.getMember("id").as<String>().equals(constantsConfig::newID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
   if (persist)
-    removeSensor(doc.getMember("id").as<String>(), false);
+    removeSensor(doc.getMember("id"), false);
   SensorT ss;
   strlcpy(ss.id, String(String(ESP.getChipId()) + n_name).c_str(), sizeof(ss.id));
   strlcpy(ss.name, doc.getMember("name").as<String>().c_str(), sizeof(ss.name));
@@ -59,7 +58,7 @@ void updateSensor(JsonObject doc, bool persist)
   ss.dht = NULL;
   ss.dallas = NULL;
   doc["id"] = String(ss.id);
-  int primaryGpio = doc["primaryGpio"] | NO_GPIO;
+  int primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
   ss.primaryGpio = primaryGpio;
   ss.delayRead = doc["delayRead"];
   ss.mqttRetain = doc["mqttRetain"] | true;
@@ -114,7 +113,7 @@ void loadStoredSensors()
     {
       file.close();
       file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "w+");
-      logger(SENSORS_TAG, "Default sensors loaded.");
+      Log.warning("%s Default values was loaded." CR, tags::sensors);
       file.print(String("[]").c_str());
       file.close();
       SPIFFS.end();
@@ -122,11 +121,10 @@ void loadStoredSensors()
     }
     else
     {
-      logger(SENSORS_TAG, "Stored ssitches loaded.");
+      Log.notice("%s Stored values was loaded." CR, tags::sensors);
     }
     file.close();
     JsonArray ar = doc.as<JsonArray>();
-    serializeJson(ar, Serial);
     for (JsonVariant ss : ar)
     {
       updateSensor(ss.as<JsonObject>(), error);
@@ -141,7 +139,7 @@ void saveSensors()
     File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "w+");
     if (!file)
     {
-      logger(SWITCHES_TAG, "Open Sensors config file Error!");
+      Log.error("%s Open Sensors file Error!" CR, tags::sensors);
     }
     else
     {
@@ -164,13 +162,12 @@ void saveSensors()
 
       if (serializeJson(doc.as<JsonArray>(), file) == 0)
       {
-        logger(SENSORS_TAG, "Failed to write Sensors Config into file");
+        Log.error("%s Failed to write Sensors Config into file" CR, tags::sensors);
       }
       else
       {
-        logger(SENSORS_TAG, "Sensors Config stored.");
+        Log.notice("%s Sensors Config stored." CR, tags::sensors);
       }
-      serializeJson(doc, Serial);
     }
     file.close();
   }
@@ -182,7 +179,7 @@ void loopSensors()
   for (unsigned int i = 0; i < sensors.size(); i++)
   {
     SensorT *ss = &sensors[i];
-    if (ss->primaryGpio == NO_GPIO)
+    if (ss->primaryGpio == constantsConfig::noGPIO)
       continue;
     switch (sensors[i].type)
     {
@@ -191,8 +188,10 @@ void loopSensors()
       if (ss->lastRead + ss->delayRead < millis())
       {
         ss->lastRead = millis();
-        publishOnMqtt(ss->mqttStateTopic, String("{\"ldr_raw\":" + String(analogRead(ss->primaryGpio)) + "}").c_str(), ss->mqttRetain);
-        logger(SENSORS_TAG, String("{\"ldr_raw\":" + String(analogRead(ss->primaryGpio)) + "}"));
+       int ldrRaw =  analogRead(ss->primaryGpio);
+        String analogReadAsString = String(ldrRaw);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"ldr_raw\":" + analogReadAsString + "}").c_str(), ss->mqttRetain);
+        Log.notice("%s {\"ldr_raw\": %d }" CR , tags::mqtt , ldrRaw);
       }
     }
     break;
@@ -205,8 +204,9 @@ void loopSensors()
       if (ss->lastBinaryState != binaryState)
       {
         ss->lastBinaryState = binaryState;
-        publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + String(binaryState) + "}").c_str(), ss->mqttRetain);
-        logger(SENSORS_TAG, String("{\"binary_state\":" + String(binaryState) + "}"));
+        String binaryStateAsString = String(binaryState);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"binary_state\":" + binaryStateAsString + "}").c_str(), ss->mqttRetain);
+        Log.notice("%s {\"binary_state\": %t }" CR , tags::sensors, binaryState);
       }
     }
     break;
@@ -222,8 +222,11 @@ void loopSensors()
         if (ss->lastRead + ss->delayRead < millis())
         {
           ss->lastRead = millis();
-          publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}").c_str(), ss->mqttRetain);
-          logger(SENSORS_TAG, String("{\"temperature\":" + String(ss->temperature) + ",\"humidity\":" + String(ss->humidity) + "}"));
+          String temperatureAsString = String(ss->temperature);
+          String humidityAsString = String(ss->humidity);
+          publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}").c_str(), ss->mqttRetain);
+          
+          Log.notice("%s {\"temperature\": %F ,\"humidity\": %F" CR, tags::sensors , ss->temperature, ss->humidity);
         }
       }
     }
@@ -236,8 +239,9 @@ void loopSensors()
         ss->dallas->requestTemperatures();
         ss->lastRead = millis();
         ss->temperature = ss->dallas->getTempCByIndex(0);
-        publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + String(ss->temperature) + "}").c_str(), ss->mqttRetain);
-        logger(SENSORS_TAG, String("{\"temperature\":" + String(ss->temperature) + "}"));
+          String temperatureAsString = String(ss->temperature);
+        publishOnMqtt(ss->mqttStateTopic, String("{\"temperature\":" + temperatureAsString + "}").c_str(), ss->mqttRetain);
+        Log.notice("%s {\"temperature\": %F " CR, tags::sensors , ss->temperature);
       }
     }
     break;

@@ -1,5 +1,6 @@
 #include "WiFi.h"
-#define WIFI_TAG "[WIFI]"
+#include "constants.h"
+
 String getApName()
 {
   String version = String(VERSION);
@@ -24,27 +25,26 @@ void reloadWiFiConfig(){
 
     if (WiFi.isConnected()) {
         uint8_t * bssid = WiFi.BSSID();
-        logger(WIFI_TAG,"MODE STA -------------------------------------");
-        logger(WIFI_TAG,"SSID  "+String(WiFi.SSID().c_str()));
-        logger(WIFI_TAG,"BSSID "+String(bssid[0])+":"+String(bssid[1])+":"+String(bssid[2])+":"+String(bssid[3])+":"+String(bssid[4])+":"+String(bssid[5]));
-        logger(WIFI_TAG,"CH    "+ String(WiFi.channel()));
-        logger(WIFI_TAG,"RSSI  "+String(WiFi.RSSI()));
-        logger(WIFI_TAG,"IP    "+WiFi.localIP().toString());
-        logger(WIFI_TAG,"MAC   "+String( WiFi.macAddress().c_str()));
-        logger(WIFI_TAG,"GW    "+WiFi.gatewayIP().toString());
-        logger(WIFI_TAG,"MASK  "+WiFi.subnetMask().toString());
-        logger(WIFI_TAG,"DNS   "+WiFi.dnsIP().toString());
-        logger(WIFI_TAG,"HOST  "+String( WiFi.hostname().c_str()));
-        logger(WIFI_TAG,"----------------------------------------------");
-       // updateNetworkConfig();
+        Log.notice("%s MODE STA -------------------------------------" CR,tags::wifi);
+        Log.notice("%s SSID %s  " CR,tags::wifi,WiFi.SSID().c_str());
+        Log.notice("%s BSSID %s:%s:%s:%s" CR,tags::wifi,bssid[0],bssid[1],bssid[2],bssid[3],bssid[4],bssid[5]);
+        Log.notice("%s CH %d   " CR,tags::wifi, WiFi.channel());
+        Log.notice("%s RSSI %d " CR,tags::wifi,WiFi.RSSI());
+        Log.notice("%s IP  %d  " CR,tags::wifi,WiFi.localIP().toString().c_str());
+        Log.notice("%s MAC %s  " CR,tags::wifi,WiFi.macAddress().c_str());
+        Log.notice("%s GW   %s " CR,tags::wifi,WiFi.gatewayIP().toString().c_str());
+        Log.notice("%s MASK %s " CR,tags::wifi,WiFi.subnetMask().toString().c_str());
+        Log.notice("%s DNS  %s " CR,tags::wifi,WiFi.dnsIP().toString().c_str());
+        Log.notice("%s HOST %s " CR, tags::wifi,WiFi.hostname().c_str());
+        Log.notice("%s ----------------------------------------------" CR);
     }
 
     if (WiFi.getMode() & WIFI_AP) {
-        logger(WIFI_TAG,"MODE AP --------------------------------------");
-        logger(WIFI_TAG,"SSID  "+String( jw.getAPSSID().c_str()));
-        logger(WIFI_TAG,"IP    "+String( WiFi.softAPIP().toString().c_str()));
-        logger(WIFI_TAG,"MAC   "+String( WiFi.softAPmacAddress().c_str()));
-        logger(WIFI_TAG,"----------------------------------------------");
+        Log.notice("%s MODE AP --------------------------------------" CR,tags::wifi);
+        Log.notice("%s SSID %s " CR,tags::wifi,jw.getAPSSID().c_str());
+        Log.notice("%s IP  %s  " CR,tags::wifi, WiFi.softAPIP().toString().c_str());
+        Log.notice("%s MAC  %s " CR,tags::wifi,WiFi.softAPmacAddress().c_str());
+        Log.notice("----------------------------------------------" CR);
 
     }
 
@@ -54,10 +54,10 @@ void scanNewWifiNetworks(){
     unsigned char result = WiFi.scanNetworks();
     if (result == WIFI_SCAN_FAILED) {
     //  publishOnEventSource("wifi-networks","Scan Failed");
-       logger(WIFI_TAG,"Scan Failed");
+       Log.error("%s Scan Failed" CR, tags::wifi);
     } else if (result == 0) {
     //   publishOnEventSource("wifi-networks","No networks found");
-       logger(WIFI_TAG,"No networks found");
+       Log.notice("%s No networks found" CR, tags::wifi);
     } else {
         for (int8_t i = 0; i < result; ++i) {
             String ssid_scan;
@@ -76,8 +76,6 @@ void scanNewWifiNetworks(){
                 chan_scan,
                 (char *) ssid_scan.c_str()
             );
-            String out = String(buffer);
-          logger(WIFI_TAG,out);
         }
     }
     WiFi.scanDelete();
@@ -88,80 +86,82 @@ void scanNewWifiNetworks(){
   }
 
 void infoCallback(justwifi_messages_t code, char * parameter) {
-    String msg = "";
+    
     switch (code){
       case MESSAGE_TURNING_OFF:
-      msg = "Turning OFF";
+      Log.notice("%s Turning OFF" CR, tags::wifi);
       break;
       case MESSAGE_TURNING_ON:
-      msg = "Turning ON";
+        Log.notice("%s Turning ON" CR, tags::wifi);
       break;
       case MESSAGE_SCANNING:
-      msg = "Scanning";
+        Log.notice("%s Scanning" CR, tags::wifi);
       break;
       case MESSAGE_SCAN_FAILED:
-      msg = "Scan failed";
+        Log.error("%s Scan failed" CR, tags::wifi);
       break;
       case MESSAGE_NO_NETWORKS:
-      msg = "No networks found";
+      Log.warning("%s No networks found" CR, tags::wifi);
+      
       break;
       case MESSAGE_NO_KNOWN_NETWORKS:
-      msg = "No known networks found";
+        Log.warning("%s No known networks found" CR, tags::wifi);
       break;
       case MESSAGE_FOUND_NETWORK:
-      msg = String(parameter);
+      Log.warning("%s Network found %s" CR, tags::wifi, parameter);
       break;
       case MESSAGE_CONNECTING:
-       msg = String("Connecting to ")+String(parameter);
+        Log.notice("%s Connecting to %s" CR, tags::wifi, parameter);
       break;
       case MESSAGE_CONNECT_WAITING:
         // too much noise
       break;
       case MESSAGE_CONNECT_FAILED:
-       msg = "Could not connect to "+String(parameter);
+        Log.error("%s Could not connect to %s" CR, tags::wifi, parameter);
       break;
       case MESSAGE_CONNECTED:
         infoWifi();
       break;
       case MESSAGE_DISCONNECTED:
-       msg = "Disconnected";
+        Log.warning("%s Disconnected" CR, tags::wifi);
       break;
       case MESSAGE_ACCESSPOINT_CREATED:
        infoWifi();
       break;
       case MESSAGE_ACCESSPOINT_DESTROYED:
-       msg = "Disconnecting access point";
+        Log.notice("%s Disconnecting access point" CR, tags::wifi);
       break;
       case MESSAGE_ACCESSPOINT_CREATING:
-       msg = "Creating access point";
+        Log.notice("%s Creating access point" CR, tags::wifi);
       break;
       case MESSAGE_ACCESSPOINT_FAILED:
-       msg = "Could not create access point";
+        Log.error("%s Could not create access point" CR, tags::wifi);
       break;
       case MESSAGE_WPS_START:
-       msg = "WPS started";
+        Log.notice("%s WPS started" CR, tags::wifi);
       break;
       case MESSAGE_WPS_SUCCESS:
-       msg = "WPS succeded!";
+        Log.notice("%s WPS succeded!" CR, tags::wifi);
       break;
       case MESSAGE_WPS_ERROR:
-       msg = "WPS failed";
+        Log.error("%s WPS failed" CR, tags::wifi);
       break;
       case MESSAGE_SMARTCONFIG_START:
-       msg = "Smart Config started";
+        Log.notice("%s Smart Config started" CR, tags::wifi);
       break;
       case MESSAGE_SMARTCONFIG_SUCCESS:
-       msg = "Smart Config succeded!";
+        Log.notice("%s mart Config succeded!" CR, tags::wifi);
       break;
       case MESSAGE_SMARTCONFIG_ERROR:
-       msg = "Smart Config failed";
+        Log.error("%s Smart Config failed" CR, tags::wifi);
        case MESSAGE_HOSTNAME_ERROR:
-       msg = "Hostname Error";
+       Log.error("%s Hostname Error" CR, tags::wifi);
        break;
       break;
       
       }
-      logger(WIFI_TAG,msg);
+      
+      
 }
 void setupWiFi(){
   jw.setHostname(getAtualConfig().nodeId);
