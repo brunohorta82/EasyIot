@@ -2,9 +2,9 @@
 #include "constants.h"
 
 // SKETCH BEGIN
-AsyncWebServer server(80);
-AsyncEventSource events("/events");
-fauxmoESP fauxmo;
+static AsyncWebServer server(80);
+static AsyncEventSource events("/events");
+static fauxmoESP fauxmo;
 
 void loadUI()
 {
@@ -155,7 +155,7 @@ void setupWebserverAsync()
   //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-   serializeFile(SWITCHES_CONFIG_FILENAME,*response);
+   serializeFile(configFilenames::switches,*response);
     request->send( response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
@@ -170,7 +170,7 @@ void setupWebserverAsync()
       removeSwitch(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeFile(SWITCHES_CONFIG_FILENAME,*response);
+    serializeFile(configFilenames::switches,*response);
     request->send(response);
   });
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -186,7 +186,7 @@ void setupWebserverAsync()
   });
 server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
   AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeFile(SENSORS_CONFIG_FILENAME,*response);
+    serializeFile(configFilenames::sensors,*response);
     request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
@@ -201,7 +201,7 @@ server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
       removeSensor(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeFile(SENSORS_CONFIG_FILENAME,*response);
+    serializeFile(configFilenames::sensors,*response);
     request->send(response);
   });
   //ALEXA SUPPORT

@@ -2,8 +2,9 @@
 #include "Discovery.h"
 #include "constants.h"
 
-std::vector<SwitchT> switchs;
+static std::vector<SwitchT> switchs;
 
+static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 void removeSwitch(const char *id, bool persist)
 {
   Log.notice("%s Remove id %s " CR,tags::switches, id);
@@ -52,13 +53,14 @@ void updateSwitch(JsonObject doc, bool persist)
   strlcpy(sw.name, doc.getMember("name").as<String>().c_str(), sizeof(sw.name));
   strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
   sw.primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
-  sw.mode = doc["mode"] | MODE_SWITCH;
-  if (sw.mode == MODE_PUSH || sw.mode == MODE_SWITCH)
+  int switchMode = doc["mode"] | 0;
+  sw.mode =   static_cast<SwitchMode>(switchMode);
+  if (sw.mode == SwitchMode::PUSH || sw.mode == SwitchMode::SWITCH)
   {
     sw.secondaryGpio = constantsConfig::noGPIO;
     sw.lastSecondaryGpioState = true;
   }
-  else if (sw.mode == MODE_DUAL_PUSH || sw.mode == MODE_DUAL_SWITCH)
+  else if (sw.mode == SwitchMode::DUAL_PUSH || sw.mode == SwitchMode::DUAL_SWITCH)
   {
     sw.secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
     sw.lastSecondaryGpioState = doc["lastSecondaryGpioState"] | true;
@@ -67,7 +69,7 @@ void updateSwitch(JsonObject doc, bool persist)
   sw.autoState = (doc["autoStateDelay"] | 0) > 0 && strlen(doc["autoStateValue"] | "") > 0;
   sw.autoStateDelay = doc["autoStateDelay"] | 0;
   strlcpy(sw.autoStateValue, doc.getMember("autoStateValue").as<String>().c_str(), sizeof(sw.autoStateValue));
-  sw.typeControl = doc["typeControl"] | TYPE_MQTT;
+  sw.typeControl = static_cast<SwitchControlType>( doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT));
   sw.pullup = doc["pullup"] | true;
   sw.mqttRetain = doc["mqttRetain"] | false;
   sw.inverted = doc["inverted"] | false;
@@ -90,11 +92,11 @@ void updateSwitch(JsonObject doc, bool persist)
       configPIN(sw.secondaryGpio, sw.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     }
   }
-  if (strcmp(sw.family,FAMILY_COVER) == 0)
+  if (strcmp(sw.family,constanstsSwitch::familyCover) == 0)
   {
     sw.secondaryGpioControl = doc["secondaryGpioControl"] | constantsConfig::noGPIO;
-    sw.statePoolStart = doc["statePoolStart"] | COVER_START_IDX;
-    sw.statePoolEnd = doc["statePoolEnd"] | COVER_END_IDX;
+    sw.statePoolStart = doc["statePoolStart"] | constanstsSwitch::coverStartIdx;
+    sw.statePoolEnd = doc["statePoolEnd"] | constanstsSwitch::converEndIdx;
     sw.positionControlCover = doc["positionControlCover"] | 0;
     sw.lastPercentage = doc["lastPercentage"] | 0;
     strlcpy(sw.mqttPositionCommandTopic, String(baseTopic + "/setposition").c_str(), sizeof(sw.mqttPositionCommandTopic));
@@ -102,17 +104,17 @@ void updateSwitch(JsonObject doc, bool persist)
     doc["mqttPositionCommandTopic"] = String(baseTopic + "/setposition");
     doc["mqttPositionStateTopic"] = String(baseTopic + "/position");
   }
-  else if (strcmp(sw.family,FAMILY_LOCK) == 0)
+  else if (strcmp(sw.family,constanstsSwitch::familyLock) == 0)
   {
     sw.secondaryGpioControl = constantsConfig::noGPIO;
-    sw.statePoolStart = doc["statePoolStart"] | LOCK_START_IDX;
-    sw.statePoolEnd = doc["statePoolEnd"] | LOCK_END_IDX;
+    sw.statePoolStart = doc["statePoolStart"] | constanstsSwitch::lockStartIdx;
+    sw.statePoolEnd = doc["statePoolEnd"] | constanstsSwitch::lockEndIdx;
   }
   else
   {
     sw.secondaryGpioControl = constantsConfig::noGPIO;
-    sw.statePoolStart = doc["statePoolStart"] | SWITCH_START_IDX;
-    sw.statePoolEnd = doc["statePoolEnd"] | SWITCH_END_IDX;
+    sw.statePoolStart = doc["statePoolStart"] | constanstsSwitch::switchStartIdx;
+    sw.statePoolEnd = doc["statePoolEnd"] | constanstsSwitch::switchEndIdx;
   }
   sw.statePoolIdx = doc["statePoolIdx"] | sw.statePoolStart;
 
@@ -135,7 +137,7 @@ void loadStoredSwitches()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "r+");
+    File file = SPIFFS.open(configFilenames::switches, "r+");
     int switchesSize = 3; //TODO GET THIS VALUE FROM FILE
     const size_t CAPACITY = JSON_ARRAY_SIZE(switchesSize + 1) + switchesSize * JSON_OBJECT_SIZE(36) + 3000;
     DynamicJsonDocument doc(CAPACITY);
@@ -143,14 +145,14 @@ void loadStoredSwitches()
     if (error)
     {
       file.close();
-      file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "w+");
+      file = SPIFFS.open(configFilenames::switches, "w+");
       Log.warning("%s Default values was loaded." CR, tags::switches);
 #if defined SINGLE_SWITCH
       file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor\",\"name\":\"Novo Interruptor\",\"family\":\"light\",\"primaryGpio\":12,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"}]").c_str());
 #elif defined DUAL_SWITCH
       file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor1\",\"name\":\"Novo Interruptor 1\",\"family\":\"light\",\"primaryGpio\":12,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor1/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor1/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"},{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor2\",\"name\":\"Novo Interruptor 2\",\"family\":\"light\",\"primaryGpio\":13,\"secondaryGpio\":99,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":1,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor2/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/light/" + String(ESP.getChipId()) + "novointerruptor2/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":5,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":0,\"statePoolStart\":0,\"statePoolEnd\":1,\"mqttPayload\":\"OFF\",\"stateControl\":\"OFF\"}]").c_str());
 #elif defined COVER
-      file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor\",\"name\":\"Novo Interruptor\",\"family\":\"cover\",\"primaryGpio\":12,\"secondaryGpio\":13,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":4,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/state\",\"mqttPositionCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/setposition\",\"mqttPositionStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/position\",\"percentageRequest\":-1,\"lastPercentage\":0,\"positionControlCover\":0,\"secondaryGpioControl\":5,\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":2,\"statePoolStart\":" + String(COVER_START_IDX) + ",\"statePoolEnd\":" + String(COVER_END_IDX) + ",\"mqttPayload\":\"STOP\",\"stateControl\":\"STOP\"}]").c_str());
+      file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "novointerruptor\",\"name\":\"Novo Interruptor\",\"family\":\"cover\",\"primaryGpio\":12,\"secondaryGpio\":13,\"autoStateValue\":\"\",\"autoState\":false,\"autoStateDelay\":0,\"typeControl\":1,\"mode\":4,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/state\",\"mqttPositionCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/setposition\",\"mqttPositionStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/cover/" + String(ESP.getChipId()) + "novointerruptor/position\",\"percentageRequest\":-1,\"lastPercentage\":0,\"positionControlCover\":0,\"secondaryGpioControl\":5,\"timeBetweenStates\":0,\"primaryGpioControl\":4,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":2,\"statePoolStart\":" + String(constanstsSwitch::coverStartIdx) + ",\"statePoolEnd\":" + String(constanstsSwitch::converEndIdx) + ",\"mqttPayload\":\"STOP\",\"stateControl\":\"STOP\"}]").c_str());
 #elif defined LOCK
       file.print(String("[{\"id\":\"" + String(ESP.getChipId()) + "fechadura1\",\"name\":\"Fechadura 1\",\"family\":\"lock\",\"primaryGpio\":99,\"secondaryGpio\":99,\"autoStateValue\":\"RELEASED\",\"autoState\":true,\"autoStateDelay\":1000,\"typeControl\":1,\"mode\":2,\"pullup\":true,\"mqttRetain\":false,\"inverted\":false,\"mqttCommandTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/set\",\"mqttStateTopic\":\"easyiot/" + String(ESP.getChipId()) + "/lock/" + String(ESP.getChipId()) + "fechadura1/state\",\"timeBetweenStates\":0,\"primaryGpioControl\":5,\"lastPrimaryGpioState\":true,\"lastSecondaryGpioState\":true,\"lastTimeChange\":0,\"statePoolIdx\":6,\"statePoolStart\":6,\"statePoolEnd\":8,\"mqttPayload\":\"\",\"stateControl\":\"RELEASED\"}]"));
 #else
@@ -178,7 +180,7 @@ void saveSwitchs()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(SWITCHES_CONFIG_FILENAME, "w+");
+    File file = SPIFFS.open(configFilenames::switches, "w+");
     if (!file)
     {
       Log.warning("%s Open Switches config file Error!." CR, tags::switches);
@@ -208,7 +210,7 @@ void saveSwitchs()
         sdoc["inverted"] = sw.inverted;
         sdoc["mqttCommandTopic"] = String(sw.mqttCommandTopic);
         sdoc["mqttStateTopic"] = String(sw.mqttStateTopic);
-        if (strcmp(sw.family,FAMILY_COVER) == 0)
+        if (strcmp(sw.family,constanstsSwitch::familyCover) == 0)
         {
           sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
           sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
@@ -290,48 +292,48 @@ void stateSwitch(SwitchT *switchT, const char *state)
   Log.notice("%s State:     %s" CR, tags::switches,state);
   Log.notice("%s State IDX: %d" CR ,tags::switches,switchT->statePoolIdx);
 
-  if (String(PAYLOAD_OPEN).equals(state))
+  if (strcmp(constanstsSwitch::payloadOpen,state) == 0)
   {
     if (switchT->timeBetweenStates > 0 && switchT->positionControlCover >= 100)
     {
       return;
     }
     switchT->lastPercentage = switchT->positionControlCover;
-    strlcpy(switchT->stateControl, PAYLOAD_OPEN, sizeof(switchT->stateControl));
-    strlcpy(switchT->mqttPayload, PAYLOAD_STATE_OPEN, sizeof(switchT->mqttPayload));
+    strlcpy(switchT->stateControl, constanstsSwitch::payloadOpen, sizeof(switchT->stateControl));
+    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadOpen, sizeof(switchT->mqttPayload));
     if (switchT->percentageRequest < 0)
       switchT->percentageRequest = 100;
-    if (switchT->typeControl == TYPE_RELAY)
+    if (switchT->typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       configPIN(switchT->secondaryGpioControl, OUTPUT);
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->secondaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> OPEN REQUEST
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
 
     publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest).c_str(), switchT->mqttRetain);
   }
-  else if (String(PAYLOAD_STOP).equals(state))
+  else if (strcmp(constanstsSwitch::payloadStop,state) == 0)
   {
-    strlcpy(switchT->stateControl, PAYLOAD_STOP, sizeof(switchT->stateControl));
-    strlcpy(switchT->mqttPayload, PAYLOAD_STATE_STOP, sizeof(switchT->mqttPayload));
+    strlcpy(switchT->stateControl, constanstsSwitch::payloadStop, sizeof(switchT->stateControl));
+    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadStateStop, sizeof(switchT->mqttPayload));
     switchT->percentageRequest = -1;
     switchT->lastPercentage = switchT->positionControlCover;
-    if (switchT->typeControl == TYPE_RELAY)
+    if (switchT->typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
 
       configPIN(switchT->primaryGpioControl, OUTPUT);
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       configPIN(switchT->secondaryGpioControl, OUTPUT);
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->secondaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> PROTECT RELAY LIFE
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
     }
     if (switchT->timeBetweenStates > 0)
     {
@@ -342,7 +344,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
       publishOnMqtt(switchT->mqttPositionStateTopic, "50", switchT->mqttRetain);
     }
   }
-  else if (String(PAYLOAD_CLOSE).equals(state))
+  else if (strcmp(constanstsSwitch::payloadClose,state) == 0)
   {
 
     if (switchT->timeBetweenStates > 0 && switchT->positionControlCover <= 0)
@@ -350,59 +352,59 @@ void stateSwitch(SwitchT *switchT, const char *state)
       return;
     }
     switchT->lastPercentage = switchT->positionControlCover;
-    strlcpy(switchT->stateControl, PAYLOAD_CLOSE, sizeof(switchT->stateControl));
-    strlcpy(switchT->mqttPayload, PAYLOAD_STATE_CLOSE, sizeof(switchT->mqttPayload));
+    strlcpy(switchT->stateControl, constanstsSwitch::payloadClose, sizeof(switchT->stateControl));
+    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadStateClose, sizeof(switchT->mqttPayload));
     if (switchT->percentageRequest < 0)
       switchT->percentageRequest = 0;
-    if (switchT->typeControl == TYPE_RELAY)
+    if (switchT->typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       configPIN(switchT->secondaryGpioControl, OUTPUT);
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> STOP
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->secondaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF -> CLOSE REQUEST
-      delay(DELAY_COVER_PROTECTION);
+      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON -> EXECUTE REQUEST
     }
 
     publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest).c_str(), switchT->mqttRetain);
   }
-  else if (String(PAYLOAD_ON).equals(state))
+  else if (strcmp(constanstsSwitch::payloadOn,state) == 0)
   {
-    strlcpy(switchT->stateControl, PAYLOAD_ON, sizeof(switchT->stateControl));
-    strlcpy(switchT->mqttPayload, PAYLOAD_ON, sizeof(switchT->mqttPayload));
-    if (switchT->typeControl == TYPE_RELAY)
+    strlcpy(switchT->stateControl, constanstsSwitch::payloadOn, sizeof(switchT->stateControl));
+    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadOn, sizeof(switchT->mqttPayload));
+    if (switchT->typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
   }
-  else if (String(PAYLOAD_OFF).equals(state))
+  else if (strcmp(constanstsSwitch::payloadOff,state) == 0)
   {
-    strlcpy(switchT->stateControl, PAYLOAD_OFF, sizeof(switchT->stateControl));
-    strlcpy(switchT->mqttPayload, PAYLOAD_OFF, sizeof(switchT->mqttPayload));
-    if (switchT->typeControl == TYPE_RELAY)
+    strlcpy(switchT->stateControl, constanstsSwitch::payloadOff, sizeof(switchT->stateControl));
+    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadOff, sizeof(switchT->mqttPayload));
+    if (switchT->typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
     }
   }
-  else if (String(PAYLOAD_LOCK).equals(state) || String(PAYLOAD_UNLOCK).equals(state))
+  else if (strcmp(constanstsSwitch::payloadLock,state) == 0 || strcmp(constanstsSwitch::payloadUnlock,state) == 0)
   {
     strlcpy(switchT->stateControl, state, sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
     strlcpy(switchT->mqttPayload, state, sizeof(switchT->mqttPayload));   //TODO CHECK STATE FROM SENSOR
-    if (switchT->typeControl == TYPE_RELAY)
+    if (switchT->typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
   }
-  else if (String(PAYLOAD_RELEASED).equals(state))
+  else if (strcmp(constanstsSwitch::payloadReleased,state) == 0)
   {
     strlcpy(switchT->stateControl, state, sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
-    strlcpy(switchT->mqttPayload, PAYLOAD_LOCK, sizeof(switchT->mqttPayload));    //TODO CHECK STATE FROM SENSOR
-    if (switchT->typeControl == TYPE_RELAY)
+    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadLock, sizeof(switchT->mqttPayload));    //TODO CHECK STATE FROM SENSOR
+    if (switchT->typeControl ==SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
@@ -414,12 +416,12 @@ void stateSwitch(SwitchT *switchT, const char *state)
     switchT->percentageRequest = max(0, min(100, atoi(state)));
     if (switchT->positionControlCover > switchT->percentageRequest)
     {
-      switchT->statePoolIdx = CLOSE_IDX;
+      switchT->statePoolIdx = constanstsSwitch::closeIdx;
       stateSwitch(switchT, statesPool[switchT->statePoolIdx].c_str());
     }
     else
     {
-      switchT->statePoolIdx = OPEN_IDX;
+      switchT->statePoolIdx = constanstsSwitch::openIdx;
       stateSwitch(switchT, statesPool[switchT->statePoolIdx].c_str());
     }
   }
@@ -446,7 +448,7 @@ void stateSwitchByName(const char *name, const char *state,const char *value)
   {
     if (strcmp(switchs[i].name, name) == 0)
     {
-      if (strcmp(FAMILY_COVER, switchs[i].family) == 0)
+      if (strcmp(constanstsSwitch::familyCover, switchs[i].family) == 0)
       {
         if (switchs[i].timeBetweenStates > 0)
         {
@@ -457,7 +459,7 @@ void stateSwitchByName(const char *name, const char *state,const char *value)
           stateSwitch(&switchs[i], state);
         }
       }
-      else if (strcmp(FAMILY_LIGHT, switchs[i].family) == 0 || strcmp(FAMILY_SWITCH, switchs[i].family) == 0)
+      else if (strcmp(constanstsSwitch::familyLight, switchs[i].family) == 0 || strcmp(constanstsSwitch::familySwitch, switchs[i].family) == 0)
       {
 
         stateSwitch(&switchs[i], state);
@@ -472,15 +474,15 @@ bool stateTimeout(SwitchT *sw)
 }
 boolean positionDone(SwitchT *sw)
 {
-  if (strcmp(sw->family, FAMILY_COVER) != 0)
+  if (strcmp(sw->family, constanstsSwitch::familyCover) != 0)
   {
     return false;
   }
-  if (strcmp(PAYLOAD_STOP, sw->stateControl) == 0)
+  if (strcmp(constanstsSwitch::payloadStop, sw->stateControl) == 0)
   {
     return false;
   }
-  if (sw->lastTimeChange + COVER_AUTO_STOP_PROTECTION < millis())
+  if (sw->lastTimeChange + constanstsSwitch::coverAutoStopProtection < millis())
   {
     return true;
   }
@@ -509,7 +511,7 @@ void loopSwitches()
     bool primaryGpioEvent = primaryValue != sw->lastPrimaryGpioState;
     bool secondaryGpioEvent = secondaryValue != sw->lastSecondaryGpioState;
 
-    if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw->lastTimeChange >= DELAY_DEBOUCE)
+    if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw->lastTimeChange >= constanstsSwitch::delayDebounce)
     {
       sw->lastPrimaryGpioState = primaryValue;
       sw->lastSecondaryGpioState = secondaryValue;
@@ -518,43 +520,43 @@ void loopSwitches()
 
       switch (sw->mode)
       {
-      case MODE_SWITCH:
+      case SWITCH:
         sw->statePoolIdx = ((sw->statePoolIdx - sw->statePoolStart + 1) % poolSize) + sw->statePoolStart;
         stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         break;
-      case MODE_PUSH:
+      case PUSH:
         if (!primaryValue)
         { //PUSHED
           sw->statePoolIdx = ((sw->statePoolIdx - sw->statePoolStart + 1) % poolSize) + sw->statePoolStart;
           stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         break;
-      case MODE_DUAL_SWITCH:
+      case DUAL_SWITCH:
         if (primaryValue == true && secondaryValue == true)
         {
-          sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_2_IDX : STOP_1_IDX;
+          sw->statePoolIdx = sw->statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
           stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         else if (primaryGpioEvent && !primaryValue)
         {
-          sw->statePoolIdx = OPEN_IDX;
+          sw->statePoolIdx = constanstsSwitch::openIdx;
           stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         else if (secondaryGpioEvent && !secondaryValue)
         {
-          sw->statePoolIdx = CLOSE_IDX;
+          sw->statePoolIdx = constanstsSwitch::closeIdx;
           stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         break;
-      case MODE_DUAL_PUSH:
+      case DUAL_PUSH:
         if (!primaryValue)
         { //PUSHED
-          sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_1_IDX : OPEN_IDX;
+          sw->statePoolIdx = sw->statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::firtStopIdx : constanstsSwitch::openIdx;
           stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         if (!secondaryValue)
         { //PUSHED
-          sw->statePoolIdx = sw->statePoolIdx == CLOSE_IDX ? STOP_2_IDX : CLOSE_IDX;
+          sw->statePoolIdx = sw->statePoolIdx == constanstsSwitch::closeIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::closeIdx;
           stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
         }
         break;
@@ -589,7 +591,7 @@ void loopSwitches()
     }
     if (positionDone(sw))
     {
-      sw->statePoolIdx = sw->statePoolIdx == OPEN_IDX ? STOP_2_IDX : STOP_1_IDX;
+      sw->statePoolIdx = sw->statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
       sw->percentageRequest = -1;
       Log.notice("%s Control Positon set change switch to  %s" CR, tags::switches,statesPool[sw->statePoolIdx].c_str());
       stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());

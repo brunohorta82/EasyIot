@@ -7,6 +7,7 @@ String getApName()
   version.replace(".","x");
   return "EasyIot-"+String(ESP.getChipId())+"-"+version;
 }
+
 void reloadWiFiConfig(){
        jw.disconnect(); 
        jw.setHostname(getAtualConfig().nodeId);

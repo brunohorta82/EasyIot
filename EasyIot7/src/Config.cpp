@@ -2,14 +2,13 @@
 #include "constants.h"
 
 //CONTROL FLAGS
-bool REBOOT = false;
-bool LOAD_DEFAULTS = false;
-bool AUTO_UPDATE = false;
-bool STORE_CONFIG = false;
-bool WIFI_SCAN = false;
-bool WIFI_RELOAD = false;
-bool restart = false;
-Config config;
+static bool g_reboot = false;
+static bool g_loadDefaults = false;
+static bool g_autoUpdate = false;
+static bool g_wifiReload = false;
+
+static Config config;
+
 struct Config &getAtualConfig()
 {
   return config;
@@ -25,15 +24,16 @@ boolean isValidNumber(const char *str)
   }
   return false;
 }
+
 void requestReloadWifi()
 {
-  WIFI_RELOAD = true;
+  g_wifiReload = true;
 }
 bool reloadWifiRequested()
 {
-  if (WIFI_RELOAD)
+  if (g_wifiReload)
   {
-    WIFI_RELOAD = false;
+    g_wifiReload = false;
     return true;
   }
   return false;
@@ -41,13 +41,13 @@ bool reloadWifiRequested()
 
 void requestRestart()
 {
-  REBOOT = true;
+  g_reboot = true;
 }
 bool restartRequested()
 {
-  if (REBOOT)
+  if (g_reboot)
   {
-    REBOOT = false;
+    g_reboot = false;
     return true;
   }
   return false;
@@ -55,13 +55,13 @@ bool restartRequested()
 
 void requestAutoUpdate()
 {
-  AUTO_UPDATE = true;
+  g_autoUpdate = true;
 }
 bool autoUpdateRequested()
 {
-  if (AUTO_UPDATE)
+  if (g_autoUpdate)
   {
-    AUTO_UPDATE = false;
+    g_autoUpdate = false;
     return true;
   }
   return false;
@@ -93,19 +93,17 @@ bool readPIN(uint8_t pin)
 }
 void requestLoadDefaults()
 {
-  LOAD_DEFAULTS = true;
+  g_loadDefaults = true;
 }
 bool loadDefaultsRequested()
 {
-  if (LOAD_DEFAULTS)
+  if (g_loadDefaults)
   {
-    LOAD_DEFAULTS = false;
+    g_loadDefaults = false;
     return true;
   }
   return false;
 }
-
-
 
 void normalize(String  &inputStr)
 {
@@ -139,7 +137,7 @@ void loadStoredConfiguration()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(constantsConfig::configFileName, "r+");
+    File file = SPIFFS.open(configFilenames::config, "r+");
     const size_t CAPACITY = JSON_OBJECT_SIZE(24) + 700;
     DynamicJsonDocument doc(CAPACITY);
     DeserializationError error = deserializeJson(doc, file);
@@ -187,7 +185,7 @@ void saveConfiguration()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(constantsConfig::configFileName, "w+");
+    File file = SPIFFS.open(configFilenames::config, "w+");
     if (!file)
     {
       Log.error("%s Open config file Error!" CR, tags::config);
@@ -226,12 +224,12 @@ void updateConfig(JsonObject doc, bool persist)
 {
   
   bool reloadWifi = config.staticIp != doc["staticIp"] || strcmp(config.wifiIp, doc["wifiIp"] | "") != 0 || strcmp(config.wifiMask, doc["wifiMask"] | "") != 0 || strcmp(config.wifiGw, doc["wifiGw"] | "") != 0 || strcmp(config.wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(config.wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(config.wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(config.wifiSecret2, doc["wifiSecret2"] | "") != 0;
-  bool reloadMqtt =  strcmp(config.mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(config.mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(config.mqttPassword, doc["mqttPassword"] | "") != 0 || config.mqttPort != (doc["mqttPort"] | DEFAULT_MQTT_PORT);
+  bool reloadMqtt =  strcmp(config.mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(config.mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(config.mqttPassword, doc["mqttPassword"] | "") != 0 || config.mqttPort != (doc["mqttPort"] | constantsMqtt::defaultPort);
   String n_name = doc["nodeId"] | String(String("MyNode")+String(ESP.getChipId()));
   normalize(n_name);
   strlcpy(config.nodeId, n_name.c_str(), sizeof(config.nodeId));
   strlcpy(config.mqttIpDns, doc["mqttIpDns"] | "", sizeof(config.mqttIpDns));
-  config.mqttPort = doc["mqttPort"] | DEFAULT_MQTT_PORT;
+  config.mqttPort = doc["mqttPort"] | constantsMqtt::defaultPort;
   strlcpy(config.mqttUsername, doc["mqttUsername"] | "", sizeof(config.mqttUsername));
   strlcpy(config.mqttPassword, doc["mqttPassword"] | "", sizeof(config.mqttPassword));
   strlcpy(config.wifiSSID, doc["wifiSSID"] | "", sizeof(config.wifiSSID));
@@ -246,7 +244,7 @@ void updateConfig(JsonObject doc, bool persist)
   config.configTime = doc["configTime"];
   strlcpy(config.configkey, doc["configkey"] | "", sizeof(config.configkey));
   config.firmware = doc["firmware"] | VERSION;
-  if(strcmp(constantsConfig::mqttCloudURL,config.mqttIpDns) == 0){
+  if(strcmp(constantsMqtt::mqttCloudURL,config.mqttIpDns) == 0){
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, config.mqttUsername, sizeof(config.homeAssistantAutoDiscoveryPrefix));
   }else
   {

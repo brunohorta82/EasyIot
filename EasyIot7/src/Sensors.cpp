@@ -1,7 +1,8 @@
 #include "Sensors.h"
 #include "Discovery.h"
 #include "constants.h"
-std::vector<SensorT> sensors;
+
+static std::vector<SensorT> sensors;
 
 void removeSensor(const char* id, bool persist)
 {
@@ -38,9 +39,10 @@ void initSensorsHaDiscovery()
 void updateSensor(JsonObject doc, bool persist)
 {
   Log.notice("%s Update Environment" CR, tags::sensors);
-  int type = doc["type"] | -1;
-  if (type < 0)
-    return ;
+  int sensorType = doc["type"] | -1;
+  if(sensorType  < 0) return;
+  SensorType type = static_cast<SensorType>(sensorType);
+  
   String n_name = doc["name"] ;
   normalize(n_name);
   String newId = doc.getMember("id").as<String>().equals(constantsConfig::newID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
@@ -49,7 +51,7 @@ void updateSensor(JsonObject doc, bool persist)
   SensorT ss;
   strlcpy(ss.id, String(String(ESP.getChipId()) + n_name).c_str(), sizeof(ss.id));
   strlcpy(ss.name, doc.getMember("name").as<String>().c_str(), sizeof(ss.name));
-  strlcpy(ss.deviceClass, doc["deviceClass"] | NONE_CLASS, sizeof(ss.deviceClass));
+  strlcpy(ss.deviceClass, doc["deviceClass"] | constantsSensor::noneClass, sizeof(ss.deviceClass));
   ss.type = type;
 
   addToHaDiscovery(&ss);
@@ -64,30 +66,30 @@ void updateSensor(JsonObject doc, bool persist)
   ss.mqttRetain = doc["mqttRetain"] | true;
   switch (type)
   {
-  case TYPE_LDR:
-    strlcpy(ss.family, SENSOR_FAMILY, sizeof(ss.family));
+  case LDR:
+    strlcpy(ss.family, constantsSensor::familySensor, sizeof(ss.family));
     break;
-  case TYPE_PIR:
-  case TYPE_RCWL_0516:
-   strlcpy(ss.family, BINARY_SENSOR_FAMILY, sizeof(ss.family));
+  case PIR:
+  case RCWL_0516:
+   strlcpy(ss.family, constantsSensor::binarySensorFamily, sizeof(ss.family));
     configPIN(primaryGpio, INPUT);
     strlcpy(ss.payloadOn, doc["payloadOn"] | "ON", sizeof(ss.payloadOff));
     strlcpy(ss.payloadOff, doc["payloadOff"] | "OFF", sizeof(ss.payloadOff));
   break;
-  case TYPE_REED_SWITCH:
-    strlcpy(ss.family, BINARY_SENSOR_FAMILY, sizeof(ss.family));
+  case REED_SWITCH:
+    strlcpy(ss.family, constantsSensor::binarySensorFamily, sizeof(ss.family));
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     strlcpy(ss.payloadOn, doc["payloadOn"] | "ON", sizeof(ss.payloadOff));
     strlcpy(ss.payloadOff, doc["payloadOff"] | "OFF", sizeof(ss.payloadOff));
     break;
-  case TYPE_DHT_11:
-  case TYPE_DHT_21:
-  case TYPE_DHT_22:
-    strlcpy(ss.family, SENSOR_FAMILY, sizeof(ss.family));
+  case DHT_11:
+  case DHT_21:
+  case DHT_22:
+    strlcpy(ss.family, constantsSensor::familySensor, sizeof(ss.family));
     ss.dht = new DHT_nonblocking(primaryGpio, type);
     break;
-  case TYPE_DS18B20:
-    strlcpy(ss.family, SENSOR_FAMILY, sizeof(ss.family));
+  case DS18B20:
+    strlcpy(ss.family, constantsSensor::familySensor, sizeof(ss.family));
     ss.dallas = new DallasTemperature(new OneWire(primaryGpio));
     break;
   }
@@ -103,7 +105,7 @@ void loadStoredSensors()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "r+");
+    File file = SPIFFS.open(configFilenames::sensors, "r+");
     
     int sensorsSize = 2; //TODO GET THIS VALUE FROM FILE
     const size_t CAPACITY = JSON_ARRAY_SIZE(sensorsSize + 1) + sensorsSize * JSON_OBJECT_SIZE(11) + 500;
@@ -112,7 +114,7 @@ void loadStoredSensors()
     if (error)
     {
       file.close();
-      file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "w+");
+      file = SPIFFS.open(configFilenames::sensors, "w+");
       Log.warning("%s Default values was loaded." CR, tags::sensors);
       file.print(String("[]").c_str());
       file.close();
@@ -136,7 +138,7 @@ void saveSensors()
 {
   if (SPIFFS.begin())
   {
-    File file = SPIFFS.open(SENSORS_CONFIG_FILENAME, "w+");
+    File file = SPIFFS.open(configFilenames::sensors, "w+");
     if (!file)
     {
       Log.error("%s Open Sensors file Error!" CR, tags::sensors);
@@ -155,7 +157,7 @@ void saveSensors()
         sdoc["mqttStateTopic"] = String(ss.mqttStateTopic);
         sdoc["delayRead"] = ss.delayRead;
         sdoc["primaryGpio"] = ss.primaryGpio;
-        sdoc["type"] = ss.type;
+        sdoc["type"] = static_cast<int>( ss.type);
         sdoc["deviceClass"] = ss.deviceClass;
         sdoc["mqttRetain"] = ss.mqttRetain;
       }
@@ -183,7 +185,7 @@ void loopSensors()
       continue;
     switch (sensors[i].type)
     {
-    case TYPE_LDR:
+    case LDR:
     {
       if (ss->lastRead + ss->delayRead < millis())
       {
@@ -196,9 +198,9 @@ void loopSensors()
     }
     break;
 
-    case TYPE_PIR:
-    case TYPE_REED_SWITCH:
-    case TYPE_RCWL_0516:
+    case PIR:
+    case REED_SWITCH:
+    case RCWL_0516:
     {
       bool binaryState = readPIN(ss->primaryGpio);
       if (ss->lastBinaryState != binaryState)
@@ -211,9 +213,9 @@ void loopSensors()
     }
     break;
 
-    case TYPE_DHT_11:
-    case TYPE_DHT_21:
-    case TYPE_DHT_22:
+    case DHT_11:
+    case DHT_21:
+    case DHT_22:
     {
 
       if (ss->dht->measure(&ss->temperature, &ss->humidity) == true)
@@ -231,7 +233,7 @@ void loopSensors()
       }
     }
     break;
-    case TYPE_DS18B20:
+    case DS18B20:
     {
       if (ss->lastRead + ss->delayRead < millis())
       {

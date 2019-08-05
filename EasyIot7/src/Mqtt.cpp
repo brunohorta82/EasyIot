@@ -2,8 +2,8 @@
 #include "Switches.h"
 #include "constants.h"
 
-WiFiClient espClient;
-PubSubClient mqttClient(espClient);
+static WiFiClient espClient;
+static PubSubClient mqttClient(espClient);
 void processMqttAction(String topic, String payload)
 {
     mqttSwitchControl(topic.c_str(), payload.c_str());
@@ -17,7 +17,7 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     payload_as_string[length] = 0;
     Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
     Log.notice("%s Payload: " CR, tags::mqtt, payload_as_string);
-    if (strcmp(topic,constantsConfig::homeassistantOnlineTopic) == 0 && strcmp( payload_as_string,AVAILABLE_PAYLOAD) == 0) {
+    if (strcmp(topic,constantsMqtt::homeassistantOnlineTopic) == 0 && strcmp( payload_as_string,constantsMqtt::availablePayload) == 0) {
         initSwitchesHaDiscovery();
     } else {
         processMqttAction(topic, payload_as_string);
@@ -54,12 +54,12 @@ boolean reconnect()
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
     char *username = strdup(getAtualConfig().mqttUsername);
     char *password = strdup(getAtualConfig().mqttPassword);
-    if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic().c_str(), 0, true, UNAVAILABLE_PAYLOAD, true))
+    if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
     {
          Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
-        publishOnMqtt(getAvailableTopic().c_str(), AVAILABLE_PAYLOAD, true);
+        publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
         //publishOnMqtt(getConfigStatusTopic().c_str(), getConfigStatus().c_str(), true);
-        subscribeOnMqtt(constantsConfig::homeassistantOnlineTopic);
+        subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
         
     }
 

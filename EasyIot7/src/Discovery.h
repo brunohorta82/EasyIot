@@ -1,5 +1,6 @@
 #ifndef DISCOVERY_H
 #define DISCOVERY_H
+
 #include <Arduino.h>
 #include <fauxmoESP.h>
 #include "Config.h"
