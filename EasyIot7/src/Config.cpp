@@ -165,11 +165,49 @@ size_t serializeConfigStatus(Print &output)
 
 void Config::save(File& file) const
 {
-  file.write((uint8_t*)this, sizeof(Config)); 
+  file.write((uint8_t*)nodeId, sizeof(nodeId)); 
+  file.write((uint8_t*)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix)); 
+  file.write((uint8_t*)mqttIpDns, sizeof(mqttIpDns)); 
+  file.write((uint8_t*)mqttUsername, sizeof(mqttUsername)); 
+  file.write((uint8_t*)&mqttPort, sizeof(mqttPort)); 
+  file.write((uint8_t*)mqttPassword, sizeof(mqttPassword)); 
+  file.write((uint8_t*)wifiSSID, sizeof(wifiSSID)); 
+  file.write((uint8_t*)wifiSecret, sizeof(wifiSecret)); 
+  file.write((uint8_t*)wifiSSID2, sizeof(wifiSSID2)); 
+  file.write((uint8_t*)wifiSecret2, sizeof(wifiSecret2)); 
+  file.write((uint8_t*)&staticIp, sizeof(staticIp)); 
+  file.write((uint8_t*)wifiIp, sizeof(wifiIp)); 
+  file.write((uint8_t*)wifiMask, sizeof(wifiMask)); 
+  file.write((uint8_t*)wifiGw, sizeof(wifiGw)); 
+  file.write((uint8_t*)apSecret, sizeof(apSecret)); 
+  file.write((uint8_t*)apName, sizeof(apName)); 
+  file.write((uint8_t*)&configTime, sizeof(configTime)); 
+  file.write((uint8_t*)configkey, sizeof(configkey)); 
+  file.write((uint8_t*)hardware, sizeof(hardware)); 
+  file.write((uint8_t*)&firmware, sizeof(firmware));
 }
 void Config::load(File& file)
 {
-  file.read((uint8_t*)this, sizeof(Config)); 
+  file.read((uint8_t*)nodeId, sizeof(nodeId)); 
+  file.read((uint8_t*)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix)); 
+  file.read((uint8_t*)mqttIpDns, sizeof(mqttIpDns)); 
+  file.read((uint8_t*)mqttUsername, sizeof(mqttUsername)); 
+  file.read((uint8_t*)&mqttPort, sizeof(mqttPort)); 
+  file.read((uint8_t*)mqttPassword, sizeof(mqttPassword)); 
+  file.read((uint8_t*)wifiSSID, sizeof(wifiSSID)); 
+  file.read((uint8_t*)wifiSecret, sizeof(wifiSecret)); 
+  file.read((uint8_t*)wifiSSID2, sizeof(wifiSSID2)); 
+  file.read((uint8_t*)wifiSecret2, sizeof(wifiSecret2)); 
+  file.read((uint8_t*)&staticIp, sizeof(staticIp)); 
+  file.read((uint8_t*)wifiIp, sizeof(wifiIp)); 
+  file.read((uint8_t*)wifiMask, sizeof(wifiMask)); 
+  file.read((uint8_t*)wifiGw, sizeof(wifiGw)); 
+  file.read((uint8_t*)apSecret, sizeof(apSecret)); 
+  file.read((uint8_t*)apName, sizeof(apName)); 
+  file.read((uint8_t*)&configTime, sizeof(configTime)); 
+  file.read((uint8_t*)configkey, sizeof(configkey)); 
+  file.read((uint8_t*)hardware, sizeof(hardware)); 
+  file.read((uint8_t*)&firmware, sizeof(firmware));
 }
 void loadStoredConfiguration()
 {
@@ -215,7 +253,6 @@ void saveConfiguration()
 
 void Config::update(JsonObject doc, bool persist)
 {
-
   bool reloadWifi = staticIp != doc["staticIp"] || strcmp(wifiIp, doc["wifiIp"] | "") != 0 || strcmp(wifiMask, doc["wifiMask"] | "") != 0 || strcmp(wifiGw, doc["wifiGw"] | "") != 0 || strcmp(wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(wifiSecret2, doc["wifiSecret2"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(mqttPassword, doc["mqttPassword"] | "") != 0 || mqttPort != (doc["mqttPort"] | constantsMqtt::defaultPort);
   String n_name = doc["nodeId"] | String(String("MyNode") + String(ESP.getChipId()));

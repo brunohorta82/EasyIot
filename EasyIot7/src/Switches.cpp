@@ -2,17 +2,119 @@
 #include "Discovery.h"
 #include "constants.h"
 
-static std::vector<SwitchT> switchs;
-
+static Switches switchs;
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
-void removeSwitch(const char *id, bool persist)
+void SwitchT::save(File &file) const
 {
-  Log.notice("%s Remove id %s " CR,tags::switches, id);
+
+  file.write((uint8_t *)id, sizeof(id));
+  file.write((uint8_t *)name, sizeof(name));
+  file.write((uint8_t *)family, sizeof(family));
+  file.write((uint8_t *)&mode, sizeof(mode));
+  file.write((uint8_t *)&typeControl, sizeof(typeControl));
+  file.write((uint8_t *)&primaryGpio, sizeof(primaryGpio));
+  file.write((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
+  file.write((uint8_t *)&pullup, sizeof(pullup));
+  file.write((uint8_t *)&primaryGpioControl, sizeof(primaryGpioControl));
+  file.write((uint8_t *)&secondaryGpioControl, sizeof(secondaryGpioControl));
+  file.write((uint8_t *)&inverted, sizeof(inverted));
+  file.write((uint8_t *)&autoState, sizeof(autoState));
+  file.write((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
+  file.write((uint8_t *)autoStateValue, sizeof(autoStateValue));
+  file.write((uint8_t *)&timeBetweenStates, sizeof(timeBetweenStates));
+  
+  //MQTT
+  file.write((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
+  file.write((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
+  file.write((uint8_t *)mqttPositionStateTopic, sizeof(mqttPositionStateTopic));
+  file.write((uint8_t *)mqttPositionCommandTopic, sizeof(mqttPositionCommandTopic));
+  file.write((uint8_t *)mqttPayload, sizeof(mqttPayload));
+  file.write((uint8_t *)&mqttRetain, sizeof(mqttRetain));
+
+  //CONTROL VARIABLES
+  file.write((uint8_t *)stateControl, sizeof(stateControl));
+  file.write((uint8_t *)&positionControlCover, sizeof(positionControlCover));
+  file.write((uint8_t *)&lastPercentage, sizeof(lastPercentage));
+
+  file.write((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
+  file.write((uint8_t *)&lastSecondaryGpioState, sizeof(lastSecondaryGpioState));
+  file.write((uint8_t *)&lastTimeChange, sizeof(lastTimeChange));
+  file.write((uint8_t *)&percentageRequest, sizeof(percentageRequest));
+  file.write((uint8_t *)&statePoolIdx, sizeof(statePoolIdx));
+  file.write((uint8_t *)&statePoolStart, sizeof(statePoolStart));
+  file.write((uint8_t *)&statePoolEnd, sizeof(statePoolEnd));
+}
+void SwitchT::load(File &file)
+{
+  file.read((uint8_t *)id, sizeof(id));
+  file.read((uint8_t *)name, sizeof(name));
+  file.read((uint8_t *)family, sizeof(family));
+  file.read((uint8_t *)&mode, sizeof(mode));
+  file.read((uint8_t *)&typeControl, sizeof(typeControl));
+  file.read((uint8_t *)&primaryGpio, sizeof(primaryGpio));
+  file.read((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
+  file.read((uint8_t *)&pullup, sizeof(pullup));
+  file.read((uint8_t *)&primaryGpioControl, sizeof(primaryGpioControl));
+  file.read((uint8_t *)&secondaryGpioControl, sizeof(secondaryGpioControl));
+  file.read((uint8_t *)&inverted, sizeof(inverted));
+  file.read((uint8_t *)&autoState, sizeof(autoState));
+  file.read((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
+  file.read((uint8_t *)autoStateValue, sizeof(autoStateValue));
+  file.read((uint8_t *)&timeBetweenStates, sizeof(timeBetweenStates));
+  
+  //MQTT
+  file.read((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
+  file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
+  file.read((uint8_t *)mqttPositionStateTopic, sizeof(mqttPositionStateTopic));
+  file.read((uint8_t *)mqttPositionCommandTopic, sizeof(mqttPositionCommandTopic));
+  file.read((uint8_t *)mqttPayload, sizeof(mqttPayload));
+  file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
+
+  //CONTROL VARIABLES
+  file.read((uint8_t *)stateControl, sizeof(stateControl));
+  file.read((uint8_t *)&positionControlCover, sizeof(positionControlCover));
+  file.read((uint8_t *)&lastPercentage, sizeof(lastPercentage));
+
+  file.read((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
+  file.read((uint8_t *)&lastSecondaryGpioState, sizeof(lastSecondaryGpioState));
+  lastTimeChange = 0;
+  file.read((uint8_t *)&lastTimeChange, sizeof(lastTimeChange));
+  percentageRequest = -1;
+  file.read((uint8_t *)&percentageRequest, sizeof(percentageRequest));
+  file.read((uint8_t *)&statePoolIdx, sizeof(statePoolIdx));
+  file.read((uint8_t *)&statePoolStart, sizeof(statePoolStart));
+  file.read((uint8_t *)&statePoolEnd, sizeof(statePoolEnd));
+  
+}
+
+void Switches::save(File &file) const
+{
+  auto n_items = items.size();
+  file.write((uint8_t *)&n_items, sizeof(n_items));
+  for (const auto &item : items)
+  {
+    item.save(file);
+  }
+}
+void Switches::load(File &file)
+{
+  auto n_items = items.size();
+  file.read((uint8_t *)&n_items, sizeof(n_items));
+  items.clear();
+  items.resize(n_items);
+  for (auto &item : items)
+  {
+    item.load(file);
+  }
+}
+void removeSwitch(const char *id)
+{
+  Log.notice("%s Remove id %s " CR, tags::switches, id);
 
   unsigned int del = constantsConfig::noGPIO;
-  for (unsigned int i = 0; i < switchs.size(); i++)
+  for (unsigned int i = 0; i < switchs.items.size(); i++)
   {
-    SwitchT swStored = switchs[i];
+    SwitchT swStored = switchs.items[i];
     if (strcmp(id, swStored.id) == 0)
     {
       publishOnMqtt(swStored.mqttCommandTopic, "", true);
@@ -24,22 +126,19 @@ void removeSwitch(const char *id, bool persist)
   }
   if (del != constantsConfig::noGPIO)
   {
-    switchs.erase(switchs.begin() + del);
+    switchs.items.erase(switchs.items.begin() + del);
   }
-  if (persist)
-  {
-    saveSwitchs();
-  }
+ 
 }
 void initSwitchesHaDiscovery()
 {
-  for (unsigned int i = 0; i < switchs.size(); i++)
+  for (unsigned int i = 0; i < switchs.items.size(); i++)
   {
-    addToHaDiscovery(&switchs[i]);
-    publishOnMqtt(switchs[i].mqttStateTopic, switchs[i].mqttPayload, switchs[i].mqttRetain);
+    addToHaDiscovery(&switchs.items[i]);
+    publishOnMqtt(switchs.items[i].mqttStateTopic, switchs.items[i].mqttPayload, switchs.items[i].mqttRetain);
   }
 }
-void updateSwitch(JsonObject doc, bool persist)
+void SwitchT::update(JsonObject doc, bool persist)
 {
 
   Log.notice("%s Update Environment" CR, tags::switches);
@@ -54,7 +153,7 @@ void updateSwitch(JsonObject doc, bool persist)
   strlcpy(sw.family, doc.getMember("family").as<String>().c_str(), sizeof(sw.family));
   sw.primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
   int switchMode = doc["mode"] | 0;
-  sw.mode =   static_cast<SwitchMode>(switchMode);
+  sw.mode = static_cast<SwitchMode>(switchMode);
   if (sw.mode == SwitchMode::PUSH || sw.mode == SwitchMode::SWITCH)
   {
     sw.secondaryGpio = constantsConfig::noGPIO;
@@ -69,7 +168,7 @@ void updateSwitch(JsonObject doc, bool persist)
   sw.autoState = (doc["autoStateDelay"] | 0) > 0 && strlen(doc["autoStateValue"] | "") > 0;
   sw.autoStateDelay = doc["autoStateDelay"] | 0;
   strlcpy(sw.autoStateValue, doc.getMember("autoStateValue").as<String>().c_str(), sizeof(sw.autoStateValue));
-  sw.typeControl = static_cast<SwitchControlType>( doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT));
+  sw.typeControl = static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT));
   sw.pullup = doc["pullup"] | true;
   sw.mqttRetain = doc["mqttRetain"] | false;
   sw.inverted = doc["inverted"] | false;
@@ -92,7 +191,7 @@ void updateSwitch(JsonObject doc, bool persist)
       configPIN(sw.secondaryGpio, sw.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     }
   }
-  if (strcmp(sw.family,constanstsSwitch::familyCover) == 0)
+  if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
   {
     sw.secondaryGpioControl = doc["secondaryGpioControl"] | constantsConfig::noGPIO;
     sw.statePoolStart = doc["statePoolStart"] | constanstsSwitch::coverStartIdx;
@@ -104,7 +203,7 @@ void updateSwitch(JsonObject doc, bool persist)
     doc["mqttPositionCommandTopic"] = String(baseTopic + "/setposition");
     doc["mqttPositionStateTopic"] = String(baseTopic + "/position");
   }
-  else if (strcmp(sw.family,constanstsSwitch::familyLock) == 0)
+  else if (strcmp(sw.family, constanstsSwitch::familyLock) == 0)
   {
     sw.secondaryGpioControl = constantsConfig::noGPIO;
     sw.statePoolStart = doc["statePoolStart"] | constanstsSwitch::lockStartIdx;
@@ -128,11 +227,12 @@ void updateSwitch(JsonObject doc, bool persist)
   addToHaDiscovery(&sw);
   doc["id"] = sw.id;
   doc["stateControl"] = sw.stateControl;
-  switchs.push_back(sw);
+  switchs.items.push_back(sw);
   stateSwitch(&sw, sw.stateControl);
+}
+void updateSwitch(const String &id,JsonObject doc){
 
 }
-
 void loadStoredSwitches()
 {
   if (SPIFFS.begin())
@@ -170,7 +270,7 @@ void loadStoredSwitches()
     JsonArray ar = doc.as<JsonArray>();
     for (JsonVariant sw : ar)
     {
-      updateSwitch(sw.as<JsonObject>(), error);
+      updateSwitch("",sw.as<JsonObject>());
     }
   }
   SPIFFS.end();
@@ -187,13 +287,13 @@ void saveSwitchs()
     }
     else
     {
-      const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.size() + 1) + switchs.size() * JSON_OBJECT_SIZE(36) + 2200;
+      const size_t CAPACITY = JSON_ARRAY_SIZE(switchs.items.size() + 1) + switchs.items.size() * JSON_OBJECT_SIZE(36) + 2200;
       ;
       DynamicJsonDocument doc(CAPACITY);
-      for (unsigned int i = 0; i < switchs.size(); i++)
+      for (unsigned int i = 0; i < switchs.items.size(); i++)
       {
         JsonObject sdoc = doc.createNestedObject();
-        SwitchT sw = switchs[i];
+        SwitchT sw = switchs.items[i];
         sdoc["id"] = sw.id;
         sdoc["name"] = sw.name;
         sdoc["family"] = sw.family;
@@ -210,7 +310,7 @@ void saveSwitchs()
         sdoc["inverted"] = sw.inverted;
         sdoc["mqttCommandTopic"] = String(sw.mqttCommandTopic);
         sdoc["mqttStateTopic"] = String(sw.mqttStateTopic);
-        if (strcmp(sw.family,constanstsSwitch::familyCover) == 0)
+        if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
         {
           sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
           sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
@@ -236,7 +336,6 @@ void saveSwitchs()
       if (serializeJson(doc.as<JsonArray>(), file) == 0)
       {
         Log.error("%s Failed to write Switches Config into file" CR, tags::switches);
-        
       }
       else
       {
@@ -248,8 +347,7 @@ void saveSwitchs()
   SPIFFS.end();
 }
 
-
-int findPoolIdx(const char* state, unsigned int currentIdx, unsigned int start, unsigned int end)
+int findPoolIdx(const char *state, unsigned int currentIdx, unsigned int start, unsigned int end)
 {
   int max = (end - start) * 2;
   unsigned int p = currentIdx;
@@ -267,21 +365,21 @@ int findPoolIdx(const char* state, unsigned int currentIdx, unsigned int start, 
 
 void mqttSwitchControl(const char *topic, const char *payload)
 {
-  for (unsigned int i = 0; i < switchs.size(); i++)
+  for (unsigned int i = 0; i < switchs.items.size(); i++)
   {
-    if (strcmp(switchs[i].mqttCommandTopic, topic) == 0)
+    if (strcmp(switchs.items[i].mqttCommandTopic, topic) == 0)
     {
 
-      for (unsigned int p = switchs[i].statePoolStart; p <= switchs[i].statePoolEnd; p++)
+      for (unsigned int p = switchs.items[i].statePoolStart; p <= switchs.items[i].statePoolEnd; p++)
       {
         if (strcmp(payload, statesPool[p].c_str()) == 0)
         {
-          switchs[i].statePoolIdx = p;
-          stateSwitch(&switchs[i], statesPool[p].c_str());
+          switchs.items[i].statePoolIdx = p;
+          stateSwitch(&switchs.items[i], statesPool[p].c_str());
           return;
         }
       }
-      stateSwitch(&switchs[i], payload);
+      stateSwitch(&switchs.items[i], payload);
     }
   }
 }
@@ -289,10 +387,10 @@ void mqttSwitchControl(const char *topic, const char *payload)
 void stateSwitch(SwitchT *switchT, const char *state)
 {
   Log.notice("%s Name:      %s" CR, tags::switches, switchT->name);
-  Log.notice("%s State:     %s" CR, tags::switches,state);
-  Log.notice("%s State IDX: %d" CR ,tags::switches,switchT->statePoolIdx);
+  Log.notice("%s State:     %s" CR, tags::switches, state);
+  Log.notice("%s State IDX: %d" CR, tags::switches, switchT->statePoolIdx);
 
-  if (strcmp(constanstsSwitch::payloadOpen,state) == 0)
+  if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
   {
     if (switchT->timeBetweenStates > 0 && switchT->positionControlCover >= 100)
     {
@@ -317,7 +415,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
 
     publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest).c_str(), switchT->mqttRetain);
   }
-  else if (strcmp(constanstsSwitch::payloadStop,state) == 0)
+  else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
   {
     strlcpy(switchT->stateControl, constanstsSwitch::payloadStop, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, constanstsSwitch::payloadStateStop, sizeof(switchT->mqttPayload));
@@ -344,7 +442,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
       publishOnMqtt(switchT->mqttPositionStateTopic, "50", switchT->mqttRetain);
     }
   }
-  else if (strcmp(constanstsSwitch::payloadClose,state) == 0)
+  else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
   {
 
     if (switchT->timeBetweenStates > 0 && switchT->positionControlCover <= 0)
@@ -370,7 +468,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
 
     publishOnMqtt(switchT->mqttPositionStateTopic, String(switchT->percentageRequest).c_str(), switchT->mqttRetain);
   }
-  else if (strcmp(constanstsSwitch::payloadOn,state) == 0)
+  else if (strcmp(constanstsSwitch::payloadOn, state) == 0)
   {
     strlcpy(switchT->stateControl, constanstsSwitch::payloadOn, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, constanstsSwitch::payloadOn, sizeof(switchT->mqttPayload));
@@ -380,7 +478,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
   }
-  else if (strcmp(constanstsSwitch::payloadOff,state) == 0)
+  else if (strcmp(constanstsSwitch::payloadOff, state) == 0)
   {
     strlcpy(switchT->stateControl, constanstsSwitch::payloadOff, sizeof(switchT->stateControl));
     strlcpy(switchT->mqttPayload, constanstsSwitch::payloadOff, sizeof(switchT->mqttPayload));
@@ -390,7 +488,7 @@ void stateSwitch(SwitchT *switchT, const char *state)
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
     }
   }
-  else if (strcmp(constanstsSwitch::payloadLock,state) == 0 || strcmp(constanstsSwitch::payloadUnlock,state) == 0)
+  else if (strcmp(constanstsSwitch::payloadLock, state) == 0 || strcmp(constanstsSwitch::payloadUnlock, state) == 0)
   {
     strlcpy(switchT->stateControl, state, sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
     strlcpy(switchT->mqttPayload, state, sizeof(switchT->mqttPayload));   //TODO CHECK STATE FROM SENSOR
@@ -400,11 +498,11 @@ void stateSwitch(SwitchT *switchT, const char *state)
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? LOW : HIGH); //TURN ON
     }
   }
-  else if (strcmp(constanstsSwitch::payloadReleased,state) == 0)
+  else if (strcmp(constanstsSwitch::payloadReleased, state) == 0)
   {
-    strlcpy(switchT->stateControl, state, sizeof(switchT->stateControl)); //TODO CHECK STATE FROM SENSOR
-    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadLock, sizeof(switchT->mqttPayload));    //TODO CHECK STATE FROM SENSOR
-    if (switchT->typeControl ==SwitchControlType::RELAY_AND_MQTT)
+    strlcpy(switchT->stateControl, state, sizeof(switchT->stateControl));                       //TODO CHECK STATE FROM SENSOR
+    strlcpy(switchT->mqttPayload, constanstsSwitch::payloadLock, sizeof(switchT->mqttPayload)); //TODO CHECK STATE FROM SENSOR
+    if (switchT->typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(switchT->primaryGpioControl, OUTPUT);
       writeToPIN(switchT->primaryGpioControl, switchT->inverted ? HIGH : LOW); //TURN OFF
@@ -434,35 +532,35 @@ void stateSwitch(SwitchT *switchT, const char *state)
 }
 void stateSwitchById(const char *id, const char *state)
 {
-  for (unsigned int i = 0; i < switchs.size(); i++)
+  for (unsigned int i = 0; i < switchs.items.size(); i++)
   {
-    if (strcmp(id, switchs[i].id) == 0)
+    if (strcmp(id, switchs.items[i].id) == 0)
     {
-      stateSwitch(&switchs[i], state);
+      stateSwitch(&switchs.items[i], state);
     }
   }
 }
-void stateSwitchByName(const char *name, const char *state,const char *value)
+void stateSwitchByName(const char *name, const char *state, const char *value)
 {
-  for (unsigned int i = 0; i < switchs.size(); i++)
+  for (unsigned int i = 0; i < switchs.items.size(); i++)
   {
-    if (strcmp(switchs[i].name, name) == 0)
+    if (strcmp(switchs.items[i].name, name) == 0)
     {
-      if (strcmp(constanstsSwitch::familyCover, switchs[i].family) == 0)
+      if (strcmp(constanstsSwitch::familyCover, switchs.items[i].family) == 0)
       {
-        if (switchs[i].timeBetweenStates > 0)
+        if (switchs.items[i].timeBetweenStates > 0)
         {
-          stateSwitch(&switchs[i], value);
+          stateSwitch(&switchs.items[i], value);
         }
         else
         {
-          stateSwitch(&switchs[i], state);
+          stateSwitch(&switchs.items[i], state);
         }
       }
-      else if (strcmp(constanstsSwitch::familyLight, switchs[i].family) == 0 || strcmp(constanstsSwitch::familySwitch, switchs[i].family) == 0)
+      else if (strcmp(constanstsSwitch::familyLight, switchs.items[i].family) == 0 || strcmp(constanstsSwitch::familySwitch, switchs.items[i].family) == 0)
       {
 
-        stateSwitch(&switchs[i], state);
+        stateSwitch(&switchs.items[i], state);
       }
     }
   }
@@ -499,10 +597,10 @@ boolean positionDone(SwitchT *sw)
 }
 void loopSwitches()
 {
-  for (unsigned int i = 0; i < switchs.size(); i++)
+  for (unsigned int i = 0; i < switchs.items.size(); i++)
   {
 
-    SwitchT *sw = &switchs[i];
+    SwitchT *sw = &switchs.items[i];
 
     bool primaryValue = readPIN(sw->primaryGpio);
     bool secondaryValue = readPIN(sw->secondaryGpio);
@@ -593,7 +691,7 @@ void loopSwitches()
     {
       sw->statePoolIdx = sw->statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
       sw->percentageRequest = -1;
-      Log.notice("%s Control Positon set change switch to  %s" CR, tags::switches,statesPool[sw->statePoolIdx].c_str());
+      Log.notice("%s Control Positon set change switch to  %s" CR, tags::switches, statesPool[sw->statePoolIdx].c_str());
       stateSwitch(sw, statesPool[sw->statePoolIdx].c_str());
     }
   }

@@ -41,6 +41,7 @@ void setup()
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
+
   loadStoredConfiguration();
   loadStoredSwitches();
   loadStoredSensors();

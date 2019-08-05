@@ -159,8 +159,12 @@ void setupWebserverAsync()
     request->send( response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
+      if (!request->hasArg("id")){
+        request->send(400,"Invalid id");
+        return;
+      }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateSwitch(json,true);
+    updateSwitch(request->arg("id").c_str(),json);
     serializeJson(json,*response);
     request->send(response);
   }));
@@ -237,7 +241,7 @@ unsigned char addSwitchToAlexa(char *name){
 void removeSwitchFromAlexa( char* name){
   fauxmo.removeDevice(name);
 }
-void sendToServerEvents(String topic, String payload)
+void sendToServerEvents(const String& topic, const String& payload)
 {
   events.send(payload.c_str(), topic.c_str(), millis());
 }

@@ -3,6 +3,7 @@
 
 #include "Arduino.h"
 #include "ArduinoJson.h"
+#include "FS.h"
 
 enum SwitchMode
 {
@@ -59,17 +60,24 @@ struct SwitchT
     int statePoolIdx;
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
+    void load(File& file);
+    void save(File& file) const;
+    void update(JsonObject doc, bool persist);
 };
-
+struct Switches {
+  std::vector<SwitchT> items;
+  void load(File& file);
+  void save(File& file) const;
+};
 void stateSwitchByName(const char *name, const char *state, const char *value);
 void loopSwitches();
 void stateSwitch(SwitchT *switchT, const char *state);
 void loadStoredSwitches();
 void saveSwitchs();
 void removeSwitch(const char *id, bool persist);
-void updateSwitch(JsonObject doc, bool persist);
+void updateSwitch(const String& id,JsonObject doc);
 void mqttSwitchControl(const char *topic, const char *payload);
 void initSwitchesHaDiscovery();
-void sendToServerEvents(String topic, String payload);
+void sendToServerEvents(const String& topic,const  String& payload);
 void stateSwitchById(const char *id, const char *state);
 #endif

@@ -30,8 +30,8 @@ constexpr const char *webserver{"[WEBSERVER]"};
 namespace configFilenames
 {
 auto constexpr config = "config.bin";
-constexpr const char *sensors{"/sensors.json"};
-constexpr const char *switches{"/switches.json"};
+constexpr const char *sensors{"sensors.bin"};
+constexpr const char *switches{"switches.bin"};
 } // namespace configFilenames
 namespace constantsConfig
 {
@@ -47,7 +47,7 @@ namespace constanstsSwitch
 
 constexpr const unsigned long delayDebounce{50ul};              //50 milliseconds
 constexpr const unsigned long delayCoverProtection{50ul};       //50 milliseconds
-constexpr const unsigned long coverAutoStopProtection{90000ul}; // after 90 seconds turn off all relay to enhance the life cycle
+constexpr const unsigned long coverAutoStopProtection{90000ul}; // after 90 seconds turn off all relay to enhance the lifecycle
 constexpr const char *payloadOn{"ON"};
 constexpr const char *payloadOff{"OFF"};
 constexpr const char *payloadClose{"CLOSE"};
