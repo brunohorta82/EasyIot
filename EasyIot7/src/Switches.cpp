@@ -1,7 +1,10 @@
+#include <algorithm>
+
 #include "Switches.h"
 #include "Discovery.h"
 #include "WebServer.h"
 #include "constants.h"
+
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 static Switches switches;
 struct Switches &getAtualSwitchesConfig()
@@ -189,38 +192,38 @@ void Switches::load(File &file)
     configPIN(item.secondaryGpioControl, OUTPUT);
     item.lastPrimaryGpioState = readPIN(item.primaryGpio);
     item.lastSecondaryGpioState = readPIN(item.secondaryGpio);
-    if(item.alexaSupport){
+    if (item.alexaSupport)
+    {
       addSwitchToAlexa(item.name);
     }
   }
 }
-bool Switches::remove(const char *id) const
+bool Switches::remove(const char *id)
 {
-  int idx = 0;
-  bool found = false;
-  for (const auto &item : items)
+
+  auto match = std::find_if(items.begin(), items.end(), [id](const SwitchT &item) {
+    return strcmp(id, item.id) == 0;
+  });
+
+  if (match == items.end())
   {
-    if (strcmp(id, item.id) == 0)
-    {
-      found = true;
-      publishOnMqtt(item.mqttCommandTopic, "", true);
-      removeFromHaDiscovery(item);
-      removeSwitchFromAlexa(item.name);
-      unsubscribeOnMqtt(item.mqttCommandTopic);
-      break;
-    }
-    idx++;
+    return false;
   }
-  if (found)
-  {
-    switches.items.erase(switches.items.begin() + idx);
-  }
-  return found;
+
+  publishOnMqtt(match->mqttCommandTopic, "", true);
+  removeFromHaDiscovery(*match);
+  removeSwitchFromAlexa(match->name);
+  unsubscribeOnMqtt(match->mqttCommandTopic);
+
+  items.erase(match);
+
+  return true;
 }
 
 void removeSwitch(const char *id)
 {
-  if(switches.remove(id)) saveSwitches();
+  if (switches.remove(id))
+    saveSwitches();
 }
 
 void initSwitchesHaDiscovery()
@@ -322,10 +325,12 @@ void saveAndRefreshServices(const SwitchT &sw)
   removeFromHaDiscovery(sw);
   removeSwitchFromAlexa(sw.name);
   delay(10);
-  if (sw.alexaSupport){
+  if (sw.alexaSupport)
+  {
     addSwitchToAlexa(sw.name);
   }
-  if (sw.haSupport){
+  if (sw.haSupport)
+  {
     addToHaDiscovery(sw);
   }
 }
@@ -632,7 +637,8 @@ void SwitchT::changeState(const char *state)
   sendToServerEvents("states", String("{\"id\":\"") + String(id) + String("\",\"state\":\"") + String(mqttPayload) + String("\"}"));
   lastTimeChange = millis();
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
-  if(dirty) switches.lastChange = millis();
+  if (dirty)
+    switches.lastChange = millis();
 }
 void stateSwitchById(const char *id, const char *state)
 {
@@ -701,7 +707,8 @@ boolean positionDone(const SwitchT &sw)
 }
 void loopSwitches()
 {
-  if(switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis()){
+  if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
+  {
     saveSwitches();
   }
   for (auto &sw : switches.items)
