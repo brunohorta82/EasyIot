@@ -633,8 +633,14 @@ void SwitchT::changeState(const char *state)
     }
   }
   publishOnMqtt(mqttStateTopic, mqttPayload, mqttRetain);
-
-  sendToServerEvents("states", String("{\"id\":\"") + String(id) + String("\",\"state\":\"") + String(mqttPayload) + String("\"}"));
+  String payloadSe;
+  payloadSe.reserve(strlen(mqttPayload) + strlen(id)+21);
+  payloadSe.concat("{\"id\":\"");
+  payloadSe.concat(id);
+  payloadSe.concat("\",\"state\":\"");
+  payloadSe.concat(mqttPayload);
+  payloadSe.concat("\"}");
+  sendToServerEvents("states", payloadSe);
   lastTimeChange = millis();
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
   if (dirty)
