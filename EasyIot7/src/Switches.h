@@ -13,7 +13,8 @@ enum SwitchMode
     DUAL_PUSH = 5
 };
 
-enum SwitchControlType{
+enum SwitchControlType
+{
     RELAY_AND_MQTT = 1,
     MQTT = 2
 };
@@ -21,9 +22,9 @@ struct SwitchT
 {
     char id[32]; //Generated from name without spaces and no special characters
     char name[24];
-    char family[10];   //switch, light, cover, lock
-    SwitchMode mode = SWITCH; // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
-    SwitchControlType typeControl = MQTT;   //MQTT OR RELAY
+    char family[10];                      //switch, light, cover, lock
+    SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
+    SwitchControlType typeControl = MQTT; //MQTT OR RELAY
     bool alexaSupport;
     bool haSupport;
     //GPIOS INPUT
@@ -61,28 +62,28 @@ struct SwitchT
     int statePoolIdx;
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
-    void load(File& file);
-    void save(File& file) const;
+    void load(File &file);
+    void save(File &file) const;
     void updateFromJson(JsonObject doc);
     void changeState(const char *state);
-    
 };
-struct Switches {
-  std::vector<SwitchT> items;
-  unsigned long lastChange = 0ul;
-  void load(File& file);
-  void save(File& file) const;
-  bool remove(const char* id) const;
-  size_t serializeToJson(Print &output);
+struct Switches
+{
+    std::vector<SwitchT> items;
+    unsigned long lastChange = 0ul;
+    void load(File &file);
+    void save(File &file) const;
+    bool remove(const char *id);
+    size_t serializeToJson(Print &output);
 };
 void stateSwitchByName(const char *name, const char *state, const char *value);
 void loopSwitches();
 void loadStoredSwitches();
 void removeSwitch(const char *id);
-void updateSwitch(const String& id,JsonObject doc);
+void updateSwitch(const String &id, JsonObject doc);
 void mqttSwitchControl(const char *topic, const char *payload);
 void initSwitchesHaDiscovery();
-void sendToServerEvents(const String& topic,const  String& payload);
+void sendToServerEvents(const String &topic, const String &payload);
 void stateSwitchById(const char *id, const char *state);
 struct Switches &getAtualSwitchesConfig();
 #endif
