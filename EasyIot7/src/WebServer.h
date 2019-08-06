@@ -19,6 +19,6 @@
 
 void setupWebserverAsync();
 void webserverServicesLoop();
-unsigned char addSwitchToAlexa(char* name);
-void removeSwitchFromAlexa(char* name);
+void addSwitchToAlexa(const char* name);
+void removeSwitchFromAlexa(const char* name);
 #endif

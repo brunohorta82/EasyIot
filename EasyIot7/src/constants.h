@@ -37,7 +37,9 @@ namespace constantsConfig
 {
 constexpr const char *updateURL{"http://release.bhonofre.pt/firmware.bin"};
 constexpr const char *newID{"NEW"};
-constexpr int noGPIO{99};
+constexpr unsigned int noGPIO{99u};
+constexpr unsigned long storeConfigDelay{5000ul};
+
 
 constexpr const char *apSecret{"EasyIot@"}; //AP PASSWORD
 } // namespace constantsConfig

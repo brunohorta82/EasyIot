@@ -53,6 +53,14 @@ struct SensorT
   
   
 };
+struct Sensors {
+  std::vector<SensorT> items;
+  void load(File& file);
+  void save(File& file) const;
+  void remove(const char* id) const;
+  size_t serializeToJson(Print &output);
+};
+struct Sensors &getAtualSensorsConfig();
 void saveSensors();
 void loadStoredSensors();
 void loopSensors();

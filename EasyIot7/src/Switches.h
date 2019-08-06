@@ -24,7 +24,8 @@ struct SwitchT
     char family[10];   //switch, light, cover, lock
     SwitchMode mode = SWITCH; // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT;   //MQTT OR RELAY
-
+    bool alexaSupport;
+    bool haSupport;
     //GPIOS INPUT
     unsigned int primaryGpio;
     unsigned int secondaryGpio;
@@ -62,22 +63,26 @@ struct SwitchT
     unsigned int statePoolEnd;
     void load(File& file);
     void save(File& file) const;
-    void update(JsonObject doc, bool persist);
+    void updateFromJson(JsonObject doc);
+    void changeState(const char *state);
+    
 };
 struct Switches {
   std::vector<SwitchT> items;
+  unsigned long lastChange = 0ul;
   void load(File& file);
   void save(File& file) const;
+  bool remove(const char* id) const;
+  size_t serializeToJson(Print &output);
 };
 void stateSwitchByName(const char *name, const char *state, const char *value);
 void loopSwitches();
-void stateSwitch(SwitchT *switchT, const char *state);
 void loadStoredSwitches();
-void saveSwitchs();
-void removeSwitch(const char *id, bool persist);
+void removeSwitch(const char *id);
 void updateSwitch(const String& id,JsonObject doc);
 void mqttSwitchControl(const char *topic, const char *payload);
 void initSwitchesHaDiscovery();
 void sendToServerEvents(const String& topic,const  String& payload);
 void stateSwitchById(const char *id, const char *state);
+struct Switches &getAtualSwitchesConfig();
 #endif

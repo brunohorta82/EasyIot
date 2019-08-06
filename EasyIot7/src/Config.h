@@ -32,11 +32,11 @@ struct Config {
  void update(JsonObject doc, bool persist);
  void save(File& file ) const;
  void load(File& file );
+ size_t serializeToJson(Print &output);
 };
 
 struct Config& getAtualConfig();
 void loadStoredConfiguration();
-size_t  serializeConfigStatus(Print& output);
 
 void requestRestart();
 bool restartRequested();
