@@ -1,6 +1,19 @@
 #include "WebServer.h"
 #include "constants.h"
 
+#include "AsyncJson.h"
+#include "Switches.h"
+#include "Sensors.h"
+#include "StaticSite.h"
+#include "StaticCss.h"
+#include "StaticJs.h"
+#include <ESP8266mDNS.h>
+#include <ESPAsyncWebServer.h>
+#include <ESPAsyncTCP.h>
+#include <fauxmoESP.h>
+#include <Config.h>
+#include "WiFi.h"
+
 // SKETCH BEGIN
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");

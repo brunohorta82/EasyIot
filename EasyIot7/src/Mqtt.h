@@ -1,8 +1,6 @@
 #ifndef MQTT_H
 #define MQTT_H
-
-#include "config.h"
-#include <PubSubClient.h>
+#include <Arduino.h>
 
 void publishOnMqtt(const char *topic, const char *payload, bool retain);
 void subscribeOnMqtt(const char *topic);

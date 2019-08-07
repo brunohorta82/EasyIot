@@ -2,7 +2,8 @@
 #define SENSORS_S_H
 
 #include <Arduino.h>
-#include "WebServer.h"
+#include "FS.h"
+#include <ArduinoJson.h>
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 

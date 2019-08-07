@@ -2,10 +2,8 @@
 #define CONFIG_H
 
 #include <Arduino.h>
-#include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
-#include "WiFi.h"
-#include "Mqtt.h"
+#include "FS.h"
 #include <ArduinoLog.h>
 
 struct Config

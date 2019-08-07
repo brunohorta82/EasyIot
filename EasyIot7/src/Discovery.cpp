@@ -1,6 +1,9 @@
 #include "Sensors.h"
 #include "Discovery.h"
 #include "constants.h"
+#include "Mqtt.h"
+#include "Config.h"
+
 
 String createHaLock(const SwitchT &sw)
 {

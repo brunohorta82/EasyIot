@@ -2,12 +2,8 @@
 #define DISCOVERY_H
 
 #include <Arduino.h>
-#include <fauxmoESP.h>
-#include "Config.h"
-#include "Mqtt.h"
-
-struct SensorT;
-struct SwitchT;
+#include "Sensors.h"
+#include "Switches.h"
 
 void addToHaDiscovery(const SensorT &ss);
 void removeFromHaDiscovery(const SwitchT &sw);

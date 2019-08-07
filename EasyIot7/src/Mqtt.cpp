@@ -1,6 +1,10 @@
 #include "Mqtt.h"
+#include "Config.h"
+#include <PubSubClient.h>
 #include "Switches.h"
+#include "WiFi.h"
 #include "constants.h"
+#include "ESP8266WiFi.h"
 
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);

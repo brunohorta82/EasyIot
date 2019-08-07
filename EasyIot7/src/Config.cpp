@@ -1,5 +1,8 @@
 #include "Config.h"
 #include "constants.h"
+#include "WiFi.h"
+#include "ESP8266WiFi.h"
+#include "Mqtt.h"
 
 //CONTROL FLAGS
 static bool g_reboot = false;

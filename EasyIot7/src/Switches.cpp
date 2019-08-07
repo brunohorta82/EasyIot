@@ -1,9 +1,9 @@
-#include <algorithm>
-
 #include "Switches.h"
 #include "Discovery.h"
 #include "WebServer.h"
 #include "constants.h"
+#include "Config.h"
+#include "Mqtt.h"
 
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 

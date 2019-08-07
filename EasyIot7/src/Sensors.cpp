@@ -1,7 +1,9 @@
 #include "Sensors.h"
 #include "Discovery.h"
 #include "constants.h"
-
+#include "WebServer.h"
+#include "Config.h"
+#include "Mqtt.h"
 struct Sensors &getAtualSensorsConfig()
 {
   static Sensors sensors;
