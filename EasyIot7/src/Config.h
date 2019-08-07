@@ -28,7 +28,7 @@ struct Config
   char apName[30];
   long configTime;
   char configkey[64];
-  char hardware[24];
+  char chipId[24];
   double firmware;
   void update(JsonObject doc, bool persist);
   void save(File &file) const;

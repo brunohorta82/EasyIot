@@ -4,9 +4,9 @@
 
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
-void processMqttAction(String topic, String payload)
+void processMqttAction(const char *topic, const char *payload)
 {
-    mqttSwitchControl(getAtualSwitchesConfig(), topic.c_str(), payload.c_str());
+    mqttSwitchControl(getAtualSwitchesConfig(), topic, payload);
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
@@ -31,37 +31,46 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
 
 String getBaseTopic()
 {
-    String username = String(getAtualConfig().mqttUsername);
-    if (username == "")
+    String topic;
+
+    if (strlen(getAtualConfig().mqttUsername) == 0)
     {
-        username = "easyiot";
+        topic.concat("easyiot");
     }
-    return username + "/" + String(ESP.getChipId());
+    else
+    {
+        topic.concat(getAtualConfig().mqttUsername);
+    }
+    topic.concat("/");
+    topic.concat(ESP.getChipId());
+    return topic;
 }
 String getAvailableTopic()
 {
-    String username = String(getAtualConfig().mqttUsername);
-    return getBaseTopic() + "/available";
+    String baseTopic = getBaseTopic();
+    baseTopic.concat("/available");
+    return baseTopic;
 }
 String getConfigStatusTopic()
 {
-    String username = String(getAtualConfig().mqttUsername);
-    return getBaseTopic() + "/config/status";
+    String baseTopic = getBaseTopic();
+    baseTopic.concat("/config/status");
+    return baseTopic;
 }
 
 boolean reconnect()
 {
 
-    if (WiFi.status() != WL_CONNECTED || String(getAtualConfig().mqttIpDns).equals(""))
+    if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
         return false;
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
     char *username = strdup(getAtualConfig().mqttUsername);
     char *password = strdup(getAtualConfig().mqttPassword);
-    if (mqttClient.connect(String(ESP.getChipId()).c_str(), username, password, getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
+    if (mqttClient.connect(getAtualConfig().chipId, username, password, getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
     {
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
-        //publishOnMqtt(getConfigStatusTopic().c_str(), getConfigStatus().c_str(), true);
+        publishOnMqtt(getConfigStatusTopic().c_str(), "{\"firmware\":7.0}", true); //TODO generate simple config status
         subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
     }
 
@@ -70,7 +79,7 @@ boolean reconnect()
 
 void setupMQTT()
 {
-    if (String(getAtualConfig().mqttIpDns).equals(""))
+    if (strlen(getAtualConfig().mqttIpDns) == 0)
     {
         return;
     }
@@ -88,7 +97,7 @@ void setupMQTT()
 
 void loopMqtt()
 {
-    if (WiFi.status() != WL_CONNECTED || String(getAtualConfig().mqttIpDns).equals(""))
+    if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
         return;
     static unsigned long lastReconnectAttempt = millis();
     if (!mqttClient.connected())

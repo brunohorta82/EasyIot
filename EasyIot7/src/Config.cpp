@@ -15,7 +15,7 @@ struct Config &getAtualConfig()
 void generateId(String &id, const String &name, size_t maxSize)
 {
   id.reserve(maxSize);
-  id.concat(ESP.getChipId());
+  id.concat(getAtualConfig().chipId);
   id.concat(name);
   normalize(id);
 }
@@ -162,7 +162,7 @@ size_t Config::serializeToJson(Print &output)
   doc["configkey"] = configkey;
   doc["apName"] = apName;
   doc["firmware"] = firmware;
-  doc["chipId"] = String(ESP.getChipId());
+  doc["chipId"] = chipId;
   doc["mac"] = WiFi.softAPmacAddress();
   return serializeJson(doc, output);
 }
@@ -188,7 +188,7 @@ void Config::save(File &file) const
   file.write((uint8_t *)apName, sizeof(apName));
   file.write((uint8_t *)&configTime, sizeof(configTime));
   file.write((uint8_t *)configkey, sizeof(configkey));
-  file.write((uint8_t *)hardware, sizeof(hardware));
+  file.write((uint8_t *)chipId, sizeof(chipId));
 }
 void Config::load(File &file)
 {
@@ -211,7 +211,7 @@ void Config::load(File &file)
   file.read((uint8_t *)apName, sizeof(apName));
   file.read((uint8_t *)&configTime, sizeof(configTime));
   file.read((uint8_t *)configkey, sizeof(configkey));
-  file.read((uint8_t *)hardware, sizeof(hardware));
+  file.read((uint8_t *)chipId, sizeof(chipId));
 }
 void loadStoredConfiguration(Config &config)
 {
@@ -225,8 +225,10 @@ void loadStoredConfiguration(Config &config)
   {
     Log.notice("%s Default config loaded." CR, tags::config);
     strlcpy(config.nodeId, String(ESP.getChipId()).c_str(), sizeof(config.nodeId));
+    strlcpy(config.chipId, config.nodeId, sizeof(config.chipId));
     config.mqttPort = constantsMqtt::defaultPort;
     config.staticIp = false;
+
     strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
     config.firmware = VERSION;
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
