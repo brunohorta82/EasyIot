@@ -43,8 +43,8 @@ void setup()
 #endif
 
   loadStoredConfiguration(getAtualConfig());
-  loadStoredSwitches(getAtualSwitchesConfig());
-  loadStoredSensors();
+  load(getAtualSwitchesConfig());
+  load(getAtualSensorsConfig());
   setupWebserverAsync();
   setupWiFi();
   setupMQTT();
@@ -56,8 +56,8 @@ void loop()
   webserverServicesLoop();
   loopWiFi();
   loopMqtt();
-  loopSwitches(getAtualSwitchesConfig());
-  loopSensors();
+  loop(getAtualSwitchesConfig());
+  loop(getAtualSensorsConfig());
   loopMqtt();
 }
 

@@ -30,8 +30,8 @@ constexpr const char *webserver{"[WEBSERVER]"};
 namespace configFilenames
 {
 auto constexpr config = "config.bin";
-constexpr const char *sensors{"sensors.bin"};
-constexpr const char *switches{"switches.bin"};
+auto constexpr sensors = "sensors.bin";
+auto constexpr switches = "switches.bin";
 } // namespace configFilenames
 namespace constantsConfig
 {
@@ -39,7 +39,6 @@ constexpr const char *updateURL{"http://release.bhonofre.pt/firmware.bin"};
 constexpr const char *newID{"NEW"};
 constexpr unsigned int noGPIO{99u};
 constexpr unsigned long storeConfigDelay{5000ul};
-
 
 constexpr const char *apSecret{"EasyIot@"}; //AP PASSWORD
 } // namespace constantsConfig

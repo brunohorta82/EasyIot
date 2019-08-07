@@ -12,7 +12,13 @@ struct Config &getAtualConfig()
   static Config config;
   return config;
 }
-
+void generateId(String &id, const String &name, size_t maxSize)
+{
+  id.reserve(maxSize);
+  id.concat(ESP.getChipId());
+  id.concat(name);
+  normalize(id);
+}
 boolean isValidNumber(const char *str)
 {
   size_t length = strlen(str);

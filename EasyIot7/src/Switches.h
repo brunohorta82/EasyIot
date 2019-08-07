@@ -57,8 +57,8 @@ struct SwitchT
     int lastPercentage;
     bool lastPrimaryGpioState;
     bool lastSecondaryGpioState;
-    unsigned long lastTimeChange;
-    int percentageRequest;
+    unsigned long lastTimeChange = 0ul;
+    int percentageRequest = -1;
     int statePoolIdx;
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
@@ -77,10 +77,10 @@ struct Switches
     size_t serializeToJson(Print &output);
 };
 void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
-void loopSwitches(Switches &switches);
-void loadStoredSwitches(Switches &switches);
-void removeSwitch(Switches &switches, const char *id);
-void updateSwitch(Switches &switches, const String &id, JsonObject doc);
+void loop(Switches &switches);
+void load(Switches &switches);
+void remove(Switches &switches, const char *id);
+void update(Switches &switches, const String &id, JsonObject doc);
 void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
 void initSwitchesHaDiscovery(const Switches &switches);
 void sendToServerEvents(const String &topic, const String &payload);

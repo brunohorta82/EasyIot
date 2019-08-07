@@ -165,14 +165,14 @@ void setupWebserverAsync()
       return;
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateSwitch(getAtualSwitchesConfig(), request->arg("id").c_str(), json);
+    update(getAtualSwitchesConfig(), request->arg("id").c_str(), json);
     serializeJson(json, *response);
     request->send(response);
   }));
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
-      removeSwitch(getAtualSwitchesConfig(), request->arg("id").c_str());
+      remove(getAtualSwitchesConfig(), request->arg("id").c_str());
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSwitchesConfig().serializeToJson(*response);
@@ -195,15 +195,20 @@ void setupWebserverAsync()
     request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
+    if (!request->hasArg("id"))
+    {
+      request->send(400, "Invalid id");
+      return;
+    }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateSensor(json, true);
+    update(getAtualSensorsConfig(), request->arg("id").c_str(), json);
     serializeJson(json, *response);
     request->send(response);
   }));
   server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
-      removeSensor(request->arg("id").c_str(), true);
+      remove(getAtualSensorsConfig(), request->arg("id").c_str());
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSensorsConfig().serializeToJson(*response);
