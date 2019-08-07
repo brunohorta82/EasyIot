@@ -76,14 +76,14 @@ struct Switches
     bool remove(const char *id);
     size_t serializeToJson(Print &output);
 };
-void stateSwitchByName(const char *name, const char *state, const char *value);
-void loopSwitches();
-void loadStoredSwitches();
-void removeSwitch(const char *id);
-void updateSwitch(const String &id, JsonObject doc);
-void mqttSwitchControl(const char *topic, const char *payload);
-void initSwitchesHaDiscovery();
+void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
+void loopSwitches(Switches &switches);
+void loadStoredSwitches(Switches &switches);
+void removeSwitch(Switches &switches, const char *id);
+void updateSwitch(Switches &switches, const String &id, JsonObject doc);
+void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
+void initSwitchesHaDiscovery(const Switches &switches);
 void sendToServerEvents(const String &topic, const String &payload);
-void stateSwitchById(const char *id, const char *state);
+void stateSwitchById(Switches &switches, const char *id, const char *state);
 struct Switches &getAtualSwitchesConfig();
 #endif

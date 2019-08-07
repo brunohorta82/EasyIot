@@ -16,9 +16,8 @@
 #include <Config.h>
 #include "WiFi.h"
 
-
 void setupWebserverAsync();
 void webserverServicesLoop();
-void addSwitchToAlexa(const char* name);
-void removeSwitchFromAlexa(const char* name);
+void addSwitchToAlexa(const char *name);
+void removeSwitchFromAlexa(const char *name);
 #endif

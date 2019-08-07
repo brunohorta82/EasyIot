@@ -42,8 +42,8 @@ void setup()
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
 
-  loadStoredConfiguration();
-  loadStoredSwitches();
+  loadStoredConfiguration(getAtualConfig());
+  loadStoredSwitches(getAtualSwitchesConfig());
   loadStoredSensors();
   setupWebserverAsync();
   setupWiFi();
@@ -56,7 +56,7 @@ void loop()
   webserverServicesLoop();
   loopWiFi();
   loopMqtt();
-  loopSwitches();
+  loopSwitches(getAtualSwitchesConfig());
   loopSensors();
   loopMqtt();
 }

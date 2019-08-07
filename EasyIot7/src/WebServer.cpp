@@ -62,7 +62,7 @@ void loadUI()
 
   //CSS
   server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css",styles_min_css, sizeof(styles_min_css));
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Expires", "Mon, 1 Jan 2222 10:10:10 GMT");
     request->send(response);
@@ -75,9 +75,9 @@ void startAlexaDiscovery()
   fauxmo.setPort(80); // required for gen3 devices
   fauxmo.enable(true);
   fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
-    String valueStr =state ? String(map((int)value,0,255,0,100)+1) : "0";
-    Log.notice("%s Device id: %s, name: %s, value: %s, state: %t" CR, tags::alexa, device_id,device_name,valueStr.c_str(),state);
-    stateSwitchByName(device_name, state ? "ON" : "OFF",valueStr.c_str() );
+    String valueStr = state ? String(map((int)value, 0, 255, 0, 100) + 1) : "0";
+    Log.notice("%s Device id: %s, name: %s, value: %s, state: %t" CR, tags::alexa, device_id, device_name, valueStr.c_str(), state);
+    stateSwitchByName(getAtualSwitchesConfig(), device_name, state ? "ON" : "OFF", valueStr.c_str());
   });
 }
 
@@ -142,36 +142,37 @@ void setupWebserverAsync()
     } });
   //CONFIG
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().serializeToJson(*response);
-    request->send( response);
+    request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().update(json, true);
     getAtualConfig().serializeToJson(*response);
-    request->send( response);
+    request->send(response);
   }));
   //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-   getAtualSwitchesConfig().serializeToJson(*response);
-    request->send( response);
+    getAtualSwitchesConfig().serializeToJson(*response);
+    request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
-      if (!request->hasArg("id")){
-        request->send(400,"Invalid id");
-        return;
-      }
+    if (!request->hasArg("id"))
+    {
+      request->send(400, "Invalid id");
+      return;
+    }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateSwitch(request->arg("id").c_str(),json);
-    serializeJson(json,*response);
+    updateSwitch(getAtualSwitchesConfig(), request->arg("id").c_str(), json);
+    serializeJson(json, *response);
     request->send(response);
   }));
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id"))
     {
-      removeSwitch(request->arg("id").c_str());
+      removeSwitch(getAtualSwitchesConfig(), request->arg("id").c_str());
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSwitchesConfig().serializeToJson(*response);
@@ -180,7 +181,7 @@ void setupWebserverAsync()
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id") && request->hasArg("state"))
     {
-      stateSwitchById(request->arg("id").c_str(), request->arg("state").c_str());
+      stateSwitchById(getAtualSwitchesConfig(), request->arg("id").c_str(), request->arg("state").c_str());
       request->send(200, "application/json", "{\"result\":\"OK\"}");
     }
     else
@@ -188,15 +189,15 @@ void setupWebserverAsync()
       request->send(400, "application/json", "{\"result\":\"MISSING PARAMS\"}");
     }
   });
-server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
-  AsyncResponseStream *response = request->beginResponseStream("application/json");
-   getAtualSensorsConfig().serializeToJson(*response);
+  server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    getAtualSensorsConfig().serializeToJson(*response);
     request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    updateSensor(json,true);
-    serializeJson(json,*response);
+    updateSensor(json, true);
+    serializeJson(json, *response);
     request->send(response);
   }));
   server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -205,7 +206,7 @@ server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
       removeSensor(request->arg("id").c_str(), true);
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-   getAtualSensorsConfig().serializeToJson(*response);
+    getAtualSensorsConfig().serializeToJson(*response);
     request->send(response);
   });
   //ALEXA SUPPORT
@@ -234,14 +235,16 @@ server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
   server.begin();
   startAlexaDiscovery();
 }
-void addSwitchToAlexa(const char *name){
-   fauxmo.removeDevice(name);
-   fauxmo.addDevice(name);
+void addSwitchToAlexa(const char *name)
+{
+  fauxmo.removeDevice(name);
+  fauxmo.addDevice(name);
 }
-void removeSwitchFromAlexa(const char* name){
+void removeSwitchFromAlexa(const char *name)
+{
   fauxmo.removeDevice(name);
 }
-void sendToServerEvents(const String& topic, const String& payload)
+void sendToServerEvents(const String &topic, const String &payload)
 {
   events.send(payload.c_str(), topic.c_str(), millis());
 }

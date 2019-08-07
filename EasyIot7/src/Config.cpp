@@ -7,10 +7,9 @@ static bool g_loadDefaults = false;
 static bool g_autoUpdate = false;
 static bool g_wifiReload = false;
 
-static Config config;
-
 struct Config &getAtualConfig()
 {
+  static Config config;
   return config;
 }
 
@@ -134,7 +133,6 @@ void normalize(String &inputStr)
   inputStr.replace("â", "a");
 }
 
-
 size_t Config::serializeToJson(Print &output)
 {
   const size_t CAPACITY = JSON_OBJECT_SIZE(26) + 512;
@@ -163,62 +161,60 @@ size_t Config::serializeToJson(Print &output)
   return serializeJson(doc, output);
 }
 
-void Config::save(File& file) const
+void Config::save(File &file) const
 {
-  file.write((uint8_t*)&firmware, sizeof(firmware));
-  file.write((uint8_t*)nodeId, sizeof(nodeId)); 
-  file.write((uint8_t*)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix)); 
-  file.write((uint8_t*)mqttIpDns, sizeof(mqttIpDns)); 
-  file.write((uint8_t*)mqttUsername, sizeof(mqttUsername)); 
-  file.write((uint8_t*)&mqttPort, sizeof(mqttPort)); 
-  file.write((uint8_t*)mqttPassword, sizeof(mqttPassword)); 
-  file.write((uint8_t*)wifiSSID, sizeof(wifiSSID)); 
-  file.write((uint8_t*)wifiSecret, sizeof(wifiSecret)); 
-  file.write((uint8_t*)wifiSSID2, sizeof(wifiSSID2)); 
-  file.write((uint8_t*)wifiSecret2, sizeof(wifiSecret2)); 
-  file.write((uint8_t*)&staticIp, sizeof(staticIp)); 
-  file.write((uint8_t*)wifiIp, sizeof(wifiIp)); 
-  file.write((uint8_t*)wifiMask, sizeof(wifiMask)); 
-  file.write((uint8_t*)wifiGw, sizeof(wifiGw)); 
-  file.write((uint8_t*)apSecret, sizeof(apSecret)); 
-  file.write((uint8_t*)apName, sizeof(apName)); 
-  file.write((uint8_t*)&configTime, sizeof(configTime)); 
-  file.write((uint8_t*)configkey, sizeof(configkey)); 
-  file.write((uint8_t*)hardware, sizeof(hardware)); 
-  
+  file.write((uint8_t *)&firmware, sizeof(firmware));
+  file.write((uint8_t *)nodeId, sizeof(nodeId));
+  file.write((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
+  file.write((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
+  file.write((uint8_t *)mqttUsername, sizeof(mqttUsername));
+  file.write((uint8_t *)&mqttPort, sizeof(mqttPort));
+  file.write((uint8_t *)mqttPassword, sizeof(mqttPassword));
+  file.write((uint8_t *)wifiSSID, sizeof(wifiSSID));
+  file.write((uint8_t *)wifiSecret, sizeof(wifiSecret));
+  file.write((uint8_t *)wifiSSID2, sizeof(wifiSSID2));
+  file.write((uint8_t *)wifiSecret2, sizeof(wifiSecret2));
+  file.write((uint8_t *)&staticIp, sizeof(staticIp));
+  file.write((uint8_t *)wifiIp, sizeof(wifiIp));
+  file.write((uint8_t *)wifiMask, sizeof(wifiMask));
+  file.write((uint8_t *)wifiGw, sizeof(wifiGw));
+  file.write((uint8_t *)apSecret, sizeof(apSecret));
+  file.write((uint8_t *)apName, sizeof(apName));
+  file.write((uint8_t *)&configTime, sizeof(configTime));
+  file.write((uint8_t *)configkey, sizeof(configkey));
+  file.write((uint8_t *)hardware, sizeof(hardware));
 }
-void Config::load(File& file)
+void Config::load(File &file)
 {
-  file.read((uint8_t*)&firmware, sizeof(firmware));
-  file.read((uint8_t*)nodeId, sizeof(nodeId)); 
-  file.read((uint8_t*)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix)); 
-  file.read((uint8_t*)mqttIpDns, sizeof(mqttIpDns)); 
-  file.read((uint8_t*)mqttUsername, sizeof(mqttUsername)); 
-  file.read((uint8_t*)&mqttPort, sizeof(mqttPort)); 
-  file.read((uint8_t*)mqttPassword, sizeof(mqttPassword)); 
-  file.read((uint8_t*)wifiSSID, sizeof(wifiSSID)); 
-  file.read((uint8_t*)wifiSecret, sizeof(wifiSecret)); 
-  file.read((uint8_t*)wifiSSID2, sizeof(wifiSSID2)); 
-  file.read((uint8_t*)wifiSecret2, sizeof(wifiSecret2)); 
-  file.read((uint8_t*)&staticIp, sizeof(staticIp)); 
-  file.read((uint8_t*)wifiIp, sizeof(wifiIp)); 
-  file.read((uint8_t*)wifiMask, sizeof(wifiMask)); 
-  file.read((uint8_t*)wifiGw, sizeof(wifiGw)); 
-  file.read((uint8_t*)apSecret, sizeof(apSecret)); 
-  file.read((uint8_t*)apName, sizeof(apName)); 
-  file.read((uint8_t*)&configTime, sizeof(configTime)); 
-  file.read((uint8_t*)configkey, sizeof(configkey)); 
-  file.read((uint8_t*)hardware, sizeof(hardware)); 
-  
+  file.read((uint8_t *)&firmware, sizeof(firmware));
+  file.read((uint8_t *)nodeId, sizeof(nodeId));
+  file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
+  file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
+  file.read((uint8_t *)mqttUsername, sizeof(mqttUsername));
+  file.read((uint8_t *)&mqttPort, sizeof(mqttPort));
+  file.read((uint8_t *)mqttPassword, sizeof(mqttPassword));
+  file.read((uint8_t *)wifiSSID, sizeof(wifiSSID));
+  file.read((uint8_t *)wifiSecret, sizeof(wifiSecret));
+  file.read((uint8_t *)wifiSSID2, sizeof(wifiSSID2));
+  file.read((uint8_t *)wifiSecret2, sizeof(wifiSecret2));
+  file.read((uint8_t *)&staticIp, sizeof(staticIp));
+  file.read((uint8_t *)wifiIp, sizeof(wifiIp));
+  file.read((uint8_t *)wifiMask, sizeof(wifiMask));
+  file.read((uint8_t *)wifiGw, sizeof(wifiGw));
+  file.read((uint8_t *)apSecret, sizeof(apSecret));
+  file.read((uint8_t *)apName, sizeof(apName));
+  file.read((uint8_t *)&configTime, sizeof(configTime));
+  file.read((uint8_t *)configkey, sizeof(configkey));
+  file.read((uint8_t *)hardware, sizeof(hardware));
 }
-void loadStoredConfiguration()
+void loadStoredConfiguration(Config &config)
 {
   if (!SPIFFS.begin())
   {
     Log.error("%s File storage can't start" CR, tags::config);
     return;
   }
-  
+
   if (!SPIFFS.exists(configFilenames::config))
   {
     Log.notice("%s Default config loaded." CR, tags::config);
@@ -236,9 +232,9 @@ void loadStoredConfiguration()
   config.load(file);
   file.close();
   SPIFFS.end();
-    Log.notice("%s Stored config loaded." CR, tags::config);
+  Log.notice("%s Stored config loaded." CR, tags::config);
 }
-void saveConfiguration()
+void saveConfiguration(Config &config)
 {
   if (!SPIFFS.begin())
   {
@@ -288,7 +284,7 @@ void Config::update(JsonObject doc, bool persist)
   if (persist || firmware != VERSION)
   {
     firmware = VERSION;
-    saveConfiguration();
+    saveConfiguration(*this);
   }
   if (reloadWifi)
   {

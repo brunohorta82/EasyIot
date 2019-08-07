@@ -3,17 +3,18 @@
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
-#include <ArduinoJson.h> 
+#include <ArduinoJson.h>
 #include "WiFi.h"
 #include "Mqtt.h"
 #include <ArduinoLog.h>
 
-struct Config {
-  char nodeId[32] ;
-  char homeAssistantAutoDiscoveryPrefix[32] ;
+struct Config
+{
+  char nodeId[32];
+  char homeAssistantAutoDiscoveryPrefix[32];
   char mqttIpDns[40];
   char mqttUsername[32];
-  int mqttPort ;
+  int mqttPort;
   char mqttPassword[24];
   char wifiSSID[32];
   char wifiSecret[24];
@@ -29,14 +30,14 @@ struct Config {
   char configkey[64];
   char hardware[24];
   double firmware;
- void update(JsonObject doc, bool persist);
- void save(File& file ) const;
- void load(File& file );
- size_t serializeToJson(Print &output);
+  void update(JsonObject doc, bool persist);
+  void save(File &file) const;
+  void load(File &file);
+  size_t serializeToJson(Print &output);
 };
 
-struct Config& getAtualConfig();
-void loadStoredConfiguration();
+struct Config &getAtualConfig();
+void loadStoredConfiguration(Config &config);
 
 void requestRestart();
 bool restartRequested();
@@ -49,7 +50,7 @@ bool loadDefaultsRequested();
 
 bool reloadWifiRequested();
 
-void normalize(String  &inputStr);
+void normalize(String &inputStr);
 boolean isValidNumber(const char *str);
 
 void configPIN(uint8_t pin, uint8_t mode);

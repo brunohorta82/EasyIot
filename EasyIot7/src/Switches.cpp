@@ -6,12 +6,13 @@
 #include "constants.h"
 
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
-static Switches switches;
+
 struct Switches &getAtualSwitchesConfig()
 {
+  static Switches switches;
   return switches;
 }
-void saveSwitches()
+void saveSwitches(Switches &switches)
 {
   if (!SPIFFS.begin())
   {
@@ -220,13 +221,13 @@ bool Switches::remove(const char *id)
   return true;
 }
 
-void removeSwitch(const char *id)
+void removeSwitch(Switches &switches, const char *id)
 {
   if (switches.remove(id))
-    saveSwitches();
+    saveSwitches(switches);
 }
 
-void initSwitchesHaDiscovery()
+void initSwitchesHaDiscovery(const Switches &switches)
 {
   for (const auto &sw : switches.items)
   {
@@ -319,9 +320,9 @@ void SwitchT::updateFromJson(JsonObject doc)
   doc["id"] = id;
   doc["stateControl"] = stateControl;
 }
-void saveAndRefreshServices(const SwitchT &sw)
+void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 {
-  saveSwitches();
+  saveSwitches(switches);
   removeFromHaDiscovery(sw);
   removeSwitchFromAlexa(sw.name);
   delay(10);
@@ -334,21 +335,21 @@ void saveAndRefreshServices(const SwitchT &sw)
     addToHaDiscovery(sw);
   }
 }
-void updateSwitch(const String &id, JsonObject doc)
+void updateSwitch(Switches &switches, const String &id, JsonObject doc)
 {
   for (auto &sw : switches.items)
   {
     if (strcmp(id.c_str(), sw.id) == 0)
     {
       sw.updateFromJson(doc);
-      saveAndRefreshServices(sw);
+      saveAndRefreshServices(switches, sw);
       return;
     }
   }
   SwitchT newSw;
   newSw.updateFromJson(doc);
   switches.items.push_back(newSw);
-  saveAndRefreshServices(newSw);
+  saveAndRefreshServices(switches, newSw);
 }
 
 SwitchT createTemplateSwitch(const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl)
@@ -423,7 +424,7 @@ SwitchT createTemplateSwitch(const String &name, const char *family, const Switc
   sw.lastTimeChange = 0ul;
   return sw;
 }
-void loadStoredSwitches()
+void loadStoredSwitches(Switches &switches)
 {
   if (!SPIFFS.begin())
   {
@@ -445,7 +446,7 @@ void loadStoredSwitches()
     switches.items.push_back(createTemplateSwitch("Portão", constanstsSwitch::familyLock, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO));
 #endif
     SPIFFS.end();
-    saveSwitches();
+    saveSwitches(switches);
     return;
   }
 
@@ -472,7 +473,7 @@ int findPoolIdx(const char *state, unsigned int currentIdx, unsigned int start, 
   return start;
 }
 
-void mqttSwitchControl(const char *topic, const char *payload)
+void mqttSwitchControl(Switches &switches, const char *topic, const char *payload)
 {
   for (auto &sw : switches.items)
   {
@@ -634,7 +635,7 @@ void SwitchT::changeState(const char *state)
   }
   publishOnMqtt(mqttStateTopic, mqttPayload, mqttRetain);
   String payloadSe;
-  payloadSe.reserve(strlen(mqttPayload) + strlen(id)+21);
+  payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
   payloadSe.concat("{\"id\":\"");
   payloadSe.concat(id);
   payloadSe.concat("\",\"state\":\"");
@@ -644,9 +645,9 @@ void SwitchT::changeState(const char *state)
   lastTimeChange = millis();
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
   if (dirty)
-    switches.lastChange = millis();
+    getAtualSwitchesConfig().lastChange = millis();
 }
-void stateSwitchById(const char *id, const char *state)
+void stateSwitchById(Switches &switches, const char *id, const char *state)
 {
   for (auto &sw : switches.items)
   {
@@ -656,7 +657,7 @@ void stateSwitchById(const char *id, const char *state)
     }
   }
 }
-void stateSwitchByName(const char *name, const char *state, const char *value)
+void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value)
 {
   for (auto &sw : switches.items)
   {
@@ -711,11 +712,11 @@ boolean positionDone(const SwitchT &sw)
   }
   return false;
 }
-void loopSwitches()
+void loopSwitches(Switches &switches)
 {
   if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
   {
-    saveSwitches();
+    saveSwitches(switches);
   }
   for (auto &sw : switches.items)
   {
