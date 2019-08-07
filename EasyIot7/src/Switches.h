@@ -25,8 +25,9 @@ struct SwitchT
     char family[10];                      //switch, light, cover, lock
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT; //MQTT OR RELAY
-    bool alexaSupport;
-    bool haSupport;
+    bool alexaSupport = true;
+    bool haSupport = true;
+    bool childLock = false;
     //GPIOS INPUT
     unsigned int primaryGpio;
     unsigned int secondaryGpio;

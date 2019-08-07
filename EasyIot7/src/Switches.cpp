@@ -98,6 +98,7 @@ void SwitchT::save(File &file) const
   file.write((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
   file.write((uint8_t *)autoStateValue, sizeof(autoStateValue));
   file.write((uint8_t *)&timeBetweenStates, sizeof(timeBetweenStates));
+  file.write((uint8_t *)&childLock, sizeof(childLock));
 
   //MQTT
   file.write((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
@@ -139,6 +140,7 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
   file.read((uint8_t *)autoStateValue, sizeof(autoStateValue));
   file.read((uint8_t *)&timeBetweenStates, sizeof(timeBetweenStates));
+  file.read((uint8_t *)&childLock, sizeof(childLock));
 
   //MQTT
   file.read((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
