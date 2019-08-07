@@ -33,17 +33,17 @@ void infoWifi()
   {
     uint8_t *bssid = WiFi.BSSID();
     Log.notice("%s MODE STA -------------------------------------" CR, tags::wifi);
-    Log.notice("%s SSID %s  " CR, tags::wifi, WiFi.SSID().c_str());
-    Log.notice("%s BSSID %s:%s:%s:%s" CR, tags::wifi, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
-    Log.notice("%s CH %d   " CR, tags::wifi, WiFi.channel());
-    Log.notice("%s RSSI %d " CR, tags::wifi, WiFi.RSSI());
-    Log.notice("%s IP  %d  " CR, tags::wifi, WiFi.localIP().toString().c_str());
-    Log.notice("%s MAC %s  " CR, tags::wifi, WiFi.macAddress().c_str());
-    Log.notice("%s GW   %s " CR, tags::wifi, WiFi.gatewayIP().toString().c_str());
-    Log.notice("%s MASK %s " CR, tags::wifi, WiFi.subnetMask().toString().c_str());
-    Log.notice("%s DNS  %s " CR, tags::wifi, WiFi.dnsIP().toString().c_str());
-    Log.notice("%s HOST %s " CR, tags::wifi, WiFi.hostname().c_str());
-    Log.notice("%s ----------------------------------------------" CR);
+    Log.notice("%s SSID  %s  " CR, tags::wifi, WiFi.SSID().c_str());
+    Log.notice("%s BSSID %X:%X:%X:%X:%X:%X" CR, tags::wifi, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+    Log.notice("%s CH    %d   " CR, tags::wifi, WiFi.channel());
+    Log.notice("%s RSSI  %d " CR, tags::wifi, WiFi.RSSI());
+    Log.notice("%s IP    %s  " CR, tags::wifi, WiFi.localIP().toString().c_str());
+    Log.notice("%s MAC   %s  " CR, tags::wifi, WiFi.macAddress().c_str());
+    Log.notice("%s GW    %s " CR, tags::wifi, WiFi.gatewayIP().toString().c_str());
+    Log.notice("%s MASK  %s " CR, tags::wifi, WiFi.subnetMask().toString().c_str());
+    Log.notice("%s DNS   %s " CR, tags::wifi, WiFi.dnsIP().toString().c_str());
+    Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
+    Log.notice("----------------------------------------------" CR);
   }
 
   if (WiFi.getMode() & WIFI_AP)

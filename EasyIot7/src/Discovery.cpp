@@ -80,7 +80,7 @@ String createHaCover(const SwitchT &sw)
     payload_available: "online"
     payload_not_available: "offline"
     json_attributes_topic: "home/sensor1/attributes" */
-void addToHaDiscovery(const  SensorT &s)
+void addToHaDiscovery(const SensorT &s)
 {
   //TODO
   switch (s.type)
@@ -92,11 +92,11 @@ void addToHaDiscovery(const  SensorT &s)
   case DS18B20:
     break;
   case LDR:
-  break;
+    break;
   case PIR:
   case REED_SWITCH:
   case RCWL_0516:
-  break;
+    break;
 
   default:
     break;
@@ -104,7 +104,11 @@ void addToHaDiscovery(const  SensorT &s)
 }
 void addToHaDiscovery(const SwitchT &sw)
 {
-
+  if (strlen(getAtualConfig().mqttIpDns) == 0)
+  {
+    Log.warning("%s Setup required to publish discovery messages" CR, tags::mqtt);
+    return;
+  }
   if (strlen(getAtualConfig().mqttIpDns) == 0)
   {
     Log.warning("%s Mqtt not configured" CR, tags::discovery);

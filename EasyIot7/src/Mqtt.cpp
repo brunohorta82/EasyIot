@@ -144,6 +144,16 @@ bool getMqttState()
 }
 void subscribeOnMqtt(const char *topic)
 {
+    if (strlen(getAtualConfig().mqttIpDns) == 0)
+    {
+        Log.warning("%s Setup required to subscrive messages" CR, tags::mqtt);
+        return;
+    }
+    if (!mqttClient.connected())
+    {
+        Log.warning("%s Required Mqtt connection" CR, tags::mqtt);
+        return;
+    }
     mqttClient.subscribe(topic);
 }
 void unsubscribeOnMqtt(const char *topic)

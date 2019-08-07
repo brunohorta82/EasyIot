@@ -12,6 +12,7 @@ struct Switches &getAtualSwitchesConfig()
   static Switches switches;
   return switches;
 }
+
 void saveSwitches(Switches &switches)
 {
   if (!SPIFFS.begin())
@@ -48,7 +49,6 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["primaryGpio"] = sw.primaryGpio;
     sdoc["secondaryGpio"] = sw.secondaryGpio;
     sdoc["autoStateValue"] = String(sw.autoStateValue);
-    sdoc["autoState"] = sw.autoState;
     sdoc["autoStateDelay"] = sw.autoStateDelay;
     sdoc["typeControl"] = sw.typeControl;
     sdoc["mode"] = sw.mode;
@@ -95,7 +95,6 @@ void SwitchT::save(File &file) const
   file.write((uint8_t *)&primaryGpioControl, sizeof(primaryGpioControl));
   file.write((uint8_t *)&secondaryGpioControl, sizeof(secondaryGpioControl));
   file.write((uint8_t *)&inverted, sizeof(inverted));
-  file.write((uint8_t *)&autoState, sizeof(autoState));
   file.write((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
   file.write((uint8_t *)autoStateValue, sizeof(autoStateValue));
   file.write((uint8_t *)&timeBetweenStates, sizeof(timeBetweenStates));
@@ -137,7 +136,6 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&primaryGpioControl, sizeof(primaryGpioControl));
   file.read((uint8_t *)&secondaryGpioControl, sizeof(secondaryGpioControl));
   file.read((uint8_t *)&inverted, sizeof(inverted));
-  file.read((uint8_t *)&autoState, sizeof(autoState));
   file.read((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
   file.read((uint8_t *)autoStateValue, sizeof(autoStateValue));
   file.read((uint8_t *)&timeBetweenStates, sizeof(timeBetweenStates));
@@ -238,87 +236,16 @@ void initSwitchesHaDiscovery(const Switches &switches)
 
 void SwitchT::updateFromJson(JsonObject doc)
 {
-  String n_name = doc["name"];
-  normalize(n_name);
-  String newId = doc.getMember("id").as<String>().equals(constantsConfig::newID) ? String(String(ESP.getChipId()) + n_name) : doc.getMember("id").as<String>();
-  strlcpy(id, String(String(ESP.getChipId()) + n_name).c_str(), sizeof(id));
-  strlcpy(name, doc.getMember("name").as<String>().c_str(), sizeof(name));
-  strlcpy(family, doc.getMember("family").as<String>().c_str(), sizeof(family));
-  primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
-  int switchMode = doc["mode"] | 0;
-  mode = static_cast<SwitchMode>(switchMode);
-  if (mode == SwitchMode::PUSH || mode == SwitchMode::SWITCH)
-  {
-    secondaryGpio = constantsConfig::noGPIO;
-    lastSecondaryGpioState = true;
-  }
-  else if (mode == SwitchMode::DUAL_PUSH || mode == SwitchMode::DUAL_SWITCH)
-  {
-    secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
-    lastSecondaryGpioState = doc["lastSecondaryGpioState"] | true;
-  }
-  timeBetweenStates = doc["timeBetweenStates"] | 0;
-  autoState = (doc["autoStateDelay"] | 0) > 0 && strlen(doc["autoStateValue"] | "") > 0;
-  autoStateDelay = doc["autoStateDelay"] | 0;
-  strlcpy(autoStateValue, doc.getMember("autoStateValue").as<String>().c_str(), sizeof(autoStateValue));
-  typeControl = static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT));
-  pullup = doc["pullup"] | true;
-  mqttRetain = doc["mqttRetain"] | false;
-  inverted = doc["inverted"] | false;
-  String baseTopic = getBaseTopic() + "/" + String(family) + "/" + String(id);
-
-  doc["mqttCommandTopic"] = String(baseTopic + "/set");
-  doc["mqttStateTopic"] = String(baseTopic + "/state");
-  strlcpy(mqttCommandTopic, String(baseTopic + "/set").c_str(), sizeof(mqttCommandTopic));
-  strlcpy(mqttStateTopic, String(baseTopic + "/state").c_str(), sizeof(mqttStateTopic));
-  primaryGpioControl = doc["primaryGpioControl"] | constantsConfig::noGPIO;
-
-  if (pullup)
-  {
-    if (primaryGpio != constantsConfig::noGPIO)
-    {
-      configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-    }
-    if (secondaryGpio != constantsConfig::noGPIO)
-    {
-      configPIN(secondaryGpio, secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-    }
-  }
-  if (strcmp(family, constanstsSwitch::familyCover) == 0)
-  {
-    secondaryGpioControl = doc["secondaryGpioControl"] | constantsConfig::noGPIO;
-    statePoolStart = doc["statePoolStart"] | constanstsSwitch::coverStartIdx;
-    statePoolEnd = doc["statePoolEnd"] | constanstsSwitch::converEndIdx;
-    positionControlCover = doc["positionControlCover"] | 0;
-    lastPercentage = doc["lastPercentage"] | 0;
-    strlcpy(mqttPositionCommandTopic, String(baseTopic + "/setposition").c_str(), sizeof(mqttPositionCommandTopic));
-    strlcpy(mqttPositionStateTopic, String(baseTopic + "/position").c_str(), sizeof(mqttPositionStateTopic));
-    doc["mqttPositionCommandTopic"] = String(baseTopic + "/setposition");
-    doc["mqttPositionStateTopic"] = String(baseTopic + "/position");
-  }
-  else if (strcmp(family, constanstsSwitch::familyLock) == 0)
-  {
-    secondaryGpioControl = constantsConfig::noGPIO;
-    statePoolStart = doc["statePoolStart"] | constanstsSwitch::lockStartIdx;
-    statePoolEnd = doc["statePoolEnd"] | constanstsSwitch::lockEndIdx;
-  }
-  else
-  {
-    secondaryGpioControl = constantsConfig::noGPIO;
-    statePoolStart = doc["statePoolStart"] | constanstsSwitch::switchStartIdx;
-    statePoolEnd = doc["statePoolEnd"] | constanstsSwitch::switchEndIdx;
-  }
-  statePoolIdx = doc["statePoolIdx"] | statePoolStart;
-
-  strlcpy(mqttPayload, statesPool[statePoolIdx].c_str(), sizeof(mqttPayload));
-  strlcpy(stateControl, statesPool[statePoolIdx].c_str(), sizeof(stateControl));
-  lastPrimaryGpioState = doc["lastPrimaryGpioState"] | true;
-  haSupport = true;
-  alexaSupport = true;
-  lastTimeChange = 0;
-  percentageRequest = -1;
+  templateSwitch(*this, doc["name"], doc["family"], static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)), doc["primaryGpio"] | constantsConfig::noGPIO, doc["secondaryGpio"] | constantsConfig::noGPIO, doc["primaryGpioControl"] | constantsConfig::noGPIO, doc["secondaryGpioControl"] | constantsConfig::noGPIO, doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul, doc["autoStateValue"] | "", static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)), doc["timeBetweenStates"] | 0ul);
   doc["id"] = id;
   doc["stateControl"] = stateControl;
+  doc["mqttCommandTopic"] = mqttCommandTopic;
+  doc["mqttStateTopic"] = mqttStateTopic;
+  if (strcmp(family, constanstsSwitch::familyCover) == 0)
+  {
+    doc["mqttPositionCommandTopic"] = mqttPositionCommandTopic;
+    doc["mqttPositionStateTopic"] = mqttPositionStateTopic;
+  }
 }
 void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 {
@@ -352,9 +279,8 @@ void updateSwitch(Switches &switches, const String &id, JsonObject doc)
   saveAndRefreshServices(switches, newSw);
 }
 
-SwitchT createTemplateSwitch(const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul)
 {
-  SwitchT sw;
   String id;
   id.reserve(sizeof(sw.id));
   id.concat(ESP.getChipId());
@@ -365,15 +291,14 @@ SwitchT createTemplateSwitch(const String &name, const char *family, const Switc
   strlcpy(sw.family, family, sizeof(sw.family));
   sw.primaryGpio = primaryGpio;
   sw.secondaryGpio = secondaryGpio;
-  sw.autoState = false;
-  strlcpy(sw.autoStateValue, "", sizeof(sw.autoStateValue));
-  sw.autoStateDelay = 0ul;
-  sw.typeControl = RELAY_AND_MQTT;
+  sw.autoStateDelay = autoStateDelay;
+  strlcpy(sw.autoStateValue, autoStateValue.c_str(), sizeof(sw.autoStateValue));
+  sw.typeControl = typecontrol;
   sw.mode = mode;
   sw.haSupport = true;
   sw.alexaSupport = true;
   sw.pullup = true;
-  sw.mqttRetain = false;
+  sw.mqttRetain = mqttRetaint;
   sw.inverted = false;
   String mqttTopic;
   mqttTopic.reserve(sizeof(sw.mqttCommandTopic));
@@ -408,13 +333,13 @@ SwitchT createTemplateSwitch(const String &name, const char *family, const Switc
   }
   sw.statePoolIdx = sw.statePoolStart;
 
-  sw.timeBetweenStates = 0ul;
+  sw.timeBetweenStates = timeBetweenStates;
 
   sw.primaryGpioControl = primaryGpioControl;
   sw.secondaryGpioControl = secondaryGpioControl;
 
-  configPIN(sw.primaryGpio, sw.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-  configPIN(sw.secondaryGpio, sw.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+  configPIN(sw.primaryGpio, sw.primaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+  configPIN(sw.secondaryGpio, sw.secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
   configPIN(sw.primaryGpioControl, OUTPUT);
   configPIN(sw.secondaryGpioControl, OUTPUT);
   sw.lastPrimaryGpioState = readPIN(sw.primaryGpio);
@@ -422,7 +347,6 @@ SwitchT createTemplateSwitch(const String &name, const char *family, const Switc
   strlcpy(sw.stateControl, constanstsSwitch::payloadOff, sizeof(sw.mqttPayload));
   strlcpy(sw.mqttPayload, sw.stateControl, sizeof(sw.mqttPayload));
   sw.lastTimeChange = 0ul;
-  return sw;
 }
 void loadStoredSwitches(Switches &switches)
 {
@@ -436,14 +360,24 @@ void loadStoredSwitches(Switches &switches)
   {
     Log.notice("%s Default config loaded." CR, tags::switches);
 #if defined SINGLE_SWITCH
-    switches.items.push_back(createTemplateSwitch("Interruptor", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO));
+    SwitchT one;
+    templateSwitch("Interruptor", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    switches.items.push_back(one);
 #elif defined DUAL_LIGHT
-    switches.items.push_back(createTemplateSwitch("Interruptor 1", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO));
-    switches.items.push_back(createTemplateSwitch("Interruptor 2", constanstsSwitch::familyLight, SWITCH, 13u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO));
+    SwitchT one;
+    SwitchT two;
+    templateSwitch(one, "Interruptor 1", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    switches.items.push_back(one);
+    templateSwitch(two, "Interruptor 2", constanstsSwitch::familyLight, SWITCH, 13u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
+    switches.items.push_back(two);
 #elif defined COVER
-    switches.items.push_back(createTemplateSwitch("Estore", constanstsSwitch::familyCover, DUAL_SWITCH, 12u, 13u, 4u, 5u));
+    SwitchT one;
+    templateSwitch(one, "Estore", constanstsSwitch::familyCover, DUAL_SWITCH, 12u, 13u, 4u, 5u);
+    switches.items.push_back(one);
 #elif defined LOCK
-    switches.items.push_back(createTemplateSwitch("Portão", constanstsSwitch::familyLock, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO));
+    SwitchT one;
+    templateSwitch("Portão", constanstsSwitch::familyLock, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    switches.items.push_back(one);
 #endif
     SPIFFS.end();
     saveSwitches(switches);
@@ -685,7 +619,7 @@ void stateSwitchByName(Switches &switches, const char *name, const char *state, 
 
 bool stateTimeout(const SwitchT &sw)
 {
-  return (sw.autoState && strcmp(sw.autoStateValue, sw.stateControl) != 0 && (sw.lastTimeChange + sw.autoStateDelay) < millis());
+  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.stateControl) != 0 && sw.lastTimeChange + sw.autoStateDelay < millis();
 }
 boolean positionDone(const SwitchT &sw)
 {
@@ -802,7 +736,7 @@ void loopSwitches(Switches &switches)
     if (stateTimeout(sw))
     {
       sw.statePoolIdx = findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.statePoolStart, sw.statePoolEnd);
-      Log.notice("%s State Timeout set change switch to %s " CR, statesPool[sw.statePoolIdx].c_str());
+      Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, statesPool[sw.statePoolIdx].c_str());
       sw.changeState(statesPool[sw.statePoolIdx].c_str());
     }
     if (positionDone(sw))

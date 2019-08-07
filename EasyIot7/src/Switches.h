@@ -38,7 +38,6 @@ struct SwitchT
     bool inverted;
 
     //AUTOMATIONS
-    bool autoState;
     unsigned long autoStateDelay;
     char autoStateValue[10];
     unsigned long timeBetweenStates;
@@ -85,5 +84,6 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
 void initSwitchesHaDiscovery(const Switches &switches);
 void sendToServerEvents(const String &topic, const String &payload);
 void stateSwitchById(Switches &switches, const char *id, const char *state);
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint, unsigned long autoStateDelay, const String &autoStateValue, const SwitchControlType &typecontrol, unsigned long timeBetweenStates);
 struct Switches &getAtualSwitchesConfig();
 #endif
