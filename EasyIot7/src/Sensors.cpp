@@ -230,6 +230,9 @@ void SensorT::updateFromJson(JsonObject doc)
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
   delayRead = doc["delayRead"];
   mqttRetain = doc["mqttRetain"] | true;
+  strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
+  strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
+  strlcpy(family, constantsSensor::familySensor, sizeof(family));
   switch (type)
   {
   case UNDEFINED:
@@ -237,29 +240,21 @@ void SensorT::updateFromJson(JsonObject doc)
     return;
     break;
   case LDR:
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    //Nothing to do
     break;
   case PIR:
   case RCWL_0516:
-    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     configPIN(primaryGpio, INPUT);
-    strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
-    strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
     break;
   case REED_SWITCH:
-    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-    strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
-    strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
     break;
   case DHT_11:
   case DHT_21:
   case DHT_22:
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
     dht = new DHT_nonblocking(primaryGpio, type);
     break;
   case DS18B20:
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
     dallas = new DallasTemperature(new OneWire(primaryGpio));
     break;
   }

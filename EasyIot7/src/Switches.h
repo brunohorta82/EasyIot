@@ -12,7 +12,12 @@ enum SwitchMode
     DUAL_SWITCH = 4,
     DUAL_PUSH = 5
 };
-
+enum SwitchSlaveMode
+{
+    MQTT,
+    HTTP_POST,
+    HTTP_GET,
+};
 enum SwitchControlType
 {
     RELAY_AND_MQTT = 1,
@@ -62,6 +67,8 @@ struct SwitchT
     int statePoolIdx;
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
+    bool slave;
+
     void load(File &file);
     void save(File &file) const;
     void updateFromJson(JsonObject doc);
