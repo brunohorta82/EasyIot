@@ -14,6 +14,7 @@ struct Config
   char mqttUsername[32];
   int mqttPort;
   char mqttPassword[24];
+  char mqttAvailableTopic[128];
   char wifiSSID[32];
   char wifiSecret[24];
   char wifiSSID2[24];
@@ -28,6 +29,7 @@ struct Config
   char configkey[64];
   char chipId[24];
   double firmware;
+
   void update(JsonObject doc, bool persist);
   void save(File &file) const;
   void load(File &file);

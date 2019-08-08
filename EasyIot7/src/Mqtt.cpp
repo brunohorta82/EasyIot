@@ -68,9 +68,7 @@ boolean reconnect()
     if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
         return false;
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
-    char *username = strdup(getAtualConfig().mqttUsername);
-    char *password = strdup(getAtualConfig().mqttPassword);
-    if (mqttClient.connect(getAtualConfig().chipId, username, password, getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
+    if (mqttClient.connect(getAtualConfig().chipId, getAtualConfig().mqttUsername, getAtualConfig().mqttPassword, getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, true))
     {
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
@@ -78,7 +76,7 @@ boolean reconnect()
         subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
     }
 
-    return mqttClient.connected();
+    return mqttConnected();
 }
 
 void setupMQTT()
@@ -88,7 +86,7 @@ void setupMQTT()
         return;
     }
     Log.notice("%s Setup" CR, tags::mqtt);
-    if (mqttClient.connected())
+    if (mqttConnected())
     {
         mqttClient.disconnect();
     }
@@ -104,10 +102,10 @@ void loopMqtt()
     if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
         return;
     static unsigned long lastReconnectAttempt = millis();
-    if (!mqttClient.connected())
+    if (!mqttConnected())
     {
         long now = millis();
-        if (now - lastReconnectAttempt > 5000)
+        if (now - lastReconnectAttempt > 8000)
         {
             Log.notice("%s Disconnected" CR, tags::mqtt);
             lastReconnectAttempt = now;
@@ -130,7 +128,7 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
         Log.warning("%s Setup required to publish messages" CR, tags::mqtt);
         return;
     }
-    if (!mqttClient.connected())
+    if (!mqttConnected())
     {
         Log.warning("%s Connection Required" CR, tags::mqtt);
         return;
@@ -151,7 +149,7 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
 
     retries = 0;
 }
-bool getMqttState()
+bool mqttConnected()
 {
     return mqttClient.connected();
 }
@@ -162,7 +160,7 @@ void subscribeOnMqtt(const char *topic)
         Log.warning("%s Setup required to subscrive messages" CR, tags::mqtt);
         return;
     }
-    if (!mqttClient.connected())
+    if (!mqttConnected())
     {
         Log.warning("%s Required Mqtt connection" CR, tags::mqtt);
         return;
@@ -171,7 +169,7 @@ void subscribeOnMqtt(const char *topic)
 }
 void unsubscribeOnMqtt(const char *topic)
 {
-    if (mqttClient.connected())
+    if (mqttConnected())
     {
         Log.notice("%s Unsubscribe on topic %s " CR, tags::mqtt, topic);
         mqttClient.unsubscribe(topic);

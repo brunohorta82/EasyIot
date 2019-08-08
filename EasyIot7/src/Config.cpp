@@ -152,6 +152,7 @@ size_t Config::serializeToJson(Print &output)
   doc["mqttPort"] = mqttPort;
   doc["mqttUsername"] = mqttUsername;
   doc["mqttPassword"] = mqttPassword;
+  doc["mqttAvailableTopic"] = mqttAvailableTopic;
   doc["wifiSSID"] = wifiSSID;
   doc["wifiSSID2"] = wifiSSID2;
   doc["wifiSecret"] = wifiSecret;
@@ -177,6 +178,7 @@ void Config::save(File &file) const
   file.write((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.write((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
   file.write((uint8_t *)mqttUsername, sizeof(mqttUsername));
+  file.write((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
   file.write((uint8_t *)&mqttPort, sizeof(mqttPort));
   file.write((uint8_t *)mqttPassword, sizeof(mqttPassword));
   file.write((uint8_t *)wifiSSID, sizeof(wifiSSID));
@@ -200,6 +202,7 @@ void Config::load(File &file)
   file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
   file.read((uint8_t *)mqttUsername, sizeof(mqttUsername));
+  file.write((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
   file.read((uint8_t *)&mqttPort, sizeof(mqttPort));
   file.read((uint8_t *)mqttPassword, sizeof(mqttPassword));
   file.read((uint8_t *)wifiSSID, sizeof(wifiSSID));
@@ -271,6 +274,7 @@ void Config::update(JsonObject doc, bool persist)
   mqttPort = doc["mqttPort"] | constantsMqtt::defaultPort;
   strlcpy(mqttUsername, doc["mqttUsername"] | "", sizeof(mqttUsername));
   strlcpy(mqttPassword, doc["mqttPassword"] | "", sizeof(mqttPassword));
+
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
   strlcpy(wifiSSID2, doc["wifiSSID2"] | "", sizeof(wifiSSID2));
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
@@ -283,6 +287,7 @@ void Config::update(JsonObject doc, bool persist)
   configTime = doc["configTime"];
   strlcpy(configkey, doc["configkey"] | "", sizeof(configkey));
   firmware = doc["firmware"] | VERSION;
+  strlcpy(mqttAvailableTopic, getAvailableTopic().c_str(), sizeof(mqttAvailableTopic));
   if (strcmp(constantsMqtt::mqttCloudURL, mqttIpDns) == 0)
   {
     strlcpy(homeAssistantAutoDiscoveryPrefix, mqttUsername, sizeof(homeAssistantAutoDiscoveryPrefix));

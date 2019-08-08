@@ -207,7 +207,7 @@ size_t systemJSONStatus(Print &output)
   object["mac"] = WiFi.softAPmacAddress();
   object["channel"] = WiFi.channel();
   object["mode"] = (int)WiFi.getMode();
-  object["mqttConnected"] = getMqttState();
+  object["mqttConnected"] = mqttConnected();
   object["freeHeap"] = String(ESP.getFreeHeap());
   return serializeJson(doc, output);
 }

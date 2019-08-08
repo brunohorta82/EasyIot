@@ -9,6 +9,6 @@ String getAvailableTopic();
 void setupMQTT();
 void loopMqtt();
 void unsubscribeOnMqtt(const char *topic);
-bool getMqttState();
+bool mqttConnected();
 
 #endif

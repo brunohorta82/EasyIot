@@ -178,6 +178,11 @@ void Switches::save(File &file) const
     item.save(file);
   }
 }
+ICACHE_RAM_ATTR void check()
+{
+  if (!mqttConnected())
+    loop(getAtualSwitchesConfig());
+}
 void Switches::load(File &file)
 {
   auto n_items = items.size();
@@ -191,6 +196,11 @@ void Switches::load(File &file)
     configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.primaryGpioControl, OUTPUT);
     configPIN(item.secondaryGpioControl, OUTPUT);
+    if (item.primaryGpio != constantsConfig::noGPIO)
+      attachInterrupt(digitalPinToInterrupt(item.primaryGpio), check, CHANGE);
+    if (item.secondaryGpio != constantsConfig::noGPIO)
+      attachInterrupt(digitalPinToInterrupt(item.secondaryGpio), check, CHANGE);
+
     item.lastPrimaryGpioState = readPIN(item.primaryGpio);
     item.lastSecondaryGpioState = readPIN(item.secondaryGpio);
     if (item.alexaSupport)
