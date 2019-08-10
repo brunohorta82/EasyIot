@@ -32,6 +32,7 @@ struct SensorT
   char mqttPayload[128];
   bool mqttRetain = true;
   bool haSupport = true;
+  bool emomcmsSupport = false;
 
   //INPUT GPIO
   unsigned int primaryGpio;

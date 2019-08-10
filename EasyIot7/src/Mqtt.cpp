@@ -5,6 +5,7 @@
 #include "WiFi.h"
 #include "constants.h"
 #include "ESP8266WiFi.h"
+#include "Discovery.h"
 
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
@@ -23,7 +24,9 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     Log.notice("%s Payload: " CR, tags::mqtt, payload_as_string);
     if (strcmp(topic, constantsMqtt::homeassistantOnlineTopic) == 0 && strcmp(payload_as_string, constantsMqtt::availablePayload) == 0)
     {
-        initSwitchesHaDiscovery(getAtualSwitchesConfig());
+        initHaDiscovery(getAtualSwitchesConfig());
+        initHaDiscovery(getAtualSensorsConfig());
+        
     }
     else
     {
@@ -68,12 +71,18 @@ boolean reconnect()
     if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
         return false;
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
-    if (mqttClient.connect(getAtualConfig().chipId, getAtualConfig().mqttUsername, getAtualConfig().mqttPassword, getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, true))
+
+    if (mqttClient.connect(getAtualConfig().chipId, String(getAtualConfig().mqttUsername).c_str(), String(getAtualConfig().mqttPassword).c_str(), getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, false))
     {
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
         publishOnMqtt(getConfigStatusTopic().c_str(), "{\"firmware\":7.0}", true); //TODO generate simple config status
         subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
+        //Init Switches Subscritions and publish de current state
+        for(auto &sw: getAtualSwitchesConfig().items){
+            subscribeOnMqtt(sw.mqttCommandTopic);
+            publishOnMqtt(sw.mqttStateTopic,sw.mqttPayload,sw.mqttRetain);
+        }
     }
 
     return mqttConnected();
@@ -90,10 +99,8 @@ void setupMQTT()
     {
         mqttClient.disconnect();
     }
-    char *ipDnsMqtt = strdup(getAtualConfig().mqttIpDns);
-    int port = getAtualConfig().mqttPort;
-
-    mqttClient.setServer(ipDnsMqtt, port);
+    
+    mqttClient.setServer(getAtualConfig().mqttIpDns, getAtualConfig().mqttPort);
     mqttClient.setCallback(callbackMqtt);
 }
 

@@ -168,6 +168,8 @@ size_t Config::serializeToJson(Print &output)
   doc["firmware"] = firmware;
   doc["chipId"] = chipId;
   doc["mac"] = WiFi.softAPmacAddress();
+  doc["apiUser"] = apiUser;
+  doc["apiPassword"] = apiPassword;
   return serializeJson(doc, output);
 }
 
@@ -194,6 +196,8 @@ void Config::save(File &file) const
   file.write((uint8_t *)&configTime, sizeof(configTime));
   file.write((uint8_t *)configkey, sizeof(configkey));
   file.write((uint8_t *)chipId, sizeof(chipId));
+  file.write((uint8_t *)apiUser, sizeof(apiUser));
+  file.write((uint8_t *)apiPassword, sizeof(apiPassword));
 }
 void Config::load(File &file)
 {
@@ -202,7 +206,7 @@ void Config::load(File &file)
   file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
   file.read((uint8_t *)mqttUsername, sizeof(mqttUsername));
-  file.write((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
+  file.read((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
   file.read((uint8_t *)&mqttPort, sizeof(mqttPort));
   file.read((uint8_t *)mqttPassword, sizeof(mqttPassword));
   file.read((uint8_t *)wifiSSID, sizeof(wifiSSID));
@@ -218,6 +222,12 @@ void Config::load(File &file)
   file.read((uint8_t *)&configTime, sizeof(configTime));
   file.read((uint8_t *)configkey, sizeof(configkey));
   file.read((uint8_t *)chipId, sizeof(chipId));
+  file.read((uint8_t *)apiUser, sizeof(apiUser));
+  file.read((uint8_t *)apiPassword, sizeof(apiPassword));
+  if (firmware < VERSION)
+  {
+    Log.warning("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
+  }
 }
 void loadStoredConfiguration(Config &config)
 {
@@ -229,13 +239,15 @@ void loadStoredConfiguration(Config &config)
 
   if (!SPIFFS.exists(configFilenames::config))
   {
+    SPIFFS.format();
     Log.notice("%s Default config loaded." CR, tags::config);
     strlcpy(config.nodeId, String(ESP.getChipId()).c_str(), sizeof(config.nodeId));
     strlcpy(config.chipId, config.nodeId, sizeof(config.chipId));
     config.mqttPort = constantsMqtt::defaultPort;
     config.staticIp = false;
-
     strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
+    strlcpy(config.apiUser, constantsConfig::apiUser, sizeof(config.apiUser));
+    strlcpy(config.apiPassword, constantsConfig::apiPassword, sizeof(config.apiPassword));
     config.firmware = VERSION;
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
     SPIFFS.end();
@@ -248,22 +260,23 @@ void loadStoredConfiguration(Config &config)
   SPIFFS.end();
   Log.notice("%s Stored config loaded." CR, tags::config);
 }
-void saveConfiguration(Config &config)
+Config &Config::saveConfigurationOnDefaultFile()
 {
   if (!SPIFFS.begin())
   {
     Log.error("%s File storage can't start" CR, tags::config);
-    return;
+    return getAtualConfig();
   }
 
   File file = SPIFFS.open(configFilenames::config, "w+");
-  config.save(file);
+  save(file);
   file.close();
   SPIFFS.end();
   Log.notice("%s Config stored." CR, tags::config);
+  return *this;
 }
 
-void Config::update(JsonObject doc, bool persist)
+Config &Config::updateFromJson(JsonObject doc)
 {
   bool reloadWifi = staticIp != doc["staticIp"] || strcmp(wifiIp, doc["wifiIp"] | "") != 0 || strcmp(wifiMask, doc["wifiMask"] | "") != 0 || strcmp(wifiGw, doc["wifiGw"] | "") != 0 || strcmp(wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(wifiSecret2, doc["wifiSecret2"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(mqttPassword, doc["mqttPassword"] | "") != 0 || mqttPort != (doc["mqttPort"] | constantsMqtt::defaultPort);
@@ -274,7 +287,6 @@ void Config::update(JsonObject doc, bool persist)
   mqttPort = doc["mqttPort"] | constantsMqtt::defaultPort;
   strlcpy(mqttUsername, doc["mqttUsername"] | "", sizeof(mqttUsername));
   strlcpy(mqttPassword, doc["mqttPassword"] | "", sizeof(mqttPassword));
-
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
   strlcpy(wifiSSID2, doc["wifiSSID2"] | "", sizeof(wifiSSID2));
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
@@ -297,11 +309,6 @@ void Config::update(JsonObject doc, bool persist)
     strlcpy(homeAssistantAutoDiscoveryPrefix, "homeassistant", sizeof(homeAssistantAutoDiscoveryPrefix));
   }
 
-  if (persist || firmware != VERSION)
-  {
-    firmware = VERSION;
-    saveConfiguration(*this);
-  }
   if (reloadWifi)
   {
     requestReloadWifi();
@@ -310,4 +317,5 @@ void Config::update(JsonObject doc, bool persist)
   {
     setupMQTT();
   }
+  return *this;
 }

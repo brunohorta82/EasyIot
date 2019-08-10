@@ -3,9 +3,26 @@
 #include "constants.h"
 #include "Mqtt.h"
 #include "Config.h"
+void initHaDiscovery(const Switches &switches)
+{
+  for (const auto &sw : switches.items)
+  {
+    addToHaDiscovery(sw);
+    publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, sw.mqttRetain);
+  }
+}
+
+void initHaDiscovery(const Sensors &sensors)
+{
+  for (const auto &ss : sensors.items)
+  {
+    addToHaDiscovery(ss);
+    publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, ss.mqttRetain);
+  }
+}
 
 
-String createHaLock(const SwitchT &sw)
+void createHaLock(const SwitchT &sw)
 {
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(8) + 300;
@@ -19,9 +36,9 @@ String createHaLock(const SwitchT &sw)
   object["payload_lock"] = constanstsSwitch::payloadLock;
   object["payload_unlock"] = constanstsSwitch::payloadUnlock;
   serializeJson(object, objectStr);
-  return objectStr;
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
-String createHaSwitch(const SwitchT &sw)
+void createHaSwitch(const SwitchT &sw)
 {
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
@@ -34,9 +51,10 @@ String createHaSwitch(const SwitchT &sw)
   object["availability_topic"] = getAvailableTopic();
   object["payload_on"] = constanstsSwitch::payloadOn;
   serializeJson(object, objectStr);
-  return objectStr;
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
+  
 }
-String createHaLight(const SwitchT &sw)
+void createHaLight(const SwitchT &sw)
 {
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
@@ -50,9 +68,10 @@ String createHaLight(const SwitchT &sw)
   object["payload_on"] = constanstsSwitch::payloadOn;
   object["payload_off"] = constanstsSwitch::payloadOff;
   serializeJson(object, objectStr);
-  return objectStr;
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
+ 
 }
-String createHaCover(const SwitchT &sw)
+void createHaCover(const SwitchT &sw)
 {
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
@@ -72,33 +91,61 @@ String createHaCover(const SwitchT &sw)
   object["position_topic"] = sw.mqttPositionStateTopic;
   object["set_position_topic"] = sw.mqttPositionCommandTopic;
   serializeJson(object, objectStr);
-  return objectStr;
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
 
-/*    name: "RSSI"
-    state_topic: "home/sensor1/infojson"
-    unit_of_measurement: 'dBm'
-    value_template: "{{ value_json.RSSI }}"
-    availability_topic: "home/sensor1/status"
-    payload_available: "online"
-    payload_not_available: "offline"
-    json_attributes_topic: "home/sensor1/attributes" */
 void addToHaDiscovery(const SensorT &s)
 {
-  //TODO
+  String objectStr = "";
+  const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
+  DynamicJsonDocument doc(capacity);
+  JsonObject object = doc.to<JsonObject>();
+  object["name"] = s.name;
+  object["state_topic"] = s.mqttStateTopic;
+  object["availability_topic"] = getAvailableTopic();
   switch (s.type)
   {
   case DHT_11:
   case DHT_21:
   case DHT_22:
+  object["unit_of_measurement"] = "%";
+  object["device_class"] = "humidity";
+  object["value_template"] = "{{value_json.humidity}}";
+  serializeJson(object, objectStr);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+  objectStr = "";
+  object["unit_of_measurement"] = "ºC";
+  object["device_class"] = "temperature";
+  object["value_template"] = "{{value_json.temperature}}";
+  serializeJson(object, objectStr);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
+  object["unit_of_measurement"] = "ºC";
+  object["device_class"] = "temperature";
+  object["value_template"] = "{{value_json.temperature}}";
+  serializeJson(object, objectStr);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case LDR:
+  object["unit_of_measurement"] = "lux";
+  object["device_class"] = "illuminance";
+  object["value_template"] = "{{value_json.illuminance}}";
+  serializeJson(object, objectStr);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/I" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PIR:
-  case REED_SWITCH:
   case RCWL_0516:
+  object["device_class"] = "occupancy";
+  object["value_template"] = "{{value_json.binary_state}}";
+  serializeJson(object, objectStr);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OC" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+  break;
+  case REED_SWITCH:
+  object["device_class"] = "opening";
+  object["value_template"] = "{{value_json.binary_state}}";
+  serializeJson(object, objectStr);
+  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
 
   default:
@@ -118,26 +165,23 @@ void addToHaDiscovery(const SwitchT &sw)
     return;
   }
 
-  String payload = "";
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
   {
-    payload = createHaCover(sw);
+    createHaCover(sw);
   }
   else if (strcmp(sw.family, constanstsSwitch::familyLight) == 0)
   {
-    payload = createHaLight(sw);
+    createHaLight(sw);
   }
   else if (strcmp(sw.family, constanstsSwitch::familySwitch) == 0)
   {
-    payload = createHaSwitch(sw);
+    createHaSwitch(sw);
   }
   else if (strcmp(sw.family, constanstsSwitch::familyLock) == 0)
   {
-    payload = createHaLock(sw);
+    createHaLock(sw);
   }
-
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), payload.c_str(), false);
-  subscribeOnMqtt(sw.mqttCommandTopic);
+  
   Log.notice("%s RELOAD HA SWITCH DISCOVERY OK" CR, tags::discovery);
 }
 

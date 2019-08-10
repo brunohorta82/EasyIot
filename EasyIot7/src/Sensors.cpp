@@ -64,6 +64,7 @@ void SensorT::load(File &file)
   file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
+  file.read((uint8_t *)&emomcmsSupport, sizeof(emomcmsSupport));
   file.read((uint8_t *)&primaryGpio, sizeof(primaryGpio));
   file.read((uint8_t *)&pullup, sizeof(pullup));
   file.read((uint8_t *)&delayRead, sizeof(delayRead));
@@ -82,6 +83,7 @@ void SensorT::save(File &file) const
   file.write((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.write((uint8_t *)&mqttRetain, sizeof(mqttRetain));
   file.write((uint8_t *)&haSupport, sizeof(haSupport));
+  file.write((uint8_t *)&emomcmsSupport, sizeof(emomcmsSupport));
   file.write((uint8_t *)&primaryGpio, sizeof(primaryGpio));
   file.write((uint8_t *)&pullup, sizeof(pullup));
   file.write((uint8_t *)&delayRead, sizeof(delayRead));
@@ -137,8 +139,8 @@ void remove(Sensors &sensors, const char *id)
 }
 void saveAndRefreshServices(Sensors &sensors, const SensorT &ss)
 {
+  
   save(sensors);
-  removeFromHaDiscovery(ss);
   delay(10);
   if (ss.haSupport)
   {
@@ -218,6 +220,7 @@ void initSensorsHaDiscovery(const Sensors &sensors)
 
 void SensorT::updateFromJson(JsonObject doc)
 {
+  removeFromHaDiscovery(*this);
   Log.notice("%s Update Environment" CR, tags::sensors);
   type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
   String idStr;
@@ -232,7 +235,7 @@ void SensorT::updateFromJson(JsonObject doc)
   mqttRetain = doc["mqttRetain"] | true;
   strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
   strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
-  strlcpy(family, constantsSensor::familySensor, sizeof(family));
+  strlcpy(mqttPayload, "", sizeof(mqttPayload));
   switch (type)
   {
   case UNDEFINED:
@@ -240,22 +243,31 @@ void SensorT::updateFromJson(JsonObject doc)
     return;
     break;
   case LDR:
-    //Nothing to do
+    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    strlcpy(mqttPayload, "{\"illuminance\":0}", sizeof(mqttPayload));
     break;
   case PIR:
   case RCWL_0516:
     configPIN(primaryGpio, INPUT);
+    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
+    strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
   case REED_SWITCH:
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
+    strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
   case DHT_11:
   case DHT_21:
   case DHT_22:
     dht = new DHT_nonblocking(primaryGpio, type);
+    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    strlcpy(mqttPayload, "{\"humidity\":0,\"temperature\":0}", sizeof(mqttPayload));
     break;
   case DS18B20:
     dallas = new DallasTemperature(new OneWire(primaryGpio));
+    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    
     break;
   }
   String mqttTopic;
@@ -290,8 +302,8 @@ void loop(Sensors &sensors)
         ss.lastRead = millis();
         int ldrRaw = analogRead(ss.primaryGpio);
         String analogReadAsString = String(ldrRaw);
-        publishOnMqtt(ss.mqttStateTopic, String("{\"ldr_raw\":" + analogReadAsString + "}").c_str(), ss.mqttRetain);
-        Log.notice("%s {\"ldr_raw\": %d }" CR, tags::mqtt, ldrRaw);
+        publishOnMqtt(ss.mqttStateTopic, String("{\"illuminance\":" + analogReadAsString + "}").c_str(), ss.mqttRetain);
+        Log.notice("%s {\"illuminance\": %d }" CR, tags::mqtt, ldrRaw);
       }
     }
     break;

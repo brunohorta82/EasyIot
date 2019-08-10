@@ -14,9 +14,10 @@ enum SwitchMode
 };
 enum SwitchSlaveMode
 {
-    MQTT,
-    HTTP_POST,
-    HTTP_GET,
+    S_MQTT_PUB,
+    S_MQTT_SUB,
+    S_HTTP_POST,
+    S_HTTP_GET,
 };
 enum SwitchControlType
 {
@@ -89,7 +90,6 @@ void load(Switches &switches);
 void remove(Switches &switches, const char *id);
 void update(Switches &switches, const String &id, JsonObject doc);
 void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
-void initSwitchesHaDiscovery(const Switches &switches);
 void sendToServerEvents(const String &topic, const String &payload);
 void stateSwitchById(Switches &switches, const char *id, const char *state);
 void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint, unsigned long autoStateDelay, const String &autoStateValue, const SwitchControlType &typecontrol, unsigned long timeBetweenStates);

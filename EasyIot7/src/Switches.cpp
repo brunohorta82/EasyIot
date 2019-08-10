@@ -237,14 +237,6 @@ void remove(Switches &switches, const char *id)
     save(switches);
 }
 
-void initSwitchesHaDiscovery(const Switches &switches)
-{
-  for (const auto &sw : switches.items)
-  {
-    addToHaDiscovery(sw);
-    publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, sw.mqttRetain);
-  }
-}
 
 void SwitchT::updateFromJson(JsonObject doc)
 {

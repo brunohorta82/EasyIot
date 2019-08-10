@@ -29,10 +29,13 @@ struct Config
   char configkey[64];
   char chipId[24];
   double firmware;
+  char apiUser[32];
+  char apiPassword[24];
 
-  void update(JsonObject doc, bool persist);
+  Config&  updateFromJson(JsonObject doc);
   void save(File &file) const;
   void load(File &file);
+  Config&  saveConfigurationOnDefaultFile();
   size_t serializeToJson(Print &output);
 };
 

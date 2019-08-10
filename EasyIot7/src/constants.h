@@ -29,9 +29,9 @@ constexpr const char *webserver{"[WEBSERVER]"};
 } // namespace tags
 namespace configFilenames
 {
-auto constexpr config = "config.bin";
-auto constexpr sensors = "sensors.bin";
-auto constexpr switches = "switches.bin";
+auto constexpr config = "/config/config.bin";
+auto constexpr sensors = "/config/sensors.bin";
+auto constexpr switches = "/config/switches.bin";
 } // namespace configFilenames
 namespace constantsConfig
 {
@@ -41,6 +41,8 @@ constexpr unsigned int noGPIO{99u};
 constexpr unsigned long storeConfigDelay{5000ul};
 
 constexpr const char *apSecret{"EasyIot@"}; //AP PASSWORD
+constexpr const char *apiUser{"admin"}; //API USER
+constexpr const char *apiPassword{"xpto"}; //API PASSWORD
 } // namespace constantsConfig
 
 namespace constanstsSwitch

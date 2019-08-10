@@ -25,36 +25,44 @@ void loadUI()
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
     response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+     if(!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+        return request->requestAuthentication();
     request->send(response);
   });
 
   server.on("/firmware.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", firmware_html, sizeof(firmware_html));
     response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 
   server.on("/mqtt.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", mqtt_html, sizeof(mqtt_html));
     response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
     response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 
   server.on("/wifi.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", wifi_html, sizeof(wifi_html));
     response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 
   server.on("/devices.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", devices_html, sizeof(devices_html));
     response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 
@@ -62,14 +70,14 @@ void loadUI()
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
     response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Expires", "Mon, 1 Jan 2222 10:10:10 GMT");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 
   server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
     response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Expires", "Mon, 1 Jan 2222 10:10:10 GMT");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 
@@ -77,7 +85,7 @@ void loadUI()
   server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
     response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Expires", "Mon, 1 Jan 2222 10:10:10 GMT");
+    response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
   });
 }
@@ -161,8 +169,8 @@ void setupWebserverAsync()
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getAtualConfig().update(json, true);
-    getAtualConfig().serializeToJson(*response);
+    getAtualConfig().updateFromJson(json).saveConfigurationOnDefaultFile().serializeToJson(*response);
+    
     request->send(response);
   }));
   //FEATURES
