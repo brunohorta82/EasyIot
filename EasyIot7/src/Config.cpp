@@ -226,7 +226,7 @@ void Config::load(File &file)
   file.read((uint8_t *)apiPassword, sizeof(apiPassword));
   if (firmware < VERSION)
   {
-    Log.warning("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
+    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
   }
 }
 void loadStoredConfiguration(Config &config)

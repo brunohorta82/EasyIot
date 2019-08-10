@@ -165,6 +165,8 @@ void setupWebserverAsync()
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().serializeToJson(*response);
+     if(!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+        return request->requestAuthentication();
     request->send(response);
   });
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
