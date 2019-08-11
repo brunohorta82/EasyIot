@@ -167,7 +167,7 @@ size_t Sensors::serializeToJson(Print &output)
 {
   if (items.empty())
     return output.write("[]");
-  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * JSON_OBJECT_SIZE(16) + 1000;
+  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(30)+ sizeof(SensorT));
   DynamicJsonDocument doc(CAPACITY);
   for (const auto &ss : items)
   {

@@ -38,8 +38,9 @@ size_t Switches::serializeToJson(Print &output)
   if (items.empty())
     return output.write("[]");
 
-  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * JSON_OBJECT_SIZE(36) + 2200;
+  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(30)+ sizeof(SwitchT));
   DynamicJsonDocument doc(CAPACITY);
+
   for (const auto &sw : items)
   {
     JsonObject sdoc = doc.createNestedObject();
