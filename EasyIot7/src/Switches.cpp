@@ -5,7 +5,7 @@
 #include "Config.h"
 #include "Mqtt.h"
 
-static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStateStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
+static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 
 struct Switches &getAtualSwitchesConfig()
 {
@@ -38,7 +38,7 @@ size_t Switches::serializeToJson(Print &output)
   if (items.empty())
     return output.write("[]");
 
-  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(30)+ sizeof(SwitchT));
+  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(30) + sizeof(SwitchT));
   DynamicJsonDocument doc(CAPACITY);
 
   for (const auto &sw : items)
@@ -179,11 +179,7 @@ void Switches::save(File &file) const
     item.save(file);
   }
 }
-ICACHE_RAM_ATTR void check()
-{
-  if (!mqttConnected())
-    loop(getAtualSwitchesConfig());
-}
+
 void Switches::load(File &file)
 {
   auto n_items = items.size();
@@ -197,10 +193,6 @@ void Switches::load(File &file)
     configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.primaryGpioControl, OUTPUT);
     configPIN(item.secondaryGpioControl, OUTPUT);
-    if (item.primaryGpio != constantsConfig::noGPIO)
-      attachInterrupt(digitalPinToInterrupt(item.primaryGpio), check, CHANGE);
-    if (item.secondaryGpio != constantsConfig::noGPIO)
-      attachInterrupt(digitalPinToInterrupt(item.secondaryGpio), check, CHANGE);
 
     item.lastPrimaryGpioState = readPIN(item.primaryGpio);
     item.lastSecondaryGpioState = readPIN(item.secondaryGpio);
@@ -237,7 +229,6 @@ void remove(Switches &switches, const char *id)
   if (switches.remove(id))
     save(switches);
 }
-
 
 void SwitchT::updateFromJson(JsonObject doc)
 {

@@ -32,10 +32,10 @@ struct Config
   char apiUser[32];
   char apiPassword[24];
 
-  Config&  updateFromJson(JsonObject doc);
+  Config &updateFromJson(JsonObject doc);
   void save(File &file) const;
   void load(File &file);
-  Config&  saveConfigurationOnDefaultFile();
+  Config &saveConfigurationOnDefaultFile();
   size_t serializeToJson(Print &output);
 };
 

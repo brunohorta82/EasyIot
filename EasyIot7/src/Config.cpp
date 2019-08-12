@@ -239,7 +239,6 @@ void loadStoredConfiguration(Config &config)
 
   if (!SPIFFS.exists(configFilenames::config))
   {
-    SPIFFS.format();
     Log.notice("%s Default config loaded." CR, tags::config);
     strlcpy(config.nodeId, String(ESP.getChipId()).c_str(), sizeof(config.nodeId));
     strlcpy(config.chipId, config.nodeId, sizeof(config.chipId));

@@ -139,7 +139,7 @@ void remove(Sensors &sensors, const char *id)
 }
 void saveAndRefreshServices(Sensors &sensors, const SensorT &ss)
 {
-  
+
   save(sensors);
   delay(10);
   if (ss.haSupport)
@@ -167,7 +167,7 @@ size_t Sensors::serializeToJson(Print &output)
 {
   if (items.empty())
     return output.write("[]");
-  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(30)+ sizeof(SensorT));
+  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(30) + sizeof(SensorT));
   DynamicJsonDocument doc(CAPACITY);
   for (const auto &ss : items)
   {
@@ -267,7 +267,7 @@ void SensorT::updateFromJson(JsonObject doc)
   case DS18B20:
     dallas = new DallasTemperature(new OneWire(primaryGpio));
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
-    
+
     break;
   }
   String mqttTopic;
