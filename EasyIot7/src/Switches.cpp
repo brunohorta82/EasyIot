@@ -353,7 +353,7 @@ void load(Switches &switches)
     Log.notice("%s Default config loaded." CR, tags::switches);
 #if defined SINGLE_SWITCH
     SwitchT one;
-    templateSwitch("Interruptor", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    templateSwitch(one, "Interruptor", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
     switches.items.push_back(one);
 #elif defined DUAL_LIGHT
     SwitchT one;
@@ -362,13 +362,30 @@ void load(Switches &switches)
     switches.items.push_back(one);
     templateSwitch(two, "Interruptor 2", constanstsSwitch::familyLight, SWITCH, 13u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
     switches.items.push_back(two);
+#elif defined VMC
+    SwitchT one;
+    SwitchT two;
+
+    templateSwitch(one, "VMC", constanstsSwitch::familySwitch, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    one.autoStateDelay = 45 * 60 * 1000; //45 minutes
+    one.mode = PUSH;
+    strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
+
+    templateSwitch(two, "BOMBA", constanstsSwitch::familySwitch, SWITCH, 12u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
+    two.autoStateDelay = 3 * 60 * 1000; //45 minutes
+    two.mode = PUSH;
+    strlcpy(two.autoStateValue, constanstsSwitch::payloadOff, sizeof(two.autoStateValue));
+
+    switches.items.push_back(one);
+    switches.items.push_back(two);
+
 #elif defined COVER
     SwitchT one;
     templateSwitch(one, "Estore", constanstsSwitch::familyCover, DUAL_SWITCH, 12u, 13u, 4u, 5u);
     switches.items.push_back(one);
 #elif defined LOCK
     SwitchT one;
-    templateSwitch("Portão", constanstsSwitch::familyLock, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    templateSwitch(one, "Portão", constanstsSwitch::familyLock, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
     switches.items.push_back(one);
 #endif
     SPIFFS.end();

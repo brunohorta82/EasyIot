@@ -21,7 +21,6 @@ void initHaDiscovery(const Sensors &sensors)
   }
 }
 
-
 void createHaLock(const SwitchT &sw)
 {
   String objectStr = "";
@@ -52,7 +51,6 @@ void createHaSwitch(const SwitchT &sw)
   object["payload_on"] = constanstsSwitch::payloadOn;
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
-  
 }
 void createHaLight(const SwitchT &sw)
 {
@@ -69,7 +67,6 @@ void createHaLight(const SwitchT &sw)
   object["payload_off"] = constanstsSwitch::payloadOff;
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
- 
 }
 void createHaCover(const SwitchT &sw)
 {
@@ -84,7 +81,7 @@ void createHaCover(const SwitchT &sw)
   object["availability_topic"] = getAvailableTopic();
   object["payload_open"] = constanstsSwitch::payloadOpen;
   object["payload_close"] = constanstsSwitch::payloadClose;
-  object["payload_stop"] = constanstsSwitch::payloadStateStop;
+  object["payload_stop"] = constanstsSwitch::payloadStop;
   object["device_class"] = "blind";
   object["position_open"] = 100;
   object["position_closed"] = 0;
@@ -108,44 +105,44 @@ void addToHaDiscovery(const SensorT &s)
   case DHT_11:
   case DHT_21:
   case DHT_22:
-  object["unit_of_measurement"] = "%";
-  object["device_class"] = "humidity";
-  object["value_template"] = "{{value_json.humidity}}";
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-  objectStr = "";
-  object["unit_of_measurement"] = "ºC";
-  object["device_class"] = "temperature";
-  object["value_template"] = "{{value_json.temperature}}";
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    object["unit_of_measurement"] = "%";
+    object["device_class"] = "humidity";
+    object["value_template"] = "{{value_json.humidity}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    objectStr = "";
+    object["unit_of_measurement"] = "ºC";
+    object["device_class"] = "temperature";
+    object["value_template"] = "{{value_json.temperature}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
-  object["unit_of_measurement"] = "ºC";
-  object["device_class"] = "temperature";
-  object["value_template"] = "{{value_json.temperature}}";
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    object["unit_of_measurement"] = "ºC";
+    object["device_class"] = "temperature";
+    object["value_template"] = "{{value_json.temperature}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case LDR:
-  object["unit_of_measurement"] = "lux";
-  object["device_class"] = "illuminance";
-  object["value_template"] = "{{value_json.illuminance}}";
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/I" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    object["unit_of_measurement"] = "lux";
+    object["device_class"] = "illuminance";
+    object["value_template"] = "{{value_json.illuminance}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/I" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PIR:
   case RCWL_0516:
-  object["device_class"] = "occupancy";
-  object["value_template"] = "{{value_json.binary_state}}";
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OC" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-  break;
+    object["device_class"] = "occupancy";
+    object["value_template"] = "{{value_json.binary_state}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OC" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    break;
   case REED_SWITCH:
-  object["device_class"] = "opening";
-  object["value_template"] = "{{value_json.binary_state}}";
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    object["device_class"] = "opening";
+    object["value_template"] = "{{value_json.binary_state}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
 
   default:
@@ -181,7 +178,7 @@ void addToHaDiscovery(const SwitchT &sw)
   {
     createHaLock(sw);
   }
-  
+
   Log.notice("%s RELOAD HA SWITCH DISCOVERY OK" CR, tags::discovery);
 }
 
