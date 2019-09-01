@@ -34,6 +34,7 @@ function buildSensorTemplate() {
         "primaryGpio": 99,
         "type": 65,
         "mqttRetain": true,
+        "haSupport": true,
         "mqttStateTopic": "../state",
         "delayRead": 2000
     };
@@ -183,15 +184,18 @@ var WORDS_PT = {
 };
 
 function loadsLanguage(lang) {
+    if(lang){
+        window.navigator.language.startsWith("en") ?   lang = "EN" :  lang = "PT";
+    }
     localStorage.setItem('lang', lang);
     $('span[class^="lang"]').each(function () {
         var langVar = (this.className).replace('lang-', '');
-        var text = window["WORDS_" + lang][langVar];
+        var text = window['WORDS_' + lang][langVar];
         $(this).text(text);
     });
     $('option[class^="lang"]').each(function () {
         var langVar = (this.className).replace('lang-', '');
-        var text = window["WORDS_" + lang][langVar];
+        var text = window['WORDS_' + lang][langVar];
         if (!text) {
             text = langVar;
         }
@@ -413,14 +417,19 @@ function applyTypeControl(id) {
 function applySensorRequiredGpio(id) {
     if ($('#s_type_' + id).val() != "70") {
         hide("s_secondaryGpioRow_" + id);
+        hide("s_tertiaryGpioRow_" + id);
         setOptionOnSelect('s_secondaryGpio_' + id, 99);
+        setOptionOnSelect('s_tertiaryGpio_' + id, 99);
     } else {
         show("s_secondaryGpioRow_" + id);
+        show("s_tertiaryGpioRow_" + id);
     }
 }
 
 function buildSensor(obj) {
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
+    let checkedHaSupport = obj.haSupport ? "checked" : "";
+    let checkedEmoncmsSupport = obj.emoncmsSupport ? "checked" : "";
     $('#sensors_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
@@ -468,6 +477,12 @@ function buildSensor(obj) {
         '                                <td><select class="form-control select-device" id="s_secondaryGpio_' + obj.id + '">' +
         '                                </select></td>' +
         '                            <tr>' +
+        '                            <tr id="s_tertiaryGpioRow_' + obj.id + '"">' +
+        '                                <td><span class="label-device "><span' +
+        '                                    class="lang-pin-in-c">Pinos Entrada C</span></span></td>' +
+        '                                <td><select class="form-control select-device" id="s_tertiaryGpio_' + obj.id + '">' +
+        '                                </select></td>' +
+        '                            <tr>' +
         '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>' +
         '                            </tr>' +
         '                            <tr>' +
@@ -488,6 +503,13 @@ function buildSensor(obj) {
         '                                    class="lang-seconds">Segundos</span> ' +
         '                                </td>' +
         '                            </tr>' +
+        '                            <tr>' +
+        '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
+        '                                <td style="display: inline-flex">' + '' +
+        '<span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="s_haSupport' + obj.id + '" value="' + obj.haSupport + '">' +
+        '<span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Emoncms</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedEmoncmsSupport + ' type="checkbox" id="s_emoncmsSupport' + obj.id + '" value="' + obj.emoncmsSupport + '"></td>' +
+        '                            </tr>' +
+
         '                            </tbody>' +
         '                        </table>' +
         '                        <div class="box-footer save">' +
@@ -501,8 +523,10 @@ function buildSensor(obj) {
         '            </div>');
     fillGpioSelect('s_primaryGpio_' + obj.id + '');
     fillGpioSelect('s_secondaryGpio_' + obj.id + '');
+    fillGpioSelect('s_tertiaryGpio_' + obj.id + '');
     setOptionOnSelect('s_primaryGpio_' + obj.id, obj.primaryGpio);
     setOptionOnSelect('s_secondaryGpio_' + obj.id, obj.secondaryGpio);
+    setOptionOnSelect('s_tertiaryGpio_' + obj.id, obj.tertiaryGpio);
     setOptionOnSelect('s_type_' + obj.id, obj.type);
     applySensorRequiredGpio(obj.id);
     loadsLanguage(localStorage.getItem('lang'));
@@ -511,7 +535,7 @@ function buildSensor(obj) {
 function updateSensorReadings(json) {
     Object.keys(json).forEach(function (key) {
         if ($('#' + key).length > 0) {
-            $("#"+key+"_value").text(json[key]);
+            $("#" + key + "_value").text(json[key]);
         } else {
             $('#readings').append('  <div id="' + key + '" style="margin-right: 10px; margin-left: 10px">' +
                 '                <div' +
@@ -735,8 +759,11 @@ function saveSensor(id) {
         "name": $('#s_name_' + id).val(),
         "primaryGpio": parseInt($('#s_primaryGpio_' + id).val()),
         "secondaryGpio": parseInt($('#s_secondaryGpio_' + id).val()),
+        "tertiaryGpio": parseInt($('#s_tertiaryGpio_' + id).val()),
         "type": parseInt($('#s_type_' + id).val()),
         "mqttRetain": document.getElementById('s_mqttRetain_' + id).checked,
+        "haSupport": document.getElementById('s_haSupport' + id).checked,
+        "emoncmsSupport": document.getElementById('s_emoncmsSupport' + id).checked,
         "delayRead": parseInt($('#s_delayRead_' + id).val()) * 1000,
 
     };
@@ -815,22 +842,7 @@ function saveSwitch(id) {
 }
 
 $(document).ready(function () {
-    if (!!window.EventSource) {
-        let source = new EventSource(endpoint.baseUrl + '/events');
-        source.addEventListener('states', function (e) {
-            let json = JSON.parse(e.data);
-            let state = json.state == "OFF" ? "on" : json.state.toLowerCase();
-            $("#btn_" + state + "_" + json.id).removeClass("ON");
-            $("#btn_" + state + "_" + json.id).removeClass("OPEN");
-            $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
-            $("#btn_" + state + "_" + json.id).addClass(json.state);
-        }, false);
-        source.addEventListener('sensors', function (e) {
-            let json = JSON.parse(e.data);
-            updateSensorReadings(json);
-        }, false);
 
-    }
     let lang = localStorage.getItem('lang');
     if (lang) {
         loadsLanguage(lang);
@@ -850,7 +862,22 @@ $(document).ready(function () {
     systemStatus();
     toggleActive("node");
     setInterval(systemStatus, 15000);
+    if (!!window.EventSource) {
+        let source = new EventSource(endpoint.baseUrl + '/events');
+        source.addEventListener('states', function (e) {
+            let json = JSON.parse(e.data);
+            let state = json.state == "OFF" ? "on" : json.state.toLowerCase();
+            $("#btn_" + state + "_" + json.id).removeClass("ON");
+            $("#btn_" + state + "_" + json.id).removeClass("OPEN");
+            $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
+            $("#btn_" + state + "_" + json.id).addClass(json.state);
+        }, false);
+        source.addEventListener('sensors', function (e) {
+            let json = JSON.parse(e.data);
+            updateSensorReadings(json);
+        }, false);
 
+    }
 
 });
 

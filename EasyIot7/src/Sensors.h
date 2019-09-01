@@ -34,11 +34,12 @@ struct SensorT
   char mqttPayload[128];
   bool mqttRetain = true;
   bool haSupport = true;
-  bool emomcmsSupport = false;
+  bool emoncmsSupport = false;
 
   //INPUT GPIO
   unsigned int primaryGpio;
   unsigned int secondaryGpio;
+  unsigned int tertiaryGpio;
   bool pullup; //USE INTERNAL RESISTOR
 
   //TEMPERATURE AND HUMIDITY SENSORS
@@ -46,7 +47,6 @@ struct SensorT
   DallasTemperature *dallas;
 
   PZEM004T *pzem;
-  bool detectCurrentDirection;
   unsigned long delayRead = 0ul;
   unsigned long lastRead = 0ul;
 

@@ -7,8 +7,7 @@
 
 void publishOnEmoncms(SensorT &sensor, String &readings)
 {
-    sensor.emomcmsSupport = true;
-    if (!sensor.emomcmsSupport)
+    if (!sensor.emoncmsSupport)
         return;
     if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().emoncmsServer) == 0 || strlen(getAtualConfig().emoncmsApikey) == 0)
         return;

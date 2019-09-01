@@ -51,6 +51,7 @@ void Sensors::load(File &file)
       break;
     case PZEM_004T:
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
+      configPIN(item.tertiaryGpio, INPUT);
       break;
     }
   }
@@ -74,15 +75,15 @@ void SensorT::load(File &file)
   file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
-  file.read((uint8_t *)&emomcmsSupport, sizeof(emomcmsSupport));
+  file.read((uint8_t *)&emoncmsSupport, sizeof(emoncmsSupport));
   file.read((uint8_t *)&primaryGpio, sizeof(primaryGpio));
   file.read((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
+  file.read((uint8_t *)&tertiaryGpio, sizeof(tertiaryGpio));
   file.read((uint8_t *)&pullup, sizeof(pullup));
   file.read((uint8_t *)&delayRead, sizeof(delayRead));
   file.read((uint8_t *)&lastBinaryState, sizeof(lastBinaryState));
   file.read((uint8_t *)payloadOff, sizeof(payloadOff));
   file.read((uint8_t *)payloadOn, sizeof(payloadOn));
-  file.write((uint8_t *)&detectCurrentDirection, sizeof(detectCurrentDirection));
 }
 void SensorT::save(File &file) const
 {
@@ -95,15 +96,15 @@ void SensorT::save(File &file) const
   file.write((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.write((uint8_t *)&mqttRetain, sizeof(mqttRetain));
   file.write((uint8_t *)&haSupport, sizeof(haSupport));
-  file.write((uint8_t *)&emomcmsSupport, sizeof(emomcmsSupport));
+  file.write((uint8_t *)&emoncmsSupport, sizeof(emoncmsSupport));
   file.write((uint8_t *)&primaryGpio, sizeof(primaryGpio));
   file.write((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
+  file.write((uint8_t *)&tertiaryGpio, sizeof(tertiaryGpio));
   file.write((uint8_t *)&pullup, sizeof(pullup));
   file.write((uint8_t *)&delayRead, sizeof(delayRead));
   file.write((uint8_t *)&lastBinaryState, sizeof(lastBinaryState));
   file.write((uint8_t *)payloadOff, sizeof(payloadOff));
   file.write((uint8_t *)payloadOn, sizeof(payloadOn));
-  file.write((uint8_t *)&detectCurrentDirection, sizeof(detectCurrentDirection));
 }
 
 void load(Sensors &sensors)
@@ -195,6 +196,7 @@ size_t Sensors::serializeToJson(Print &output)
     sdoc["mqttRetain"] = ss.mqttRetain;
     sdoc["primaryGpio"] = ss.primaryGpio;
     sdoc["secondaryGpio"] = ss.secondaryGpio;
+    sdoc["tertiaryGpio"] = ss.tertiaryGpio;
     sdoc["pullup"] = ss.pullup;
     sdoc["delayRead"] = ss.delayRead;
     sdoc["lastBinaryState"] = ss.lastBinaryState;
@@ -202,8 +204,8 @@ size_t Sensors::serializeToJson(Print &output)
     sdoc["humidity"] = ss.humidity;
     sdoc["payloadOff"] = ss.payloadOff;
     sdoc["payloadOn"] = ss.payloadOn;
-    sdoc["detectCurrentDirection"] = ss.detectCurrentDirection;
     sdoc["haSupport"] = ss.haSupport;
+    sdoc["emoncmsSupport"] = ss.emoncmsSupport;
   }
   return serializeJson(doc, output);
 }
@@ -248,8 +250,11 @@ void SensorT::updateFromJson(JsonObject doc)
   dallas = NULL;
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
   secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
+  tertiaryGpio = doc["tertiaryGpio"] | constantsConfig::noGPIO;
   delayRead = doc["delayRead"];
   mqttRetain = doc["mqttRetain"] | true;
+  haSupport = doc["haSupport"] | true;
+  emoncmsSupport = doc["emoncmsSupport"] | false;
   strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
   strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
   strlcpy(mqttPayload, "", sizeof(mqttPayload));
@@ -394,6 +399,13 @@ void loop(Sensors &sensors)
         float i = ss.pzem->current(ip);
 
         float p = ss.pzem->power(ip);
+        if (ss.tertiaryGpio != constantsConfig::noGPIO)
+        {
+          if (digitalRead(ss.tertiaryGpio))
+          {
+            p = p * -1;
+          }
+        }
 
         if (v < 0.0)
         {
