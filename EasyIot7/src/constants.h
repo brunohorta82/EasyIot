@@ -26,6 +26,7 @@ constexpr const char *sensors{"[SENSORS]"};
 constexpr const char *switches{"[SWITCHES]"};
 constexpr const char *alexa{"[ALEXA]"};
 constexpr const char *webserver{"[WEBSERVER]"};
+constexpr const char *emoncms{"[EMONCMS]"};
 } // namespace tags
 namespace configFilenames
 {

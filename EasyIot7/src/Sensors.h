@@ -4,9 +4,10 @@
 #include <Arduino.h>
 #include "FS.h"
 #include <ArduinoJson.h>
-#include <DallasTemperature.h>
-#include <dht_nonblocking.h>
 
+class PZEM004T;
+class DHT_nonblocking;
+class DallasTemperature;
 enum SensorType
 {
   UNDEFINED = -1,
@@ -15,9 +16,10 @@ enum SensorType
   LDR = 21,
   DS18B20 = 90,
   REED_SWITCH = 56,
-  DHT_11 = DHT_TYPE_11, //0
-  DHT_21 = DHT_TYPE_21, //1
-  DHT_22 = DHT_TYPE_22  //2
+  DHT_11 = 0,
+  DHT_21 = 1,
+  DHT_22 = 2,
+  PZEM_004T = 70
 };
 
 struct SensorT
@@ -36,12 +38,15 @@ struct SensorT
 
   //INPUT GPIO
   unsigned int primaryGpio;
+  unsigned int secondaryGpio;
   bool pullup; //USE INTERNAL RESISTOR
 
   //TEMPERATURE AND HUMIDITY SENSORS
   DHT_nonblocking *dht;
   DallasTemperature *dallas;
 
+  PZEM004T *pzem;
+  bool detectCurrentDirection;
   unsigned long delayRead = 0ul;
   unsigned long lastRead = 0ul;
 

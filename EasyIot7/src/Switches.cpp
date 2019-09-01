@@ -362,18 +362,40 @@ void load(Switches &switches)
     switches.items.push_back(one);
     templateSwitch(two, "Interruptor 2", constanstsSwitch::familyLight, SWITCH, 13u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
     switches.items.push_back(two);
+#elif defined FOUR_LOCK
+    SwitchT one;
+    SwitchT two;
+    SwitchT three;
+    SwitchT four;
+    templateSwitch(one, "Porta 1", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 14u, constantsConfig::noGPIO);
+    templateSwitch(two, "Porta 2", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    templateSwitch(three, "Porta 3", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 12u, constantsConfig::noGPIO);
+    templateSwitch(four, "Porta 4", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
+    
+    one.autoStateDelay = 1000; //1 second
+    strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
+    two.autoStateDelay = 1000; //1 second
+    strlcpy(two.autoStateValue, constanstsSwitch::payloadOff, sizeof(two.autoStateValue));
+    three.autoStateDelay = 1000; //1 second
+    strlcpy(three.autoStateValue, constanstsSwitch::payloadOff, sizeof(three.autoStateValue));
+    four.autoStateDelay = 1000; //1 second
+    strlcpy(four.autoStateValue, constanstsSwitch::payloadOff, sizeof(four.autoStateValue));
+    switches.items.push_back(one);
+    switches.items.push_back(two);
+    switches.items.push_back(three);
+    switches.items.push_back(four);
 #elif defined VMC
     SwitchT one;
     SwitchT two;
 
-    templateSwitch(one, "VMC", constanstsSwitch::familySwitch, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    templateSwitch(one, "VMC", constanstsSwitch::familySwitch, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
     one.autoStateDelay = 45 * 60 * 1000; //45 minutes
-    one.mode = PUSH;
+    
     strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
 
-    templateSwitch(two, "BOMBA", constanstsSwitch::familySwitch, SWITCH, 12u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
+    templateSwitch(two, "BOMBA", constanstsSwitch::familySwitch, PUSH, 12u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
     two.autoStateDelay = 3 * 60 * 1000; //45 minutes
-    two.mode = PUSH;
+    
     strlcpy(two.autoStateValue, constanstsSwitch::payloadOff, sizeof(two.autoStateValue));
 
     switches.items.push_back(one);

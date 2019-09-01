@@ -170,6 +170,9 @@ size_t Config::serializeToJson(Print &output)
   doc["mac"] = WiFi.softAPmacAddress();
   doc["apiUser"] = apiUser;
   doc["apiPassword"] = apiPassword;
+  doc["emoncmsServer"] = emoncmsServer;
+  doc["emoncmsPath"] = emoncmsPath;
+  doc["emoncmsApikey"] = emoncmsApikey;
   return serializeJson(doc, output);
 }
 
@@ -198,6 +201,9 @@ void Config::save(File &file) const
   file.write((uint8_t *)chipId, sizeof(chipId));
   file.write((uint8_t *)apiUser, sizeof(apiUser));
   file.write((uint8_t *)apiPassword, sizeof(apiPassword));
+  file.write((uint8_t *)emoncmsServer, sizeof(emoncmsServer));
+  file.write((uint8_t *)emoncmsPath, sizeof(emoncmsPath));
+  file.write((uint8_t *)emoncmsApikey, sizeof(emoncmsApikey));
 }
 void Config::load(File &file)
 {
@@ -224,6 +230,9 @@ void Config::load(File &file)
   file.read((uint8_t *)chipId, sizeof(chipId));
   file.read((uint8_t *)apiUser, sizeof(apiUser));
   file.read((uint8_t *)apiPassword, sizeof(apiPassword));
+  file.read((uint8_t *)emoncmsServer, sizeof(emoncmsServer));
+  file.read((uint8_t *)emoncmsPath, sizeof(emoncmsPath));
+  file.read((uint8_t *)emoncmsApikey, sizeof(emoncmsApikey));
   if (firmware < VERSION)
   {
     Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
@@ -290,6 +299,23 @@ Config &Config::updateFromJson(JsonObject doc)
   strlcpy(wifiSSID2, doc["wifiSSID2"] | "", sizeof(wifiSSID2));
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
   strlcpy(wifiSecret2, doc["wifiSecret2"] | "", sizeof(wifiSecret2));
+  String emoncmsServerStr = doc["emoncmsServer"] | "";
+  emoncmsServerStr.replace("https", "http");
+
+  while (emoncmsServerStr.endsWith("/"))
+  {
+
+    emoncmsServerStr.remove(emoncmsServerStr.lastIndexOf("/"));
+  }
+  strlcpy(emoncmsServer, emoncmsServerStr.c_str(), sizeof(emoncmsServer));
+  String emoncmsPathStr = doc["emoncmsPath"] | "";
+  while (emoncmsPathStr.endsWith("/"))
+  {
+    emoncmsPathStr.remove(emoncmsPathStr.lastIndexOf("/"));
+  }
+  strlcpy(emoncmsPath, emoncmsPathStr.c_str(), sizeof(emoncmsPath));
+
+  strlcpy(emoncmsApikey, doc["emoncmsApikey"] | "", sizeof(emoncmsApikey));
   strlcpy(wifiIp, doc["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, doc["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, doc["wifiGw"] | "", sizeof(wifiGw));

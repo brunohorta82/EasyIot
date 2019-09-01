@@ -4,6 +4,13 @@
 #include "WebServer.h"
 #include "Config.h"
 #include "Mqtt.h"
+#include <DallasTemperature.h>
+#include <dht_nonblocking.h>
+#include <PZEM004T.h>
+#include <DallasTemperature.h>
+#include <dht_nonblocking.h>
+#include <Emoncms.h>
+
 struct Sensors &getAtualSensorsConfig()
 {
   static Sensors sensors;
@@ -42,6 +49,9 @@ void Sensors::load(File &file)
     case DS18B20:
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
       break;
+    case PZEM_004T:
+      item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
+      break;
     }
   }
 }
@@ -66,11 +76,13 @@ void SensorT::load(File &file)
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
   file.read((uint8_t *)&emomcmsSupport, sizeof(emomcmsSupport));
   file.read((uint8_t *)&primaryGpio, sizeof(primaryGpio));
+  file.read((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
   file.read((uint8_t *)&pullup, sizeof(pullup));
   file.read((uint8_t *)&delayRead, sizeof(delayRead));
   file.read((uint8_t *)&lastBinaryState, sizeof(lastBinaryState));
   file.read((uint8_t *)payloadOff, sizeof(payloadOff));
   file.read((uint8_t *)payloadOn, sizeof(payloadOn));
+  file.write((uint8_t *)&detectCurrentDirection, sizeof(detectCurrentDirection));
 }
 void SensorT::save(File &file) const
 {
@@ -85,11 +97,13 @@ void SensorT::save(File &file) const
   file.write((uint8_t *)&haSupport, sizeof(haSupport));
   file.write((uint8_t *)&emomcmsSupport, sizeof(emomcmsSupport));
   file.write((uint8_t *)&primaryGpio, sizeof(primaryGpio));
+  file.write((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
   file.write((uint8_t *)&pullup, sizeof(pullup));
   file.write((uint8_t *)&delayRead, sizeof(delayRead));
   file.write((uint8_t *)&lastBinaryState, sizeof(lastBinaryState));
   file.write((uint8_t *)payloadOff, sizeof(payloadOff));
   file.write((uint8_t *)payloadOn, sizeof(payloadOn));
+  file.write((uint8_t *)&detectCurrentDirection, sizeof(detectCurrentDirection));
 }
 
 void load(Sensors &sensors)
@@ -180,6 +194,7 @@ size_t Sensors::serializeToJson(Print &output)
     sdoc["mqttStateTopic"] = ss.mqttStateTopic;
     sdoc["mqttRetain"] = ss.mqttRetain;
     sdoc["primaryGpio"] = ss.primaryGpio;
+    sdoc["secondaryGpio"] = ss.secondaryGpio;
     sdoc["pullup"] = ss.pullup;
     sdoc["delayRead"] = ss.delayRead;
     sdoc["lastBinaryState"] = ss.lastBinaryState;
@@ -187,6 +202,7 @@ size_t Sensors::serializeToJson(Print &output)
     sdoc["humidity"] = ss.humidity;
     sdoc["payloadOff"] = ss.payloadOff;
     sdoc["payloadOn"] = ss.payloadOn;
+    sdoc["detectCurrentDirection"] = ss.detectCurrentDirection;
     sdoc["haSupport"] = ss.haSupport;
   }
   return serializeJson(doc, output);
@@ -231,6 +247,7 @@ void SensorT::updateFromJson(JsonObject doc)
   dht = NULL;
   dallas = NULL;
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
+  secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
   delayRead = doc["delayRead"];
   mqttRetain = doc["mqttRetain"] | true;
   strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
@@ -269,6 +286,10 @@ void SensorT::updateFromJson(JsonObject doc)
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
 
     break;
+  case PZEM_004T:
+    pzem = new PZEM004T(primaryGpio, secondaryGpio);
+    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    break;
   }
   String mqttTopic;
   mqttTopic.reserve(sizeof(mqttStateTopic));
@@ -282,7 +303,7 @@ void SensorT::updateFromJson(JsonObject doc)
   doc["id"] = id;
   doc["mqttStateTopic"] = mqttStateTopic;
 }
-
+IPAddress ip(192, 168, 1, 1);
 void loop(Sensors &sensors)
 {
   for (auto &ss : sensors.items)
@@ -302,7 +323,10 @@ void loop(Sensors &sensors)
         ss.lastRead = millis();
         int ldrRaw = analogRead(ss.primaryGpio);
         String analogReadAsString = String(ldrRaw);
-        publishOnMqtt(ss.mqttStateTopic, String("{\"illuminance\":" + analogReadAsString + "}").c_str(), ss.mqttRetain);
+        auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
+        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+        sendToServerEvents("sensors", readings);
+        publishOnEmoncms(ss, readings);
         Log.notice("%s {\"illuminance\": %d }" CR, tags::mqtt, ldrRaw);
       }
     }
@@ -317,7 +341,9 @@ void loop(Sensors &sensors)
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
-        publishOnMqtt(ss.mqttStateTopic, String("{\"binary_state\":" + binaryStateAsString + "}").c_str(), ss.mqttRetain);
+        auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
+        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+        sendToServerEvents("sensors", readings);
         Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
       }
     }
@@ -330,15 +356,15 @@ void loop(Sensors &sensors)
 
       if (ss.dht->measure(&ss.temperature, &ss.humidity) == true)
       {
-
         if (ss.lastRead + ss.delayRead < millis())
         {
           ss.lastRead = millis();
           String temperatureAsString = String(ss.temperature);
           String humidityAsString = String(ss.humidity);
-          publishOnMqtt(ss.mqttStateTopic, String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}").c_str(), ss.mqttRetain);
-
-          Log.notice("%s {\"temperature\": %F ,\"humidity\": %F" CR, tags::sensors, ss.temperature, ss.humidity);
+          auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
+          publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+          sendToServerEvents("sensors", readings);
+          Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
         }
       }
     }
@@ -352,11 +378,37 @@ void loop(Sensors &sensors)
         ss.lastRead = millis();
         ss.temperature = ss.dallas->getTempCByIndex(0);
         String temperatureAsString = String(ss.temperature);
-        publishOnMqtt(ss.mqttStateTopic, String("{\"temperature\":" + temperatureAsString + "}").c_str(), ss.mqttRetain);
-        Log.notice("%s {\"temperature\": %F " CR, tags::sensors, ss.temperature);
+        auto readings = String("{\"temperature\":" + temperatureAsString + "}");
+        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+        sendToServerEvents("sensors", readings);
+        Log.notice("%s {\"temperature\": %F }" CR, tags::sensors, ss.temperature);
       }
     }
     break;
+    case PZEM_004T:
+      if (ss.lastRead + ss.delayRead < millis())
+      {
+        ss.lastRead = millis();
+        float v = ss.pzem->voltage(ip);
+
+        float i = ss.pzem->current(ip);
+
+        float p = ss.pzem->power(ip);
+
+        if (v < 0.0)
+        {
+          Log.notice("%s PZEM ERROR" CR, tags::sensors);
+        }
+        else
+        {
+          auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + "}");
+          publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+          sendToServerEvents("sensors", readings);
+          publishOnEmoncms(ss, readings);
+          Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F  }" CR, tags::sensors, v, i, p);
+        }
+      }
+      break;
     }
   }
 }

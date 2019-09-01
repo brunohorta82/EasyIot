@@ -31,7 +31,10 @@ struct Config
   double firmware;
   char apiUser[32];
   char apiPassword[24];
-
+  char emoncmsServer[80];
+  char emoncmsPath[20];
+  char emoncmsApikey[80];
+  char emoncmsFingerprint[100];
   Config &updateFromJson(JsonObject doc);
   void save(File &file) const;
   void load(File &file);
