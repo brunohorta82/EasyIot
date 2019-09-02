@@ -7,6 +7,8 @@ void initHaDiscovery(const Switches &switches)
 {
   for (const auto &sw : switches.items)
   {
+    if (!sw.haSupport)
+      continue;
     addToHaDiscovery(sw);
     publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, sw.mqttRetain);
   }
@@ -16,6 +18,8 @@ void initHaDiscovery(const Sensors &sensors)
 {
   for (const auto &ss : sensors.items)
   {
+    if (!ss.haSupport)
+      continue;
     addToHaDiscovery(ss);
     publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, ss.mqttRetain);
   }
@@ -23,6 +27,8 @@ void initHaDiscovery(const Sensors &sensors)
 
 void createHaLock(const SwitchT &sw)
 {
+  if (!sw.haSupport)
+    return;
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(8) + 300;
   DynamicJsonDocument doc(capacity);
@@ -39,6 +45,8 @@ void createHaLock(const SwitchT &sw)
 }
 void createHaSwitch(const SwitchT &sw)
 {
+  if (!sw.haSupport)
+    return;
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
   DynamicJsonDocument doc(capacity);
@@ -54,6 +62,8 @@ void createHaSwitch(const SwitchT &sw)
 }
 void createHaLight(const SwitchT &sw)
 {
+  if (!sw.haSupport)
+    return;
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
   DynamicJsonDocument doc(capacity);
@@ -70,6 +80,8 @@ void createHaLight(const SwitchT &sw)
 }
 void createHaCover(const SwitchT &sw)
 {
+  if (!sw.haSupport)
+    return;
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
   DynamicJsonDocument doc(capacity);
@@ -93,6 +105,8 @@ void createHaCover(const SwitchT &sw)
 
 void addToHaDiscovery(const SensorT &s)
 {
+  if (!s.haSupport)
+    return;
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
   DynamicJsonDocument doc(capacity);
@@ -151,6 +165,8 @@ void addToHaDiscovery(const SensorT &s)
 }
 void addToHaDiscovery(const SwitchT &sw)
 {
+  if (!sw.haSupport)
+    return;
   if (strlen(getAtualConfig().mqttIpDns) == 0)
   {
     Log.warning("%s Setup required to publish discovery messages" CR, tags::mqtt);

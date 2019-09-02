@@ -26,7 +26,6 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     {
         initHaDiscovery(getAtualSwitchesConfig());
         initHaDiscovery(getAtualSensorsConfig());
-        
     }
     else
     {
@@ -72,16 +71,17 @@ boolean reconnect()
         return false;
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 
-    if (mqttClient.connect(getAtualConfig().chipId, String(getAtualConfig().mqttUsername).c_str(), String(getAtualConfig().mqttPassword).c_str(), getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, false))
+    if (mqttClient.connect(getAtualConfig().chipId, String(getAtualConfig().mqttUsername).c_str(), String(getAtualConfig().mqttPassword).c_str(), getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, true))
     {
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
         publishOnMqtt(getConfigStatusTopic().c_str(), "{\"firmware\":7.0}", true); //TODO generate simple config status
         subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
         //Init Switches Subscritions and publish de current state
-        for(auto &sw: getAtualSwitchesConfig().items){
+        for (auto &sw : getAtualSwitchesConfig().items)
+        {
             subscribeOnMqtt(sw.mqttCommandTopic);
-            publishOnMqtt(sw.mqttStateTopic,sw.mqttPayload,sw.mqttRetain);
+            publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, sw.mqttRetain);
         }
     }
 
@@ -99,7 +99,7 @@ void setupMQTT()
     {
         mqttClient.disconnect();
     }
-    
+
     mqttClient.setServer(getAtualConfig().mqttIpDns, getAtualConfig().mqttPort);
     mqttClient.setCallback(callbackMqtt);
 }

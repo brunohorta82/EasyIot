@@ -4,7 +4,7 @@
 #include "constants.h"
 #include "Config.h"
 #include "Mqtt.h"
-
+#include "WebRequests.h"
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 
 struct Switches &getAtualSwitchesConfig()
@@ -78,6 +78,9 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["statePoolEnd"] = sw.statePoolEnd;
     sdoc["mqttPayload"] = sw.mqttPayload;
     sdoc["stateControl"] = sw.stateControl;
+
+    sdoc["alexaSupport"] = sw.alexaSupport;
+    sdoc["haSupport"] = sw.haSupport;
   }
   return serializeJson(doc, output);
 }
@@ -230,52 +233,7 @@ void remove(Switches &switches, const char *id)
     save(switches);
 }
 
-void SwitchT::updateFromJson(JsonObject doc)
-{
-  templateSwitch(*this, doc["name"], doc["family"], static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)), doc["primaryGpio"] | constantsConfig::noGPIO, doc["secondaryGpio"] | constantsConfig::noGPIO, doc["primaryGpioControl"] | constantsConfig::noGPIO, doc["secondaryGpioControl"] | constantsConfig::noGPIO, doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul, doc["autoStateValue"] | "", static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)), doc["timeBetweenStates"] | 0ul);
-  doc["id"] = id;
-  doc["stateControl"] = stateControl;
-  doc["mqttCommandTopic"] = mqttCommandTopic;
-  doc["mqttStateTopic"] = mqttStateTopic;
-  if (strcmp(family, constanstsSwitch::familyCover) == 0)
-  {
-    doc["mqttPositionCommandTopic"] = mqttPositionCommandTopic;
-    doc["mqttPositionStateTopic"] = mqttPositionStateTopic;
-  }
-}
-void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
-{
-  save(switches);
-  removeFromHaDiscovery(sw);
-  removeSwitchFromAlexa(sw.name);
-  delay(10);
-  if (sw.alexaSupport)
-  {
-    addSwitchToAlexa(sw.name);
-  }
-  if (sw.haSupport)
-  {
-    addToHaDiscovery(sw);
-  }
-}
-void update(Switches &switches, const String &id, JsonObject doc)
-{
-  for (auto &sw : switches.items)
-  {
-    if (strcmp(id.c_str(), sw.id) == 0)
-    {
-      sw.updateFromJson(doc);
-      saveAndRefreshServices(switches, sw);
-      return;
-    }
-  }
-  SwitchT newSw;
-  newSw.updateFromJson(doc);
-  switches.items.push_back(newSw);
-  saveAndRefreshServices(switches, newSw);
-}
-
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -288,8 +246,8 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   strlcpy(sw.autoStateValue, autoStateValue.c_str(), sizeof(sw.autoStateValue));
   sw.typeControl = typecontrol;
   sw.mode = mode;
-  sw.haSupport = true;
-  sw.alexaSupport = true;
+  sw.haSupport = haSupport;
+  sw.alexaSupport = alexaSupport;
   sw.pullup = true;
   sw.mqttRetain = mqttRetaint;
   sw.inverted = false;
@@ -340,6 +298,51 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   strlcpy(sw.mqttPayload, sw.stateControl, sizeof(sw.mqttPayload));
   sw.lastTimeChange = 0ul;
 }
+void SwitchT::updateFromJson(JsonObject doc)
+{
+  templateSwitch(*this, doc["name"], doc["family"], static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)), doc["primaryGpio"] | constantsConfig::noGPIO, doc["secondaryGpio"] | constantsConfig::noGPIO, doc["primaryGpioControl"] | constantsConfig::noGPIO, doc["secondaryGpioControl"] | constantsConfig::noGPIO, doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul, doc["autoStateValue"] | "", static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)), doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true, doc["alexaSupport"] | true);
+  doc["id"] = id;
+  doc["stateControl"] = stateControl;
+  doc["mqttCommandTopic"] = mqttCommandTopic;
+  doc["mqttStateTopic"] = mqttStateTopic;
+  if (strcmp(family, constanstsSwitch::familyCover) == 0)
+  {
+    doc["mqttPositionCommandTopic"] = mqttPositionCommandTopic;
+    doc["mqttPositionStateTopic"] = mqttPositionStateTopic;
+  }
+}
+void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
+{
+  save(switches);
+  removeFromHaDiscovery(sw);
+  removeSwitchFromAlexa(sw.name);
+  delay(10);
+  if (sw.alexaSupport)
+  {
+    addSwitchToAlexa(sw.name);
+  }
+  if (sw.haSupport)
+  {
+    addToHaDiscovery(sw);
+  }
+}
+void update(Switches &switches, const String &id, JsonObject doc)
+{
+  for (auto &sw : switches.items)
+  {
+    if (strcmp(id.c_str(), sw.id) == 0)
+    {
+      sw.updateFromJson(doc);
+      saveAndRefreshServices(switches, sw);
+      return;
+    }
+  }
+  SwitchT newSw;
+  newSw.updateFromJson(doc);
+  switches.items.push_back(newSw);
+  saveAndRefreshServices(switches, newSw);
+}
+
 void load(Switches &switches)
 {
   if (!SPIFFS.begin())
@@ -371,7 +374,7 @@ void load(Switches &switches)
     templateSwitch(two, "Porta 2", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
     templateSwitch(three, "Porta 3", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 12u, constantsConfig::noGPIO);
     templateSwitch(four, "Porta 4", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
-    
+
     one.autoStateDelay = 1000; //1 second
     strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
     two.autoStateDelay = 1000; //1 second
@@ -390,12 +393,12 @@ void load(Switches &switches)
 
     templateSwitch(one, "VMC", constanstsSwitch::familySwitch, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
     one.autoStateDelay = 45 * 60 * 1000; //45 minutes
-    
+
     strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
 
     templateSwitch(two, "BOMBA", constanstsSwitch::familySwitch, PUSH, 12u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
     two.autoStateDelay = 3 * 60 * 1000; //45 minutes
-    
+
     strlcpy(two.autoStateValue, constanstsSwitch::payloadOff, sizeof(two.autoStateValue));
 
     switches.items.push_back(one);
@@ -460,6 +463,7 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
 
 void SwitchT::changeState(const char *state)
 {
+  controlMasterSwitch("192.168.1.142", "10268892interruptor1", state);
   bool dirty = strcmp(state, stateControl);
   Log.notice("%s Name:      %s" CR, tags::switches, name);
   Log.notice("%s State:     %s" CR, tags::switches, state);

@@ -9,7 +9,7 @@
 #include <PZEM004T.h>
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
-#include <Emoncms.h>
+#include "WebRequests.h"
 
 struct Sensors &getAtualSensorsConfig()
 {

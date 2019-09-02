@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.177"
+    baseUrl: "http://192.168.1.142"
 };
 var switches = [];
 var sensors = [];
@@ -115,6 +115,7 @@ var WORDS_EN = {
     "unlock": "Unlocked",
     "open": "Open",
     "close": "Closed",
+    "mqtt":"MQTT",
     "stop": "Stop",
     "time": "Time",
     "17": "A0"
@@ -163,6 +164,7 @@ var WORDS_PT = {
     "dual-normal": "Duplo Pressão",
     "mode": "Mode",
     "relay-mqtt": "Relé / MQTT",
+    "mqtt":"MQTT",
     "control": "Saída",
     "pin-in-a": "Pino Entrada a",
     "pin-in-b": "Pino Entrada b",
@@ -184,7 +186,7 @@ var WORDS_PT = {
 };
 
 function loadsLanguage(lang) {
-    if(lang){
+    if(lang === null){
         window.navigator.language.startsWith("en") ?   lang = "EN" :  lang = "PT";
     }
     localStorage.setItem('lang', lang);
@@ -557,6 +559,9 @@ function buildSwitch(obj) {
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
     let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
+    let checkedHaSupport = obj.haSupport ? "checked" : "";
+    let checkedAlexaSupport = obj.alexaSupport ? "checked" : "";
+
     $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
@@ -690,7 +695,12 @@ function buildSwitch(obj) {
         '                                </select>' +
         '                                </td>' +
         '                            </tr>' +
-
+        '                            <tr>' +
+        '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
+        '                                <td style="display: inline-flex">' + '' +
+        '<span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="haSupport' + obj.id + '" value="' + obj.haSupport + '">' +
+        '<span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Alexa</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedAlexaSupport + ' type="checkbox" id="alexaSupport' + obj.id + '" value="' + obj.alexaSupport + '"></td>' +
+        '                            </tr>' +
         '                            </tbody>' +
         '                        </table>' +
         '                        <div class="box-footer save">' +
@@ -1044,6 +1054,8 @@ function buildSwitchTemplate() {
         "pullup": false,
         "mqttRetain": false,
         "inverted": false,
+        "haSupport": true,
+        "alexaSupport": true,
         "mqttCommandTopic": "../set",
         "mqttStateTopic": "../state",
         "mqttPositionCommandTopic": "../setposition",

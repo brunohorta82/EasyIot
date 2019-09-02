@@ -256,6 +256,8 @@ void loadStoredConfiguration(Config &config)
     strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
     strlcpy(config.apiUser, constantsConfig::apiUser, sizeof(config.apiUser));
     strlcpy(config.apiPassword, constantsConfig::apiPassword, sizeof(config.apiPassword));
+    strlcpy(config.wifiSSID, "VOID SOFTWARE", sizeof(config.wifiSSID));
+    strlcpy(config.wifiSecret, "blackiscool", sizeof(config.wifiSecret));
     config.firmware = VERSION;
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
     SPIFFS.end();
