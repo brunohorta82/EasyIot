@@ -323,6 +323,7 @@ void loop(Sensors &sensors)
       break;
     case LDR:
     {
+
       if (ss.lastRead + ss.delayRead < millis())
       {
         ss.lastRead = millis();

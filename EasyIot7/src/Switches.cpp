@@ -5,8 +5,10 @@
 #include "Config.h"
 #include "Mqtt.h"
 #include "WebRequests.h"
+#include <esp-knx-ip.h>
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
-
+std::vector<SwitchStatePool> webStatesPoolRequest;
+address_t temp_ga = knx.GA_to_address(2, 1, 1);
 struct Switches &getAtualSwitchesConfig()
 {
   static Switches switches;
@@ -182,9 +184,40 @@ void Switches::save(File &file) const
     item.save(file);
   }
 }
+void temp_cb(message_t const &msg, void *arg)
+{
+  switch (msg.ct)
+  {
+  case KNX_CT_WRITE:
+  {
+    String payload;
+    payload.reserve(msg.data_len);
+    for (int i = 1; i < msg.data_len - 1; i++)
+    {
+      if (msg.data[i] == 0)
+        continue;
+      payload.concat((char)msg.data[i]);
+    }
+    Serial.println("KNX_CT_WRITE");
+    payload.trim();
+    Serial.println(payload);
 
+    break;
+  }
+  case KNX_CT_READ:
+  {
+    Serial.println("KNX_CT_READ");
+    knx.answer_14byte_string(msg.received_on, "ON");
+    break;
+  }
+  }
+}
 void Switches::load(File &file)
 {
+  callback_id_t temp_cb_id = knx.callback_register("Read Temperature", temp_cb);
+  knx.callback_assign(temp_cb_id, knx.GA_to_address(2, 1, 1));
+  knx.physical_address_set(knx.PA_to_address(1, 1, 1));
+  knx.start(nullptr);
   auto n_items = items.size();
   file.read((uint8_t *)&n_items, sizeof(n_items));
   items.clear();
@@ -463,7 +496,8 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
 
 void SwitchT::changeState(const char *state)
 {
-  controlMasterSwitch("192.168.1.142", "10268892interruptor1", state);
+  knx.write_14byte_string(temp_ga, state);
+  //  controlMasterSwitch("192.168.187.173", "10268892interruptor1", state);
   bool dirty = strcmp(state, stateControl);
   Log.notice("%s Name:      %s" CR, tags::switches, name);
   Log.notice("%s State:     %s" CR, tags::switches, state);
@@ -680,8 +714,24 @@ boolean positionDone(const SwitchT &sw)
   }
   return false;
 }
+void addStateRequest(const char *id, const char *state)
+{
+  SwitchStatePool st;
+  strlcpy(st.id, id, sizeof(st.id));
+  strlcpy(st.state, state, sizeof(st.state));
+  webStatesPoolRequest.push_back(st);
+}
 void loop(Switches &switches)
 {
+  knx.loop();
+  if (!webStatesPoolRequest.empty())
+  {
+    for (auto &sws : webStatesPoolRequest)
+    {
+      stateSwitchById(switches, sws.id, sws.state);
+    }
+    webStatesPoolRequest.clear();
+  }
   if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
   {
     save(switches);

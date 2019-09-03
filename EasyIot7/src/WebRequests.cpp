@@ -11,18 +11,19 @@ void publishOnEmoncms(SensorT &sensor, String &readings)
         return;
     if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().emoncmsServer) == 0 || strlen(getAtualConfig().emoncmsApikey) == 0)
         return;
-    WiFiClient client;
     HTTPClient http;
     String queryString;
     queryString.concat(getAtualConfig().emoncmsServer);
     queryString.concat(getAtualConfig().emoncmsPath);
     queryString.concat("/input/post.json?node=");
-    queryString.concat(sensor.name);
+    String name = String(sensor.name);
+    normalize(name);
+    queryString.concat(name);
     queryString.concat("&apikey=");
     queryString.concat(getAtualConfig().emoncmsApikey);
     queryString.concat("&json=");
     queryString.concat(readings);
-    if (http.begin(client, queryString))
+    if (http.begin(queryString))
     {
         int httpCode = http.GET();
         if (httpCode < 0)
@@ -41,7 +42,7 @@ void controlMasterSwitch(const char *chipId, const char *switchId, const char *s
 
     if (WiFi.status() != WL_CONNECTED)
         return;
-    WiFiClient client;
+
     HTTPClient http;
     String queryString;
     queryString.concat("http://");
@@ -52,7 +53,7 @@ void controlMasterSwitch(const char *chipId, const char *switchId, const char *s
     queryString.concat("&state=");
     queryString.concat(state); //STATE
     Serial.println(queryString);
-    if (http.begin(client, queryString))
+    if (http.begin(queryString))
     {
         int httpCode = http.GET();
         if (httpCode < 0)

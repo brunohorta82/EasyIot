@@ -7,6 +7,7 @@
 #include "Sensors.h"
 #include <ESP8266httpUpdate.h>
 #include "constants.h"
+#include "WebRequests.h"
 
 void checkInternalRoutines()
 {

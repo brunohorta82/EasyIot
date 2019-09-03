@@ -38,8 +38,8 @@ void loadUI()
     request->send(response);
   });
 
-  server.on("/mqtt.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", mqtt_html, sizeof(mqtt_html));
+  server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
     request->send(response);
@@ -204,7 +204,7 @@ void setupWebserverAsync()
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id") && request->hasArg("state"))
     {
-      stateSwitchById(getAtualSwitchesConfig(), request->arg("id").c_str(), request->arg("state").c_str());
+      addStateRequest(request->arg("id").c_str(), request->arg("state").c_str());
       request->send(200, "application/json", "{\"result\":\"OK\"}");
     }
     else
@@ -257,6 +257,7 @@ void setupWebserverAsync()
       request->send(404);
     }
   });
+
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
