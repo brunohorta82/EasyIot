@@ -204,7 +204,7 @@ void setupWebserverAsync()
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasArg("id") && request->hasArg("state"))
     {
-      addStateRequest(request->arg("id").c_str(), request->arg("state").c_str());
+      stateSwitchById(getAtualSwitchesConfig(), request->arg("id").c_str(), request->arg("state").c_str());
       request->send(200, "application/json", "{\"result\":\"OK\"}");
     }
     else

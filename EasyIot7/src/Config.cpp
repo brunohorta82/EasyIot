@@ -173,6 +173,9 @@ size_t Config::serializeToJson(Print &output)
   doc["emoncmsServer"] = emoncmsServer;
   doc["emoncmsPath"] = emoncmsPath;
   doc["emoncmsApikey"] = emoncmsApikey;
+  doc["knxArea"] = knxArea;
+  doc["knxLine"] = knxLine;
+  doc["knxMember"] = knxMember;
   return serializeJson(doc, output);
 }
 
@@ -204,6 +207,9 @@ void Config::save(File &file) const
   file.write((uint8_t *)emoncmsServer, sizeof(emoncmsServer));
   file.write((uint8_t *)emoncmsPath, sizeof(emoncmsPath));
   file.write((uint8_t *)emoncmsApikey, sizeof(emoncmsApikey));
+  file.write((uint8_t *)&knxArea, sizeof(knxArea));
+  file.write((uint8_t *)&knxLine, sizeof(knxLine));
+  file.write((uint8_t *)&knxMember, sizeof(knxMember));
 }
 void Config::load(File &file)
 {
@@ -233,6 +239,9 @@ void Config::load(File &file)
   file.read((uint8_t *)emoncmsServer, sizeof(emoncmsServer));
   file.read((uint8_t *)emoncmsPath, sizeof(emoncmsPath));
   file.read((uint8_t *)emoncmsApikey, sizeof(emoncmsApikey));
+  file.read((uint8_t *)&knxArea, sizeof(knxArea));
+  file.read((uint8_t *)&knxLine, sizeof(knxLine));
+  file.read((uint8_t *)&knxMember, sizeof(knxMember));
   if (firmware < VERSION)
   {
     Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
@@ -256,8 +265,17 @@ void loadStoredConfiguration(Config &config)
     strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
     strlcpy(config.apiUser, constantsConfig::apiUser, sizeof(config.apiUser));
     strlcpy(config.apiPassword, constantsConfig::apiPassword, sizeof(config.apiPassword));
-    strlcpy(config.wifiSSID, "IOTBH", sizeof(config.wifiSSID));
-    strlcpy(config.wifiSecret, "IOT2017@", sizeof(config.wifiSecret));
+
+#ifdef WIFI_SSID
+    strlcpy(config.wifiSSID, WIFI_SSID, sizeof(config.wifiSSID));
+#endif
+#ifdef WIFI_SECRET
+    strlcpy(config.wifiSecret, WIFI_SECRET, sizeof(config.wifiSecret));
+#endif
+
+    config.knxArea = 1;
+    config.knxLine = 1;
+    config.knxMember = 1;
     config.firmware = VERSION;
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
     SPIFFS.end();
@@ -302,6 +320,9 @@ Config &Config::updateFromJson(JsonObject doc)
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
   strlcpy(wifiSecret2, doc["wifiSecret2"] | "", sizeof(wifiSecret2));
   String emoncmsServerStr = doc["emoncmsServer"] | "";
+  knxArea = doc["knxArea"] | 0;
+  knxLine = doc["knxLine"] | 0;
+  knxMember = doc["knxMember"] | 0;
   emoncmsServerStr.replace("https", "http");
 
   while (emoncmsServerStr.endsWith("/"))

@@ -89,7 +89,6 @@ struct Switches
     bool remove(const char *id);
     size_t serializeToJson(Print &output);
 };
-void addStateRequest(const char *id, const char *state);
 void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
 void loop(Switches &switches);
 void load(Switches &switches);

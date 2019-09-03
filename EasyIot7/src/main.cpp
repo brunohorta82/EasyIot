@@ -8,7 +8,7 @@
 #include <ESP8266httpUpdate.h>
 #include "constants.h"
 #include "WebRequests.h"
-
+#include <esp-knx-ip.h>
 void checkInternalRoutines()
 {
   if (restartRequested())
@@ -49,6 +49,7 @@ void setup()
   setupWebserverAsync();
   setupWiFi();
   setupMQTT();
+  knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
 }
 
 void loop()
@@ -60,6 +61,7 @@ void loop()
   loop(getAtualSwitchesConfig());
   loop(getAtualSensorsConfig());
   loopMqtt();
+  knx.loop();
 }
 
 void actualUpdate()

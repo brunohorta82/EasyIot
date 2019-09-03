@@ -266,6 +266,9 @@ function fillConfig() {
     $('input[name="mqttPassword"]').val(config.mqttPassword);
     $('input[name="wifiSSID"]').val(config.wifiSSID);
     $('input[name="wifiSecret"]').val(config.wifiSecret);
+    $('input[name="knxArea"]').val(config.knxArea);
+    $('input[name="knxMember"]').val(config.knxMember);
+    $('input[name="knxLine"]').val(config.knxLine);
     let staticIp = document.getElementById("staticIp");
     if (staticIp) {
         staticIp.checked = !config.staticIp;

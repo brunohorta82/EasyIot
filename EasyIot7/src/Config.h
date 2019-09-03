@@ -35,6 +35,9 @@ struct Config
   char emoncmsPath[20];
   char emoncmsApikey[80];
   char emoncmsFingerprint[100];
+  uint8_t knxArea;
+  uint8_t knxLine;
+  uint8_t knxMember;
   Config &updateFromJson(JsonObject doc);
   void save(File &file) const;
   void load(File &file);
