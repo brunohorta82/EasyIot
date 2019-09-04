@@ -3,7 +3,7 @@
 #include "WiFi.h"
 #include "ESP8266WiFi.h"
 #include "Mqtt.h"
-
+#include <esp-knx-ip.h>
 //CONTROL FLAGS
 static bool g_reboot = false;
 static bool g_loadDefaults = false;
@@ -324,7 +324,7 @@ Config &Config::updateFromJson(JsonObject doc)
   knxLine = static_cast<uint8_t>(doc["knxLine"] | 0);
   knxMember = static_cast<uint8_t>(doc["knxMember"] | 0);
   emoncmsServerStr.replace("https", "http");
-
+  knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   while (emoncmsServerStr.endsWith("/"))
   {
 
