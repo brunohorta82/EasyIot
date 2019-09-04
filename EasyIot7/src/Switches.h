@@ -55,6 +55,7 @@ struct SwitchT
     uint8_t knxLevelThree;
     uint8_t knxIdRegister;
     uint8_t knxIdAssign;
+    bool knxNotifyGroup = true;
 
     //AUTOMATIONS
     unsigned long autoStateDelay;

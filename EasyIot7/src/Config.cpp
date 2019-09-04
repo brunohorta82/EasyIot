@@ -320,9 +320,9 @@ Config &Config::updateFromJson(JsonObject doc)
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
   strlcpy(wifiSecret2, doc["wifiSecret2"] | "", sizeof(wifiSecret2));
   String emoncmsServerStr = doc["emoncmsServer"] | "";
-  knxArea = doc["knxArea"] | 0;
-  knxLine = doc["knxLine"] | 0;
-  knxMember = doc["knxMember"] | 0;
+  knxArea = static_cast<uint8_t>(doc["knxArea"] | 0);
+  knxLine = static_cast<uint8_t>(doc["knxLine"] | 0);
+  knxMember = static_cast<uint8_t>(doc["knxMember"] | 0);
   emoncmsServerStr.replace("https", "http");
 
   while (emoncmsServerStr.endsWith("/"))

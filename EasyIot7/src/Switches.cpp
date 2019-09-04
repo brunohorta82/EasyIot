@@ -199,15 +199,9 @@ void switchesCallback(message_t const &msg, void *arg)
   {
   case KNX_CT_WRITE:
   {
-    String payload;
-    payload.reserve(msg.data_len);
-    for (int i = 1; i < msg.data_len - 1; i++)
-    {
-      if (msg.data[i] == 0)
-        continue;
-      payload.concat((char)msg.data[i]);
-    }
-    s->changeState(payload.c_str());
+    bool state = (bool)msg.data[0];
+    s->knxNotifyGroup = false;
+    s->changeState(state ? constanstsSwitch::payloadOn : constanstsSwitch::payloadOff);
     break;
   }
   case KNX_CT_READ:
@@ -223,17 +217,11 @@ void allwitchesCallback(message_t const &msg, void *arg)
   {
   case KNX_CT_WRITE:
   {
-    String payload;
-    payload.reserve(msg.data_len);
-    for (int i = 1; i < msg.data_len - 1; i++)
-    {
-      if (msg.data[i] == 0)
-        continue;
-      payload.concat((char)msg.data[i]);
-    }
+    bool state = (bool)msg.data[0];
     for (auto &sw : getAtualSwitchesConfig().items)
     {
-      sw.changeState(payload.c_str());
+      sw.knxNotifyGroup = false;
+      sw.changeState(state ? constanstsSwitch::payloadOn : constanstsSwitch::payloadOff);
     }
     break;
   }
@@ -263,22 +251,19 @@ void Switches::load(File &file)
         globalKnxLevelThreeAssign = true;
       }
       item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
-      //TODO item.knxIdAssign =
-      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+      item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
     }
 
     configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.primaryGpioControl, OUTPUT);
     configPIN(item.secondaryGpioControl, OUTPUT);
-
     item.lastPrimaryGpioState = readPIN(item.primaryGpio);
     item.lastSecondaryGpioState = readPIN(item.secondaryGpio);
     if (item.alexaSupport)
     {
       addSwitchToAlexa(item.name);
     }
-    knx.write_14byte_string(knx.GA_to_address(1, 1, 1), item.stateControl);
   }
 }
 bool Switches::remove(const char *id)
@@ -376,11 +361,10 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.knxLevelOne = knxLevelOne;
   sw.knxLevelTwo = knxLevelTwo;
   sw.knxLevelThree = knxLevelThree;
-  //TODO knx.callback_unassign(sw.knxIdAssign);
-  //TODO knx.callback_deregister(sw.knxIdRegister);
+  knx.callback_unassign(sw.knxIdAssign);
+  knx.callback_deregister(sw.knxIdRegister);
   sw.knxIdRegister = knx.callback_register(String(sw.name), switchesCallback, &sw);
-  //sw.knxIdAssign =
-  knx.callback_assign(sw.knxIdRegister, knx.GA_to_address(sw.knxLevelOne, sw.knxLevelTwo, sw.knxLevelThree));
+  sw.knxIdAssign = knx.callback_assign(sw.knxIdRegister, knx.GA_to_address(sw.knxLevelOne, sw.knxLevelTwo, sw.knxLevelThree));
 }
 void SwitchT::updateFromJson(JsonObject doc)
 {
@@ -551,10 +535,16 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
     }
   }
 }
-
+void knkGroupNotifyState(const SwitchT &sw, const char *state)
+{
+}
 void SwitchT::changeState(const char *state)
 {
-  knx.write_14byte_string(knx.GA_to_address(1, 1, 1), state);
+  if (knxNotifyGroup)
+  {
+    knx.write_1bit(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), strcmp(state, constanstsSwitch::payloadOn) == 0);
+  }
+  knxNotifyGroup = true;
   bool dirty = strcmp(state, stateControl);
   Log.notice("%s Name:      %s" CR, tags::switches, name);
   Log.notice("%s State:     %s" CR, tags::switches, state);
@@ -582,7 +572,6 @@ void SwitchT::changeState(const char *state)
       delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON . EXECUTE REQUEST
     }
-    //TODO knx.write_14byte_string(temp_ga, state);
     publishOnMqtt(mqttPositionStateTopic, String(percentageRequest).c_str(), mqttRetain);
   }
   else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
