@@ -113,27 +113,6 @@ void SensorT::save(File &file) const
   file.write((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
 }
 
-void load(Sensors &sensors)
-{
-  if (!SPIFFS.begin())
-  {
-    Log.error("%s File storage can't start" CR, tags::sensors);
-    return;
-  }
-
-  if (!SPIFFS.exists(configFilenames::sensors))
-  {
-    Log.notice("%s Default config loaded." CR, tags::sensors);
-    SPIFFS.end();
-    return;
-  }
-
-  File file = SPIFFS.open(configFilenames::sensors, "r+");
-  sensors.load(file);
-  file.close();
-  SPIFFS.end();
-  Log.notice("%s Stored values was loaded." CR, tags::sensors);
-}
 void save(Sensors &sensors)
 {
   if (!SPIFFS.begin())
@@ -152,6 +131,62 @@ void save(Sensors &sensors)
   file.close();
   SPIFFS.end();
   Log.notice("%s Config stored." CR, tags::sensors);
+}
+void load(Sensors &sensors)
+{
+  if (!SPIFFS.begin())
+  {
+    Log.error("%s File storage can't start" CR, tags::sensors);
+    return;
+  }
+
+  if (!SPIFFS.exists(configFilenames::sensors))
+  {
+    Log.notice("%s Default config loaded." CR, tags::sensors);
+#if defined BHPZEM_004T
+    SensorT pzem;
+    strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
+    String idStr;
+    generateId(idStr, pzem.name, sizeof(pzem.id));
+    strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
+    strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
+    pzem.type = PZEM_004T;
+    pzem.knxLevelOne = 3;
+    pzem.knxLevelTwo = 1;
+    pzem.knxLevelThree = 1;
+    pzem.primaryGpio = 4;
+    pzem.secondaryGpio = 5;
+    pzem.tertiaryGpio = 14;
+    pzem.mqttRetain = true;
+    pzem.haSupport = true;
+    pzem.emoncmsSupport = true;
+    pzem.delayRead = 5000;
+    String mqttTopic;
+    mqttTopic.reserve(sizeof(pzem.mqttStateTopic));
+    mqttTopic.concat(getBaseTopic());
+    mqttTopic.concat("/");
+    mqttTopic.concat(pzem.family);
+    mqttTopic.concat("/");
+    mqttTopic.concat(pzem.id);
+    mqttTopic.concat("/state");
+    strlcpy(pzem.mqttStateTopic, mqttTopic.c_str(), sizeof(pzem.mqttStateTopic));
+    strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
+    strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
+    strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
+    strlcpy(pzem.deviceClass, constantsSensor::noneClass, sizeof(pzem.deviceClass));
+    sensors.items.push_back(pzem);
+    SPIFFS.end();
+    save(sensors);
+    load(sensors);
+    return;
+#endif
+  }
+
+  File file = SPIFFS.open(configFilenames::sensors, "r+");
+  sensors.load(file);
+  file.close();
+  SPIFFS.end();
+  Log.notice("%s Stored values was loaded." CR, tags::sensors);
 }
 void remove(Sensors &sensors, const char *id)
 {
@@ -188,7 +223,7 @@ size_t Sensors::serializeToJson(Print &output)
 {
   if (items.empty())
     return output.write("[]");
-  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(30) + sizeof(SensorT));
+  const size_t CAPACITY = JSON_ARRAY_SIZE(items.size()) + items.size() * (JSON_OBJECT_SIZE(24) + sizeof(SensorT));
   DynamicJsonDocument doc(CAPACITY);
   for (const auto &ss : items)
   {
@@ -267,7 +302,7 @@ void SensorT::updateFromJson(JsonObject doc)
   knxLevelTwo = doc["knxLevelTwo"] | 0;
   knxLevelThree = doc["knxLevelThree"] | 0;
   emoncmsSupport = doc["emoncmsSupport"] | false;
-  strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
+  strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOn));
   strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
   strlcpy(mqttPayload, "", sizeof(mqttPayload));
   switch (type)
