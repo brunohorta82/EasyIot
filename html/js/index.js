@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.142"
+    baseUrl: "http://192.168.187.173"
 };
 var switches = [];
 var sensors = [];
@@ -33,6 +33,9 @@ function buildSensorTemplate() {
         "name": "Novo Sensor",
         "primaryGpio": 99,
         "type": 65,
+        "knxLevelOne": 0,
+        "knxLevelTwo": 0,
+        "knxLevelThree": 0,
         "mqttRetain": true,
         "haSupport": true,
         "mqttStateTopic": "../state",
@@ -498,6 +501,11 @@ function buildSensor(obj) {
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
         '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="s_mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
         '                            </tr>' +
+        '                            <tr>' +
+        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
+        '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>' +
+        '                            </tr>' +
+
         '                            <tr >' +
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-reading-interval">Leituras a cada </span></span></td>' +
@@ -678,6 +686,22 @@ function buildSwitch(obj) {
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
         '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
         '                            </tr>' +
+        '                            <tr>' +
+        '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' +
+        '                            </tr>' +
+        '                            <tr>' +
+        '                                <td><span class="label-device-indent"><span' +
+        '                                    class="lang-group">Grupo</span></span></td>' +
+        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne  + '"' +
+        '                                                            type="text" id="knxLevelOne_' + obj.id + '" placeholder="ex: 2"' +
+        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo  + '"' +
+        '                                                            type="text" id="knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' +
+        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree  + '"' +
+        '                                                            type="text" id="knxLevelThree_' + obj.id + '" placeholder="ex: 1"' +
+        '                                                             maxlength="2" required/>' +
+
+        '                                </td>' +
+        '                            </tr>' +
         '                            <tr id="timeBetweenStatesRow_' + obj.id + '" >' +
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-time">TEMPO</span></span></td>' +
@@ -774,6 +798,9 @@ function saveSensor(id) {
         "secondaryGpio": parseInt($('#s_secondaryGpio_' + id).val()),
         "tertiaryGpio": parseInt($('#s_tertiaryGpio_' + id).val()),
         "type": parseInt($('#s_type_' + id).val()),
+        "knxLevelOne": parseInt($('#s_knxLevelOne_' + id).val()),
+        "knxLevelTwo": parseInt($('#s_knxLevelTwo_' + id).val()),
+        "knxLevelThree": parseInt($('#s_knxLevelThree_' + id).val()),
         "mqttRetain": document.getElementById('s_mqttRetain_' + id).checked,
         "haSupport": document.getElementById('s_haSupport' + id).checked,
         "emoncmsSupport": document.getElementById('s_emoncmsSupport' + id).checked,
@@ -820,6 +847,9 @@ function saveSwitch(id) {
         "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()) * 1000,
         "typeControl": parseInt($('#typeControl_' + id).val()),
         "mode": parseInt($('#mode_' + id).val()),
+        "knxLevelOne": parseInt($('#knxLevelOne_' + id).val()),
+        "knxLevelTwo": parseInt($('#knxLevelTwo_' + id).val()),
+        "knxLevelThree": parseInt($('#knxLevelThree_' + id).val()),
         "pullup": true,
         "mqttRetain": document.getElementById('mqttRetain_' + id).checked,
         "inverted": false,
@@ -1054,6 +1084,9 @@ function buildSwitchTemplate() {
         "autoStateValue": "",
         "typeControl": 2,
         "mode": 1,
+        "knxLevelOne": 0,
+        "knxLevelTwo": 0,
+        "knxLevelThree": 0,
         "pullup": false,
         "mqttRetain": false,
         "inverted": false,

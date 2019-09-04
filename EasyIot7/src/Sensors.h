@@ -35,7 +35,10 @@ struct SensorT
   bool mqttRetain = true;
   bool haSupport = true;
   bool emoncmsSupport = false;
-
+  //KNX
+  uint8_t knxLevelOne;
+  uint8_t knxLevelTwo;
+  uint8_t knxLevelThree;
   //INPUT GPIO
   unsigned int primaryGpio;
   unsigned int secondaryGpio;

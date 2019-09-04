@@ -84,6 +84,9 @@ void SensorT::load(File &file)
   file.read((uint8_t *)&lastBinaryState, sizeof(lastBinaryState));
   file.read((uint8_t *)payloadOff, sizeof(payloadOff));
   file.read((uint8_t *)payloadOn, sizeof(payloadOn));
+  file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
+  file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
+  file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
 }
 void SensorT::save(File &file) const
 {
@@ -105,6 +108,9 @@ void SensorT::save(File &file) const
   file.write((uint8_t *)&lastBinaryState, sizeof(lastBinaryState));
   file.write((uint8_t *)payloadOff, sizeof(payloadOff));
   file.write((uint8_t *)payloadOn, sizeof(payloadOn));
+  file.write((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
+  file.write((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
+  file.write((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
 }
 
 void load(Sensors &sensors)
@@ -206,6 +212,9 @@ size_t Sensors::serializeToJson(Print &output)
     sdoc["payloadOn"] = ss.payloadOn;
     sdoc["haSupport"] = ss.haSupport;
     sdoc["emoncmsSupport"] = ss.emoncmsSupport;
+    sdoc["knxLevelOne"] = ss.knxLevelOne;
+    sdoc["knxLevelTwo"] = ss.knxLevelTwo;
+    sdoc["knxLevelThree"] = ss.knxLevelThree;
   }
   return serializeJson(doc, output);
 }
@@ -254,6 +263,9 @@ void SensorT::updateFromJson(JsonObject doc)
   delayRead = doc["delayRead"];
   mqttRetain = doc["mqttRetain"] | true;
   haSupport = doc["haSupport"] | true;
+  knxLevelOne = doc["knxLevelOne"] | 0;
+  knxLevelTwo = doc["knxLevelTwo"] | 0;
+  knxLevelThree = doc["knxLevelThree"] | 0;
   emoncmsSupport = doc["emoncmsSupport"] | false;
   strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOff));
   strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));

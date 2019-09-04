@@ -49,6 +49,13 @@ struct SwitchT
     unsigned int secondaryGpioControl;
     bool inverted;
 
+    //KNX
+    uint8_t knxLevelOne;
+    uint8_t knxLevelTwo;
+    uint8_t knxLevelThree;
+    uint8_t knxIdRegister;
+    uint8_t knxIdAssign;
+
     //AUTOMATIONS
     unsigned long autoStateDelay;
     char autoStateValue[10];

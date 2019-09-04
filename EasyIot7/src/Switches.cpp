@@ -59,6 +59,9 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["inverted"] = sw.inverted;
     sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
     sdoc["mqttStateTopic"] = sw.mqttStateTopic;
+    sdoc["knxLevelOne"] = sw.knxLevelOne;
+    sdoc["knxLevelTwo"] = sw.knxLevelTwo;
+    sdoc["knxLevelThree"] = sw.knxLevelThree;
     if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
     {
       sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
@@ -128,6 +131,9 @@ void SwitchT::save(File &file) const
 
   file.write((uint8_t *)&alexaSupport, sizeof(alexaSupport));
   file.write((uint8_t *)&haSupport, sizeof(haSupport));
+  file.write((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
+  file.write((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
+  file.write((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
 }
 void SwitchT::load(File &file)
 {
@@ -172,6 +178,9 @@ void SwitchT::load(File &file)
 
   file.read((uint8_t *)&alexaSupport, sizeof(alexaSupport));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
+  file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
+  file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
+  file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
 }
 
 void Switches::save(File &file) const
@@ -203,7 +212,7 @@ void switchesCallback(message_t const &msg, void *arg)
   }
   case KNX_CT_READ:
   {
-
+    Serial.println("Read");
     break;
   }
   }
@@ -237,21 +246,27 @@ void allwitchesCallback(message_t const &msg, void *arg)
 }
 void Switches::load(File &file)
 {
-
   knx.start(nullptr);
   auto n_items = items.size();
   file.read((uint8_t *)&n_items, sizeof(n_items));
   items.clear();
   items.resize(n_items);
-  int i = 1;
-  callback_id_t switchesCallbackId = knx.callback_register("ALL", allwitchesCallback);
-  knx.callback_assign(switchesCallbackId, knx.GA_to_address(2, 1, 0));
+  bool globalKnxLevelThreeAssign = false;
   for (auto &item : items)
   {
-    callback_id_t switchesCallbackId = knx.callback_register(String(item.name), switchesCallback, &item);
-    knx.callback_assign(switchesCallbackId, knx.GA_to_address(2, 1, i));
-    i++;
     item.load(file);
+    if (item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
+    {
+      if (!globalKnxLevelThreeAssign)
+      {
+        knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+        globalKnxLevelThreeAssign = true;
+      }
+      item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
+      //TODO item.knxIdAssign =
+      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+    }
+
     configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.primaryGpioControl, OUTPUT);
@@ -294,7 +309,7 @@ void remove(Switches &switches, const char *id)
     save(switches);
 }
 
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -358,10 +373,18 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   strlcpy(sw.stateControl, constanstsSwitch::payloadOff, sizeof(sw.mqttPayload));
   strlcpy(sw.mqttPayload, sw.stateControl, sizeof(sw.mqttPayload));
   sw.lastTimeChange = 0ul;
+  sw.knxLevelOne = knxLevelOne;
+  sw.knxLevelTwo = knxLevelTwo;
+  sw.knxLevelThree = knxLevelThree;
+  //TODO knx.callback_unassign(sw.knxIdAssign);
+  //TODO knx.callback_deregister(sw.knxIdRegister);
+  sw.knxIdRegister = knx.callback_register(String(sw.name), switchesCallback, &sw);
+  //sw.knxIdAssign =
+  knx.callback_assign(sw.knxIdRegister, knx.GA_to_address(sw.knxLevelOne, sw.knxLevelTwo, sw.knxLevelThree));
 }
 void SwitchT::updateFromJson(JsonObject doc)
 {
-  templateSwitch(*this, doc["name"], doc["family"], static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)), doc["primaryGpio"] | constantsConfig::noGPIO, doc["secondaryGpio"] | constantsConfig::noGPIO, doc["primaryGpioControl"] | constantsConfig::noGPIO, doc["secondaryGpioControl"] | constantsConfig::noGPIO, doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul, doc["autoStateValue"] | "", static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)), doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true, doc["alexaSupport"] | true);
+  templateSwitch(*this, doc["name"], doc["family"], static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)), doc["primaryGpio"] | constantsConfig::noGPIO, doc["secondaryGpio"] | constantsConfig::noGPIO, doc["primaryGpioControl"] | constantsConfig::noGPIO, doc["secondaryGpioControl"] | constantsConfig::noGPIO, doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul, doc["autoStateValue"] | "", static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)), doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true, doc["alexaSupport"] | true, doc["knxLevelOne"] | 0, doc["knxLevelTwo"] | 0, doc["knxLevelThree"] | 0);
   doc["id"] = id;
   doc["stateControl"] = stateControl;
   doc["mqttCommandTopic"] = mqttCommandTopic;
@@ -423,9 +446,16 @@ void load(Switches &switches)
     SwitchT one;
     SwitchT two;
     templateSwitch(one, "Interruptor 1", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    one.knxLevelOne = 2;
+    one.knxLevelTwo = 1;
+    one.knxLevelThree = 1;
     switches.items.push_back(one);
     templateSwitch(two, "Interruptor 2", constanstsSwitch::familyLight, SWITCH, 13u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
+    two.knxLevelOne = 2;
+    two.knxLevelTwo = 1;
+    two.knxLevelThree = 2;
     switches.items.push_back(two);
+
 #elif defined FOUR_LOCK
     SwitchT one;
     SwitchT two;
@@ -662,6 +692,7 @@ void SwitchT::changeState(const char *state)
       changeState(statesPool[statePoolIdx].c_str());
     }
   }
+
   publishOnMqtt(mqttStateTopic, mqttPayload, mqttRetain);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
