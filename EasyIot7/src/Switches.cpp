@@ -294,7 +294,7 @@ void remove(Switches &switches, const char *id)
     save(switches);
 }
 
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = true, bool alexaSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));

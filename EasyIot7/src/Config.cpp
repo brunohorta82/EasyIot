@@ -144,7 +144,7 @@ void normalize(String &inputStr)
 
 size_t Config::serializeToJson(Print &output)
 {
-  const size_t CAPACITY = JSON_OBJECT_SIZE(24) + sizeof(Config);
+  const size_t CAPACITY = JSON_OBJECT_SIZE(32) + sizeof(Config);
   StaticJsonDocument<CAPACITY> doc;
   doc["nodeId"] = nodeId;
   doc["homeAssistantAutoDiscoveryPrefix"] = homeAssistantAutoDiscoveryPrefix;
