@@ -51,6 +51,8 @@ void Sensors::load(File &file)
       break;
     case PZEM_004T:
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
+      IPAddress ip(192, 168, 1, item.primaryGpio);
+      item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
       break;
     }
@@ -355,7 +357,7 @@ void SensorT::updateFromJson(JsonObject doc)
   doc["id"] = id;
   doc["mqttStateTopic"] = mqttStateTopic;
 }
-IPAddress ip(192, 168, 1, 1);
+
 void loop(Sensors &sensors)
 {
   for (auto &ss : sensors.items)
@@ -441,6 +443,7 @@ void loop(Sensors &sensors)
     case PZEM_004T:
       if (ss.lastRead + ss.delayRead < millis())
       {
+        IPAddress ip(192, 168, 1, ss.primaryGpio);
         ss.lastRead = millis();
         float v = ss.pzem->voltage(ip);
 

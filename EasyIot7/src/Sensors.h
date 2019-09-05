@@ -13,13 +13,13 @@ enum SensorType
   UNDEFINED = -1,
   PIR = 65,
   RCWL_0516 = 66,
-  LDR = 21,
+  LDR = 21, //Analog signal, ex: A0
   DS18B20 = 90,
   REED_SWITCH = 56,
   DHT_11 = 0,
   DHT_21 = 1,
   DHT_22 = 2,
-  PZEM_004T = 70
+  PZEM_004T = 70 // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
 };
 
 struct SensorT
@@ -50,6 +50,7 @@ struct SensorT
   DallasTemperature *dallas;
 
   PZEM004T *pzem;
+
   unsigned long delayRead = 0ul;
   unsigned long lastRead = 0ul;
 
