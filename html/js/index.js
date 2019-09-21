@@ -777,6 +777,7 @@ function buildSwitch(obj) {
         removeFromSelect('mode_' + obj.id, 5);
     }
     fillGpioSelect('primaryGpio_' + obj.id);
+    fillGpioSelect('secondaryGpio_' + obj.id);
     fillGpioSelect('secondaryGpioControl_' + obj.id);
     fillGpioSelect('primaryGpioControl_' + obj.id);
     fillGpioSelect('secondaryGpioControl_' + obj.id);
@@ -784,6 +785,7 @@ function buildSwitch(obj) {
     applySwitchFamily(obj.id);
     setOptionOnSelect('typeControl_' + obj.id, obj.typeControl);
     setOptionOnSelect('mode_' + obj.id, obj.mode);
+    applySwitchMode(obj.id);
     applyTypeControl(obj.id);
     setOptionOnSelect('primaryGpioControl_' + obj.id, obj.primaryGpioControl);
     setOptionOnSelect('secondaryGpioControl_' + obj.id, obj.secondaryGpioControl);

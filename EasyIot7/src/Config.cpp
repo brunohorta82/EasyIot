@@ -135,7 +135,6 @@ void normalize(String &inputStr)
   inputStr.replace("#", "");
   inputStr.replace("!", "");
   inputStr.replace("+", "");
-  inputStr.replace("-", "");
   inputStr.replace(",", "");
   inputStr.replace("\"", "");
   inputStr.replace(" ", "");
