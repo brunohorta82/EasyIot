@@ -396,7 +396,7 @@ function applySwitchFamily(id) {
 }
 
 function fillGpioSelect(id) {
-    var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15"];
+    var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15","16"];
     addToSelect(id, "lang-none", 99);
     for (let gpio of gpios) {
         addToSelect(id, "lang-" + gpio, gpio);
@@ -477,8 +477,8 @@ function buildSensor(obj) {
         '                                    <option value="90">DS18B20</option>' +
         '                                    <option value="56">REED SWITCH</option>' +
         '                                    <option value="0">DHT 11</option>' +
-        '                                    <option value="2">DHT 21</option>' +
-        '                                    <option value="3">DHT 22</option>' +
+        '                                    <option value="1">DHT 21</option>' +
+        '                                    <option value="2">DHT 22</option>' +
         '                                    <option value="70">PZEM 004T V2</option>' +
         '                                </select></td>' +
         '                            <tr>' +

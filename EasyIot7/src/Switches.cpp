@@ -487,6 +487,12 @@ void load(Switches &switches)
     SwitchT one;
     templateSwitch(one, "Portão", constanstsSwitch::familyLock, PUSH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
     switches.items.push_back(one);
+#elif defined GATE
+    SwitchT one;
+    templateSwitch(one, "Portão", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
+    one.autoStateDelay = 1000; //1 second
+    strlcpy(one.autoStateValue, constanstsSwitch::payloadReleased, sizeof(one.autoStateValue));
+    switches.items.push_back(one);
 #endif
     SPIFFS.end();
     return;
