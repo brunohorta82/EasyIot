@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "WebServer.h"
 #include "Mqtt.h"
+unsigned long connectedOn = 0ul;
 String getApName()
 {
   String version = String(VERSION);
@@ -34,6 +35,7 @@ void infoWifi()
 
   if (WiFi.isConnected())
   {
+    connectedOn = millis();
     uint8_t *bssid = WiFi.BSSID();
     Log.notice("%s MODE STA -------------------------------------" CR, tags::wifi);
     Log.notice("%s SSID  %s  " CR, tags::wifi, WiFi.SSID().c_str());
@@ -190,6 +192,9 @@ void setupWiFi()
 
 void loopWiFi()
 {
+   if (WiFi.isConnected() && connectedOn + 60000 < millis()){
+      dissableAP();
+   }
   jw.loop();
 }
 size_t systemJSONStatus(Print &output)

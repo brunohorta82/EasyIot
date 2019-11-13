@@ -450,6 +450,7 @@ void loop(Sensors &sensors)
         float i = ss.pzem->current(ip);
 
         float p = ss.pzem->power(ip);
+        float c = ss.pzem->energy(ip);
         if (ss.tertiaryGpio != constantsConfig::noGPIO)
         {
           if (digitalRead(ss.tertiaryGpio))
@@ -464,11 +465,11 @@ void loop(Sensors &sensors)
         }
         else
         {
-          auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + "}");
+          auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p)  + ",\"energy\":" + String(c)+ "}");
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
           sendToServerEvents("sensors", readings);
           publishOnEmoncms(ss, readings);
-          Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F  }" CR, tags::sensors, v, i, p);
+          Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p,c);
         }
       }
       break;

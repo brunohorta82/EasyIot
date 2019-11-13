@@ -158,6 +158,33 @@ void addToHaDiscovery(const SensorT &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
+    case PZEM_004T:
+    object["name"] = String(s.name)+" Power";
+    object["unit_of_measurement"] = "W";
+    object["device_class"] = "power";
+    object["value_template"] = "{{value_json.power}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PW" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    object["name"] = String(s.name)+" Current";
+    object["unit_of_measurement"] = "A";
+    object["value_template"] = "{{value_json.current}}";
+    objectStr = "";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/CU" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    object["name"] = String(s.name)+" Voltage";
+    object["unit_of_measurement"] = "V";
+    object["value_template"] = "{{value_json.voltage}}";
+    objectStr = "";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/VT" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    object["name"] = String(s.name)+" Energy";
+    object["unit_of_measurement"] = "KhW";
+    object["device_class"] = "power";
+    object["value_template"] = "{{value_json.energy}}";
+    objectStr = "";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/EN" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    break;
 
   default:
     break;
