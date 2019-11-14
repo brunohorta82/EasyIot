@@ -245,6 +245,7 @@ void Config::load(File &file)
   {
     Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
   }
+  firmware = VERSION;
 }
 void loadStoredConfiguration(Config &config)
 {
