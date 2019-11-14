@@ -76,7 +76,7 @@ struct SwitchT
     int lastPercentage;
     bool lastPrimaryGpioState;
     bool lastSecondaryGpioState;
-    unsigned long lastTimeChange = 0ul;
+    volatile long lastTimeChange = 0;
     int percentageRequest = -1;
     int statePoolIdx;
     unsigned int statePoolStart;
