@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 
 class PZEM004T;
+class PZEM004Tv30;
 class DHT_nonblocking;
 class DallasTemperature;
 enum SensorType
@@ -19,7 +20,8 @@ enum SensorType
   DHT_11 = 0,
   DHT_21 = 1,
   DHT_22 = 2,
-  PZEM_004T = 70 // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
+  PZEM_004T = 70,    // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
+  PZEM_004T_V03 = 71 // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
 };
 
 struct SensorT
@@ -50,6 +52,7 @@ struct SensorT
   DallasTemperature *dallas;
 
   PZEM004T *pzem;
+  PZEM004Tv30 *pzemv03;
 
   unsigned long delayRead = 0ul;
   unsigned long lastRead = 0ul;

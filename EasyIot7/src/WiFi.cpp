@@ -24,10 +24,15 @@ void reloadWiFiConfig()
     jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret, getAtualConfig().wifiIp, getAtualConfig().wifiGw, getAtualConfig().wifiMask, getAtualConfig().wifiGw, true);
     jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2, getAtualConfig().wifiIp, getAtualConfig().wifiGw, getAtualConfig().wifiMask, getAtualConfig().wifiGw, false);
   }
-  else
+  else if (strlen(getAtualConfig().wifiSecret) > 0 || strlen(getAtualConfig().wifiSecret2) > 0)
   {
     jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret);
     jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2);
+  } 
+  else
+  {
+    jw.addNetwork(getAtualConfig().wifiSSID);
+    jw.addNetwork(getAtualConfig().wifiSSID2);
   }
 }
 void infoWifi()

@@ -480,6 +480,7 @@ function buildSensor(obj) {
         '                                    <option value="1">DHT 21</option>' +
         '                                    <option value="2">DHT 22</option>' +
         '                                    <option value="70">PZEM 004T V2</option>' +
+        '                                    <option value="71">PZEM 004T V3</option>' +
         '                                </select></td>' +
         '                            <tr>' +
         '                            <tr>' +

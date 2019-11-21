@@ -7,6 +7,7 @@
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include <PZEM004T.h>
+#include <PZEM004Tv30.h>
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
@@ -50,9 +51,15 @@ void Sensors::load(File &file)
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
       break;
     case PZEM_004T:
+    {
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
       IPAddress ip(192, 168, 1, item.primaryGpio);
       item.pzem->setAddress(ip);
+      configPIN(item.tertiaryGpio, INPUT);
+    }
+    break;
+    case PZEM_004T_V03:
+      item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
       configPIN(item.tertiaryGpio, INPUT);
       break;
     }
@@ -158,7 +165,44 @@ void load(Sensors &sensors)
     pzem.knxLevelThree = 1;
     pzem.primaryGpio = 4;
     pzem.secondaryGpio = 5;
-    pzem.tertiaryGpio = 14;
+    pzem.tertiaryGpio = constantsConfig::noGPIO;
+    pzem.mqttRetain = true;
+    pzem.haSupport = true;
+    pzem.emoncmsSupport = true;
+    pzem.delayRead = 5000;
+    String mqttTopic;
+    mqttTopic.reserve(sizeof(pzem.mqttStateTopic));
+    mqttTopic.concat(getBaseTopic());
+    mqttTopic.concat("/");
+    mqttTopic.concat(pzem.family);
+    mqttTopic.concat("/");
+    mqttTopic.concat(pzem.id);
+    mqttTopic.concat("/state");
+    strlcpy(pzem.mqttStateTopic, mqttTopic.c_str(), sizeof(pzem.mqttStateTopic));
+    strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
+    strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
+    strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
+    strlcpy(pzem.deviceClass, constantsSensor::noneClass, sizeof(pzem.deviceClass));
+    sensors.items.push_back(pzem);
+    SPIFFS.end();
+    save(sensors);
+    load(sensors);
+    return;
+#endif
+#if defined BHPZEM_004T_V03
+    SensorT pzem;
+    strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
+    String idStr;
+    generateId(idStr, pzem.name, sizeof(pzem.id));
+    strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
+    strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
+    pzem.type = PZEM_004T_V03;
+    pzem.knxLevelOne = 3;
+    pzem.knxLevelTwo = 1;
+    pzem.knxLevelThree = 1;
+    pzem.primaryGpio = 4;
+    pzem.secondaryGpio = 5;
+    pzem.tertiaryGpio = constantsConfig::noGPIO;
     pzem.mqttRetain = true;
     pzem.haSupport = true;
     pzem.emoncmsSupport = true;
@@ -281,7 +325,6 @@ void initSensorsHaDiscovery(const Sensors &sensors)
     publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, ss.mqttRetain);
   }
 }
-
 void SensorT::updateFromJson(JsonObject doc)
 {
   removeFromHaDiscovery(*this);
@@ -342,6 +385,10 @@ void SensorT::updateFromJson(JsonObject doc)
     break;
   case PZEM_004T:
     pzem = new PZEM004T(primaryGpio, secondaryGpio);
+    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    break;
+  case PZEM_004T_V03:
+    pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   }
@@ -465,11 +512,43 @@ void loop(Sensors &sensors)
         }
         else
         {
-          auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p)  + ",\"energy\":" + String(c)+ "}");
+          auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
           sendToServerEvents("sensors", readings);
           publishOnEmoncms(ss, readings);
-          Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p,c);
+          Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
+        }
+      }
+      break;
+    case PZEM_004T_V03:
+      if (ss.lastRead + ss.delayRead < millis())
+      {
+        ss.lastRead = millis();
+        float v = ss.pzemv03->voltage();
+        float i = ss.pzemv03->current();
+        float p = ss.pzemv03->power();
+        float c = ss.pzemv03->energy();
+        float f = ss.pzemv03->frequency();
+        float pf = ss.pzemv03->pf();
+        if (ss.tertiaryGpio != constantsConfig::noGPIO)
+        {
+          if (digitalRead(ss.tertiaryGpio))
+          {
+            p = p * -1;
+          }
+        }
+
+        if (isnan(v))
+        {
+          Log.notice("%s PZEM ERROR" CR, tags::sensors);
+        }
+        else
+        {
+          auto readings = String("{\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+          publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+          sendToServerEvents("sensors", readings);
+          publishOnEmoncms(ss, readings);
+          Log.notice("%s %s" CR, tags::sensors, readings.c_str());
         }
       }
       break;
