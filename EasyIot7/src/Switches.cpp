@@ -784,17 +784,11 @@ void loop(Switches &switches)
     bool primaryGpioEvent = primaryValue != sw.lastPrimaryGpioState;
     bool secondaryGpioEvent = secondaryValue != sw.lastSecondaryGpioState;
 
-    if ((primaryGpioEvent || secondaryGpioEvent))
+       if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw.lastTimeChange >= constanstsSwitch::delayDebounce)
     {
-      if (currentTime - sw.lastTimeChange <= constanstsSwitch::delayDebounce)
-      {
-        sw.lastTimeChange = currentTime;
-        return;
-      }
-
       sw.lastPrimaryGpioState = primaryValue;
       sw.lastSecondaryGpioState = secondaryValue;
-
+      sw.lastTimeChange = currentTime;
       int poolSize = sw.statePoolEnd - sw.statePoolStart + 1;
 
       switch (sw.mode)
