@@ -430,14 +430,14 @@ void load(Switches &switches)
     SwitchT one;
     SwitchT two;
     templateSwitch(one, "Interruptor 1", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
-    one.knxLevelOne = 2;
-    one.knxLevelTwo = 1;
-    one.knxLevelThree = 1;
+    one.knxLevelOne = 0;
+    one.knxLevelTwo = 0;
+    one.knxLevelThree = 0;
     switches.items.push_back(one);
     templateSwitch(two, "Interruptor 2", constanstsSwitch::familyLight, SWITCH, 13u, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
-    two.knxLevelOne = 2;
-    two.knxLevelTwo = 1;
-    two.knxLevelThree = 2;
+    two.knxLevelOne = 0;
+    two.knxLevelTwo = 0;
+    two.knxLevelThree = 0;
     switches.items.push_back(two);
 
 #elif defined FOUR_LOCK
