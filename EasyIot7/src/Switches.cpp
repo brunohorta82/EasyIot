@@ -371,6 +371,14 @@ void SwitchT::updateFromJson(JsonObject doc)
   templateSwitch(*this, doc["name"], doc["family"], static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)), doc["primaryGpio"] | constantsConfig::noGPIO, doc["secondaryGpio"] | constantsConfig::noGPIO, doc["primaryGpioControl"] | constantsConfig::noGPIO, doc["secondaryGpioControl"] | constantsConfig::noGPIO, doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul, doc["autoStateValue"] | "", static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)), doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true, doc["alexaSupport"] | true, doc["knxLevelOne"] | 0, doc["knxLevelTwo"] | 0, doc["knxLevelThree"] | 0);
   doc["id"] = id;
   doc["stateControl"] = stateControl;
+  if (!doc["mqttCommandTopic"].isNull())
+  {
+    strlcpy(mqttCommandTopic, doc["mqttCommandTopic"], sizeof(mqttCommandTopic));
+  }
+  if (!doc["mqttStateTopic"].isNull())
+  {
+    strlcpy(mqttStateTopic, doc["mqttStateTopic"], sizeof(mqttCommandTopic));
+  }
   doc["mqttCommandTopic"] = mqttCommandTopic;
   doc["mqttStateTopic"] = mqttStateTopic;
   if (strcmp(family, constanstsSwitch::familyCover) == 0)
@@ -688,7 +696,7 @@ void SwitchT::changeState(const char *state)
     }
   }
 
-  publishOnMqtt(mqttStateTopic, mqttPayload, mqttRetain);
+  publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
   payloadSe.concat("{\"id\":\"");
@@ -784,7 +792,7 @@ void loop(Switches &switches)
     bool primaryGpioEvent = primaryValue != sw.lastPrimaryGpioState;
     bool secondaryGpioEvent = secondaryValue != sw.lastSecondaryGpioState;
 
-       if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw.lastTimeChange >= constanstsSwitch::delayDebounce)
+    if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw.lastTimeChange >= constanstsSwitch::delayDebounce)
     {
       sw.lastPrimaryGpioState = primaryValue;
       sw.lastSecondaryGpioState = secondaryValue;

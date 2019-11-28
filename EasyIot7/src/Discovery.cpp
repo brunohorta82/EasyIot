@@ -10,7 +10,7 @@ void initHaDiscovery(const Switches &switches)
     if (!sw.haSupport)
       continue;
     addToHaDiscovery(sw);
-    publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, sw.mqttRetain);
+    publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, true);
   }
 }
 
@@ -21,7 +21,7 @@ void initHaDiscovery(const Sensors &sensors)
     if (!ss.haSupport)
       continue;
     addToHaDiscovery(ss);
-    publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, ss.mqttRetain);
+    publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, true);
   }
 }
 

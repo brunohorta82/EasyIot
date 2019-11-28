@@ -23,15 +23,18 @@ void loadUI()
 {
   //HTML
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+
     request->send(response);
   });
 
   server.on("/firmware.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", firmware_html, sizeof(firmware_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -39,6 +42,8 @@ void loadUI()
   });
 
   server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -46,6 +51,8 @@ void loadUI()
   });
 
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -53,6 +60,8 @@ void loadUI()
   });
 
   server.on("/wifi.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", wifi_html, sizeof(wifi_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -60,6 +69,8 @@ void loadUI()
   });
 
   server.on("/devices.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", devices_html, sizeof(devices_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -68,6 +79,8 @@ void loadUI()
 
   //JS
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -75,6 +88,8 @@ void loadUI()
   });
 
   server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -83,6 +98,8 @@ void loadUI()
 
   //CSS
   server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
@@ -117,23 +134,33 @@ void setupWebserverAsync()
 
   //SYSTEM
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     requestRestart();
     request->send(200, "application/json", "{\"result\":\"OK\"}");
   });
   server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     request->send(200, "application/json", "{\"result\":\"OK\"}");
     requestLoadDefaults();
   });
   server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     systemJSONStatus(*response);
     request->send(response);
   });
   server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     request->send(200, "application/json", "{\"result\":\"OK\"}");
     requestAutoUpdate();
   });
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
+     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+     return request->requestAuthentication();
     bool error = Update.hasError();
     if(error){
       requestRestart();
@@ -163,25 +190,35 @@ void setupWebserverAsync()
     } });
   //CONFIG
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().serializeToJson(*response);
-    // if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-    // return request->requestAuthentication();
+
     request->send(response);
   });
+
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().updateFromJson(json).saveConfigurationOnDefaultFile().serializeToJson(*response);
 
     request->send(response);
   }));
+
   //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSwitchesConfig().serializeToJson(*response);
     request->send(response);
   });
+
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     if (!request->hasArg("id"))
     {
       request->send(400, "Invalid id");
@@ -192,7 +229,10 @@ void setupWebserverAsync()
     serializeJson(json, *response);
     request->send(response);
   }));
+
   server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     if (request->hasArg("id"))
     {
       remove(getAtualSwitchesConfig(), request->arg("id").c_str());
@@ -202,6 +242,8 @@ void setupWebserverAsync()
     request->send(response);
   });
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     if (request->hasArg("id") && request->hasArg("state"))
     {
       stateSwitchById(getAtualSwitchesConfig(), request->arg("id").c_str(), request->arg("state").c_str());
@@ -213,11 +255,16 @@ void setupWebserverAsync()
     }
   });
   server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSensorsConfig().serializeToJson(*response);
     request->send(response);
   });
+
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     if (!request->hasArg("id"))
     {
       request->send(400, "Invalid id");
@@ -228,7 +275,10 @@ void setupWebserverAsync()
     serializeJson(json, *response);
     request->send(response);
   }));
+
   server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
     if (request->hasArg("id"))
     {
       remove(getAtualSensorsConfig(), request->arg("id").c_str());
@@ -237,11 +287,13 @@ void setupWebserverAsync()
     getAtualSensorsConfig().serializeToJson(*response);
     request->send(response);
   });
+
   //ALEXA SUPPORT
   server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
     if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data)))
       return;
   });
+
   server.onNotFound([](AsyncWebServerRequest *request) {
     //ALEXA
     String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
@@ -277,6 +329,7 @@ void sendToServerEvents(const String &topic, const String &payload)
 {
   events.send(payload.c_str(), topic.c_str(), millis());
 }
+
 void webserverServicesLoop()
 {
   MDNS.update();
