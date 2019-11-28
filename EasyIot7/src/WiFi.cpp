@@ -28,7 +28,7 @@ void reloadWiFiConfig()
   {
     jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret);
     jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2);
-  } 
+  }
   else
   {
     jw.addNetwork(getAtualConfig().wifiSSID);
@@ -188,6 +188,7 @@ void setupWiFi()
 {
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);
+  jw.startSmartConfig();
   jw.setSoftAP(getAtualConfig().apName, getAtualConfig().apSecret);
   jw.enableAP(false);
   jw.enableAPFallback(true);
@@ -197,9 +198,10 @@ void setupWiFi()
 
 void loopWiFi()
 {
-   if (WiFi.isConnected() && connectedOn + 60000 < millis()){
-      dissableAP();
-   }
+  if (WiFi.isConnected() && connectedOn + 60000 < millis())
+  {
+    dissableAP();
+  }
   jw.loop();
 }
 size_t systemJSONStatus(Print &output)
