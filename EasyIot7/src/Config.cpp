@@ -306,6 +306,8 @@ Config &Config::saveConfigurationOnDefaultFile()
 
 Config &Config::updateFromJson(JsonObject doc)
 {
+  char lastNodeId[32];
+  strlcpy(lastNodeId, getAtualConfig().nodeId, sizeof(lastNodeId));
   bool reloadWifi = staticIp != doc["staticIp"] || strcmp(wifiIp, doc["wifiIp"] | "") != 0 || strcmp(wifiMask, doc["wifiMask"] | "") != 0 || strcmp(wifiGw, doc["wifiGw"] | "") != 0 || strcmp(wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(wifiSecret2, doc["wifiSecret2"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(mqttPassword, doc["mqttPassword"] | "") != 0 || mqttPort != (doc["mqttPort"] | constantsMqtt::defaultPort);
   String n_name = doc["nodeId"] | String(ESP.getChipId());
@@ -365,5 +367,6 @@ Config &Config::updateFromJson(JsonObject doc)
   {
     setupMQTT();
   }
+  refreshMDNS(lastNodeId);
   return *this;
 }

@@ -16,7 +16,6 @@ void processMqttAction(const char *topic, const char *payload)
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
     Log.notice("%s Message received" CR, tags::mqtt);
-
     char *payload_as_string = (char *)malloc(length + 1);
     memcpy(payload_as_string, (char *)payload, length);
     payload_as_string[length] = 0;

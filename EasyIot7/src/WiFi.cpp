@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "WebServer.h"
 #include "Mqtt.h"
+#include <ESP8266mDNS.h>
 unsigned long connectedOn = 0ul;
 String getApName()
 {
@@ -184,10 +185,36 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
   }
 }
+
+void refreshMDNS(const char *lastName)
+{
+  MDNS.removeService(lastName, "easyiot", "tcp");
+  MDNS.removeQuery();
+  MDNS.close();
+  if (MDNS.begin(String(getAtualConfig().nodeId)))
+  {
+    MDNS.addService("easyiot", "tcp", 80);
+    MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
+    MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION));
+  }
+  else
+  {
+    Log.error("%s MDNS Error" CR, tags::wifi);
+  }
+}
+void mdnsCallback(justwifi_messages_t code, char *parameter)
+{
+
+  if (code == MESSAGE_CONNECTED)
+  {
+    refreshMDNS(getAtualConfig().nodeId);
+  }
+}
 void setupWiFi()
 {
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);
+  jw.subscribe(mdnsCallback);
 #if JUSTWIFI_ENABLE_SMARTCONFIG
   jw.startSmartConfig();
 #endif
@@ -205,6 +232,7 @@ void loopWiFi()
     dissableAP();
   }
   jw.loop();
+  MDNS.update();
 }
 size_t systemJSONStatus(Print &output)
 {

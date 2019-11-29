@@ -53,12 +53,12 @@ void setup()
   loadStoredConfiguration(getAtualConfig());
   load(getAtualSwitchesConfig());
   load(getAtualSensorsConfig());
-  setupWebserverAsync();
   setupWiFi();
   setupMQTT();
   knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   configTime(0, 0, NTP_SERVER);
   setenv("TZ", TZ_INFO, 1);
+  setupWebserverAsync();
 }
 
 void loop()
@@ -75,7 +75,6 @@ void loop()
   if (WiFi.status() == WL_CONNECTED && lastNTPtime + 1000 < millis())
   {
     time_t now = time(nullptr);
-    Serial.println(ctime(&now));
     lastNTPtime = millis();
     sendToServerEvents("my_time", String(ctime(&now)));
   }

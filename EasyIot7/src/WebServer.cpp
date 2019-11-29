@@ -7,7 +7,7 @@
 #include "StaticSite.h"
 #include "StaticCss.h"
 #include "StaticJs.h"
-#include <ESP8266mDNS.h>
+
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncTCP.h>
 #include <fauxmoESP.h>
@@ -128,12 +128,6 @@ void startAlexaDiscovery()
 
 void setupWebserverAsync()
 {
-  MDNS.begin(getAtualConfig().nodeId);
-  MDNS.addService("easyiot", "tcp", 80);
-  MDNS.addServiceTxt("easyiot", "tcp", "nodeId", String(getAtualConfig().nodeId));
-  MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
-  MDNS.addServiceTxt("easyiot", "tcp", "wifiSignal", String(WiFi.RSSI()));
-  MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION));
   server.addHandler(&events);
   loadUI();
 
@@ -370,6 +364,6 @@ void sendToServerEvents(const String &topic, const String &payload)
 
 void webserverServicesLoop()
 {
-  MDNS.update();
+
   fauxmo.handle();
 }
