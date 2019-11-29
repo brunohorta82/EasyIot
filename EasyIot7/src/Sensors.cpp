@@ -11,6 +11,34 @@
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
+#include "SSD1306.h"   //https://github.com/ThingPulse/esp8266-oled-ssd1306
+#define DISPLAY_SDA 2  //-1 if you don't use display
+#define DISPLAY_SCL 13 //-1 if you don't use display
+#define DISPLAY_BTN 16
+bool displayOn = true;
+SSD1306 display(0x3C, DISPLAY_SDA, DISPLAY_SCL);
+bool lastState = false;
+void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
+{
+  display.clear();
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(5, 0, String(_power) + "W");
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(5, 16, String(_energy) + " kWh");
+  display.drawString(5, 26, String(_voltage) + " V");
+  display.drawString(5, 36, String(_amperage) + " A");
+  display.display();
+}
+
+void setupDisplay()
+{
+  display.init();
+  display.flipScreenVertically();
+  display.setFont(ArialMT_Plain_16);
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.drawString(5, 0, "BH PZEM");
+  display.display();
+}
 
 struct Sensors &getAtualSensorsConfig()
 {
@@ -56,11 +84,13 @@ void Sensors::load(File &file)
       IPAddress ip(192, 168, 1, item.primaryGpio);
       item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
+      setupDisplay();
     }
     break;
     case PZEM_004T_V03:
       item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
       configPIN(item.tertiaryGpio, INPUT);
+      setupDisplay();
       break;
     }
   }
@@ -513,6 +543,7 @@ void loop(Sensors &sensors)
         else
         {
           auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+          printOnDisplay(v, i, p, c);
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
           sendToServerEvents("sensors", readings);
           publishOnEmoncms(ss, readings);

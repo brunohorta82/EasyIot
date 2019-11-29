@@ -96,7 +96,7 @@ var WORDS_EN = {
     "released": "Released",
     "disconnected": "disconnected",
     "dconnected": "connected",
-    "integrate":"Integrate",
+    "integrate": "Integrate",
     "normal": "Generic",
     "choose": "select",
     "push": "Push",
@@ -114,31 +114,31 @@ var WORDS_EN = {
     "command": "Command",
     "state": "State",
     "on": "On",
-    "auto-state":"Auto State",
+    "auto-state": "Auto State",
     "off": "Off",
     "locked": "Lock",
     "unlock": "Unlocked",
     "open": "Open",
     "close": "Closed",
-    "mqtt":"MQTT",
+    "mqtt": "MQTT",
     "stop": "Stop",
     "time": "Time",
     "17": "A0",
-    "group":"Group",
-    "pin-in-c":"Input Pin c",
-    "line":"Line",
-    "member":"Member",
-    "address":"Address",
-    "prefix":"Prefix",
-    "apikey":"API Key"
+    "group": "Group",
+    "pin-in-c": "Input Pin c",
+    "line": "Line",
+    "member": "Member",
+    "address": "Address",
+    "prefix": "Prefix",
+    "apikey": "API Key"
 
 };
 var WORDS_PT = {
     "node": "NÓ",
-    "group":"Grupo",
+    "group": "Grupo",
     "integrations": "INTEGRAÇÕES",
     "sensors": "Sensores",
-    "integrate":"Integrar",
+    "integrate": "Integrar",
     "released": "Libertar",
     "reading-interval": "Leituras a cada",
     "update": "ATUALIZAR",
@@ -150,7 +150,7 @@ var WORDS_PT = {
     "save": "Guardar",
     "memory-free": "HEAP",
     "choose": "escolher",
-    "auto-state":"Estádo automático",
+    "auto-state": "Estádo automático",
     "clean-fields": "Limpar todos os campos",
     "username": "Utilizador",
     "password": "Palavra Passe",
@@ -175,11 +175,11 @@ var WORDS_PT = {
     "lock": "Fechadura",
     "normal": "Normal",
     "push": "Pressão",
-    "dual-push": "Duplo Normal",
-    "dual-normal": "Duplo Pressão",
+    "dual-push": "Duplo Pressão",
+    "dual-normal": "Duplo Normal",
     "mode": "Modo",
     "relay-mqtt": "Relé / MQTT",
-    "mqtt":"MQTT",
+    "mqtt": "MQTT",
     "control": "Saída",
     "pin-in-a": "Pino Entrada a",
     "pin-in-b": "Pino Entrada b",
@@ -199,16 +199,16 @@ var WORDS_PT = {
     "stop": "Parar",
     "time": "Tempo",
     "17": "A0",
-    "line":"Linha",
-    "member":"Membro",
-    "address":"Endereço",
-    "prefix":"Prefixo",
-    "apikey":"Chave da API"
+    "line": "Linha",
+    "member": "Membro",
+    "address": "Endereço",
+    "prefix": "Prefixo",
+    "apikey": "Chave da API"
 };
 
 function loadsLanguage(lang) {
-    if(lang === null){
-        window.navigator.language.startsWith("en") ?   lang = "EN" :  lang = "PT";
+    if (lang === null) {
+        window.navigator.language.startsWith("en") ? lang = "EN" : lang = "PT";
     }
     localStorage.setItem('lang', lang);
     $('span[class^="lang"]').each(function () {
@@ -396,7 +396,7 @@ function applySwitchFamily(id) {
 }
 
 function fillGpioSelect(id) {
-    var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15","16"];
+    var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15", "16"];
     addToSelect(id, "lang-none", 99);
     for (let gpio of gpios) {
         addToSelect(id, "lang-" + gpio, gpio);
@@ -526,11 +526,11 @@ function buildSensor(obj) {
         '                            <tr>' +
         '                                <td><span class="label-device-indent"><span' +
         '                                    class="lang-group">Grupo</span></span></td>' +
-        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne  + '"' +
+        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' +
         '                                                            type="text" id="s_knxLevelOne_' + obj.id + '" placeholder="ex: 2"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo  + '"' +
+        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' +
         '                                                            type="text" id="s_knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree  + '"' +
+        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree + '"' +
         '                                                            type="text" id="s_knxLevelThree_' + obj.id + '" placeholder="ex: 1"' +
         '                                                             maxlength="2" required/>' +
 
@@ -722,11 +722,11 @@ function buildSwitch(obj) {
         '                            <tr>' +
         '                                <td><span class="label-device-indent"><span' +
         '                                    class="lang-group">Grupo</span></span></td>' +
-        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne  + '"' +
+        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' +
         '                                                            type="text" id="knxLevelOne_' + obj.id + '" placeholder="ex: 2"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo  + '"' +
+        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' +
         '                                                            type="text" id="knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree  + '"' +
+        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree + '"' +
         '                                                            type="text" id="knxLevelThree_' + obj.id + '" placeholder="ex: 1"' +
         '                                                             maxlength="2" required/>' +
 
@@ -1002,9 +1002,9 @@ function saveMqtt() {
     storeConfig();
 }
 function saveKnx() {
-    config.knxArea =  parseInt($('#knxArea').val().trim());
-    config.knxLine =  parseInt($('#knxLine').val().trim());
-    config.knxMember = parseInt( $('#knxMember').val().trim());
+    config.knxArea = parseInt($('#knxArea').val().trim());
+    config.knxLine = parseInt($('#knxLine').val().trim());
+    config.knxMember = parseInt($('#knxMember').val().trim());
     storeConfig();
 }
 function saveEmoncms() {

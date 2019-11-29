@@ -188,7 +188,9 @@ void setupWiFi()
 {
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);
+#if JUSTWIFI_ENABLE_SMARTCONFIG
   jw.startSmartConfig();
+#endif
   jw.setSoftAP(getAtualConfig().apName, getAtualConfig().apSecret);
   jw.enableAP(false);
   jw.enableAPFallback(true);
