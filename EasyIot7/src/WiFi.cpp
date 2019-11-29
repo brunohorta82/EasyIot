@@ -200,7 +200,7 @@ void setupWiFi()
 
 void loopWiFi()
 {
-  if (WiFi.isConnected() && connectedOn + 60000 < millis())
+  if ((WiFi.getMode() & WIFI_AP) && WiFi.isConnected() && connectedOn + 60000 < millis())
   {
     dissableAP();
   }

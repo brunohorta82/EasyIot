@@ -62,6 +62,7 @@ function hide(id) {
 var config;
 var WORDS_EN = {
     "node": "NODE",
+    "clock":"CLOCK",
     "reading-interval": "Readings every",
     "sensors": "Sensors",
     "integrations": "INTEGRATIONS",
@@ -135,6 +136,7 @@ var WORDS_EN = {
 };
 var WORDS_PT = {
     "node": "NÓ",
+    "clock":"RELÓGIO",
     "group": "Grupo",
     "integrations": "INTEGRAÇÕES",
     "sensors": "Sensores",
@@ -274,7 +276,6 @@ function loadDevice(func, e, next) {
 
 function fillConfig() {
     if (!config) return;
-    $("#firmwareVersion").text(config.firmware);
     $(".bh-model").text(config.hardware);
     $(".bh-onofre-item").removeClass("hide");
     $("#version_lbl").text(config.firmware);
@@ -919,45 +920,7 @@ function saveSwitch(id) {
     });
 }
 
-$(document).ready(function () {
 
-    let lang = localStorage.getItem('lang');
-    if (lang) {
-        loadsLanguage(lang);
-    } else {
-        window.navigator.language.startsWith("en") ? loadsLanguage("EN") : loadsLanguage("PT");
-    }
-    loadConfig();
-    $('#node_id').on('keypress', function (e) {
-        if (e.which === 32)
-            return false;
-    });
-    $('.menu-item').click(function (e) {
-        let menu = $(e.currentTarget).data('menu');
-        toggleActive(menu);
-
-    });
-    systemStatus();
-    toggleActive("node");
-    setInterval(systemStatus, 15000);
-    if (!!window.EventSource) {
-        let source = new EventSource(endpoint.baseUrl + '/events');
-        source.addEventListener('states', function (e) {
-            let json = JSON.parse(e.data);
-            let state = json.state == "OFF" ? "on" : json.state.toLowerCase();
-            $("#btn_" + state + "_" + json.id).removeClass("ON");
-            $("#btn_" + state + "_" + json.id).removeClass("OPEN");
-            $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
-            $("#btn_" + state + "_" + json.id).addClass(json.state);
-        }, false);
-        source.addEventListener('sensors', function (e) {
-            let json = JSON.parse(e.data);
-            updateSensorReadings(json);
-        }, false);
-
-    }
-
-});
 
 function storeConfig() {
     const targetUrl = endpoint.baseUrl + "/save-config";
@@ -1141,3 +1104,45 @@ function buildSwitchTemplate() {
     };
     buildSwitch(device);
 }
+$(document).ready(function () {
+
+    let lang = localStorage.getItem('lang');
+    if (lang) {
+        loadsLanguage(lang);
+    } else {
+        window.navigator.language.startsWith("en") ? loadsLanguage("EN") : loadsLanguage("PT");
+    }
+    loadConfig();
+    $('#node_id').on('keypress', function (e) {
+        if (e.which === 32)
+            return false;
+    });
+    $('.menu-item').click(function (e) {
+        let menu = $(e.currentTarget).data('menu');
+        toggleActive(menu);
+
+    });
+    systemStatus();
+    toggleActive("node");
+    setInterval(systemStatus, 15000);
+    if (!!window.EventSource) {
+        let source = new EventSource(endpoint.baseUrl + '/events');
+        source.addEventListener('states', function (e) {
+            let json = JSON.parse(e.data);
+            let state = json.state == "OFF" ? "on" : json.state.toLowerCase();
+            $("#btn_" + state + "_" + json.id).removeClass("ON");
+            $("#btn_" + state + "_" + json.id).removeClass("OPEN");
+            $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
+            $("#btn_" + state + "_" + json.id).addClass(json.state);
+        }, false);
+        source.addEventListener('sensors', function (e) {
+            let json = JSON.parse(e.data);
+            updateSensorReadings(json);
+        }, false);
+        source.addEventListener('my_time', function (e) {
+            $('#lbl-clock').text(e.data);
+        }, false);
+
+    }
+
+});
