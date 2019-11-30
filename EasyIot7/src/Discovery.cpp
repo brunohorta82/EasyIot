@@ -155,6 +155,8 @@ void addToHaDiscovery(const SensorT &s)
   case REED_SWITCH:
     object["device_class"] = "window";
     object["value_template"] = "{{value_json.binary_state}}";
+    object["payload_on"] = 1;
+    object["payload_off"] = 0;
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
