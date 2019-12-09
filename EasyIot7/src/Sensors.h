@@ -26,6 +26,7 @@ enum SensorType
 
 struct SensorT
 {
+  double firmware;
   char id[32]; //Generated from name without spaces and no special characters
   char name[24];
   char family[16]; //sensor, binary_sensor

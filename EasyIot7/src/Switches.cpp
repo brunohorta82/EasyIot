@@ -91,7 +91,7 @@ size_t Switches::serializeToJson(Print &output)
 
 void SwitchT::save(File &file) const
 {
-
+  file.write((uint8_t *)&firmware, sizeof(firmware));
   file.write((uint8_t *)id, sizeof(id));
   file.write((uint8_t *)name, sizeof(name));
   file.write((uint8_t *)family, sizeof(family));
@@ -123,20 +123,28 @@ void SwitchT::save(File &file) const
 
   file.write((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
   file.write((uint8_t *)&lastSecondaryGpioState, sizeof(lastSecondaryGpioState));
-  file.write((uint8_t *)&lastTimeChange, sizeof(lastTimeChange));
-  file.write((uint8_t *)&percentageRequest, sizeof(percentageRequest));
   file.write((uint8_t *)&statePoolIdx, sizeof(statePoolIdx));
   file.write((uint8_t *)&statePoolStart, sizeof(statePoolStart));
   file.write((uint8_t *)&statePoolEnd, sizeof(statePoolEnd));
 
   file.write((uint8_t *)&alexaSupport, sizeof(alexaSupport));
   file.write((uint8_t *)&haSupport, sizeof(haSupport));
+  file.write((uint8_t *)&knxSupport, sizeof(knxSupport));
   file.write((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
   file.write((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
   file.write((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
 }
 void SwitchT::load(File &file)
 {
+  file.read((uint8_t *)&firmware, sizeof(firmware));
+  if (firmware < VERSION)
+  {
+    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
+    firmware = VERSION;
+    save(file);
+    load(file);
+    return;
+  }
   file.read((uint8_t *)id, sizeof(id));
   file.read((uint8_t *)name, sizeof(name));
   file.read((uint8_t *)family, sizeof(family));
@@ -168,16 +176,13 @@ void SwitchT::load(File &file)
 
   file.read((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
   file.read((uint8_t *)&lastSecondaryGpioState, sizeof(lastSecondaryGpioState));
-  lastTimeChange = 0;
-  file.read((uint8_t *)&lastTimeChange, sizeof(lastTimeChange));
-  percentageRequest = -1;
-  file.read((uint8_t *)&percentageRequest, sizeof(percentageRequest));
   file.read((uint8_t *)&statePoolIdx, sizeof(statePoolIdx));
   file.read((uint8_t *)&statePoolStart, sizeof(statePoolStart));
   file.read((uint8_t *)&statePoolEnd, sizeof(statePoolEnd));
 
   file.read((uint8_t *)&alexaSupport, sizeof(alexaSupport));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
+  file.read((uint8_t *)&knxSupport, sizeof(knxSupport));
   file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
   file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
   file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
@@ -357,7 +362,8 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.lastSecondaryGpioState = readPIN(sw.secondaryGpio);
   strlcpy(sw.stateControl, constanstsSwitch::payloadOff, sizeof(sw.mqttPayload));
   strlcpy(sw.mqttPayload, sw.stateControl, sizeof(sw.mqttPayload));
-  sw.lastTimeChange = 0ul;
+  sw.lastPrimaryGpioState = millis();
+  sw.lastSecondaryTimeChange = millis();
   sw.knxLevelOne = knxLevelOne;
   sw.knxLevelTwo = knxLevelTwo;
   sw.knxLevelThree = knxLevelThree;
@@ -705,7 +711,6 @@ void SwitchT::changeState(const char *state)
   payloadSe.concat(mqttPayload);
   payloadSe.concat("\"}");
   sendToServerEvents("states", payloadSe);
-  lastTimeChange = millis();
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
@@ -748,7 +753,7 @@ void stateSwitchByName(Switches &switches, const char *name, const char *state, 
 
 bool stateTimeout(const SwitchT &sw)
 {
-  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.stateControl) != 0 && sw.lastTimeChange + sw.autoStateDelay < millis();
+  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.stateControl) != 0 && sw.lastPrimaryTimeChange + sw.autoStateDelay < millis();
 }
 boolean positionDone(const SwitchT &sw)
 {
@@ -760,7 +765,7 @@ boolean positionDone(const SwitchT &sw)
   {
     return false;
   }
-  if (sw.lastTimeChange + constanstsSwitch::coverAutoStopProtection < millis())
+  if (sw.lastPrimaryTimeChange + constanstsSwitch::coverAutoStopProtection < millis())
   {
     return true;
   }
@@ -787,18 +792,23 @@ void loop(Switches &switches)
   {
     bool primaryValue = readPIN(sw.primaryGpio);
     bool secondaryValue = readPIN(sw.secondaryGpio);
-    unsigned long currentTime = millis();
+    uint32_t read_started_ms = millis();
 
-    bool primaryGpioEvent = primaryValue != sw.lastPrimaryGpioState;
-    bool secondaryGpioEvent = secondaryValue != sw.lastSecondaryGpioState;
-
-    if ((primaryGpioEvent || secondaryGpioEvent) && currentTime - sw.lastTimeChange >= constanstsSwitch::delayDebounce)
+    bool primaryGpioEvent = primaryValue != sw.lastPrimaryGpioState && read_started_ms - sw.lastPrimaryTimeChange >= constanstsSwitch::delayDebounce;
+    bool secondaryGpioEvent = secondaryValue != sw.lastSecondaryGpioState && read_started_ms - sw.lastSecondaryTimeChange >= constanstsSwitch::delayDebounce;
+    if (primaryGpioEvent)
+    {
+      sw.lastPrimaryTimeChange = read_started_ms;
+    }
+    if (secondaryGpioEvent)
+    {
+      sw.lastSecondaryTimeChange = read_started_ms;
+    }
+    if (primaryGpioEvent || secondaryGpioEvent)
     {
       sw.lastPrimaryGpioState = primaryValue;
       sw.lastSecondaryGpioState = secondaryValue;
-      sw.lastTimeChange = currentTime;
       int poolSize = sw.statePoolEnd - sw.statePoolStart + 1;
-
       switch (sw.mode)
       {
       case SWITCH:
@@ -849,7 +859,7 @@ void loop(Switches &switches)
     if (sw.primaryGpioControl != constantsConfig::noGPIO && sw.timeBetweenStates != 0 && digitalRead(sw.primaryGpioControl))
     {
       unsigned long offset = ((sw.lastPercentage * sw.timeBetweenStates) / 100);
-      unsigned long deltaTime = (millis() - sw.lastTimeChange);
+      unsigned long deltaTime = (millis() - sw.lastPrimaryTimeChange);
       if (sw.secondaryGpioControl != constantsConfig::noGPIO)
       {
         if (digitalRead(sw.secondaryGpioControl))

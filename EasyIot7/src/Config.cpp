@@ -213,6 +213,14 @@ void Config::save(File &file) const
 void Config::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
+  if (firmware < VERSION)
+  {
+    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
+    firmware = VERSION;
+    save(file);
+    load(file);
+    return;
+  }
   file.read((uint8_t *)nodeId, sizeof(nodeId));
   file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
@@ -241,11 +249,6 @@ void Config::load(File &file)
   file.read((uint8_t *)&knxArea, sizeof(knxArea));
   file.read((uint8_t *)&knxLine, sizeof(knxLine));
   file.read((uint8_t *)&knxMember, sizeof(knxMember));
-  if (firmware < VERSION)
-  {
-    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
-  }
-  firmware = VERSION;
 }
 void loadStoredConfiguration(Config &config)
 {

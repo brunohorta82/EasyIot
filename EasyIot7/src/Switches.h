@@ -31,13 +31,15 @@ struct SwitchStatePool
 };
 struct SwitchT
 {
+    double firmware;
     char id[32]; //Generated from name without spaces and no special characters
     char name[24];
     char family[10];                      //switch, light, cover, lock
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT; //MQTT OR RELAY
-    bool alexaSupport = true;
-    bool haSupport = true;
+    bool alexaSupport = false;
+    bool haSupport = false;
+    bool knxSupport = false;
     bool childLock = false;
     //GPIOS INPUT
     unsigned int primaryGpio;
@@ -76,7 +78,9 @@ struct SwitchT
     int lastPercentage;
     bool lastPrimaryGpioState;
     bool lastSecondaryGpioState;
-    volatile long lastTimeChange = 0;
+
+    uint32_t lastPrimaryTimeChange = 0;
+    uint32_t lastSecondaryTimeChange = 0;
     int percentageRequest = -1;
     int statePoolIdx;
     unsigned int statePoolStart;

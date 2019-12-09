@@ -8,6 +8,7 @@
 
 struct Config
 {
+  double firmware;
   char nodeId[32];
   char homeAssistantAutoDiscoveryPrefix[32];
   char mqttIpDns[40];
@@ -28,7 +29,6 @@ struct Config
   long configTime;
   char configkey[64];
   char chipId[24];
-  double firmware;
   char apiUser[32];
   char apiPassword[24];
   char emoncmsServer[80];

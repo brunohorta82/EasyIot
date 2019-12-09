@@ -106,6 +106,15 @@ void Sensors::save(File &file) const
 }
 void SensorT::load(File &file)
 {
+  file.read((uint8_t *)&firmware, sizeof(firmware));
+  if (firmware < VERSION)
+  {
+    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
+    firmware = VERSION;
+    save(file);
+    load(file);
+    return;
+  }
   file.read((uint8_t *)id, sizeof(id));
   file.read((uint8_t *)name, sizeof(name));
   file.read((uint8_t *)family, sizeof(family));
@@ -129,7 +138,7 @@ void SensorT::load(File &file)
 }
 void SensorT::save(File &file) const
 {
-
+  file.write((uint8_t *)&firmware, sizeof(firmware));
   file.write((uint8_t *)id, sizeof(id));
   file.write((uint8_t *)name, sizeof(name));
   file.write((uint8_t *)family, sizeof(family));
