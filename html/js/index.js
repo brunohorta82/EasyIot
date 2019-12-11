@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: "http://192.168.1.114"
+    baseUrl: ""
 };
 var switches = [];
 var sensors = [];
@@ -88,7 +88,7 @@ function hide(id) {
 var config;
 var WORDS_EN = {
     "node": "NODE",
-    "clock":"CLOCK",
+    "lang-connectedOn":"CONNECTED ON",
     "reading-interval": "Readings every",
     "sensors": "Sensors",
     "integrations": "INTEGRATIONS",
@@ -162,7 +162,7 @@ var WORDS_EN = {
 };
 var WORDS_PT = {
     "node": "NÓ",
-    "clock":"RELÓGIO",
+    "lang-connectedOn":"LIGADO A",
     "group": "Grupo",
     "integrations": "INTEGRAÇÕES",
     "sensors": "Sensores",
@@ -307,6 +307,7 @@ function fillConfig() {
     $("#version_lbl").text(config.firmware);
     $("#lbl-chip").text(config.chipId);
     $("#lbl-mac").text(config.mac);
+    $("#lbl-connectedOn").text(config.connectedOn);
     $('input[name="nodeId"]').val(config.nodeId);
     $('input[name="mqttIpDns"]').val(config.mqttIpDns);
     $('#mqtt_lbl').text(config.mqttIpDns);
@@ -1140,10 +1141,6 @@ $(document).ready(function () {
             let json = JSON.parse(e.data);
             updateSensorReadings(json);
         }, false);
-        source.addEventListener('my_time', function (e) {
-            $('#lbl-clock').text(e.data);
-        }, false);
-
     }
 
 });
