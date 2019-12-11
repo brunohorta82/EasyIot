@@ -195,6 +195,7 @@ void refreshMDNS(const char *lastName)
     MDNS.addService("easyiot", "tcp", 80);
     MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
     MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION));
+    MDNS.addServiceTxt("easyiot", "tcp", "lastChange", String(getTime()));
   }
   else
   {

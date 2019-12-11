@@ -9,12 +9,6 @@
 #include "constants.h"
 #include "WebRequests.h"
 #include <esp-knx-ip.h>
-#include <Time.h>
-const char *NTP_SERVER = "pt.pool.ntp.org";
-const char *TZ_INFO = "WET-0WEST-1,M3.5.0/01:00:00,M10.5.0/02:00:00";
-tm timeinfo;
-time_t now;
-unsigned long lastNTPtime;
 
 void checkInternalRoutines()
 {
@@ -56,8 +50,7 @@ void setup()
   setupWiFi();
   setupMQTT();
   knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
-  configTime(0, 0, NTP_SERVER);
-  setenv("TZ", TZ_INFO, 1);
+
   setupWebserverAsync();
 }
 
@@ -70,14 +63,8 @@ void loop()
   loop(getAtualSwitchesConfig());
   loop(getAtualSensorsConfig());
   loopMqtt();
+  loopTime();
   knx.loop();
-
-  if (WiFi.status() == WL_CONNECTED && lastNTPtime + 1000 < millis())
-  {
-    time_t now = time(nullptr);
-    lastNTPtime = millis();
-    sendToServerEvents("my_time", String(ctime(&now)));
-  }
 }
 
 void actualUpdate()

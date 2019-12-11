@@ -5,4 +5,5 @@ void setupWebserverAsync();
 void webserverServicesLoop();
 void addSwitchToAlexa(const char *name);
 void removeSwitchFromAlexa(const char *name);
+void sendToServerEvents(const String &topic, const char *payload);
 #endif

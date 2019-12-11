@@ -11,6 +11,7 @@
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
+#if BHPZEM_004T || BHPZEM_004T_V03
 #include "SSD1306.h"   //https://github.com/ThingPulse/esp8266-oled-ssd1306
 #define DISPLAY_SDA 2  //-1 if you don't use display
 #define DISPLAY_SCL 13 //-1 if you don't use display
@@ -39,7 +40,7 @@ void setupDisplay()
   display.drawString(5, 0, "BH PZEM");
   display.display();
 }
-
+#endif
 struct Sensors &getAtualSensorsConfig()
 {
   static Sensors sensors;
@@ -84,13 +85,17 @@ void Sensors::load(File &file)
       IPAddress ip(192, 168, 1, item.primaryGpio);
       item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
+#if BHPZEM_004T || BHPZEM_004T_V03
       setupDisplay();
+#endif
     }
     break;
     case PZEM_004T_V03:
       item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
       configPIN(item.tertiaryGpio, INPUT);
+#if BHPZEM_004T || BHPZEM_004T_V03
       setupDisplay();
+#endif
       break;
     }
   }
@@ -463,7 +468,7 @@ void loop(Sensors &sensors)
         String analogReadAsString = String(ldrRaw);
         auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings);
+        sendToServerEvents("sensors", readings.c_str());
         publishOnEmoncms(ss, readings);
         Log.notice("%s {\"illuminance\": %d }" CR, tags::mqtt, ldrRaw);
       }
@@ -481,7 +486,7 @@ void loop(Sensors &sensors)
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings);
+        sendToServerEvents("sensors", readings.c_str());
         Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
       }
     }
@@ -501,7 +506,7 @@ void loop(Sensors &sensors)
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings);
+          sendToServerEvents("sensors", readings.c_str());
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
         }
       }
@@ -518,7 +523,7 @@ void loop(Sensors &sensors)
         String temperatureAsString = String(ss.temperature);
         auto readings = String("{\"temperature\":" + temperatureAsString + "}");
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings);
+        sendToServerEvents("sensors", readings.c_str());
         Log.notice("%s {\"temperature\": %F }" CR, tags::sensors, ss.temperature);
       }
     }
@@ -549,9 +554,11 @@ void loop(Sensors &sensors)
         else
         {
           auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+#if BHPZEM_004T || BHPZEM_004T_V03
           printOnDisplay(v, i, p, c);
+#endif
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings);
+          sendToServerEvents("sensors", readings.c_str());
           publishOnEmoncms(ss, readings);
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
         }
@@ -583,7 +590,7 @@ void loop(Sensors &sensors)
         {
           auto readings = String("{\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings);
+          sendToServerEvents("sensors", readings.c_str());
           publishOnEmoncms(ss, readings);
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
         }
