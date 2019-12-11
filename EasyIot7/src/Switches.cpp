@@ -726,7 +726,7 @@ void SwitchT::changeState(const char *state)
   payloadSe.concat("\",\"state\":\"");
   payloadSe.concat(mqttPayload);
   payloadSe.concat("\"}");
-  sendToServerEvents("states", payloadSe);
+  sendToServerEvents("states", payloadSe.c_str());
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();

@@ -38,6 +38,7 @@ struct Config
   uint8_t knxArea;
   uint8_t knxLine;
   uint8_t knxMember;
+  long connectedOn;
   Config &updateFromJson(JsonObject doc);
   void save(File &file) const;
   void load(File &file);
@@ -66,5 +67,6 @@ void configPIN(uint8_t pin, uint8_t mode);
 void writeToPIN(uint8_t pin, uint8_t val);
 bool readPIN(uint8_t pin);
 void generateId(String &id, const String &name, size_t maxSize);
-
+void loopTime();
+long getTime();
 #endif

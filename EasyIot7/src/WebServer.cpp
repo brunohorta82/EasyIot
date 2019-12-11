@@ -357,9 +357,9 @@ void removeSwitchFromAlexa(const char *name)
 {
   fauxmo.removeDevice(name);
 }
-void sendToServerEvents(const String &topic, const String &payload)
+void sendToServerEvents(const String &topic, const char *payload)
 {
-  events.send(payload.c_str(), topic.c_str(), millis());
+  events.send(payload, topic.c_str(), millis());
 }
 
 void webserverServicesLoop()

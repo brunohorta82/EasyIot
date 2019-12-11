@@ -4,6 +4,13 @@
 #include "ESP8266WiFi.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
+#include <Time.h>
+#include "WebServer.h"
+const char *NTP_SERVER = "pt.pool.ntp.org";
+const char *TZ_INFO = "WET-0WEST-1,M3.5.0/01:00:00,M10.5.0/02:00:00";
+tm timeinfo;
+time_t now;
+unsigned long lastNTPtime = 0ul;
 //CONTROL FLAGS
 static bool g_reboot = false;
 static bool g_loadDefaults = false;
@@ -21,6 +28,23 @@ void generateId(String &id, const String &name, size_t maxSize)
   id.concat(getAtualConfig().chipId);
   id.concat(name);
   normalize(id);
+}
+long getTime()
+{
+  time_t now = time(nullptr);
+  return now;
+}
+void loopTime()
+{
+  if (WiFi.status() == WL_CONNECTED && lastNTPtime + 1000 < millis())
+  {
+    long time = getTime();
+    if (getAtualConfig().connectedOn == 0ul && time > 1576082395)
+    {
+      getAtualConfig().connectedOn = time;
+    }
+    lastNTPtime = millis();
+  }
 }
 boolean isValidNumber(const char *str)
 {
@@ -181,6 +205,7 @@ size_t Config::serializeToJson(Print &output)
   doc["mode"] = (int)WiFi.getMode();
   doc["mqttConnected"] = mqttConnected();
   doc["freeHeap"] = String(ESP.getFreeHeap());
+  doc["connectedOn"] = connectedOn;
   return serializeJson(doc, output);
 }
 
@@ -255,6 +280,8 @@ void Config::load(File &file)
 }
 void loadStoredConfiguration(Config &config)
 {
+  configTime(0, 0, NTP_SERVER);
+  setenv("TZ", TZ_INFO, 1);
   if (!SPIFFS.begin())
   {
     Log.error("%s File storage can't start" CR, tags::config);

@@ -463,7 +463,7 @@ void loop(Sensors &sensors)
         String analogReadAsString = String(ldrRaw);
         auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings);
+        sendToServerEvents("sensors", readings.c_str());
         publishOnEmoncms(ss, readings);
         Log.notice("%s {\"illuminance\": %d }" CR, tags::mqtt, ldrRaw);
       }
@@ -481,7 +481,7 @@ void loop(Sensors &sensors)
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings);
+        sendToServerEvents("sensors", readings.c_str());
         Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
       }
     }
@@ -501,7 +501,7 @@ void loop(Sensors &sensors)
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings);
+          sendToServerEvents("sensors", readings.c_str());
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
         }
       }
@@ -518,7 +518,7 @@ void loop(Sensors &sensors)
         String temperatureAsString = String(ss.temperature);
         auto readings = String("{\"temperature\":" + temperatureAsString + "}");
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings);
+        sendToServerEvents("sensors", readings.c_str());
         Log.notice("%s {\"temperature\": %F }" CR, tags::sensors, ss.temperature);
       }
     }
@@ -551,7 +551,7 @@ void loop(Sensors &sensors)
           auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
           printOnDisplay(v, i, p, c);
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings);
+          sendToServerEvents("sensors", readings.c_str());
           publishOnEmoncms(ss, readings);
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
         }
@@ -583,7 +583,7 @@ void loop(Sensors &sensors)
         {
           auto readings = String("{\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings);
+          sendToServerEvents("sensors", readings.c_str());
           publishOnEmoncms(ss, readings);
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
         }
