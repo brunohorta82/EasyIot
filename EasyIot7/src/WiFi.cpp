@@ -189,7 +189,6 @@ void infoCallback(justwifi_messages_t code, char *parameter)
 void refreshMDNS(const char *lastName)
 {
   MDNS.removeService(lastName, "easyiot", "tcp");
-  MDNS.removeQuery();
   MDNS.close();
   if (MDNS.begin(String(getAtualConfig().nodeId)))
   {

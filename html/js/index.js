@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.1.114"
 };
 var switches = [];
 var sensors = [];
@@ -25,7 +25,34 @@ function addToSelect(select, class_, value) {
 
     }
 }
-
+function buildSwitchTemplate() {
+    if ($('#bs_NEW').length > 0) return
+    let device = {
+        "id": "NEW",
+        "name": "Novo Interruptor",
+        "family": "switch",
+        "primaryGpio": 99,
+        "secondaryGpio": 99,
+        "timeBetweenStates": 0,
+        "autoStateDelay": 0,
+        "autoStateValue": "",
+        "typeControl": 2,
+        "mode": 1,
+        "knxLevelOne": 0,
+        "knxLevelTwo": 0,
+        "knxLevelThree": 0,
+        "pullup": false,
+        "mqttRetain": false,
+        "inverted": false,
+        "mqttCommandTopic": "../set",
+        "mqttStateTopic": "../state",
+        "mqttPositionCommandTopic": "../setposition",
+        "mqttPositionStateTopic": "../position",
+        "primaryGpioControl": 99,
+        "secondaryGpioControl": 99,
+    };
+    buildSwitch(device);
+}
 function buildSensorTemplate() {
     if ($('#bss_NEW').length > 0) return
     let device = {
@@ -33,11 +60,10 @@ function buildSensorTemplate() {
         "name": "Novo Sensor",
         "primaryGpio": 99,
         "type": 65,
-        "knxLevelOne": 3,
-        "knxLevelTwo": 1,
-        "knxLevelThree": 99,
+        "knxLevelOne": 0,
+        "knxLevelTwo": 0,
+        "knxLevelThree": 0,
         "mqttRetain": true,
-        "haSupport": true,
         "mqttStateTopic": "../state",
         "delayRead": 2000
     };
@@ -603,6 +629,7 @@ function buildSwitch(obj) {
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     let checkedHaSupport = obj.haSupport ? "checked" : "";
     let checkedAlexaSupport = obj.alexaSupport ? "checked" : "";
+    let checkedKnxSupport = obj.knxSupport ? "checked" : "";
 
     $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
@@ -756,8 +783,10 @@ function buildSwitch(obj) {
         '                            <tr>' +
         '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
         '                                <td style="display: inline-flex">' +
+        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >KNX</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedKnxSupport + ' type="checkbox" id="knxSupport_' + obj.id + '" value="' + obj.knxSupport + '">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="haSupport_' + obj.id + '" value="' + obj.haSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Emoncms</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedAlexaSupport + ' type="checkbox" id="alexaSupport_' + obj.id + '" value="' + obj.alexaSupport + '">' +
+        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Alexa</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedAlexaSupport + ' type="checkbox" id="alexaSupport_' + obj.id + '" value="' + obj.alexaSupport + '">' +
+
         '                               </td>' +
         '                            </tr>' +
         '                            </tbody>' +
@@ -888,6 +917,7 @@ function saveSwitch(id) {
         "mqttRetain": document.getElementById('mqttRetain_' + id).checked,
         "haSupport": document.getElementById('haSupport_' + id).checked,
         "alexaSupport": document.getElementById('alexaSupport_' + id).checked,
+        "knxSupport": document.getElementById('knxSupport_' + id).checked,
         "inverted": false,
         "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),
         "secondaryGpioControl": parseInt($('#secondaryGpioControl_' + id).val()),
@@ -1074,36 +1104,7 @@ function systemStatus() {
     });
 }
 
-function buildSwitchTemplate() {
-    if ($('#bs_NEW').length > 0) return
-    let device = {
-        "id": "NEW",
-        "name": "Novo Interruptor",
-        "family": "switch",
-        "primaryGpio": 99,
-        "secondaryGpio": 99,
-        "timeBetweenStates": 0,
-        "autoStateDelay": 0,
-        "autoStateValue": "",
-        "typeControl": 2,
-        "mode": 1,
-        "knxLevelOne": 2,
-        "knxLevelTwo": 1,
-        "knxLevelThree": 99,
-        "pullup": false,
-        "mqttRetain": false,
-        "inverted": false,
-        "haSupport": true,
-        "alexaSupport": true,
-        "mqttCommandTopic": "../set",
-        "mqttStateTopic": "../state",
-        "mqttPositionCommandTopic": "../setposition",
-        "mqttPositionStateTopic": "../position",
-        "primaryGpioControl": 99,
-        "secondaryGpioControl": 99,
-    };
-    buildSwitch(device);
-}
+
 $(document).ready(function () {
 
     let lang = localStorage.getItem('lang');
