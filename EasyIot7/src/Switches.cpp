@@ -85,6 +85,7 @@ size_t Switches::serializeToJson(Print &output)
 
     sdoc["alexaSupport"] = sw.alexaSupport;
     sdoc["haSupport"] = sw.haSupport;
+    sdoc["knxSupport"] = sw.knxSupport;
   }
   return serializeJson(doc, output);
 }
@@ -137,14 +138,6 @@ void SwitchT::save(File &file) const
 void SwitchT::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  if (firmware < VERSION)
-  {
-    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
-    firmware = VERSION;
-    save(file);
-    load(file);
-    return;
-  }
   file.read((uint8_t *)id, sizeof(id));
   file.read((uint8_t *)name, sizeof(name));
   file.read((uint8_t *)family, sizeof(family));
@@ -186,6 +179,12 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
   file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
   file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
+
+  if (firmware < VERSION)
+  {
+    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::switches, firmware, VERSION);
+    firmware = VERSION;
+  }
 }
 
 void Switches::save(File &file) const
@@ -248,7 +247,20 @@ void Switches::load(File &file)
   for (auto &item : items)
   {
     item.load(file);
-    if (item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
+    configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    configPIN(item.primaryGpioControl, OUTPUT);
+    configPIN(item.secondaryGpioControl, OUTPUT);
+    item.lastPrimaryGpioState = readPIN(item.primaryGpio);
+    item.lastSecondaryGpioState = readPIN(item.secondaryGpio);
+    //INTEGRATIONS
+    //ALEXA
+    if (item.alexaSupport)
+    {
+      addSwitchToAlexa(item.name);
+    }
+    //KNX
+    if (item.knxSupport && item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
     {
       if (!globalKnxLevelThreeAssign)
       {
@@ -257,17 +269,6 @@ void Switches::load(File &file)
       }
       item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
       item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
-    }
-
-    configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-    configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-    configPIN(item.primaryGpioControl, OUTPUT);
-    configPIN(item.secondaryGpioControl, OUTPUT);
-    item.lastPrimaryGpioState = readPIN(item.primaryGpio);
-    item.lastSecondaryGpioState = readPIN(item.secondaryGpio);
-    if (item.alexaSupport)
-    {
-      addSwitchToAlexa(item.name);
     }
   }
 }
@@ -299,7 +300,7 @@ void remove(Switches &switches, const char *id)
     save(switches);
 }
 
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = true, bool alexaSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -312,6 +313,7 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   strlcpy(sw.autoStateValue, autoStateValue.c_str(), sizeof(sw.autoStateValue));
   sw.typeControl = typecontrol;
   sw.mode = mode;
+  sw.knxSupport = knxSupport;
   sw.haSupport = haSupport;
   sw.alexaSupport = alexaSupport;
   sw.pullup = true;
@@ -374,7 +376,21 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
 }
 void SwitchT::updateFromJson(JsonObject doc)
 {
-  templateSwitch(*this, doc["name"], doc["family"], static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)), doc["primaryGpio"] | constantsConfig::noGPIO, doc["secondaryGpio"] | constantsConfig::noGPIO, doc["primaryGpioControl"] | constantsConfig::noGPIO, doc["secondaryGpioControl"] | constantsConfig::noGPIO, doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul, doc["autoStateValue"] | "", static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)), doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true, doc["alexaSupport"] | true, doc["knxLevelOne"] | 0, doc["knxLevelTwo"] | 0, doc["knxLevelThree"] | 0);
+  templateSwitch(*this,
+                 doc["name"], doc["family"],
+                 static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH)),
+                 doc["primaryGpio"] | constantsConfig::noGPIO,
+                 doc["secondaryGpio"] | constantsConfig::noGPIO,
+                 doc["primaryGpioControl"] | constantsConfig::noGPIO,
+                 doc["secondaryGpioControl"] | constantsConfig::noGPIO,
+                 doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul,
+                 doc["autoStateValue"] | "",
+                 static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)),
+                 doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true, doc["alexaSupport"] | true,
+                 doc["knxLevelOne"] | 0,
+                 doc["knxLevelTwo"] | 0,
+                 doc["knxLevelThree"] | 0,
+                 doc["knxSupport"]);
   doc["id"] = id;
   doc["stateControl"] = stateControl;
   if (!doc["mqttCommandTopic"].isNull())

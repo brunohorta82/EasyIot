@@ -49,7 +49,7 @@ constexpr const char *apiPassword{"xpto"};  //API PASSWORD
 namespace constanstsSwitch
 {
 
-constexpr const int delayDebounce{75};                          //75 milliseconds
+constexpr const int delayDebounce{35};                          //75 milliseconds
 constexpr const unsigned long delayCoverProtection{50ul};       //50 milliseconds
 constexpr const unsigned long coverAutoStopProtection{90000ul}; // after 90 seconds turn off all relay to enhance the lifecycle
 constexpr const char *payloadOn{"ON"};

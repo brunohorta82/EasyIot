@@ -143,7 +143,7 @@ void normalize(String &inputStr)
 
 size_t Config::serializeToJson(Print &output)
 {
-  const size_t CAPACITY = JSON_OBJECT_SIZE(32) + sizeof(Config);
+  const size_t CAPACITY = JSON_OBJECT_SIZE(38) + sizeof(Config);
   StaticJsonDocument<CAPACITY> doc;
   doc["nodeId"] = nodeId;
   doc["homeAssistantAutoDiscoveryPrefix"] = homeAssistantAutoDiscoveryPrefix;
@@ -175,6 +175,12 @@ size_t Config::serializeToJson(Print &output)
   doc["knxArea"] = knxArea;
   doc["knxLine"] = knxLine;
   doc["knxMember"] = knxMember;
+  doc["currentWifiIp"] = WiFi.localIP().toString();
+  doc["wifiStatus"] = WiFi.isConnected();
+  doc["signal"] = WiFi.RSSI();
+  doc["mode"] = (int)WiFi.getMode();
+  doc["mqttConnected"] = mqttConnected();
+  doc["freeHeap"] = String(ESP.getFreeHeap());
   return serializeJson(doc, output);
 }
 
@@ -213,14 +219,6 @@ void Config::save(File &file) const
 void Config::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  if (firmware < VERSION)
-  {
-    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
-    firmware = VERSION;
-    save(file);
-    load(file);
-    return;
-  }
   file.read((uint8_t *)nodeId, sizeof(nodeId));
   file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
@@ -249,6 +247,11 @@ void Config::load(File &file)
   file.read((uint8_t *)&knxArea, sizeof(knxArea));
   file.read((uint8_t *)&knxLine, sizeof(knxLine));
   file.read((uint8_t *)&knxMember, sizeof(knxMember));
+  if (firmware < VERSION)
+  {
+    Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
+    firmware = VERSION;
+  }
 }
 void loadStoredConfiguration(Config &config)
 {
@@ -282,7 +285,7 @@ void loadStoredConfiguration(Config &config)
     config.firmware = VERSION;
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
     SPIFFS.end();
-    return;
+    Log.notice("%s Config %D loaded." CR, tags::config, config.firmware);
   }
 
   File file = SPIFFS.open(configFilenames::config, "r+");
