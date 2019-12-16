@@ -70,5 +70,5 @@ void loop()
 void actualUpdate()
 {
   WiFiClient client;
-  ESPhttpUpdate.update(client, constantsConfig::updateURL, VERSION);
+  ESPhttpUpdate.update(client, constantsConfig::updateURL);
 }
