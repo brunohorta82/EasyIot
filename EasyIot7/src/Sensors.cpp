@@ -524,9 +524,7 @@ void loop(Sensors &sensors)
         for (int i = 0; i < ss.oneWireSensorsCount; i++)
         {
           ss.dallas->requestTemperatures();
-          Serial.println(ss.dallas->getDeviceCount());
           ss.lastRead = millis();
-          Serial.print("COUNT ");
           ss.temperature = ss.dallas->getTempCByIndex(i);
           String temperatureAsString = String("temperature_") + String(i + 1);
           obj[temperatureAsString] = ss.temperature;

@@ -132,8 +132,6 @@ void addToHaDiscovery(const SensorT &s)
     publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
-    Serial.println("SSSSS");
-    Serial.println(s.oneWireSensorsCount);
     for (int i = 0; i < s.oneWireSensorsCount; i++)
     {
       String idx = String(i + 1);
