@@ -11,7 +11,7 @@
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
-#if BHPZEM_004T || BHPZEM_004T_V03
+#if WITH_DISPLAY
 #include "SSD1306.h"   //https://github.com/ThingPulse/esp8266-oled-ssd1306
 #define DISPLAY_SDA 2  //-1 if you don't use display
 #define DISPLAY_SCL 13 //-1 if you don't use display
@@ -85,7 +85,7 @@ void Sensors::load(File &file)
       IPAddress ip(192, 168, 1, item.primaryGpio);
       item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
-#if BHPZEM_004T || BHPZEM_004T_V03
+#if WITH_DISPLAY
       setupDisplay();
 #endif
     }
@@ -93,7 +93,7 @@ void Sensors::load(File &file)
     case PZEM_004T_V03:
       item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
       configPIN(item.tertiaryGpio, INPUT);
-#if BHPZEM_004T || BHPZEM_004T_V03
+#if WITH_DISPLAY
       setupDisplay();
 #endif
       break;
@@ -514,17 +514,26 @@ void loop(Sensors &sensors)
     break;
     case DS18B20:
     {
+
       if (ss.lastRead + ss.delayRead < millis())
       {
         ss.dallas->begin();
-        ss.dallas->requestTemperatures();
-        ss.lastRead = millis();
-        ss.temperature = ss.dallas->getTempCByIndex(0);
-        String temperatureAsString = String(ss.temperature);
-        auto readings = String("{\"temperature\":" + temperatureAsString + "}");
+        ss.oneWireSensorsCount = ss.dallas->getDeviceCount();
+        StaticJsonDocument<256> doc;
+        JsonObject obj = doc.to<JsonObject>();
+        for (int i = 0; i < ss.oneWireSensorsCount; i++)
+        {
+          ss.dallas->requestTemperatures();
+          ss.lastRead = millis();
+          ss.temperature = ss.dallas->getTempCByIndex(i);
+          String temperatureAsString = String("temperature_") + String(i + 1);
+          obj[temperatureAsString] = ss.temperature;
+        }
+        String readings = "";
+        serializeJson(doc, readings);
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
         sendToServerEvents("sensors", readings.c_str());
-        Log.notice("%s {\"temperature\": %F }" CR, tags::sensors, ss.temperature);
+        Log.notice("%s %s " CR, tags::sensors, readings.c_str());
       }
     }
     break;
@@ -554,7 +563,7 @@ void loop(Sensors &sensors)
         else
         {
           auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
-#if BHPZEM_004T || BHPZEM_004T_V03
+#if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
@@ -589,6 +598,9 @@ void loop(Sensors &sensors)
         else
         {
           auto readings = String("{\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+#if WITH_DISPLAY
+          printOnDisplay(v, i, p, c);
+#endif
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
           sendToServerEvents("sensors", readings.c_str());
           publishOnEmoncms(ss, readings);

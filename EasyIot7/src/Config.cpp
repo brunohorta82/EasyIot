@@ -42,6 +42,7 @@ void loopTime()
     if (getAtualConfig().connectedOn == 0ul && time > 1576082395)
     {
       getAtualConfig().connectedOn = time;
+      refreshMDNS(getAtualConfig().nodeId);
     }
     lastNTPtime = millis();
   }

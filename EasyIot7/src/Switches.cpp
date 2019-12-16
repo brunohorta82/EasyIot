@@ -808,17 +808,16 @@ void loop(Switches &switches)
   {
     bool primaryValue = readPIN(sw.primaryGpio);
     bool secondaryValue = readPIN(sw.secondaryGpio);
-    uint32_t read_started_ms = millis();
 
-    bool primaryGpioEvent = primaryValue != sw.lastPrimaryGpioState && read_started_ms - sw.lastPrimaryTimeChange >= constanstsSwitch::delayDebounce;
-    bool secondaryGpioEvent = secondaryValue != sw.lastSecondaryGpioState && read_started_ms - sw.lastSecondaryTimeChange >= constanstsSwitch::delayDebounce;
+    bool primaryGpioEvent = primaryValue != sw.lastPrimaryGpioState && millis() - sw.lastPrimaryTimeChange >= constanstsSwitch::delayDebounce;
+    bool secondaryGpioEvent = secondaryValue != sw.lastSecondaryGpioState && millis() - sw.lastSecondaryTimeChange >= constanstsSwitch::delayDebounce;
     if (primaryGpioEvent)
     {
-      sw.lastPrimaryTimeChange = read_started_ms;
+      sw.lastPrimaryTimeChange = millis();
     }
     if (secondaryGpioEvent)
     {
-      sw.lastSecondaryTimeChange = read_started_ms;
+      sw.lastSecondaryTimeChange = millis();
     }
     if (primaryGpioEvent || secondaryGpioEvent)
     {

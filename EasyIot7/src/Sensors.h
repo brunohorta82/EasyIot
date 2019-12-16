@@ -51,6 +51,7 @@ struct SensorT
   //TEMPERATURE AND HUMIDITY SENSORS
   DHT_nonblocking *dht;
   DallasTemperature *dallas;
+  uint8_t oneWireSensorsCount = 0;
 
   PZEM004T *pzem;
   PZEM004Tv30 *pzemv03;
