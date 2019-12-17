@@ -36,7 +36,37 @@ auto constexpr switches = "/config/switches.bin";
 } // namespace configFilenames
 namespace constantsConfig
 {
-constexpr const char *updateURL{"http://release.bhonofre.pt/firmware.bin"};
+#if NONE
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=NONE"};
+#endif
+#if SINGLE_SWITCH
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=SINGLE_SWITCH"};
+#endif
+#if DUAL_LIGHT
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=DUAL_LIGHT"};
+#endif
+#if VMC
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=VMC"};
+#endif
+#if COVER
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=COVER"};
+#endif
+#if LOCK
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=LOCK"};
+#endif
+#if FOUR_LOCK
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=FOUR_LOCK"};
+#endif
+#if BHPZEM_004T
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=BHPZEM_004T"};
+#endif
+#if BHPZEM_004T_V03
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=BHPZEM_004T_V03"};
+#endif
+#if GATE
+constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=NONE"};
+#endif
+
 constexpr const char *newID{"NEW"};
 constexpr unsigned int noGPIO{99u};
 constexpr unsigned long storeConfigDelay{5000ul};
