@@ -527,7 +527,7 @@ void loop(Sensors &sensors)
           ss.lastRead = millis();
           ss.temperature = ss.dallas->getTempCByIndex(i);
           String temperatureAsString = String("temperature_") + String(i + 1);
-          obj[temperatureAsString] = ss.temperature;
+          obj[temperatureAsString] = trunc(ss.temperature);
         }
         String readings = "";
         serializeJson(doc, readings);
