@@ -25,6 +25,19 @@ function addToSelect(select, class_, value) {
 
     }
 }
+function requestUpdate() {
+    $.ajax({
+        url: endpoint.baseUrl + "/auto-update",
+        contentType: "text/plain; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            showMessage("O Dispositivo vai iniciar a atualização automática, aguarde.", "The device started the auto upgrade.")
+        }, error: function () {
+            showMessage("Não foi possivel iniciar a atualização automárica, tenta novamente.", "Can't be possible to start auto update, retry again.")
+        },
+        timeout: 1000
+    });
+}
 function buildSwitchTemplate() {
     if ($('#bs_NEW').length > 0) return
     let device = {
@@ -87,6 +100,7 @@ function hide(id) {
 
 var config;
 var WORDS_EN = {
+    "update-from-server":"NEW UPGRADE",
     "node": "NODE",
     "lang-connectedOn":"CONNECTED ON",
     "reading-interval": "Readings every",
@@ -97,7 +111,8 @@ var WORDS_EN = {
     "memory-free": "HEAP",
     "current-version": "Current version",
     "new-file": "Choose new version file",
-    "install-new-version": "Install new version",
+    "install-new-version": "Auto Upgrade to version",
+    "install-file-version": "Install file version",
     "version": "Version",
     "save": "Save",
     "clean-fields": "Clear all Fields",
@@ -161,6 +176,7 @@ var WORDS_EN = {
 
 };
 var WORDS_PT = {
+    "update-from-server":"NOVA ATUALIZAÇÃO",
     "node": "NÓ",
     "lang-connectedOn":"LIGADO A",
     "group": "Grupo",
@@ -173,7 +189,8 @@ var WORDS_PT = {
     "features": "FUNÇÕES",
     "current-version": "Versão atual",
     "new-file": "Escolher o ficheiro da nova versão",
-    "install-new-version": "Instalar nova versão",
+    "install-new-version": "Atualizar automáticamente para a versão ",
+    "install-file-version": "Instalar versão do ficheiro",
     "version": "Versão",
     "save": "Guardar",
     "memory-free": "HEAP",
@@ -329,8 +346,9 @@ function fillConfig() {
     $('input[name="emoncmsServer"]').val(config.emoncmsServer);
     $('input[name="emoncmsPath"]').val(config.emoncmsPath);
     $('input[name="emoncmsApikey"]').val(config.emoncmsApikey);
-
+    getLastVersion(config.firmwareMode,config.firmware);
     $('#ff').prop('disabled', false);
+
 }
 
 function toggleActive(menu) {
@@ -1060,6 +1078,23 @@ function reboot() {
         timeout: 2000
     });
 }
+function getLastVersion(firmwareMode, currentVersion) {
+    $.ajax({
+        url: "http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode="+ firmwareMode,
+        contentType: "text/plain; charset=utf-8",
+        success: function (response) {
+            if(response <= currentVersion){
+                $("#box-auto-update").addClass('hide');
+            }else {
+                $("#box-auto-update").removeClass('hide');
+                $("#lbl-lastversion").text(response);
+            }
+        }, error: function () {
+            $("#box-auto-update").addClass('hide');
+        },
+        timeout: 1000
+    });
+}
 
 function loadDefaults() {
     $.ajax({
@@ -1067,7 +1102,7 @@ function loadDefaults() {
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            showMessage("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.", "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.")
+            showMessage("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.", "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.")
         }, error: function () {
             showMessage("Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
         },

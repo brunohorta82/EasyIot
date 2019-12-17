@@ -196,36 +196,7 @@ void refreshMDNS(const char *lastName)
     MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
     MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION));
     MDNS.addServiceTxt("easyiot", "tcp", "lastChange", String(getTime()));
-#if NONE
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "NONE");
-#endif
-#if SINGLE_SWITCH
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "SINGLE_SWITCH");
-#endif
-#if DUAL_LIGHT
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "DUAL_LIGHT");
-#endif
-#if VMC
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "VMC");
-#endif
-#if COVER
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "COVER");
-#endif
-#if LOCK
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "LOCK");
-#endif
-#if FOUR_LOCK
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "FOUR_LOCK");
-#endif
-#if BHPZEM_004T
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "BHPZEM_004T");
-#endif
-#if BHPZEM_004T_V03
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "BHPZEM_004T_V03");
-#endif
-#if GATE
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", "GATE");
-#endif
+    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", constantsConfig::firmwareMode);
   }
   else
   {

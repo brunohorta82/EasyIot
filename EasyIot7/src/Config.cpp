@@ -167,7 +167,7 @@ void normalize(String &inputStr)
 
 size_t Config::serializeToJson(Print &output)
 {
-  const size_t CAPACITY = JSON_OBJECT_SIZE(38) + sizeof(Config);
+  const size_t CAPACITY = JSON_OBJECT_SIZE(39) + sizeof(Config);
   StaticJsonDocument<CAPACITY> doc;
   doc["nodeId"] = nodeId;
   doc["homeAssistantAutoDiscoveryPrefix"] = homeAssistantAutoDiscoveryPrefix;
@@ -206,6 +206,8 @@ size_t Config::serializeToJson(Print &output)
   doc["mqttConnected"] = mqttConnected();
   doc["freeHeap"] = String(ESP.getFreeHeap());
   doc["connectedOn"] = connectedOn;
+  doc["firmwareMode"] = constantsConfig::firmwareMode;
+
   return serializeJson(doc, output);
 }
 
@@ -244,6 +246,9 @@ void Config::save(File &file) const
 void Config::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
+  if(firmware < 7.8){
+    requestLoadDefaults();
+  }
   file.read((uint8_t *)nodeId, sizeof(nodeId));
   file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));

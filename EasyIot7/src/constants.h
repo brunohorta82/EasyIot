@@ -37,35 +37,56 @@ auto constexpr switches = "/config/switches.bin";
 namespace constantsConfig
 {
 #if NONE
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=NONE"};
+constexpr const char *firmwareMode{"NONE"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=NONE"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=NONE"};
 #endif
 #if SINGLE_SWITCH
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=SINGLE_SWITCH"};
+constexpr const char *firmwareMode{"SINGLE_SWITCH"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=SINGLE_SWITCH"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=SINGLE_SWITCH"};
 #endif
 #if DUAL_LIGHT
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=DUAL_LIGHT"};
+constexpr const char *firmwareMode{"DUAL_LIGHT"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=DUAL_LIGHT"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=DUAL_LIGHT"};
 #endif
 #if VMC
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=VMC"};
+constexpr const char *firmwareMode{"VMC"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=VMC"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=VMC"};
 #endif
 #if COVER
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=COVER"};
+constexpr const char *firmwareMode{"COVER"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=COVER"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=COVER"};
 #endif
 #if LOCK
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=LOCK"};
+constexpr const char *firmwareMode{"LOCK"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=LOCK"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=LOCK"};
 #endif
 #if FOUR_LOCK
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=FOUR_LOCK"};
+constexpr const char *firmwareMode{"FOUR_LOCK"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=FOUR_LOCK"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=FOUR_LOCK"};
 #endif
 #if BHPZEM_004T
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=BHPZEM_004T"};
+constexpr const char *firmwareMode{"BHPZEM_004T"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T"};
 #endif
 #if BHPZEM_004T_V03
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=BHPZEM_004T_V03"};
+constexpr const char *firmwareMode{"BHPZEM_004T_V03"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_V03"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_V03"};
 #endif
 #if GATE
-constexpr const char *updateURL{"http://192.168.1.20:8080/update-firmware/latest?firmwareMode=NONE"};
+constexpr const char *firmwareMode{"GATE"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=GATE"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=GATE"};
 #endif
+
 
 constexpr const char *newID{"NEW"};
 constexpr unsigned int noGPIO{99u};
