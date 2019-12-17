@@ -4,7 +4,6 @@
 #include "ESP8266WiFi.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
-#include <Time.h>
 #include "WebServer.h"
 const char *NTP_SERVER = "pt.pool.ntp.org";
 const char *TZ_INFO = "WET-0WEST-1,M3.5.0/01:00:00,M10.5.0/02:00:00";
