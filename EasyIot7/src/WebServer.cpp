@@ -121,7 +121,9 @@ void startAlexaDiscovery()
   fauxmo.enable(true);
   fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
     String valueStr = state ? String(map((int)value, 0, 255, 0, 100) + 1) : "0";
+#ifdef DEBUG
     Log.notice("%s Device id: %s, name: %s, value: %s, state: %t" CR, tags::alexa, device_id, device_name, valueStr.c_str(), state);
+#endif
     stateSwitchByName(getAtualSwitchesConfig(), device_name, state ? "ON" : "OFF", valueStr.c_str());
   });
 }
@@ -181,7 +183,9 @@ void setupWebserverAsync()
     response->addHeader("Connection", "close");
     request->send(response); }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     if(!index){
+#ifdef DEBUG
       Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
+#endif
       Update.runAsync(true);
       if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
         Update.printError(Serial);
@@ -194,7 +198,9 @@ void setupWebserverAsync()
     }
     if(final){
       if(Update.end(true)){
+#ifdef DEBUG
         Log.notice("%s Update Success: %d" CR, tags::system, index+len);
+#endif
         requestRestart();
       } else {
          requestRestart();
