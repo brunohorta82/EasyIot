@@ -58,7 +58,9 @@ void Sensors::load(File &file)
     switch (item.type)
     {
     case UNDEFINED:
+#ifdef DEBUG
       Log.error("%s Invalid type" CR, tags::sensors);
+#endif
       continue;
       break;
     case LDR:
@@ -134,7 +136,9 @@ void SensorT::load(File &file)
   file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
   if (firmware < VERSION)
   {
+#ifdef DEBUG
     Log.notice("%s Migrate Firmware from %F to %F" CR, tags::sensors, firmware, VERSION);
+#endif
     firmware = VERSION;
   }
 }
@@ -167,32 +171,42 @@ void save(Sensors &sensors)
 {
   if (!SPIFFS.begin())
   {
+#ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::sensors);
+#endif
     return;
   }
 
   File file = SPIFFS.open(configFilenames::sensors, "w+");
   if (!file)
   {
+#ifdef DEBUG
     Log.error("%s Failed to create file" CR, tags::sensors);
+#endif
     return;
   }
   sensors.save(file);
   file.close();
   SPIFFS.end();
+#ifdef DEBUG
   Log.notice("%s Config stored." CR, tags::sensors);
+#endif
 }
 void load(Sensors &sensors)
 {
   if (!SPIFFS.begin())
   {
+#ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::sensors);
+#endif
     return;
   }
 
   if (!SPIFFS.exists(configFilenames::sensors))
   {
+#ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::sensors);
+#endif
 #if defined BHPZEM_004T
     SensorT pzem;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
@@ -273,7 +287,9 @@ void load(Sensors &sensors)
   sensors.load(file);
   file.close();
   SPIFFS.end();
+#ifdef DEBUG
   Log.notice("%s Stored values was loaded." CR, tags::sensors);
+#endif
 }
 void remove(Sensors &sensors, const char *id)
 {
@@ -369,7 +385,9 @@ void initSensorsHaDiscovery(const Sensors &sensors)
 void SensorT::updateFromJson(JsonObject doc)
 {
   removeFromHaDiscovery(*this);
+#ifdef DEBUG
   Log.notice("%s Update Environment" CR, tags::sensors);
+#endif
   type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
   String idStr;
   strlcpy(name, doc.getMember("name").as<String>().c_str(), sizeof(name));
@@ -394,7 +412,9 @@ void SensorT::updateFromJson(JsonObject doc)
   switch (type)
   {
   case UNDEFINED:
+#ifdef DEBUG
     Log.error("%s Invalid type" CR, tags::sensors);
+#endif
     return;
     break;
   case LDR:
@@ -470,7 +490,9 @@ void loop(Sensors &sensors)
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
         sendToServerEvents("sensors", readings.c_str());
         publishOnEmoncms(ss, readings);
+#ifdef DEBUG
         Log.notice("%s {\"illuminance\": %d }" CR, tags::mqtt, ldrRaw);
+#endif
       }
     }
     break;
@@ -487,7 +509,9 @@ void loop(Sensors &sensors)
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
         sendToServerEvents("sensors", readings.c_str());
+#ifdef DEBUG
         Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
+#endif
       }
     }
     break;
@@ -507,7 +531,9 @@ void loop(Sensors &sensors)
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
           sendToServerEvents("sensors", readings.c_str());
+#ifdef DEBUG
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
+#endif
         }
       }
     }
@@ -533,7 +559,9 @@ void loop(Sensors &sensors)
         serializeJson(doc, readings);
         publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
         sendToServerEvents("sensors", readings.c_str());
+#ifdef DEBUG
         Log.notice("%s %s " CR, tags::sensors, readings.c_str());
+#endif
       }
     }
     break;
@@ -558,7 +586,9 @@ void loop(Sensors &sensors)
 
         if (v < 0.0)
         {
+#ifdef DEBUG
           Log.notice("%s PZEM ERROR" CR, tags::sensors);
+#endif
         }
         else
         {
@@ -569,7 +599,9 @@ void loop(Sensors &sensors)
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
           sendToServerEvents("sensors", readings.c_str());
           publishOnEmoncms(ss, readings);
+#ifdef DEBUG
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
+#endif
         }
       }
       break;
@@ -593,7 +625,9 @@ void loop(Sensors &sensors)
 
         if (isnan(v))
         {
+#ifdef DEBUG
           Log.notice("%s PZEM ERROR" CR, tags::sensors);
+#endif
         }
         else
         {
@@ -604,7 +638,9 @@ void loop(Sensors &sensors)
           publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
           sendToServerEvents("sensors", readings.c_str());
           publishOnEmoncms(ss, readings);
+#ifdef DEBUG
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
+#endif
         }
       }
       break;

@@ -14,25 +14,51 @@ void checkInternalRoutines()
 {
   if (restartRequested())
   {
+#ifdef DEBUG
     Log.notice("%s Rebooting...", tags::system);
+#endif
     ESP.restart();
   }
   if (loadDefaultsRequested())
   {
+#ifdef DEBUG
     Log.notice("%s Loading defaults...", tags::system);
+#endif
     SPIFFS.format();
     requestRestart();
   }
   if (autoUpdateRequested())
   {
+#ifdef DEBUG
     Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
+#endif
     WiFiClient client;
-    ESPhttpUpdate.update(client, constantsConfig::updateURL);
+    t_httpUpdate_return ret = ESPhttpUpdate.update(client, constantsConfig::updateURL, String(VERSION));
+    switch (ret)
+    {
+    case HTTP_UPDATE_FAILED:
+#ifdef DEBUG
+      Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+#endif
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+#ifdef DEBUG
+      Log.notice("HTTP_UPDATE_NO_UPDATES");
+#endif
+      break;
+    case HTTP_UPDATE_OK:
+#ifdef DEBUG
+      Log.notice("HTTP_UPDATE_OK");
+#endif
+      break;
+    }
   }
 
   if (reloadWifiRequested())
   {
+#ifdef DEBUG
     Log.notice("%s Loading wifi configuration...", tags::system);
+#endif
     reloadWiFiConfig();
   }
 }
@@ -60,15 +86,14 @@ void loop()
   webserverServicesLoop();
   loopWiFi();
   loopMqtt();
-  loop(getAtualSwitchesConfig());
-  loop(getAtualSensorsConfig());
-  loopMqtt();
-  loopTime();
+  if (!autoUpdateRequested())
+  {
+    loop(getAtualSwitchesConfig());
+    loopMqtt();
+    loop(getAtualSensorsConfig());
+    loopMqtt();
+    loopTime();
+  }
   knx.loop();
-}
-
-void actualUpdate()
-{
-  WiFiClient client;
-  ESPhttpUpdate.update(client, constantsConfig::updateURL);
+  loopMqtt();
 }

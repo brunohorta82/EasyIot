@@ -43,6 +43,7 @@ void infoWifi()
   {
     connectedOn = millis();
     uint8_t *bssid = WiFi.BSSID();
+#ifdef DEBUG
     Log.notice("%s MODE STA -------------------------------------" CR, tags::wifi);
     Log.notice("%s SSID  %s  " CR, tags::wifi, WiFi.SSID().c_str());
     Log.notice("%s BSSID %X:%X:%X:%X:%X:%X" CR, tags::wifi, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
@@ -55,15 +56,18 @@ void infoWifi()
     Log.notice("%s DNS   %s " CR, tags::wifi, WiFi.dnsIP().toString().c_str());
     Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
     Log.notice("----------------------------------------------" CR);
+#endif
   }
 
   if (WiFi.getMode() & WIFI_AP)
   {
+#ifdef DEBUG
     Log.notice("%s MODE AP --------------------------------------" CR, tags::wifi);
     Log.notice("%s SSID %s " CR, tags::wifi, jw.getAPSSID().c_str());
     Log.notice("%s IP  %s  " CR, tags::wifi, WiFi.softAPIP().toString().c_str());
     Log.notice("%s MAC  %s " CR, tags::wifi, WiFi.softAPmacAddress().c_str());
     Log.notice("----------------------------------------------" CR);
+#endif
   }
 }
 
@@ -72,13 +76,15 @@ void scanNewWifiNetworks()
   unsigned char result = WiFi.scanNetworks();
   if (result == WIFI_SCAN_FAILED)
   {
-    //  publishOnEventSource("wifi-networks","Scan Failed");
+#ifdef DEBUG
     Log.error("%s Scan Failed" CR, tags::wifi);
+#endif
   }
   else if (result == 0)
   {
-    //   publishOnEventSource("wifi-networks","No networks found");
+#ifdef DEBUG
     Log.notice("%s No networks found" CR, tags::wifi);
+#endif
   }
   else
   {
@@ -113,6 +119,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
 
   switch (code)
   {
+#ifdef DEBUG
   case MESSAGE_TURNING_OFF:
     Log.notice("%s Turning OFF" CR, tags::wifi);
     break;
@@ -144,15 +151,19 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_CONNECT_FAILED:
     Log.error("%s Could not connect to %s" CR, tags::wifi, parameter);
     break;
+#endif
   case MESSAGE_CONNECTED:
     infoWifi();
     break;
+#ifdef DEBUG
   case MESSAGE_DISCONNECTED:
     Log.warning("%s Disconnected" CR, tags::wifi);
     break;
+#endif
   case MESSAGE_ACCESSPOINT_CREATED:
     infoWifi();
     break;
+#ifdef DEBUG
   case MESSAGE_ACCESSPOINT_DESTROYED:
     Log.notice("%s Disconnecting access point" CR, tags::wifi);
     break;
@@ -182,7 +193,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_HOSTNAME_ERROR:
     Log.error("%s Hostname Error" CR, tags::wifi);
     break;
-    break;
+#endif
   }
 }
 
@@ -200,7 +211,9 @@ void refreshMDNS(const char *lastName)
   }
   else
   {
+#ifdef DEBUG
     Log.error("%s MDNS Error" CR, tags::wifi);
+#endif
   }
 }
 void mdnsCallback(justwifi_messages_t code, char *parameter)
