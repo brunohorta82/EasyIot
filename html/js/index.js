@@ -29,7 +29,6 @@ function requestUpdate() {
     $.ajax({
         url: endpoint.baseUrl + "/auto-update",
         contentType: "text/plain; charset=utf-8",
-        dataType: "json",
         success: function (response) {
             showMessage("O Dispositivo vai iniciar a atualização automática, aguarde.", "The device started the auto upgrade.")
         }, error: function () {

@@ -18,20 +18,26 @@ void save(Switches &switches)
 {
   if (!SPIFFS.begin())
   {
+#ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::switches);
+#endif
     return;
   }
 
   File file = SPIFFS.open(configFilenames::switches, "w+");
   if (!file)
   {
+#ifdef DEBUG
     Log.error("%s Failed to create file" CR, tags::switches);
+#endif
     return;
   }
   switches.save(file);
   file.close();
   SPIFFS.end();
+#ifdef DEBUG
   Log.notice("%s Config stored." CR, tags::switches);
+#endif
   switches.lastChange = 0ul;
 }
 size_t Switches::serializeToJson(Print &output)
@@ -182,7 +188,9 @@ void SwitchT::load(File &file)
 
   if (firmware < VERSION)
   {
+#ifdef DEBUG
     Log.notice("%s Migrate Firmware from %F to %F" CR, tags::switches, firmware, VERSION);
+#endif
     firmware = VERSION;
   }
 }
@@ -445,13 +453,17 @@ void load(Switches &switches)
 {
   if (!SPIFFS.begin())
   {
+#ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::sensors);
+#endif
     return;
   }
 
   if (!SPIFFS.exists(configFilenames::switches))
   {
+#ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::switches);
+#endif
 #if defined SINGLE_SWITCH
     SwitchT one;
     templateSwitch(one, "Interruptor", constanstsSwitch::familyLight, SWITCH, 12u, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
@@ -532,7 +544,9 @@ void load(Switches &switches)
   switches.load(file);
   file.close();
   SPIFFS.end();
+#ifdef DEBUG
   Log.notice("%s Stored values was loaded." CR, tags::switches);
+#endif
 }
 
 int findPoolIdx(const char *state, unsigned int currentIdx, unsigned int start, unsigned int end)
@@ -582,9 +596,11 @@ void SwitchT::changeState(const char *state)
   }
   knxNotifyGroup = true;
   bool dirty = strcmp(state, stateControl);
+#ifdef DEBUG
   Log.notice("%s Name:      %s" CR, tags::switches, name);
   Log.notice("%s State:     %s" CR, tags::switches, state);
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
+#endif
 
   if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
   {
@@ -892,14 +908,18 @@ void loop(Switches &switches)
     if (stateTimeout(sw))
     {
       sw.statePoolIdx = findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.statePoolStart, sw.statePoolEnd);
+#ifdef DEBUG
       Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, statesPool[sw.statePoolIdx].c_str());
+#endif
       sw.changeState(statesPool[sw.statePoolIdx].c_str());
     }
     if (positionDone(sw))
     {
       sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
       sw.percentageRequest = -1;
+#ifdef DEBUG
       Log.notice("%s Control Positon set change switch to  %s" CR, tags::switches, statesPool[sw.statePoolIdx].c_str());
+#endif
       sw.changeState(statesPool[sw.statePoolIdx].c_str());
     }
   }

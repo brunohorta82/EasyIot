@@ -246,7 +246,8 @@ void Config::save(File &file) const
 void Config::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  if(firmware < 7.8){
+  if (firmware < 7.8)
+  {
     requestLoadDefaults();
   }
   file.read((uint8_t *)nodeId, sizeof(nodeId));
@@ -279,7 +280,9 @@ void Config::load(File &file)
   file.read((uint8_t *)&knxMember, sizeof(knxMember));
   if (firmware < VERSION)
   {
+#ifdef DEBUG
     Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
+#endif
     firmware = VERSION;
   }
 }
@@ -289,13 +292,17 @@ void loadStoredConfiguration(Config &config)
   setenv("TZ", TZ_INFO, 1);
   if (!SPIFFS.begin())
   {
+#ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
+#endif
     return;
   }
 
   if (!SPIFFS.exists(configFilenames::config))
   {
+#ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::config);
+#endif
     strlcpy(config.nodeId, String(ESP.getChipId()).c_str(), sizeof(config.nodeId));
     strlcpy(config.chipId, config.nodeId, sizeof(config.chipId));
     config.mqttPort = constantsMqtt::defaultPort;
@@ -317,20 +324,26 @@ void loadStoredConfiguration(Config &config)
     config.firmware = VERSION;
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
     SPIFFS.end();
+#ifdef DEBUG
     Log.notice("%s Config %D loaded." CR, tags::config, config.firmware);
+#endif
   }
 
   File file = SPIFFS.open(configFilenames::config, "r+");
   config.load(file);
   file.close();
   SPIFFS.end();
+#ifdef DEBUG
   Log.notice("%s Stored config loaded." CR, tags::config);
+#endif
 }
 Config &Config::saveConfigurationOnDefaultFile()
 {
   if (!SPIFFS.begin())
   {
+#ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
+#endif
     return getAtualConfig();
   }
 
@@ -338,7 +351,9 @@ Config &Config::saveConfigurationOnDefaultFile()
   save(file);
   file.close();
   SPIFFS.end();
+#ifdef DEBUG
   Log.notice("%s Config stored." CR, tags::config);
+#endif
   return *this;
 }
 

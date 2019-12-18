@@ -243,12 +243,16 @@ void addToHaDiscovery(const SwitchT &sw)
     return;
   if (strlen(getAtualConfig().mqttIpDns) == 0)
   {
+#ifdef DEBUG
     Log.warning("%s Setup required to publish discovery messages" CR, tags::mqtt);
+#endif
     return;
   }
   if (strlen(getAtualConfig().mqttIpDns) == 0)
   {
+#ifdef DEBUG
     Log.warning("%s Mqtt not configured" CR, tags::discovery);
+#endif
     return;
   }
 
@@ -268,8 +272,9 @@ void addToHaDiscovery(const SwitchT &sw)
   {
     createHaLock(sw);
   }
-
+#ifdef DEBUG
   Log.notice("%s RELOAD HA SWITCH DISCOVERY OK" CR, tags::discovery);
+#endif
 }
 
 void removeFromHaDiscovery(const SwitchT &sw)

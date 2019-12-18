@@ -27,14 +27,20 @@ void publishOnEmoncms(SensorT &sensor, String &readings)
     if (http.begin(client, queryString))
     {
         int httpCode = http.GET();
+
         if (httpCode < 0)
         {
+#ifdef DEBUG
             Log.error("%s GET Request, error %s" CR, tags::emoncms, http.errorToString(httpCode).c_str());
+#endif
         }
+
         http.end();
     }
+#ifdef DEBUG
     else
     {
         Log.error("%s Unable to connect" CR, tags::emoncms);
     }
+#endif
 }

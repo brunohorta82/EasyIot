@@ -87,7 +87,6 @@ constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-bina
 constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=GATE"};
 #endif
 
-
 constexpr const char *newID{"NEW"};
 constexpr unsigned int noGPIO{99u};
 constexpr unsigned long storeConfigDelay{5000ul};
