@@ -201,8 +201,8 @@ void refreshMDNS(const char *lastName)
 {
   MDNS.removeService(lastName, "easyiot", "tcp");
   MDNS.close();
-  if (MDNS.begin(String(getAtualConfig().nodeId)))
-  {
+  if (MDNS.begin(String(getAtualConfig().nodeId),INADDR_ANY,10))
+  { 
     MDNS.addService("easyiot", "tcp", 80);
     MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
     MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION));

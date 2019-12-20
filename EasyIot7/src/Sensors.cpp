@@ -11,6 +11,7 @@
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
+#include <Bounce2.h>
 #if WITH_DISPLAY
 #include "SSD1306.h"   //https://github.com/ThingPulse/esp8266-oled-ssd1306
 #define DISPLAY_SDA 2  //-1 if you don't use display
@@ -19,6 +20,7 @@
 bool displayOn = true;
 SSD1306 display(0x3C, DISPLAY_SDA, DISPLAY_SCL);
 bool lastState = false;
+Bounce debouncer = Bounce();
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
 {
   display.clear();
@@ -33,6 +35,9 @@ void printOnDisplay(float _voltage, float _amperage, float _power, float _energy
 
 void setupDisplay()
 {
+  pinMode(DISPLAY_BTN, INPUT_PULLDOWN_16);
+  debouncer.attach(DISPLAY_BTN);
+  debouncer.interval(5); // interval in ms
   display.init();
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_16);
@@ -468,6 +473,28 @@ void SensorT::updateFromJson(JsonObject doc)
 
 void loop(Sensors &sensors)
 {
+#if WITH_DISPLAY
+  debouncer.update();
+  int value = debouncer.read();
+  if (lastState != value)
+  {
+    lastState = value;
+    if (value)
+    {
+
+      if (displayOn)
+      {
+        display.displayOff();
+        displayOn = false;
+      }
+      else
+      {
+        display.displayOn();
+        displayOn = true;
+      }
+    }
+  }
+#endif
   for (auto &ss : sensors.items)
   {
 

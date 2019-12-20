@@ -84,6 +84,7 @@ boolean reconnect()
         publishOnMqtt(getConfigStatusTopic().c_str(), "{\"firmware\":7.0}", true); //TODO generate simple config status
         subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
         //Init Switches Subscritions and publish de current state
+        refreshMDNS(getAtualConfig().nodeId);
         for (auto &sw : getAtualSwitchesConfig().items)
         {
             subscribeOnMqtt(sw.mqttCommandTopic);
@@ -106,6 +107,7 @@ void setupMQTT()
     if (mqttConnected())
     {
         mqttClient.disconnect();
+        refreshMDNS(getAtualConfig().nodeId);
     }
 
     mqttClient.setServer(getAtualConfig().mqttIpDns, getAtualConfig().mqttPort);
