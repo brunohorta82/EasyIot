@@ -188,7 +188,7 @@ size_t Config::serializeToJson(Print &output)
   doc["configTime"] = configTime;
   doc["configkey"] = configkey;
   doc["apName"] = apName;
-  doc["firmware"] = firmware;
+  doc["firmware"] = VERSION;
   doc["chipId"] = chipId;
   doc["mac"] = WiFi.softAPmacAddress();
   doc["apiUser"] = apiUser;
