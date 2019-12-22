@@ -797,10 +797,6 @@ boolean positionDone(const SwitchT &sw)
   {
     return false;
   }
-  if (sw.lastPrimaryTimeChange + constanstsSwitch::coverAutoStopProtection < millis())
-  {
-    return true;
-  }
   if (sw.timeBetweenStates == 0)
   {
     return false;
