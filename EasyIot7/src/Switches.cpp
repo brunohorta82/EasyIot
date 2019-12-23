@@ -592,7 +592,8 @@ void knkGroupNotifyState(const SwitchT &sw, const char *state)
 }
 void SwitchT::changeState(const char *state)
 {
-
+  lastPrimaryTimeChange = millis();
+  lastSecondaryGpioState = millis();
   bool dirty = strcmp(state, stateControl);
 #ifdef DEBUG
   Log.notice("%s Name:      %s" CR, tags::switches, name);
