@@ -590,7 +590,7 @@ void knkGroupNotifyState(const SwitchT &sw, const char *state)
 }
 void SwitchT::changeState(const char *state)
 {
-  if (knxNotifyGroup)
+  if (knxNotifyGroup && knxSupport)
   {
     knx.write_1bit(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), strcmp(state, constanstsSwitch::payloadOn) == 0);
   }

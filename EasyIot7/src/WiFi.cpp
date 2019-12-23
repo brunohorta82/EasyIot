@@ -5,6 +5,7 @@
 #include "WebServer.h"
 #include "Mqtt.h"
 #include <ESP8266mDNS.h>
+#include <esp-knx-ip.h>
 unsigned long connectedOn = 0ul;
 String getApName()
 {
@@ -153,6 +154,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
 #endif
   case MESSAGE_CONNECTED:
+    knx.start(nullptr);
     infoWifi();
     break;
 #ifdef DEBUG
@@ -201,8 +203,8 @@ void refreshMDNS(const char *lastName)
 {
   MDNS.removeService(lastName, "easyiot", "tcp");
   MDNS.close();
-  if (MDNS.begin(String(getAtualConfig().nodeId),INADDR_ANY,10))
-  { 
+  if (MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10))
+  {
     MDNS.addService("easyiot", "tcp", 80);
     MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
     MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION));
