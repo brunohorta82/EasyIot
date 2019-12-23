@@ -211,9 +211,11 @@ void switchesCallback(message_t const &msg, void *arg)
   {
   case KNX_CT_WRITE:
   {
-    bool state = (bool)msg.data[0];
+    int stateIdx = (int)msg.data[1];
     s->knxNotifyGroup = false;
-    s->changeState(state ? constanstsSwitch::payloadOn : constanstsSwitch::payloadOff);
+
+    s->changeState(statesPool[stateIdx].c_str());
+
     break;
   }
   case KNX_CT_READ:
@@ -229,11 +231,11 @@ void allwitchesCallback(message_t const &msg, void *arg)
   {
   case KNX_CT_WRITE:
   {
-    bool state = (bool)msg.data[0];
+    int stateIdx = (int)msg.data[0];
     for (auto &sw : getAtualSwitchesConfig().items)
     {
       sw.knxNotifyGroup = false;
-      sw.changeState(state ? constanstsSwitch::payloadOn : constanstsSwitch::payloadOff);
+      sw.changeState(statesPool[stateIdx].c_str());
     }
     break;
   }
@@ -590,11 +592,7 @@ void knkGroupNotifyState(const SwitchT &sw, const char *state)
 }
 void SwitchT::changeState(const char *state)
 {
-  if (knxNotifyGroup && knxSupport)
-  {
-    knx.write_1bit(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), strcmp(state, constanstsSwitch::payloadOn) == 0);
-  }
-  knxNotifyGroup = true;
+
   bool dirty = strcmp(state, stateControl);
 #ifdef DEBUG
   Log.notice("%s Name:      %s" CR, tags::switches, name);
@@ -744,6 +742,12 @@ void SwitchT::changeState(const char *state)
   payloadSe.concat("\"}");
   sendToServerEvents("states", payloadSe.c_str());
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
+  if (knxNotifyGroup && knxSupport)
+  {
+
+    knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+  }
+  knxNotifyGroup = true;
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
 }

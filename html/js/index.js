@@ -325,6 +325,7 @@ function fillConfig() {
     $("#lbl-mac").text(config.mac);
     $("#lbl-connectedOn").text(config.connectedOn);
     $('input[name="nodeId"]').val(config.nodeId);
+    $(document).prop('title', 'BH EASY IoT '+config.nodeId);
     $('input[name="mqttIpDns"]').val(config.mqttIpDns);
     $('#mqtt_lbl').text(config.mqttIpDns);
     $('input[name="mqttUsername"]').val(config.mqttUsername);

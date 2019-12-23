@@ -10,6 +10,11 @@ void initHaDiscovery(const Switches &switches)
     if (!sw.haSupport)
       continue;
     publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, true);
+    if (strcmp(constanstsSwitch::familyCover, sw.family) == 0)
+    {
+      publishOnMqtt(sw.mqttPositionStateTopic, String(sw.lastPercentage).c_str(), true);
+    }
+
     addToHaDiscovery(sw);
   }
 }
@@ -22,7 +27,7 @@ void initHaDiscovery(const Sensors &sensors)
       continue;
     publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, true);
     addToHaDiscovery(ss);
-    }
+  }
 }
 
 void createHaLock(const SwitchT &sw)
