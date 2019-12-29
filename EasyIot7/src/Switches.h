@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "FS.h"
-
+class Bounce;
 enum SwitchMode
 {
     SWITCH = 1,
@@ -78,9 +78,8 @@ struct SwitchT
     int lastPercentage;
     bool lastPrimaryGpioState;
     bool lastSecondaryGpioState;
-
-    uint32_t lastPrimaryTimeChange = 0;
-    uint32_t lastSecondaryTimeChange = 0;
+    Bounce *debouncerPrimary;
+    Bounce *debouncerSecondary;
     int percentageRequest = -1;
     int statePoolIdx;
     unsigned int statePoolStart;
