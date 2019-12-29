@@ -6,6 +6,7 @@
 #include "Mqtt.h"
 #include "WebRequests.h"
 #include <esp-knx-ip.h>
+#include <Bounce2.h>
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 
 struct Switches &getAtualSwitchesConfig()
@@ -185,7 +186,19 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
   file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
   file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
+  if (primaryGpio != constantsConfig::noGPIO)
+  {
+    debouncerPrimary = new Bounce();
+    debouncerPrimary->attach(primaryGpio, primaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    debouncerPrimary->interval(5);
+  }
 
+  if (secondaryGpio != constantsConfig::noGPIO)
+  {
+    debouncerSecondary = new Bounce();
+    debouncerSecondary->attach(secondaryGpio, secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    debouncerSecondary->interval(5);
+  }
   if (firmware < VERSION)
   {
 #ifdef DEBUG
@@ -261,8 +274,6 @@ void Switches::load(File &file)
     configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.primaryGpioControl, OUTPUT);
     configPIN(item.secondaryGpioControl, OUTPUT);
-    item.lastPrimaryGpioState = readPIN(item.primaryGpio);
-    item.lastSecondaryGpioState = readPIN(item.secondaryGpio);
     //INTEGRATIONS
     //ALEXA
     if (item.alexaSupport)
@@ -366,16 +377,27 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.primaryGpioControl = primaryGpioControl;
   sw.secondaryGpioControl = secondaryGpioControl;
 
-  configPIN(sw.primaryGpio, sw.primaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
-  configPIN(sw.secondaryGpio, sw.secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+  if (sw.primaryGpio != constantsConfig::noGPIO)
+  {
+    sw.debouncerPrimary = new Bounce();
+    sw.debouncerPrimary->attach(sw.primaryGpio, sw.primaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    sw.debouncerPrimary->interval(5);
+  }
+
+  if (sw.secondaryGpio != constantsConfig::noGPIO)
+  {
+    sw.debouncerSecondary = new Bounce();
+    sw.debouncerSecondary->attach(sw.secondaryGpio, sw.secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    sw.debouncerSecondary->interval(5);
+  }
+
   configPIN(sw.primaryGpioControl, OUTPUT);
   configPIN(sw.secondaryGpioControl, OUTPUT);
-  sw.lastPrimaryGpioState = readPIN(sw.primaryGpio);
-  sw.lastSecondaryGpioState = readPIN(sw.secondaryGpio);
+  sw.lastPrimaryGpioState = true;
+  sw.lastSecondaryGpioState = true;
   strlcpy(sw.stateControl, constanstsSwitch::payloadOff, sizeof(sw.mqttPayload));
   strlcpy(sw.mqttPayload, sw.stateControl, sizeof(sw.mqttPayload));
-  sw.lastPrimaryGpioState = millis();
-  sw.lastSecondaryTimeChange = millis();
+
   sw.knxLevelOne = knxLevelOne;
   sw.knxLevelTwo = knxLevelTwo;
   sw.knxLevelThree = knxLevelThree;
@@ -592,7 +614,7 @@ void knkGroupNotifyState(const SwitchT &sw, const char *state)
 }
 void SwitchT::changeState(const char *state)
 {
- 
+
   bool dirty = strcmp(state, stateControl);
 #ifdef DEBUG
   Log.notice("%s Name:      %s" CR, tags::switches, name);
@@ -787,10 +809,6 @@ void stateSwitchByName(Switches &switches, const char *name, const char *state, 
   }
 }
 
-bool stateTimeout(const SwitchT &sw)
-{
-  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.stateControl) != 0 && sw.lastPrimaryTimeChange + sw.autoStateDelay < millis();
-}
 boolean positionDone(const SwitchT &sw)
 {
   if (strcmp(sw.family, constanstsSwitch::familyCover) != 0)
@@ -822,107 +840,81 @@ void loop(Switches &switches)
   }
   for (auto &sw : switches.items)
   {
-    bool primaryValue = readPIN(sw.primaryGpio);
-    bool secondaryValue = readPIN(sw.secondaryGpio);
+    bool primaryGpioEvent = true;
+    bool secondaryGpioEvent = true;
+    if (sw.primaryGpio != constantsConfig::noGPIO)
+    {
+      sw.debouncerPrimary->update();
+      primaryGpioEvent = sw.debouncerPrimary->read();
+    }
+    if (sw.secondaryGpio != constantsConfig::noGPIO)
+    {
+      sw.debouncerSecondary->update();
+      secondaryGpioEvent = sw.debouncerSecondary->read();
+    }
 
-    bool primaryGpioEvent = primaryValue != sw.lastPrimaryGpioState && millis() - sw.lastPrimaryTimeChange >= constanstsSwitch::delayDebounce;
-    bool secondaryGpioEvent = secondaryValue != sw.lastSecondaryGpioState && millis() - sw.lastSecondaryTimeChange >= constanstsSwitch::delayDebounce;
-    if (primaryGpioEvent)
+    int poolSize = sw.statePoolEnd - sw.statePoolStart + 1;
+    switch (sw.mode)
     {
-      sw.lastPrimaryTimeChange = millis();
-    }
-    if (secondaryGpioEvent)
-    {
-      sw.lastSecondaryTimeChange = millis();
-    }
-    if (primaryGpioEvent || secondaryGpioEvent)
-    {
-      sw.lastPrimaryGpioState = primaryValue;
-      sw.lastSecondaryGpioState = secondaryValue;
-      int poolSize = sw.statePoolEnd - sw.statePoolStart + 1;
-      switch (sw.mode)
+    case SWITCH:
+      if (sw.primaryGpio != constantsConfig::noGPIO && sw.lastPrimaryGpioState != primaryGpioEvent)
       {
-      case SWITCH:
         sw.statePoolIdx = ((sw.statePoolIdx - sw.statePoolStart + 1) % poolSize) + sw.statePoolStart;
         sw.changeState(statesPool[sw.statePoolIdx].c_str());
-        break;
-      case PUSH:
-        if (!primaryValue)
-        { //PUSHED
-          sw.statePoolIdx = ((sw.statePoolIdx - sw.statePoolStart + 1) % poolSize) + sw.statePoolStart;
-          sw.changeState(statesPool[sw.statePoolIdx].c_str());
-        }
-        break;
-      case DUAL_SWITCH:
-        if (primaryValue == true && secondaryValue == true)
+      }
+      break;
+    case PUSH:
+      if (sw.primaryGpio != constantsConfig::noGPIO && !primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
+      { //PUSHED
+        sw.statePoolIdx = ((sw.statePoolIdx - sw.statePoolStart + 1) % poolSize) + sw.statePoolStart;
+        sw.changeState(statesPool[sw.statePoolIdx].c_str());
+      }
+
+      break;
+    case DUAL_SWITCH:
+      if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
+      {
+        if (primaryGpioEvent && secondaryGpioEvent && (sw.lastPrimaryGpioState != primaryGpioEvent || sw.lastSecondaryGpioState != secondaryGpioEvent))
         {
+
           sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
           sw.changeState(statesPool[sw.statePoolIdx].c_str());
         }
-        else if (primaryGpioEvent && !primaryValue)
+        else if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
         {
+
           sw.statePoolIdx = constanstsSwitch::openIdx;
           sw.changeState(statesPool[sw.statePoolIdx].c_str());
         }
-        else if (secondaryGpioEvent && !secondaryValue)
+        else if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
         {
+
           sw.statePoolIdx = constanstsSwitch::closeIdx;
           sw.changeState(statesPool[sw.statePoolIdx].c_str());
         }
-        break;
-      case DUAL_PUSH:
-        if (!primaryValue)
+      }
+      break;
+    case DUAL_PUSH:
+      if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
+      {
+        if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
         { //PUSHED
+
           sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::firtStopIdx : constanstsSwitch::openIdx;
           sw.changeState(statesPool[sw.statePoolIdx].c_str());
         }
-        if (!secondaryValue)
+        if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
         { //PUSHED
+
           sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::closeIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::closeIdx;
           sw.changeState(statesPool[sw.statePoolIdx].c_str());
         }
-        break;
-      default:
-        break;
       }
+      break;
+    default:
+      break;
     }
-
-    if (sw.primaryGpioControl != constantsConfig::noGPIO && sw.timeBetweenStates != 0 && digitalRead(sw.primaryGpioControl))
-    {
-      unsigned long offset = ((sw.lastPercentage * sw.timeBetweenStates) / 100);
-      unsigned long deltaTime = (millis() - sw.lastPrimaryTimeChange);
-      if (sw.secondaryGpioControl != constantsConfig::noGPIO)
-      {
-        if (digitalRead(sw.secondaryGpioControl))
-        {
-          //OPEN
-          sw.positionControlCover = max(0ul, ((offset + deltaTime) * 100) / sw.timeBetweenStates);
-        }
-        else
-        { //CLOSE
-          sw.positionControlCover = min(100ul, ((offset - deltaTime) * 100) / sw.timeBetweenStates);
-        }
-      }
-    }
-
-    if (stateTimeout(sw))
-    {
-      sw.lastPrimaryTimeChange = millis();
-      sw.lastSecondaryGpioState = millis();
-      sw.statePoolIdx = findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.statePoolStart, sw.statePoolEnd);
-#ifdef DEBUG
-      Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, statesPool[sw.statePoolIdx].c_str());
-#endif
-      sw.changeState(statesPool[sw.statePoolIdx].c_str());
-    }
-    if (positionDone(sw))
-    {
-      sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
-      sw.percentageRequest = -1;
-#ifdef DEBUG
-      Log.notice("%s Control Positon set change switch to  %s" CR, tags::switches, statesPool[sw.statePoolIdx].c_str());
-#endif
-      sw.changeState(statesPool[sw.statePoolIdx].c_str());
-    }
+    sw.lastPrimaryGpioState = primaryGpioEvent;
+    sw.lastSecondaryGpioState = secondaryGpioEvent;
   }
 }
