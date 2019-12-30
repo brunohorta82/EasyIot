@@ -614,7 +614,7 @@ void knkGroupNotifyState(const SwitchT &sw, const char *state)
 }
 void SwitchT::changeState(const char *state)
 {
-
+  lastChangeState = millis();
   bool dirty = strcmp(state, stateControl);
 #ifdef DEBUG
   Log.notice("%s Name:      %s" CR, tags::switches, name);
@@ -830,7 +830,10 @@ boolean positionDone(const SwitchT &sw)
   }
   return false;
 }
-
+bool stateTimeout(const SwitchT &sw)
+{
+  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.stateControl) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
+}
 void loop(Switches &switches)
 {
 
@@ -916,5 +919,13 @@ void loop(Switches &switches)
     }
     sw.lastPrimaryGpioState = primaryGpioEvent;
     sw.lastSecondaryGpioState = secondaryGpioEvent;
+    if (stateTimeout(sw))
+    {
+      sw.statePoolIdx = findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.statePoolStart, sw.statePoolEnd);
+#ifdef DEBUG
+      Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, statesPool[sw.statePoolIdx].c_str());
+#endif
+      sw.changeState(statesPool[sw.statePoolIdx].c_str());
+    }
   }
 }
