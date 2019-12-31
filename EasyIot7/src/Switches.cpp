@@ -644,7 +644,7 @@ void SwitchT::changeState(const char *state)
       delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON . EXECUTE REQUEST
     }
-    publishOnMqtt(mqttPositionStateTopic, String(percentageRequest).c_str(), mqttRetain);
+    publishOnMqtt(mqttPositionStateTopic, String(100).c_str(), mqttRetain);
   }
   else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
   {
@@ -696,7 +696,7 @@ void SwitchT::changeState(const char *state)
       delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON . EXECUTE REQUEST
     }
-    publishOnMqtt(mqttPositionStateTopic, String(percentageRequest).c_str(), mqttRetain);
+    publishOnMqtt(mqttPositionStateTopic, String(0).c_str(), mqttRetain);
   }
   else if (strcmp(constanstsSwitch::payloadOn, state) == 0)
   {

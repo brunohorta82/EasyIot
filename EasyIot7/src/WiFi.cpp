@@ -69,6 +69,7 @@ void infoWifi()
     Log.notice("%s MAC  %s " CR, tags::wifi, WiFi.softAPmacAddress().c_str());
     Log.notice("----------------------------------------------" CR);
 #endif
+refreshMDNS(getAtualConfig().nodeId);
   }
 }
 
@@ -165,13 +166,19 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_ACCESSPOINT_CREATED:
     infoWifi();
     break;
-#ifdef DEBUG
+
   case MESSAGE_ACCESSPOINT_DESTROYED:
+  #ifdef DEBUG
     Log.notice("%s Disconnecting access point" CR, tags::wifi);
+    #endif
     break;
   case MESSAGE_ACCESSPOINT_CREATING:
+  #ifdef DEBUG
     Log.notice("%s Creating access point" CR, tags::wifi);
+    #endif
+    
     break;
+  #ifdef DEBUG
   case MESSAGE_ACCESSPOINT_FAILED:
     Log.error("%s Could not create access point" CR, tags::wifi);
     break;

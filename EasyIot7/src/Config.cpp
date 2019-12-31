@@ -30,6 +30,10 @@ void generateId(String &id, const String &name, size_t maxSize)
 }
 long getTime()
 {
+  if (WiFi.status() != WL_CONNECTED )
+  {
+    return 0;
+  }
   time_t now = time(nullptr);
   return now;
 }
