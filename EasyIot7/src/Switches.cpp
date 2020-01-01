@@ -628,11 +628,10 @@ void SwitchT::changeState(const char *state)
     {
       return;
     }
-    lastPercentage = positionControlCover;
+    lastPercentage = 100;
+    percentageRequest = 100;
     strlcpy(stateControl, constanstsSwitch::payloadOpen, sizeof(stateControl));
     strlcpy(mqttPayload, constanstsSwitch::payloadOpen, sizeof(mqttPayload));
-    if (percentageRequest < 0)
-      percentageRequest = 100;
     if (typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(primaryGpioControl, OUTPUT);
@@ -650,8 +649,8 @@ void SwitchT::changeState(const char *state)
   {
     strlcpy(stateControl, constanstsSwitch::payloadStop, sizeof(stateControl));
     strlcpy(mqttPayload, constanstsSwitch::payloadStateStop, sizeof(mqttPayload));
-    percentageRequest = -1;
-    lastPercentage = positionControlCover;
+    percentageRequest = 50;
+    lastPercentage = 50;
     if (typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
 
@@ -680,11 +679,10 @@ void SwitchT::changeState(const char *state)
     {
       return;
     }
-    lastPercentage = positionControlCover;
+    lastPercentage = 0;
+    percentageRequest = 0;
     strlcpy(stateControl, constanstsSwitch::payloadClose, sizeof(stateControl));
     strlcpy(mqttPayload, constanstsSwitch::payloadStateClose, sizeof(mqttPayload));
-    if (percentageRequest < 0)
-      percentageRequest = 0;
     if (typeControl == SwitchControlType::RELAY_AND_MQTT)
     {
       configPIN(primaryGpioControl, OUTPUT);
@@ -809,27 +807,6 @@ void stateSwitchByName(Switches &switches, const char *name, const char *state, 
   }
 }
 
-boolean positionDone(const SwitchT &sw)
-{
-  if (strcmp(sw.family, constanstsSwitch::familyCover) != 0)
-  {
-    return false;
-  }
-  if (strcmp(constanstsSwitch::payloadStop, sw.stateControl) == 0)
-  {
-    return false;
-  }
-  if (sw.timeBetweenStates == 0)
-  {
-    return false;
-  }
-
-  if (sw.percentageRequest == sw.positionControlCover)
-  {
-    return true;
-  }
-  return false;
-}
 bool stateTimeout(const SwitchT &sw)
 {
   return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.stateControl) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
