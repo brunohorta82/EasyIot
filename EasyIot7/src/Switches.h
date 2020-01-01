@@ -85,7 +85,7 @@ struct SwitchT
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
     bool slave;
-
+    unsigned long lastChangeState;
     void load(File &file);
     void save(File &file) const;
     void updateFromJson(JsonObject doc);
