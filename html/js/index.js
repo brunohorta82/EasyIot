@@ -487,7 +487,7 @@ function applyTypeControl(id) {
 }
 
 function applySensorRequiredGpio(id) {
-    if ($('#s_type_' + id).val() != "70") {
+    if ($('#s_type_' + id).val() != "70" && $('#s_type_' + id).val() != "71" ) {
         hide("s_secondaryGpioRow_" + id);
         hide("s_tertiaryGpioRow_" + id);
         setOptionOnSelect('s_secondaryGpio_' + id, 99);
@@ -496,6 +496,7 @@ function applySensorRequiredGpio(id) {
         show("s_secondaryGpioRow_" + id);
         show("s_tertiaryGpioRow_" + id);
     }
+
 }
 
 function buildSensor(obj) {
