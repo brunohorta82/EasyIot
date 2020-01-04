@@ -166,13 +166,21 @@ void addToHaDiscovery(const SensorT &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OC" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
-  case REED_SWITCH:
+  case REED_SWITCH_NC:
     object["device_class"] = "window";
     object["value_template"] = "{{value_json.binary_state}}";
     object["payload_on"] = 1;
     object["payload_off"] = 0;
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    break;
+    case REED_SWITCH_NO:
+    object["device_class"] = "window";
+    object["value_template"] = "{{value_json.binary_state}}";
+    object["payload_on"] = 0;
+    object["payload_off"] = 1;
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/ON" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PZEM_004T:
     object["name"] = String(s.name) + " Power";

@@ -16,7 +16,8 @@ enum SensorType
   RCWL_0516 = 66,
   LDR = 21, //Analog signal, ex: A0
   DS18B20 = 90,
-  REED_SWITCH = 56,
+  REED_SWITCH_NC = 56,
+  REED_SWITCH_NO = 57,
   DHT_11 = 0,
   DHT_21 = 1,
   DHT_22 = 2,

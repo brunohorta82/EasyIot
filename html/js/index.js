@@ -521,7 +521,8 @@ function buildSensor(obj) {
         '                                    <option value="66">RCWL-0516</option>' +
         '                                    <option value="21">LDR</option>' +
         '                                    <option value="90">DS18B20</option>' +
-        '                                    <option value="56">REED SWITCH</option>' +
+        '                                    <option value="56">REED SWITCH NC</option>' +
+        '                                    <option value="57">REED SWITCH NO</option>' +
         '                                    <option value="0">DHT 11</option>' +
         '                                    <option value="1">DHT 21</option>' +
         '                                    <option value="2">DHT 22</option>' +
