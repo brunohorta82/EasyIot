@@ -346,7 +346,7 @@ function fillConfig() {
     $('input[name="emoncmsServer"]').val(config.emoncmsServer);
     $('input[name="emoncmsPath"]').val(config.emoncmsPath);
     $('input[name="emoncmsApikey"]').val(config.emoncmsApikey);
-    getLastVersion(config.firmwareMode,config.firmware);
+    getLastVersion(config.firmwareMode,config.firmware,config.chipId);
     $('#ff').prop('disabled', false);
 
 }
@@ -1080,9 +1080,9 @@ function reboot() {
         timeout: 2000
     });
 }
-function getLastVersion(firmwareMode, currentVersion) {
+function getLastVersion(firmwareMode, currentVersion,chipId) {
     $.ajax({
-        url: "http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode="+ firmwareMode,
+        url: "http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode="+ firmwareMode+"&chipId="+ chipId+"&currentVersion="+currentVersion,
         contentType: "text/plain; charset=utf-8",
         success: function (response) {
             if(response <= currentVersion){
