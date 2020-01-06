@@ -75,7 +75,8 @@ void Sensors::load(File &file)
     case RCWL_0516:
       configPIN(item.primaryGpio, INPUT);
       break;
-    case REED_SWITCH:
+    case REED_SWITCH_NC:
+    case REED_SWITCH_NO:
       configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
       break;
     case DHT_11:
@@ -379,6 +380,13 @@ bool Sensors::remove(const char *id)
 
   return true;
 }
+void reloadSensors(){
+    for ( auto &ss : getAtualSensorsConfig().items){
+       ss.reloadMqttTopics();
+     }
+     save(getAtualSensorsConfig());
+     
+}
 void initSensorsHaDiscovery(const Sensors &sensors)
 {
   for (auto &ss : sensors.items)
@@ -432,10 +440,15 @@ void SensorT::updateFromJson(JsonObject doc)
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
-  case REED_SWITCH:
+  case REED_SWITCH_NC:
+  configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
+    strlcpy(mqttPayload, "{\"binary_state\":1}", sizeof(mqttPayload));
+    break;
+  case REED_SWITCH_NO:
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
-    strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
+    strlcpy(mqttPayload, "{\"binary_state\":0}", sizeof(mqttPayload));
     break;
   case DHT_11:
   case DHT_21:
@@ -458,7 +471,12 @@ void SensorT::updateFromJson(JsonObject doc)
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   }
-  String mqttTopic;
+  reloadMqttTopics();
+  doc["id"] = id;
+  doc["mqttStateTopic"] = mqttStateTopic;
+}
+void SensorT::reloadMqttTopics(){
+String mqttTopic;
   mqttTopic.reserve(sizeof(mqttStateTopic));
   mqttTopic.concat(getBaseTopic());
   mqttTopic.concat("/");
@@ -467,10 +485,7 @@ void SensorT::updateFromJson(JsonObject doc)
   mqttTopic.concat(id);
   mqttTopic.concat("/state");
   strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
-  doc["id"] = id;
-  doc["mqttStateTopic"] = mqttStateTopic;
 }
-
 void loop(Sensors &sensors)
 {
 #if WITH_DISPLAY
@@ -525,10 +540,26 @@ void loop(Sensors &sensors)
     break;
 
     case PIR:
-    case REED_SWITCH:
+    case REED_SWITCH_NC:
     case RCWL_0516:
     {
       bool binaryState = readPIN(ss.primaryGpio);
+      if (ss.lastBinaryState != binaryState)
+      {
+        ss.lastBinaryState = binaryState;
+        String binaryStateAsString = String(binaryState);
+        auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
+        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+        sendToServerEvents("sensors", readings.c_str());
+#ifdef DEBUG
+        Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
+#endif
+      }
+    }
+    break;
+    case REED_SWITCH_NO:
+    {
+      bool binaryState = !readPIN(ss.primaryGpio);
       if (ss.lastBinaryState != binaryState)
       {
         ss.lastBinaryState = binaryState;

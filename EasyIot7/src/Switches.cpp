@@ -320,7 +320,33 @@ void remove(Switches &switches, const char *id)
   if (switches.remove(id))
     save(switches);
 }
-
+void SwitchT::reloadMqttTopics(){
+String mqttTopic;
+  mqttTopic.reserve(sizeof(mqttCommandTopic));
+  mqttTopic.concat(getBaseTopic());
+  mqttTopic.concat("/");
+  mqttTopic.concat(family);
+  mqttTopic.concat("/");
+  mqttTopic.concat(id);
+  mqttTopic.concat("/set");
+  strlcpy(mqttCommandTopic, mqttTopic.c_str(), sizeof(mqttCommandTopic));
+  mqttTopic.replace("/set", "/state");
+  strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
+  if (strcmp(family, constanstsSwitch::familyCover) == 0)
+  {
+    mqttTopic.replace("/state", "/setposition");
+    strlcpy(mqttPositionCommandTopic, mqttTopic.c_str(), sizeof(mqttPositionCommandTopic));
+    mqttTopic.replace("/setposition", "/position");
+    strlcpy(mqttPositionStateTopic, mqttTopic.c_str(), sizeof(mqttPositionStateTopic));
+  }
+}
+void reloadSwitches(){
+    for ( auto &sw : getAtualSwitchesConfig().items){
+       sw.reloadMqttTopics();
+     }
+     save(getAtualSwitchesConfig());
+     
+}
 void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
 {
   String idStr;
@@ -340,23 +366,9 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.pullup = true;
   sw.mqttRetain = mqttRetaint;
   sw.inverted = false;
-  String mqttTopic;
-  mqttTopic.reserve(sizeof(sw.mqttCommandTopic));
-  mqttTopic.concat(getBaseTopic());
-  mqttTopic.concat("/");
-  mqttTopic.concat(sw.family);
-  mqttTopic.concat("/");
-  mqttTopic.concat(sw.id);
-  mqttTopic.concat("/set");
-  strlcpy(sw.mqttCommandTopic, mqttTopic.c_str(), sizeof(sw.mqttCommandTopic));
-  mqttTopic.replace("/set", "/state");
-  strlcpy(sw.mqttStateTopic, mqttTopic.c_str(), sizeof(sw.mqttStateTopic));
+ sw.reloadMqttTopics();
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
   {
-    mqttTopic.replace("/state", "/setposition");
-    strlcpy(sw.mqttPositionCommandTopic, mqttTopic.c_str(), sizeof(sw.mqttPositionCommandTopic));
-    mqttTopic.replace("/setposition", "/position");
-    strlcpy(sw.mqttPositionStateTopic, mqttTopic.c_str(), sizeof(sw.mqttPositionStateTopic));
     sw.statePoolStart = constanstsSwitch::coverStartIdx;
     sw.statePoolEnd = constanstsSwitch::converEndIdx;
   }
@@ -443,6 +455,7 @@ void SwitchT::updateFromJson(JsonObject doc)
 }
 void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 {
+
   save(switches);
   removeFromHaDiscovery(sw);
   removeSwitchFromAlexa(sw.name);
