@@ -5,6 +5,8 @@
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
 #include "WebServer.h"
+#include "Switches.h"
+#include "Sensors.h"
 const char *NTP_SERVER = "pt.pool.ntp.org";
 const char *TZ_INFO = "WET-0WEST-1,M3.5.0/01:00:00,M10.5.0/02:00:00";
 tm timeinfo;
@@ -423,6 +425,8 @@ Config &Config::updateFromJson(JsonObject doc)
   if (reloadMqtt)
   {
     setupMQTT();
+     reloadSwitches();
+     reloadSensors();
   }
   refreshMDNS(lastNodeId);
   return *this;

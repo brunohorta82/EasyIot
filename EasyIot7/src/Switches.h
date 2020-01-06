@@ -90,6 +90,7 @@ struct SwitchT
     void save(File &file) const;
     void updateFromJson(JsonObject doc);
     void changeState(const char *state);
+    void reloadMqttTopics();
 };
 struct Switches
 {
@@ -98,6 +99,7 @@ struct Switches
     void load(File &file);
     void save(File &file) const;
     bool remove(const char *id);
+    
     size_t serializeToJson(Print &output);
 };
 void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
@@ -109,4 +111,5 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
 void sendToServerEvents(const String &topic, const String &payload);
 void stateSwitchById(Switches &switches, const char *id, const char *state);
 struct Switches &getAtualSwitchesConfig();
+void reloadSwitches();
 #endif
