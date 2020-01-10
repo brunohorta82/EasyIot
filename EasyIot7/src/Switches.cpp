@@ -276,10 +276,12 @@ void Switches::load(File &file)
     configPIN(item.secondaryGpioControl, OUTPUT);
     //INTEGRATIONS
     //ALEXA
+#if EMULATE_ALEXA
     if (item.alexaSupport)
     {
       addSwitchToAlexa(item.name);
     }
+#endif
     //KNX
     if (item.knxSupport && item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
     {
@@ -307,7 +309,9 @@ bool Switches::remove(const char *id)
 
   publishOnMqtt(match->mqttCommandTopic, "", true);
   removeFromHaDiscovery(*match);
+#if EMULATE_ALEXA
   removeSwitchFromAlexa(match->name);
+#endif
   unsubscribeOnMqtt(match->mqttCommandTopic);
 
   items.erase(match);
@@ -320,8 +324,9 @@ void remove(Switches &switches, const char *id)
   if (switches.remove(id))
     save(switches);
 }
-void SwitchT::reloadMqttTopics(){
-String mqttTopic;
+void SwitchT::reloadMqttTopics()
+{
+  String mqttTopic;
   mqttTopic.reserve(sizeof(mqttCommandTopic));
   mqttTopic.concat(getBaseTopic());
   mqttTopic.concat("/");
@@ -340,12 +345,13 @@ String mqttTopic;
     strlcpy(mqttPositionStateTopic, mqttTopic.c_str(), sizeof(mqttPositionStateTopic));
   }
 }
-void reloadSwitches(){
-    for ( auto &sw : getAtualSwitchesConfig().items){
-       sw.reloadMqttTopics();
-     }
-     save(getAtualSwitchesConfig());
-     
+void reloadSwitches()
+{
+  for (auto &sw : getAtualSwitchesConfig().items)
+  {
+    sw.reloadMqttTopics();
+  }
+  save(getAtualSwitchesConfig());
 }
 void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
 {
@@ -366,7 +372,7 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.pullup = true;
   sw.mqttRetain = mqttRetaint;
   sw.inverted = false;
- sw.reloadMqttTopics();
+  sw.reloadMqttTopics();
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
   {
     sw.statePoolStart = constanstsSwitch::coverStartIdx;
@@ -430,7 +436,8 @@ void SwitchT::updateFromJson(JsonObject doc)
                  doc["mqttRetain"] | false, doc["autoStateDelay"] | 0ul,
                  doc["autoStateValue"] | "",
                  static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)),
-                 doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true, doc["alexaSupport"] | true,
+                 doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true,
+                 doc["alexaSupport"] | true,
                  doc["knxLevelOne"] | 0,
                  doc["knxLevelTwo"] | 0,
                  doc["knxLevelThree"] | 0,
@@ -458,12 +465,16 @@ void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 
   save(switches);
   removeFromHaDiscovery(sw);
+#if EMULATE_ALEXA
   removeSwitchFromAlexa(sw.name);
+#endif
   delay(10);
+#if EMULATE_ALEXA
   if (sw.alexaSupport)
   {
     addSwitchToAlexa(sw.name);
   }
+#endif
   if (sw.haSupport)
   {
     addToHaDiscovery(sw);

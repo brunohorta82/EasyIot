@@ -10,14 +10,18 @@
 
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncTCP.h>
+#if EMULATE_ALEXA
 #include <fauxmoESP.h>
+#endif
 #include <Config.h>
 #include "WiFi.h"
 
 // SKETCH BEGIN
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
+#if EMULATE_ALEXA
 static fauxmoESP fauxmo;
+#endif
 
 void loadUI()
 {
@@ -113,7 +117,7 @@ void loadUI()
     request->send(response);
   });
 }
-
+#if EMULATE_ALEXA
 void startAlexaDiscovery()
 {
   fauxmo.createServer(false);
@@ -127,7 +131,7 @@ void startAlexaDiscovery()
     stateSwitchByName(getAtualSwitchesConfig(), device_name, state ? "ON" : "OFF", valueStr.c_str());
   });
 }
-
+#endif
 void setupWebserverAsync()
 {
   server.addHandler(&events);
@@ -325,18 +329,20 @@ void setupWebserverAsync()
     getAtualSensorsConfig().serializeToJson(*response);
     request->send(response);
   });
-
+#if EMULATE_ALEXA
   //ALEXA SUPPORT
   server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
     if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data)))
       return;
   });
-
+#endif
   server.onNotFound([](AsyncWebServerRequest *request) {
+#if EMULATE_ALEXA
     //ALEXA
     String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
     if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body))
       return;
+#endif
     //CORS
     if (request->method() == HTTP_OPTIONS)
     {
@@ -352,8 +358,11 @@ void setupWebserverAsync()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
   server.begin();
+#if EMULATE_ALEXA
   startAlexaDiscovery();
+#endif
 }
+#if EMULATE_ALEXA
 void addSwitchToAlexa(const char *name)
 {
   fauxmo.removeDevice(name);
@@ -363,6 +372,7 @@ void removeSwitchFromAlexa(const char *name)
 {
   fauxmo.removeDevice(name);
 }
+#endif
 void sendToServerEvents(const String &topic, const char *payload)
 {
   events.send(payload, topic.c_str(), millis());
@@ -370,6 +380,7 @@ void sendToServerEvents(const String &topic, const char *payload)
 
 void webserverServicesLoop()
 {
-
+#if EMULATE_ALEXA
   fauxmo.handle();
+#endif
 }
