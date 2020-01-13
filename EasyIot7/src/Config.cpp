@@ -331,7 +331,7 @@ void loadStoredConfiguration(Config &config)
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
     SPIFFS.end();
 #ifdef DEBUG
-    Log.notice("%s Config %D loaded." CR, tags::config, config.firmware);
+    Log.notice("%s Config %s loaded." CR, tags::config, String(config.firmware).c_str());
 #endif
   }
 

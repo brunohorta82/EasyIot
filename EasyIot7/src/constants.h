@@ -36,10 +36,10 @@ auto constexpr switches = "/config/switches.bin";
 } // namespace configFilenames
 namespace constantsConfig
 {
-#if NONE
-constexpr const char *firmwareMode{"NONE"};
-constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=NONE"};
-constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=NONE"};
+#if DEFAULT
+constexpr const char *firmwareMode{"DEFAULT"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=DEFAULT"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=DEFAULT"};
 #endif
 #if SINGLE_SWITCH
 constexpr const char *firmwareMode{"SINGLE_SWITCH"};
@@ -96,6 +96,10 @@ constexpr const char *apiUser{"admin"};     //API USER
 constexpr const char *apiPassword{"xpto"};  //API PASSWORD
 } // namespace constantsConfig
 
+namespace constanstsCloudIO{
+constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
+constexpr  uint16_t mqttPort{1883};
+}
 namespace constanstsSwitch
 {
 

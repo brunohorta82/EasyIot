@@ -6,6 +6,7 @@
 #include "Mqtt.h"
 #include <ESP8266mDNS.h>
 #include <esp-knx-ip.h>
+#include "CloudIO.h"
 unsigned long connectedOn = 0ul;
 String getApName()
 {
@@ -157,6 +158,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_CONNECTED:
     knx.start(nullptr);
     infoWifi();
+    connectToCloundIO();
     break;
 #ifdef DEBUG
   case MESSAGE_DISCONNECTED:
@@ -231,6 +233,7 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
   if (code == MESSAGE_CONNECTED)
   {
     refreshMDNS(getAtualConfig().nodeId);
+    
   }
 }
 void setupWiFi()

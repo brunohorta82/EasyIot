@@ -10,6 +10,7 @@
 #include "WebRequests.h"
 #include <esp-knx-ip.h>
 #include <ESP8266mDNS.h>
+#include "CloudIO.h"
 
 void checkInternalRoutines()
 {
@@ -78,6 +79,7 @@ void setup()
   setupMQTT();
   knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   setupWebserverAsync();
+  setupCloudIO();
 }
 
 void loop()
