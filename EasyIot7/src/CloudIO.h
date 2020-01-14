@@ -2,5 +2,5 @@
 #define CLOUDIO_H
 void setupCloudIO();
 void connectToCloundIO();
-
+void publishFeactures();
 #endif

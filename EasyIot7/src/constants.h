@@ -27,6 +27,7 @@ constexpr const char *switches{"[SWITCHES]"};
 constexpr const char *alexa{"[ALEXA]"};
 constexpr const char *webserver{"[WEBSERVER]"};
 constexpr const char *emoncms{"[EMONCMS]"};
+constexpr const char *cloudIO{"[CLOUDIO]"};
 } // namespace tags
 namespace configFilenames
 {
@@ -110,8 +111,12 @@ constexpr const char *apiPassword{"xpto"};  //API PASSWORD
 namespace constanstsCloudIO
 {
 constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
-constexpr uint16_t mqttPort{1883};
-} // namespace constanstsCloudIO
+
+constexpr const char *apiDns{"http://easyiot.bhonofre.pt"};
+
+constexpr  uint16_t mqttPort{1883};
+}
+
 namespace constanstsSwitch
 {
 

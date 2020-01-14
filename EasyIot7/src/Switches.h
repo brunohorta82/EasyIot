@@ -100,7 +100,7 @@ struct Switches
     void save(File &file) const;
     bool remove(const char *id);
     
-    size_t serializeToJson(Print &output);
+    size_t serializeToJson( Print &output);
 };
 void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
 void loop(Switches &switches);
