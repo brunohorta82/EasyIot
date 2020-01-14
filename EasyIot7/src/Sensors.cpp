@@ -213,7 +213,7 @@ void load(Sensors &sensors)
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::sensors);
 #endif
-#if defined BHPZEM_004T
+#if defined BHPZEM_004T || BHPZEM_004T_2_0
     SensorT pzem;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
     String idStr;
@@ -250,7 +250,7 @@ void load(Sensors &sensors)
     load(sensors);
     return;
 #endif
-#if defined BHPZEM_004T_V03
+#if defined BHPZEM_004T_V03 || BHPZEM_004T_V03_2_0
     SensorT pzem;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
     String idStr;

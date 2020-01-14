@@ -36,10 +36,10 @@ auto constexpr switches = "/config/switches.bin";
 } // namespace configFilenames
 namespace constantsConfig
 {
-#if DEFAULT
-constexpr const char *firmwareMode{"DEFAULT"};
-constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=DEFAULT"};
-constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=DEFAULT"};
+#if NO_FEATURES
+constexpr const char *firmwareMode{"NO_FEATURES"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=NO_FEATURES"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=NO_FEATURES"};
 #endif
 #if SINGLE_SWITCH
 constexpr const char *firmwareMode{"SINGLE_SWITCH"};
@@ -76,10 +76,21 @@ constexpr const char *firmwareMode{"BHPZEM_004T"};
 constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T"};
 constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T"};
 #endif
+#if BHPZEM_004T_2_0
+constexpr const char *firmwareMode{"BHPZEM_004T_2_0"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_2_0"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_2_0"};
+#endif
 #if BHPZEM_004T_V03
 constexpr const char *firmwareMode{"BHPZEM_004T_V03"};
 constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_V03"};
 constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_V03"};
+#endif
+
+#if BHPZEM_004T_V03_2_0
+constexpr const char *firmwareMode{"BHPZEM_004T_V03_2_0"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_V03_2_0"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_V03_2_0"};
 #endif
 #if GATE
 constexpr const char *firmwareMode{"GATE"};
@@ -96,14 +107,15 @@ constexpr const char *apiUser{"admin"};     //API USER
 constexpr const char *apiPassword{"xpto"};  //API PASSWORD
 } // namespace constantsConfig
 
-namespace constanstsCloudIO{
+namespace constanstsCloudIO
+{
 constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
-constexpr  uint16_t mqttPort{1883};
-}
+constexpr uint16_t mqttPort{1883};
+} // namespace constanstsCloudIO
 namespace constanstsSwitch
 {
 
-constexpr const unsigned long  delayDebounce{25ul};                          //25 milliseconds
+constexpr const unsigned long delayDebounce{25ul};              //25 milliseconds
 constexpr const unsigned long delayCoverProtection{50ul};       //50 milliseconds
 constexpr const unsigned long coverAutoStopProtection{90000ul}; // after 90 seconds turn off all relay to enhance the lifecycle
 constexpr const char *payloadOn{"ON"};
