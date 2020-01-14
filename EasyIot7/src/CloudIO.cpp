@@ -5,13 +5,14 @@
 #include <AsyncMqttClient.h>
 #include "constants.h"
 #include "Switches.h"
-
+#include <ESP8266HTTPClient.h>
 AsyncMqttClient mqttClient;
 
 Ticker mqttReconnectTimer;
 void connectToCloundIO() {
   Serial.println("Connecting to MQTT...");
   mqttClient.connect();
+   publishFeactures();
 }
 
 bool mqttCloudIOConnected(){
@@ -115,3 +116,63 @@ void setupCloudIO() {
   mqttClient.setCredentials("brunohorta82","xptoxpto");
 }
 
+void publishFeactures()
+{
+    if (WiFi.status() != WL_CONNECTED)
+        return;
+    WiFiClient client;
+    HTTPClient http;
+
+    String queryString;
+    queryString.reserve(200);
+    queryString.concat(constanstsCloudIO::apiDns);
+    queryString.concat("/devices/features/add-or-update/");
+    queryString.concat(getAtualConfig().chipId);
+    Serial.println(queryString);
+     String payload ="";
+    if(getAtualSwitchesConfig().items.empty()){
+      payload= "[]";
+    }
+         
+        size_t s = getAtualSwitchesConfig().items.size();
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s) + s* (JSON_OBJECT_SIZE(7) + sizeof(SwitchT));
+  DynamicJsonDocument doc(CAPACITY);
+
+  for (const auto &sw : getAtualSwitchesConfig().items)
+  {
+    JsonObject sdoc = doc.createNestedObject();
+    sdoc["id"] = sw.id;
+    sdoc["name"] = sw.name;
+    sdoc["family"] = sw.family;
+    sdoc["stateControl"] = sw.stateControl;
+    sdoc["alexaSupport"] = sw.alexaSupport;
+    sdoc["chipId"] = getAtualConfig().chipId;
+    
+  }
+  
+serializeJson(doc,payload);
+Serial.println(payload);
+  http.addHeader("Content-Type", "application/json");
+    if (http.begin(client,queryString))
+    {
+        
+
+        int httpCode = http.POST(payload);
+
+        if (httpCode < 0)
+        {
+#ifdef DEBUG
+Serial.println(httpCode);
+            Log.error("%s GET Request, error %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
+#endif
+        }
+
+        http.end();
+    }
+#ifdef DEBUG
+    else
+    {
+        Log.error("%s Unable to connect" CR, tags::cloudIO);
+    }
+#endif
+}

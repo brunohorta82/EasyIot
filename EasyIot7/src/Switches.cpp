@@ -7,6 +7,7 @@
 #include "WebRequests.h"
 #include <esp-knx-ip.h>
 #include <Bounce2.h>
+#include "CloudIO.h"
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 
 struct Switches &getAtualSwitchesConfig()
@@ -40,6 +41,7 @@ void save(Switches &switches)
   Log.notice("%s Config stored." CR, tags::switches);
 #endif
   switches.lastChange = 0ul;
+ 
 }
 size_t Switches::serializeToJson(Print &output)
 {
@@ -94,6 +96,7 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["haSupport"] = sw.haSupport;
     sdoc["knxSupport"] = sw.knxSupport;
   }
+
   return serializeJson(doc, output);
 }
 
