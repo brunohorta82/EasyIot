@@ -13,12 +13,12 @@
 #include "WebRequests.h"
 #include <Bounce2.h>
 #if WITH_DISPLAY
-#include "SSD1306.h"   //https://github.com/ThingPulse/esp8266-oled-ssd1306
-#define DISPLAY_SDA 2  //-1 if you don't use display
-#define DISPLAY_SCL 13 //-1 if you don't use display
+#include "SSD1306Wire.h" //https://github.com/ThingPulse/esp8266-oled-ssd1306
+#define DISPLAY_SDA 2    //-1 if you don't use display
+#define DISPLAY_SCL 13   //-1 if you don't use display
 #define DISPLAY_BTN 16
 bool displayOn = true;
-SSD1306 display(0x3C, DISPLAY_SDA, DISPLAY_SCL);
+SSD1306Wire display(0x3C, DISPLAY_SDA, DISPLAY_SCL);
 bool lastState = false;
 Bounce debouncer = Bounce();
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
@@ -380,12 +380,13 @@ bool Sensors::remove(const char *id)
 
   return true;
 }
-void reloadSensors(){
-    for ( auto &ss : getAtualSensorsConfig().items){
-       ss.reloadMqttTopics();
-     }
-     save(getAtualSensorsConfig());
-     
+void reloadSensors()
+{
+  for (auto &ss : getAtualSensorsConfig().items)
+  {
+    ss.reloadMqttTopics();
+  }
+  save(getAtualSensorsConfig());
 }
 void initSensorsHaDiscovery(const Sensors &sensors)
 {
@@ -441,7 +442,7 @@ void SensorT::updateFromJson(JsonObject doc)
     strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NC:
-  configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":1}", sizeof(mqttPayload));
     break;
@@ -475,8 +476,9 @@ void SensorT::updateFromJson(JsonObject doc)
   doc["id"] = id;
   doc["mqttStateTopic"] = mqttStateTopic;
 }
-void SensorT::reloadMqttTopics(){
-String mqttTopic;
+void SensorT::reloadMqttTopics()
+{
+  String mqttTopic;
   mqttTopic.reserve(sizeof(mqttStateTopic));
   mqttTopic.concat(getBaseTopic());
   mqttTopic.concat("/");
