@@ -86,6 +86,12 @@ struct SwitchT
     unsigned int statePoolEnd;
     bool slave;
     unsigned long lastChangeState;
+    
+    //CLOUDIO
+    char mqttCloudCommandTopic[128];
+    char mqttCloudStateTopic[128];
+    
+    //METHODS
     void load(File &file);
     void save(File &file) const;
     void updateFromJson(JsonObject doc);
@@ -108,6 +114,7 @@ void load(Switches &switches);
 void remove(Switches &switches, const char *id);
 void update(Switches &switches, const String &id, JsonObject doc);
 void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
+void mqttCloudSwitchControl(Switches &switches, const char *topic, const char *payload);
 void sendToServerEvents(const String &topic, const String &payload);
 void stateSwitchById(Switches &switches, const char *id, const char *state);
 struct Switches &getAtualSwitchesConfig();

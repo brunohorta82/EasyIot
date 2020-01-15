@@ -25,9 +25,12 @@ bool mqttCloudIOConnected()
 {
   return mqttClient.connected();
 }
+void notifyStateToCloudIO(const char *topic,const char *state){
+  if(!mqttClient.connected())return;
+  mqttClient.publish(topic,0,false,state);
+}
 void subscribeOnMqttCloudIO(const char *topic)
 {
-
   if (!mqttCloudIOConnected())
   {
 #ifdef DEBUG
@@ -54,9 +57,15 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(sw.id);
     topic.concat("/set");
-    subscribeOnMqttCloudIO(topic.c_str());
+    
+    strlcpy(sw.mqttCloudCommandTopic,topic.c_str(),sizeof(sw.mqttCloudCommandTopic));
+    subscribeOnMqttCloudIO(sw.mqttCloudCommandTopic);
+    
     topic.replace("/set", "/status");
-    mqttClient.publish(topic.c_str(), 0, false, sw.mqttPayload);
+    
+    strlcpy(sw.mqttCloudStateTopic,topic.c_str(),sizeof(sw.mqttCloudStateTopic));
+    mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.mqttPayload);
+    
   }
 }
 
@@ -74,44 +83,24 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 
 void onMqttSubscribe(uint16_t packetId, uint8_t qos)
 {
-  Serial.println("Subscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-  Serial.print("  qos: ");
-  Serial.println(qos);
 }
 
 void onMqttUnsubscribe(uint16_t packetId)
 {
-  Serial.println("Unsubscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
 }
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-  Serial.println("Publish received.");
-  Serial.print("  topic: ");
-  Serial.println(topic);
-  Serial.print("  qos: ");
-  Serial.println(properties.qos);
-  Serial.print("  dup: ");
-  Serial.println(properties.dup);
-  Serial.print("  retain: ");
-  Serial.println(properties.retain);
-  Serial.print("  len: ");
-  Serial.println(len);
-  Serial.print("  index: ");
-  Serial.println(index);
-  Serial.print("  total: ");
-  Serial.println(total);
+  char msg[100];
+  #ifdef DEBUG
+  Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
+#endif
+  strlcpy(msg,payload,len+1);
+  mqttCloudSwitchControl(getAtualSwitchesConfig(), topic,  msg);
 }
 
 void onMqttPublish(uint16_t packetId)
 {
-  Serial.println("Publish acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
 }
 
 void setupCloudIO()
@@ -127,8 +116,6 @@ void setupCloudIO()
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(getAtualConfig().chipId);
   mqttClient.setCredentials(user.c_str(), pw.c_str());
-  Serial.println(user);
-  Serial.println(pw);
   connectToClounIOMqtt();
 }
 bool tryCloudConnectio()
@@ -141,6 +128,7 @@ bool tryCloudConnectio()
     cloudIOReadyToConnect = true;
     setupCloudIO();
   }
+  return true;
 }
 WiFiClient client;
 HTTPClient http;

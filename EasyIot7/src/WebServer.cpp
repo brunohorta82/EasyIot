@@ -222,6 +222,26 @@ void setupWebserverAsync()
     request->send(response);
   });
 
+    //CONFIG
+  server.on("/assign", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
+#endif
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    
+    if(request->hasArg("configKey")){
+     strlcpy(getAtualConfig().configkey, request->arg("configKey").c_str(),sizeof(getAtualConfig().configkey));
+     response->setCode(200);
+     requestCloudIOSync();
+    }else
+    {
+      response->setCode(400);
+    }
+    
+    request->send(response);
+  });
+
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
