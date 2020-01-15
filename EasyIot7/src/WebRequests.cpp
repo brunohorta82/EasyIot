@@ -4,6 +4,8 @@
 #include "ESP8266WiFi.h"
 #include <ESP8266HTTPClient.h>
 #include "Sensors.h"
+#include "Switches.h"
+#include "ArduinoJson.h"
 
 void publishOnEmoncms(SensorT &sensor, String &readings)
 {

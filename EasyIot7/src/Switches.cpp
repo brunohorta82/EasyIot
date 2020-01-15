@@ -7,6 +7,7 @@
 #include "WebRequests.h"
 #include <esp-knx-ip.h>
 #include <Bounce2.h>
+#include "CloudIO.h"
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 
 struct Switches &getAtualSwitchesConfig()
@@ -40,6 +41,7 @@ void save(Switches &switches)
   Log.notice("%s Config stored." CR, tags::switches);
 #endif
   switches.lastChange = 0ul;
+ 
 }
 size_t Switches::serializeToJson(Print &output)
 {
@@ -94,6 +96,7 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["haSupport"] = sw.haSupport;
     sdoc["knxSupport"] = sw.knxSupport;
   }
+
   return serializeJson(doc, output);
 }
 
@@ -633,6 +636,27 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
     }
   }
 }
+
+void mqttCloudSwitchControl(Switches &switches, const char *topic, const char *payload)
+{
+  for (auto &sw : switches.items)
+  {
+    if (strcmp(sw.mqttCloudCommandTopic, topic) == 0)
+    {
+
+      for (unsigned int p = sw.statePoolStart; p <= sw.statePoolEnd; p++)
+      {
+        if (strcmp(payload, statesPool[p].c_str()) == 0)
+        {
+          sw.statePoolIdx = p;
+          sw.changeState(statesPool[p].c_str());
+          return;
+        }
+      }
+      sw.changeState(payload);
+    }
+  }
+}
 void knkGroupNotifyState(const SwitchT &sw, const char *state)
 {
 }
@@ -775,7 +799,7 @@ void SwitchT::changeState(const char *state)
       changeState(statesPool[statePoolIdx].c_str());
     }
   }
-
+  notifyStateToCloudIO(mqttCloudStateTopic,mqttPayload);
   publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);

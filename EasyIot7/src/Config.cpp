@@ -17,8 +17,10 @@ static bool g_reboot = false;
 static bool g_loadDefaults = false;
 static bool g_autoUpdate = false;
 static bool g_wifiReload = false;
+static bool g_cloudIOSync = false;
 
-struct Config &getAtualConfig()
+struct Config &
+getAtualConfig()
 {
   static Config config;
   return config;
@@ -32,7 +34,7 @@ void generateId(String &id, const String &name, size_t maxSize)
 }
 long getTime()
 {
-  if (WiFi.status() != WL_CONNECTED )
+  if (WiFi.status() != WL_CONNECTED)
   {
     return 0;
   }
@@ -62,7 +64,19 @@ boolean isValidNumber(const char *str)
   }
   return false;
 }
-
+void requestCloudIOSync()
+{
+  g_cloudIOSync = true;
+}
+bool cloudIOSync()
+{
+  if (g_cloudIOSync)
+  {
+    g_cloudIOSync = false;
+    return true;
+  }
+  return false;
+}
 void requestReloadWifi()
 {
   g_wifiReload = true;
@@ -331,7 +345,7 @@ void loadStoredConfiguration(Config &config)
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
     SPIFFS.end();
 #ifdef DEBUG
-    Log.notice("%s Config %D loaded." CR, tags::config, config.firmware);
+    Log.notice("%s Config %s loaded." CR, tags::config, String(config.firmware).c_str());
 #endif
   }
 
@@ -425,8 +439,8 @@ Config &Config::updateFromJson(JsonObject doc)
   if (reloadMqtt)
   {
     setupMQTT();
-     reloadSwitches();
-     reloadSensors();
+    reloadSwitches();
+    reloadSensors();
   }
   refreshMDNS(lastNodeId);
   return *this;

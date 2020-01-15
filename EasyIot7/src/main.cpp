@@ -10,9 +10,14 @@
 #include "WebRequests.h"
 #include <esp-knx-ip.h>
 #include <ESP8266mDNS.h>
+#include "CloudIO.h"
 
 void checkInternalRoutines()
 {
+  if (cloudIOSync())
+  {
+    connectoToCloudIO();
+  }
   if (restartRequested())
   {
 #ifdef DEBUG

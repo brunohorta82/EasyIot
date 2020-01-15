@@ -222,6 +222,26 @@ void setupWebserverAsync()
     request->send(response);
   });
 
+    //CONFIG
+  server.on("/assign", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication();
+#endif
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    
+    if(request->hasArg("configKey")){
+     strlcpy(getAtualConfig().configkey, request->arg("configKey").c_str(),sizeof(getAtualConfig().configkey));
+     response->setCode(200);
+     requestCloudIOSync();
+    }else
+    {
+      response->setCode(400);
+    }
+    
+    request->send(response);
+  });
+
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
@@ -229,7 +249,7 @@ void setupWebserverAsync()
 #endif
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().updateFromJson(json).saveConfigurationOnDefaultFile().serializeToJson(*response);
-
+    requestCloudIOSync();
     request->send(response);
   }));
 
@@ -257,6 +277,7 @@ void setupWebserverAsync()
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     update(getAtualSwitchesConfig(), request->arg("id").c_str(), json);
     serializeJson(json, *response);
+    requestCloudIOSync();
     request->send(response);
   }));
 
@@ -313,6 +334,7 @@ void setupWebserverAsync()
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     update(getAtualSensorsConfig(), request->arg("id").c_str(), json);
     serializeJson(json, *response);
+    requestCloudIOSync();
     request->send(response);
   }));
 
