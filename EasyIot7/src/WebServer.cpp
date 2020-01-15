@@ -229,7 +229,7 @@ void setupWebserverAsync()
 #endif
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().updateFromJson(json).saveConfigurationOnDefaultFile().serializeToJson(*response);
-
+    requestCloudIOSync();
     request->send(response);
   }));
 
@@ -257,6 +257,7 @@ void setupWebserverAsync()
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     update(getAtualSwitchesConfig(), request->arg("id").c_str(), json);
     serializeJson(json, *response);
+    requestCloudIOSync();
     request->send(response);
   }));
 
@@ -313,6 +314,7 @@ void setupWebserverAsync()
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     update(getAtualSensorsConfig(), request->arg("id").c_str(), json);
     serializeJson(json, *response);
+    requestCloudIOSync();
     request->send(response);
   }));
 

@@ -14,6 +14,10 @@
 
 void checkInternalRoutines()
 {
+  if (cloudIOSync())
+  {
+    connectoToCloudIO();
+  }
   if (restartRequested())
   {
 #ifdef DEBUG
@@ -79,7 +83,6 @@ void setup()
   setupMQTT();
   knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   setupWebserverAsync();
-  setupCloudIO();
 }
 
 void loop()

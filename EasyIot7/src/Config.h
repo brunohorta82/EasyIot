@@ -50,6 +50,8 @@ struct Config
 
 struct Config &getAtualConfig();
 void loadStoredConfiguration(Config &config);
+void requestCloudIOSync();
+bool cloudIOSync();
 
 void requestRestart();
 bool restartRequested();

@@ -70,7 +70,7 @@ void infoWifi()
     Log.notice("%s MAC  %s " CR, tags::wifi, WiFi.softAPmacAddress().c_str());
     Log.notice("----------------------------------------------" CR);
 #endif
-refreshMDNS(getAtualConfig().nodeId);
+    refreshMDNS(getAtualConfig().nodeId);
   }
 }
 
@@ -158,7 +158,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_CONNECTED:
     knx.start(nullptr);
     infoWifi();
-    connectToCloundIO();
+    connectoToCloudIO();
     break;
 #ifdef DEBUG
   case MESSAGE_DISCONNECTED:
@@ -170,17 +170,17 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
 
   case MESSAGE_ACCESSPOINT_DESTROYED:
-  #ifdef DEBUG
+#ifdef DEBUG
     Log.notice("%s Disconnecting access point" CR, tags::wifi);
-    #endif
+#endif
     break;
   case MESSAGE_ACCESSPOINT_CREATING:
-  #ifdef DEBUG
+#ifdef DEBUG
     Log.notice("%s Creating access point" CR, tags::wifi);
-    #endif
-    
+#endif
+
     break;
-  #ifdef DEBUG
+#ifdef DEBUG
   case MESSAGE_ACCESSPOINT_FAILED:
     Log.error("%s Could not create access point" CR, tags::wifi);
     break;
@@ -216,7 +216,7 @@ void refreshMDNS(const char *lastName)
   {
     MDNS.addService("easyiot", "tcp", 80);
     MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
-    MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION,3));
+    MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION, 3));
     MDNS.addServiceTxt("easyiot", "tcp", "lastChange", String(getTime()));
     MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", constantsConfig::firmwareMode);
   }
@@ -233,7 +233,6 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
   if (code == MESSAGE_CONNECTED)
   {
     refreshMDNS(getAtualConfig().nodeId);
-    
   }
 }
 void setupWiFi()

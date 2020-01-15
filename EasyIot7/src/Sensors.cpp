@@ -224,8 +224,14 @@ void load(Sensors &sensors)
     pzem.knxLevelOne = 3;
     pzem.knxLevelTwo = 1;
     pzem.knxLevelThree = 1;
+#if defined BHPZEM_004T
     pzem.primaryGpio = 4;
     pzem.secondaryGpio = 5;
+#endif
+#if defined BHPZEM_004T_2_0
+    pzem.primaryGpio = 3;
+    pzem.secondaryGpio = 1;
+#endif
     pzem.tertiaryGpio = constantsConfig::noGPIO;
     pzem.mqttRetain = true;
     pzem.haSupport = true;
@@ -261,8 +267,14 @@ void load(Sensors &sensors)
     pzem.knxLevelOne = 3;
     pzem.knxLevelTwo = 1;
     pzem.knxLevelThree = 1;
+#if defined BHPZEM_004T_V03
     pzem.primaryGpio = 4;
     pzem.secondaryGpio = 5;
+#endif
+#if defined BHPZEM_004T_V03_2_0
+    pzem.primaryGpio = 3;
+    pzem.secondaryGpio = 1;
+#endif
     pzem.tertiaryGpio = constantsConfig::noGPIO;
     pzem.mqttRetain = true;
     pzem.haSupport = true;
