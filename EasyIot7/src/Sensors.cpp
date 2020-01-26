@@ -90,7 +90,7 @@ void Sensors::load(File &file)
     case PZEM_004T:
     {
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
-      IPAddress ip(192, 168, 1, item.primaryGpio);
+      IPAddress ip(192, 168, 1, item.secondaryGpio);
       item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
 #if WITH_DISPLAY
@@ -640,14 +640,16 @@ void loop(Sensors &sensors)
     case PZEM_004T:
       if (ss.lastRead + ss.delayRead < millis())
       {
-        IPAddress ip(192, 168, 1, ss.primaryGpio);
+        IPAddress ip(192, 168, 1, ss.secondaryGpio);
         ss.lastRead = millis();
         float v = ss.pzem->voltage(ip);
 
         float i = ss.pzem->current(ip);
 
         float p = ss.pzem->power(ip);
+
         float c = ss.pzem->energy(ip);
+
         if (ss.tertiaryGpio != constantsConfig::noGPIO)
         {
           if (digitalRead(ss.tertiaryGpio))
@@ -664,7 +666,7 @@ void loop(Sensors &sensors)
         }
         else
         {
-          auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+          auto readings = String("{\"pzem\":" + String(ss.secondaryGpio) + ",\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
@@ -703,7 +705,7 @@ void loop(Sensors &sensors)
         }
         else
         {
-          auto readings = String("{\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+          auto readings = String("{\"pzem\":" + String(ss.secondaryGpio) + ",\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
