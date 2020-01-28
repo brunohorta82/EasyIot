@@ -98,6 +98,11 @@ constexpr const char *firmwareMode{"GATE"};
 constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=GATE"};
 constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=GATE"};
 #endif
+#if BHPZEM_017
+constexpr const char *firmwareMode{"BHPZEM_017"};
+constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_017"};
+constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_017"};
+#endif
 
 constexpr const char *newID{"NEW"};
 constexpr unsigned int noGPIO{99u};

@@ -37,7 +37,7 @@ struct SwitchT
     char family[10];                      //switch, light, cover, lock
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT; //MQTT OR RELAY
-    bool alexaSupport = false;
+    bool cloudIOSupport = true;
     bool haSupport = false;
     bool knxSupport = false;
     bool childLock = false;

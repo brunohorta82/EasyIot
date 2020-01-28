@@ -12,6 +12,8 @@
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
 #include <Bounce2.h>
+#include <Modbus.h>
+
 #if WITH_DISPLAY
 #include "SSD1306Wire.h" //https://github.com/ThingPulse/esp8266-oled-ssd1306
 #define DISPLAY_SDA 2    //-1 if you don't use display
@@ -101,6 +103,13 @@ void Sensors::load(File &file)
     case PZEM_004T_V03:
       item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
       configPIN(item.tertiaryGpio, INPUT);
+#if WITH_DISPLAY
+      setupDisplay();
+#endif
+      break;
+    case PZEM_017:
+      item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
+      uint8_t result = item.pzemModbus->Begin(9600, 2);
 #if WITH_DISPLAY
       setupDisplay();
 #endif
@@ -213,68 +222,38 @@ void load(Sensors &sensors)
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::sensors);
 #endif
-#if defined BHPZEM_004T || BHPZEM_004T_2_0
+#if defined BHPZEM_004T || BHPZEM_004T_2_0 || BHPZEM_004T_V03 || BHPZEM_004T_V03_2_0 || BHPZEM_017
     SensorT pzem;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
     String idStr;
     generateId(idStr, pzem.name, sizeof(pzem.id));
     strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
     strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
+#if defined BHPZEM_004T_2_0 || BHPZEM_004T
     pzem.type = PZEM_004T;
-    pzem.knxLevelOne = 3;
-    pzem.knxLevelTwo = 1;
-    pzem.knxLevelThree = 1;
-#if defined BHPZEM_004T
-    pzem.primaryGpio = 4;
-    pzem.secondaryGpio = 5;
 #endif
-#if defined BHPZEM_004T_2_0
-    pzem.primaryGpio = 3;
-    pzem.secondaryGpio = 1;
+#if defined BHPZEM_017
+    pzem.type = PZEM_017;
 #endif
-    pzem.tertiaryGpio = constantsConfig::noGPIO;
-    pzem.mqttRetain = true;
-    pzem.haSupport = true;
-    pzem.emoncmsSupport = true;
-    pzem.delayRead = 5000;
-    String mqttTopic;
-    mqttTopic.reserve(sizeof(pzem.mqttStateTopic));
-    mqttTopic.concat(getBaseTopic());
-    mqttTopic.concat("/");
-    mqttTopic.concat(pzem.family);
-    mqttTopic.concat("/");
-    mqttTopic.concat(pzem.id);
-    mqttTopic.concat("/state");
-    strlcpy(pzem.mqttStateTopic, mqttTopic.c_str(), sizeof(pzem.mqttStateTopic));
-    strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
-    strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
-    strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
-    strlcpy(pzem.deviceClass, constantsSensor::noneClass, sizeof(pzem.deviceClass));
-    sensors.items.push_back(pzem);
-    SPIFFS.end();
-    save(sensors);
-    load(sensors);
-    return;
-#endif
-#if defined BHPZEM_004T_V03 || BHPZEM_004T_V03_2_0
-    SensorT pzem;
-    strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
-    String idStr;
-    generateId(idStr, pzem.name, sizeof(pzem.id));
-    strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
-    strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
+#if defined PZEM_004T_V03 || BHPZEM_004T_V03_2_0
     pzem.type = PZEM_004T_V03;
+#endif
     pzem.knxLevelOne = 3;
     pzem.knxLevelTwo = 1;
     pzem.knxLevelThree = 1;
-#if defined BHPZEM_004T_V03
+#if defined BHPZEM_004T || BHPZEM_004T_V03
     pzem.primaryGpio = 4;
     pzem.secondaryGpio = 5;
 #endif
-#if defined BHPZEM_004T_V03_2_0
+#if defined BHPZEM_004T_2_0 || BHPZEM_004T_V03_2_0
     pzem.primaryGpio = 3;
     pzem.secondaryGpio = 1;
 #endif
+#if defined BHPZEM_017
+    pzem.primaryGpio = 4;
+    pzem.secondaryGpio = 5;
+#endif
+
     pzem.tertiaryGpio = constantsConfig::noGPIO;
     pzem.mqttRetain = true;
     pzem.haSupport = true;
@@ -482,6 +461,10 @@ void SensorT::updateFromJson(JsonObject doc)
   case PZEM_004T_V03:
     pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    break;
+  case PZEM_017:
+    pzemModbus = new Modbus(primaryGpio, secondaryGpio);
+    uint8_t result = pzemModbus->Begin(9600, 2);
     break;
   }
   reloadMqttTopics();
@@ -715,6 +698,59 @@ void loop(Sensors &sensors)
 #ifdef DEBUG
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
+        }
+      }
+      break;
+    case PZEM_017:
+      if (ss.lastRead + ss.delayRead < millis())
+      {
+
+        ss.lastRead = millis();
+        float v = -1;
+        float i = -1;
+        float p = -1;
+        float c = -1;
+        static uint8_t send_retry = 0;
+        bool data_ready = ss.pzemModbus->ReceiveReady();
+        if (data_ready)
+        {
+
+          uint8_t buffer[22];
+          uint8_t error = ss.pzemModbus->ReceiveBuffer(buffer, 8);
+          if (error)
+          {
+#ifdef DEBUG
+            Log.notice("%s PZEM ERROR" CR, tags::sensors);
+#endif
+          }
+          else
+          {
+            v = (float)((buffer[3] << 8) + buffer[4]) / 100.0;
+            i = (float)((buffer[5] << 8) + buffer[6]) / 100.0;
+            p = (float)((buffer[9] << 24) + (buffer[10] << 16) + (buffer[7] << 8) + buffer[8]) / 10.0;
+            c = (float)((buffer[13] << 24) + (buffer[14] << 16) + (buffer[11] << 8) + buffer[12]);
+            auto readings = String("{\"pzem\":" + String(ss.secondaryGpio) + ",\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+#if WITH_DISPLAY
+            printOnDisplay(v, i, p, e);
+#endif
+            publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
+            sendToServerEvents("sensors", readings.c_str());
+            publishOnEmoncms(ss, readings);
+#ifdef DEBUG
+            Log.notice("%s %s" CR, tags::sensors, readings.c_str());
+#endif
+          }
+        }
+
+        if (0 == send_retry || data_ready)
+        {
+          send_retry = 5;
+          ss.pzemModbus->Send(0x01, 0x04, 0, 8);
+        }
+        else
+        {
+
+          send_retry--;
         }
       }
       break;

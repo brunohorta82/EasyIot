@@ -487,7 +487,7 @@ function applyTypeControl(id) {
 }
 
 function applySensorRequiredGpio(id) {
-    if ($('#s_type_' + id).val() != "70" && $('#s_type_' + id).val() != "71" ) {
+    if ($('#s_type_' + id).val() != "70" && $('#s_type_' + id).val() != "71" && $('#s_type_' + id).val() != "72" ) {
         hide("s_secondaryGpioRow_" + id);
         hide("s_tertiaryGpioRow_" + id);
         setOptionOnSelect('s_secondaryGpio_' + id, 99);
@@ -529,6 +529,7 @@ function buildSensor(obj) {
         '                                    <option value="2">DHT 22</option>' +
         '                                    <option value="70">PZEM 004T V2</option>' +
         '                                    <option value="71">PZEM 004T V3</option>' +
+        '                                    <option value="72">PZEM 017</option>' +
         '                                </select></td>' +
         '                            <tr>' +
         '                            <tr>' +
@@ -649,7 +650,7 @@ function buildSwitch(obj) {
     let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     let checkedHaSupport = obj.haSupport ? "checked" : "";
-    let checkedAlexaSupport = obj.alexaSupport ? "checked" : "";
+    let checkedCloudIOSupport = obj.cloudIOSupport ? "checked" : "";
     let checkedKnxSupport = obj.knxSupport ? "checked" : "";
 
     $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
@@ -806,7 +807,7 @@ function buildSwitch(obj) {
         '                                <td style="display: inline-flex">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >KNX</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedKnxSupport + ' type="checkbox" id="knxSupport_' + obj.id + '" value="' + obj.knxSupport + '">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="haSupport_' + obj.id + '" value="' + obj.haSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Alexa</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedAlexaSupport + ' type="checkbox" id="alexaSupport_' + obj.id + '" value="' + obj.alexaSupport + '">' +
+        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >CloudIO</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedCloudIOSupport + ' type="checkbox" id="cloudIOSupport_' + obj.id + '" value="' + obj.cloudIOupport + '">' +
 
         '                               </td>' +
         '                            </tr>' +
@@ -937,7 +938,7 @@ function saveSwitch(id) {
         "pullup": true,
         "mqttRetain": document.getElementById('mqttRetain_' + id).checked,
         "haSupport": document.getElementById('haSupport_' + id).checked,
-        "alexaSupport": document.getElementById('alexaSupport_' + id).checked,
+        "cloudIOSupport": document.getElementById('cloudIOSupport_' + id).checked,
         "knxSupport": document.getElementById('knxSupport_' + id).checked,
         "inverted": false,
         "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),

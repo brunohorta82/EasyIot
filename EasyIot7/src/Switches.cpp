@@ -41,7 +41,6 @@ void save(Switches &switches)
   Log.notice("%s Config stored." CR, tags::switches);
 #endif
   switches.lastChange = 0ul;
- 
 }
 size_t Switches::serializeToJson(Print &output)
 {
@@ -92,7 +91,7 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["mqttPayload"] = sw.mqttPayload;
     sdoc["stateControl"] = sw.stateControl;
 
-    sdoc["alexaSupport"] = sw.alexaSupport;
+    sdoc["cloudIOSupport"] = sw.cloudIOSupport;
     sdoc["haSupport"] = sw.haSupport;
     sdoc["knxSupport"] = sw.knxSupport;
   }
@@ -138,7 +137,7 @@ void SwitchT::save(File &file) const
   file.write((uint8_t *)&statePoolStart, sizeof(statePoolStart));
   file.write((uint8_t *)&statePoolEnd, sizeof(statePoolEnd));
 
-  file.write((uint8_t *)&alexaSupport, sizeof(alexaSupport));
+  file.write((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
   file.write((uint8_t *)&haSupport, sizeof(haSupport));
   file.write((uint8_t *)&knxSupport, sizeof(knxSupport));
   file.write((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
@@ -183,7 +182,7 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&statePoolStart, sizeof(statePoolStart));
   file.read((uint8_t *)&statePoolEnd, sizeof(statePoolEnd));
 
-  file.read((uint8_t *)&alexaSupport, sizeof(alexaSupport));
+  file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
   file.read((uint8_t *)&knxSupport, sizeof(knxSupport));
   file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
@@ -280,7 +279,7 @@ void Switches::load(File &file)
     //INTEGRATIONS
     //ALEXA
 #if EMULATE_ALEXA
-    if (item.alexaSupport)
+    if (item.cloudIOSupport)
     {
       addSwitchToAlexa(item.name);
     }
@@ -356,7 +355,7 @@ void reloadSwitches()
   }
   save(getAtualSwitchesConfig());
 }
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool cloudIOSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -371,7 +370,7 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.mode = mode;
   sw.knxSupport = knxSupport;
   sw.haSupport = haSupport;
-  sw.alexaSupport = alexaSupport;
+  sw.cloudIOSupport = cloudIOSupport;
   sw.pullup = true;
   sw.mqttRetain = mqttRetaint;
   sw.inverted = false;
@@ -440,7 +439,7 @@ void SwitchT::updateFromJson(JsonObject doc)
                  doc["autoStateValue"] | "",
                  static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)),
                  doc["timeBetweenStates"] | 0ul, doc["haSupport"] | true,
-                 doc["alexaSupport"] | true,
+                 doc["cloudIOSupport"] | true,
                  doc["knxLevelOne"] | 0,
                  doc["knxLevelTwo"] | 0,
                  doc["knxLevelThree"] | 0,
@@ -473,7 +472,7 @@ void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 #endif
   delay(10);
 #if EMULATE_ALEXA
-  if (sw.alexaSupport)
+  if (sw.cloudIOSupport)
   {
     addSwitchToAlexa(sw.name);
   }
@@ -799,7 +798,7 @@ void SwitchT::changeState(const char *state)
       changeState(statesPool[statePoolIdx].c_str());
     }
   }
-  notifyStateToCloudIO(mqttCloudStateTopic,mqttPayload);
+  notifyStateToCloudIO(mqttCloudStateTopic, mqttPayload);
   publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
