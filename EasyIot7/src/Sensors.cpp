@@ -235,7 +235,7 @@ void load(Sensors &sensors)
 #if defined BHPZEM_017
     pzem.type = PZEM_017;
 #endif
-#if defined PZEM_004T_V03 || BHPZEM_004T_V03_2_0
+#if defined BHPZEM_004T_V03 || BHPZEM_004T_V03_2_0
     pzem.type = PZEM_004T_V03;
 #endif
     pzem.knxLevelOne = 3;
@@ -727,7 +727,7 @@ void loop(Sensors &sensors)
             c = (float)((buffer[13] << 24) + (buffer[14] << 16) + (buffer[11] << 8) + buffer[12]);
             auto readings = String("{\"pzem\":" + String(ss.secondaryGpio) + ",\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
 #if WITH_DISPLAY
-            printOnDisplay(v, i, p, e);
+            printOnDisplay(v, i, p, c);
 #endif
             publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
             sendToServerEvents("sensors", readings.c_str());
