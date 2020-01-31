@@ -1,16 +1,14 @@
-const endpoint = {
-    baseUrl: ""
-};
+const endpoint = {baseUrl: ""};
 var switches = [];
 var sensors = [];
 let sortByProperty = function (property) {
     return function (x, y) {
-        return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
-    };
+        return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1))
+    }
 };
 
 function removeFromSelect(select, value) {
-    $("#" + select + " option[value='" + value + "']").remove();
+    $("#" + select + " option[value='" + value + "']").remove()
 }
 
 function addToSelect(select, class_, value) {
@@ -21,22 +19,24 @@ function addToSelect(select, class_, value) {
         opt.appendChild(document.createTextNode(""));
         opt.value = value;
         sel.appendChild(opt);
-        $("#" + select + " option[value='" + value + "']").addClass(class_);
-
+        $("#" + select + " option[value='" + value + "']").addClass(class_)
     }
 }
+
 function requestUpdate() {
     $.ajax({
         url: endpoint.baseUrl + "/auto-update",
         contentType: "text/plain; charset=utf-8",
         success: function (response) {
             showMessage("O Dispositivo vai iniciar a atualização automática, aguarde.", "The device started the auto upgrade.")
-        }, error: function () {
+        },
+        error: function () {
             showMessage("Não foi possivel iniciar a atualização automárica, tenta novamente.", "Can't be possible to start auto update, retry again.")
         },
         timeout: 1000
-    });
+    })
 }
+
 function buildSwitchTemplate() {
     if ($('#bs_NEW').length > 0) return
     let device = {
@@ -45,7 +45,8 @@ function buildSwitchTemplate() {
         "family": "switch",
         "primaryGpio": 99,
         "secondaryGpio": 99,
-        "timeBetweenStates": 0,
+        "automationTimeA": 0,
+        "automationTimeB": 0,
         "autoStateDelay": 0,
         "autoStateValue": "",
         "typeControl": 2,
@@ -53,9 +54,9 @@ function buildSwitchTemplate() {
         "knxLevelOne": 0,
         "knxLevelTwo": 0,
         "knxLevelThree": 0,
-        "pullup": false,
-        "mqttRetain": false,
-        "inverted": false,
+        "pullup": !1,
+        "mqttRetain": !1,
+        "inverted": !1,
         "mqttCommandTopic": "../set",
         "mqttStateTopic": "../state",
         "mqttPositionCommandTopic": "../setposition",
@@ -63,8 +64,9 @@ function buildSwitchTemplate() {
         "primaryGpioControl": 99,
         "secondaryGpioControl": 99,
     };
-    buildSwitch(device);
+    buildSwitch(device)
 }
+
 function buildSensorTemplate() {
     if ($('#bss_NEW').length > 0) return
     let device = {
@@ -75,33 +77,33 @@ function buildSensorTemplate() {
         "knxLevelOne": 0,
         "knxLevelTwo": 0,
         "knxLevelThree": 0,
-        "mqttRetain": true,
+        "mqttRetain": !0,
         "mqttStateTopic": "../state",
         "delayRead": 2000
     };
-    buildSensor(device);
+    buildSensor(device)
 }
 
 function setOptionOnSelect(select, value) {
     let sel = document.getElementById(select);
     if (sel) {
-        sel.selectedIndex = $("#" + select + " option[value='" + value + "']").index();
+        sel.selectedIndex = $("#" + select + " option[value='" + value + "']").index()
     }
 }
 
 function show(id) {
-    $('#' + id).removeClass("hide");
+    $('#' + id).removeClass("hide")
 }
 
 function hide(id) {
-    $('#' + id).addClass("hide");
+    $('#' + id).addClass("hide")
 }
 
 var config;
 var WORDS_EN = {
-    "update-from-server":"NEW UPGRADE",
+    "update-from-server": "NEW UPGRADE",
     "node": "NODE",
-    "lang-connectedOn":"CONNECTED ON",
+    "lang-connectedOn": "CONNECTED ON",
     "reading-interval": "Readings every",
     "sensors": "Sensors",
     "integrations": "INTEGRATIONS",
@@ -144,7 +146,7 @@ var WORDS_EN = {
     "dual-push": "Dual Push",
     "dual-normal": "Dual Generic",
     "mode": "Mode",
-    "relay-mqtt": "Relay / MQTT",
+    "pin-output": "OUTPUT PIN",
     "control": "Output",
     "pin-in-a": "Input Pin a",
     "pin-in-b": "Input Pin b",
@@ -172,12 +174,11 @@ var WORDS_EN = {
     "address": "Address",
     "prefix": "Prefix",
     "apikey": "API Key"
-
 };
 var WORDS_PT = {
-    "update-from-server":"NOVA ATUALIZAÇÃO",
+    "update-from-server": "NOVA ATUALIZAÇÃO",
     "node": "NÓ",
-    "lang-connectedOn":"LIGADO A",
+    "lang-connectedOn": "LIGADO A",
     "group": "Grupo",
     "integrations": "INTEGRAÇÕES",
     "sensors": "Sensores",
@@ -222,7 +223,7 @@ var WORDS_PT = {
     "dual-push": "Duplo Pressão",
     "dual-normal": "Duplo Normal",
     "mode": "Modo",
-    "relay-mqtt": "Relé / MQTT",
+    "pin-output": "PINO SAÍDA",
     "mqtt": "MQTT",
     "control": "Saída",
     "pin-in-a": "Pino Entrada a",
@@ -252,68 +253,57 @@ var WORDS_PT = {
 
 function loadsLanguage(lang) {
     if (lang === null) {
-        window.navigator.language.startsWith("en") ? lang = "EN" : lang = "PT";
+        window.navigator.language.startsWith("en") ? lang = "EN" : lang = "PT"
     }
     localStorage.setItem('lang', lang);
     $('span[class^="lang"]').each(function () {
         var langVar = (this.className).replace('lang-', '');
         var text = window['WORDS_' + lang][langVar];
-        $(this).text(text);
+        $(this).text(text)
     });
     $('option[class^="lang"]').each(function () {
         var langVar = (this.className).replace('lang-', '');
         var text = window['WORDS_' + lang][langVar];
         if (!text) {
-            text = langVar;
+            text = langVar
         }
-        $(this).text(text);
-    });
+        $(this).text(text)
+    })
 }
 
 function showMessage(pt, en) {
-    localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
+    localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en)
 }
 
 function showText(pt, en) {
-    return localStorage.getItem('lang').toString() === "PT" ? pt : en;
+    return localStorage.getItem('lang').toString() === "PT" ? pt : en
 }
 
 function loadConfig() {
     const targetUrl = endpoint.baseUrl + "/config";
     $.ajax({
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
+        url: targetUrl, contentType: "text/plain; charset=utf-8", dataType: "json", success: function (response) {
             config = response;
-            fillConfig();
-        },
-        error: function () {
+            fillConfig()
+        }, error: function () {
             showMessage("Erro a carregar configuração", "Configuration load failed.")
         }, complete: function () {
-
-        },
-        timeout: 2000
-    });
+        }, timeout: 2000
+    })
 }
 
 function loadDevice(func, e, next) {
     const targetUrl = endpoint.baseUrl + "/" + e;
     $.ajax({
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
+        url: targetUrl, contentType: "text/plain; charset=utf-8", dataType: "json", success: function (response) {
             func(response);
             if (next) {
-                next();
+                next()
             }
-        },
-        error: function () {
+        }, error: function () {
             showMessage("Erro a carregar configuração de funcionalidades.", "Features Configuration load failed.")
-        },
-        timeout: 2000
-    });
+        }, timeout: 2000
+    })
 }
 
 function fillConfig() {
@@ -325,7 +315,7 @@ function fillConfig() {
     $("#lbl-mac").text(config.mac);
     $("#lbl-connectedOn").text(config.connectedOn);
     $('input[name="nodeId"]').val(config.nodeId);
-    $(document).prop('title', 'BH EASY IoT '+config.nodeId);
+    $(document).prop('title', 'BH EASY IoT ' + config.nodeId);
     $('input[name="mqttIpDns"]').val(config.mqttIpDns);
     $('#mqtt_lbl').text(config.mqttIpDns);
     $('input[name="mqttUsername"]').val(config.mqttUsername);
@@ -337,7 +327,7 @@ function fillConfig() {
     $('input[name="knxLine"]').val(config.knxLine);
     let staticIp = document.getElementById("staticIp");
     if (staticIp) {
-        staticIp.checked = !config.staticIp;
+        staticIp.checked = !config.staticIp
     }
     $('input[name="wifiIp"]').val(config.wifiIp);
     $('input[name="wifiMask"]').val(config.wifiMask);
@@ -346,9 +336,8 @@ function fillConfig() {
     $('input[name="emoncmsServer"]').val(config.emoncmsServer);
     $('input[name="emoncmsPath"]').val(config.emoncmsPath);
     $('input[name="emoncmsApikey"]').val(config.emoncmsApikey);
-    getLastVersion(config.firmwareMode,config.firmware,config.chipId);
-    $('#ff').prop('disabled', false);
-
+    getLastVersion(config.firmwareMode, config.firmware, config.chipId);
+    $('#ff').prop('disabled', !1)
 }
 
 function toggleActive(menu) {
@@ -359,15 +348,14 @@ function toggleActive(menu) {
             switches = [];
             loadDevice(fillSwitches, "switches", function () {
                 loadDevice(fillSensors, "sensors", function () {
-                });
-
-            });
+                })
+            })
         } else {
             systemStatus();
-            fillConfig();
+            fillConfig()
         }
-        loadsLanguage(localStorage.getItem('lang'));
-    });
+        loadsLanguage(localStorage.getItem('lang'))
+    })
 }
 
 function fillSwitches(payload) {
@@ -375,7 +363,7 @@ function fillSwitches(payload) {
     if (!payload) return;
     $('#switch_config').empty();
     for (let obj of payload.sort(sortByProperty('name'))) {
-        buildSwitch(obj);
+        buildSwitch(obj)
     }
 }
 
@@ -384,14 +372,13 @@ function fillSensors(payload) {
     if (!payload) return;
     $('#sensors_config').empty();
     for (let obj of payload.sort(sortByProperty('name'))) {
-        buildSensor(obj);
+        buildSensor(obj)
     }
 }
 
 function applySwitchFamily(id) {
     hide("mqttPositionCommandTopicRow_" + id);
     hide("mqttPositionStateTopicRow_" + id);
-    hide("timeBetweenStatesRow_" + id);
     hide("secondaryGpioControlRow_" + id);
     hide("secondaryGpioRow_" + id);
     hide("btn_on_" + id);
@@ -420,32 +407,30 @@ function applySwitchFamily(id) {
         show("secondaryGpioRow_" + id);
         show("mqttPositionCommandTopicRow_" + id);
         show("mqttPositionStateTopicRow_" + id);
-        show("timeBetweenStatesRow_" + id);
         addToSelect('autoStateValue_' + id, "lang-open", "OPEN");
         addToSelect('autoStateValue_' + id, "lang-close", "CLOSE");
-        addToSelect('autoStateValue_' + id, "lang-stop", "STOP");
+        addToSelect('autoStateValue_' + id, "lang-stop", "STOP")
     } else if ($('#family_' + id).val() == "lock") {
         show("btn_on_" + id);
         addToSelect('mode_' + id, "lang-push", 2);
-        addToSelect('autoStateValue_' + id, "lang-released", "RELEASED");
+        addToSelect('autoStateValue_' + id, "lang-released", "RELEASED")
     } else {
         show("btn_on_" + id);
         addToSelect('mode_' + id, "lang-normal", 1);
         addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('autoStateValue_' + id, "lang-on", "ON");
-        addToSelect('autoStateValue_' + id, "lang-off", "OFF");
+        addToSelect('autoStateValue_' + id, "lang-off", "OFF")
     }
     applySwitchMode(id);
     applyTypeControl(id);
-    loadsLanguage(localStorage.getItem('lang'));
-
+    loadsLanguage(localStorage.getItem('lang'))
 }
 
 function fillGpioSelect(id) {
     var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15", "16"];
     addToSelect(id, "lang-none", 99);
     for (let gpio of gpios) {
-        addToSelect(id, "lang-" + gpio, gpio);
+        addToSelect(id, "lang-" + gpio, gpio)
     }
 }
 
@@ -459,12 +444,12 @@ function applySwitchMode(id) {
         }
         show("secondaryGpioControlRow_" + id)
     }
-    loadsLanguage(localStorage.getItem('lang'));
+    loadsLanguage(localStorage.getItem('lang'))
 }
 
 function ifdef(value, defaultValue) {
     if (value) return value;
-    return defaultValue;
+    return defaultValue
 }
 
 function applyTypeControl(id) {
@@ -474,145 +459,34 @@ function applyTypeControl(id) {
         show("primaryGpioControlRow_" + id);
         if ($('#family_' + id).val() == "cover") {
             if ($('#mode_' + id).val() != 2) {
-                show("secondaryGpioControlRow_" + id);
+                show("secondaryGpioControlRow_" + id)
             }
         }
     } else {
         setOptionOnSelect('primaryGpioControl_' + id, 99);
         setOptionOnSelect('secondaryGpioControl_' + id, 99);
         hide("secondaryGpioControlRow_" + id);
-        hide("primaryGpioControlRow_" + id);
+        hide("primaryGpioControlRow_" + id)
     }
-
 }
 
 function applySensorRequiredGpio(id) {
-    if ($('#s_type_' + id).val() != "70" && $('#s_type_' + id).val() != "71" && $('#s_type_' + id).val() != "72" ) {
+    if ($('#s_type_' + id).val() != "70" && $('#s_type_' + id).val() != "71" && $('#s_type_' + id).val() != "72") {
         hide("s_secondaryGpioRow_" + id);
         hide("s_tertiaryGpioRow_" + id);
         setOptionOnSelect('s_secondaryGpio_' + id, 99);
-        setOptionOnSelect('s_tertiaryGpio_' + id, 99);
+        setOptionOnSelect('s_tertiaryGpio_' + id, 99)
     } else {
         show("s_secondaryGpioRow_" + id);
-        show("s_tertiaryGpioRow_" + id);
+        show("s_tertiaryGpioRow_" + id)
     }
-
 }
 
 function buildSensor(obj) {
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     let checkedHaSupport = obj.haSupport ? "checked" : "";
     let checkedEmoncmsSupport = obj.emoncmsSupport ? "checked" : "";
-    $('#sensors_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
-        '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
-        '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
-        '                        <div class="pull-right">' +
-        '                        </div>' +
-        '                    </div>' +
-        '                </div>' +
-        '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">' +
-        '                    <div class="box-body no-padding">' +
-        '                        <table class="table table-condensed">' +
-        '                            <tbody>' +
-        '                            <tr style="  border-top: 1px solid #88bf9c;">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-sensor">Sensor</span></span></td>' +
-        '                                <td><select onchange="applySensorRequiredGpio(\'' + obj.id + '\');" class="form-control select-device" id="s_type_' + obj.id + '">' +
-        '                                    <option value="65">PIR</option>' +
-        '                                    <option value="66">RCWL-0516</option>' +
-        '                                    <option value="21">LDR</option>' +
-        '                                    <option value="90">DS18B20</option>' +
-        '                                    <option value="56">REED SWITCH NC</option>' +
-        '                                    <option value="57">REED SWITCH NO</option>' +
-        '                                    <option value="0">DHT 11</option>' +
-        '                                    <option value="1">DHT 21</option>' +
-        '                                    <option value="2">DHT 22</option>' +
-        '                                    <option value="70">PZEM 004T V2</option>' +
-        '                                    <option value="71">PZEM 004T V3</option>' +
-        '                                    <option value="72">PZEM 017</option>' +
-        '                                </select></td>' +
-        '                            <tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-name">NOME</span></span></td>' +
-        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"' +
-        '                                                            type="text" id="s_name_' + obj.id + '" placeholder="ex: sala"' +
-        '                                                            maxlength="30" required/>' +
-        '                                </td>' +
-        '                            </tr>' +
-
-        '                            <tr style="  border-top: 1px solid #88bf9c;">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-in-a">Pino Entrada A</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="s_primaryGpio_' + obj.id + '">' +
-        '                                </select></td>' +
-        '                            <tr>' +
-        '                            <tr id="s_secondaryGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-in-b">Pino Entrada B</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="s_secondaryGpio_' + obj.id + '">' +
-        '                                </select></td>' +
-        '                            <tr>' +
-        '                            <tr id="s_tertiaryGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-in-c">Pino Entrada C</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="s_tertiaryGpio_' + obj.id + '">' +
-        '                                </select></td>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
-        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="s_mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span' +
-        '                                    class="lang-group">Grupo</span></span></td>' +
-        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' +
-        '                                                            type="text" id="s_knxLevelOne_' + obj.id + '" placeholder="ex: 2"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' +
-        '                                                            type="text" id="s_knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree + '"' +
-        '                                                            type="text" id="s_knxLevelThree_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/>' +
-
-        '                                </td>' +
-        '                            </tr>' +
-        '                            <tr >' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-reading-interval">Leituras a cada </span></span></td>' +
-        '                                <td class="col-xs-8"><input style="float: left; width: 70%;" class="input-device form-control" value="' + obj.delayRead / 1000 + '"' +
-        '                                                            type="text" id="s_delayRead_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="2" required/><span style=" margin-left' +
-        ':10px; float: left;" ' +
-        '                                    class="lang-seconds">Segundos</span> ' +
-        '                                </td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
-        '                                <td style="display: inline-flex">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="s_haSupport_' + obj.id + '" value="' + obj.haSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Emoncms</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedEmoncmsSupport + ' type="checkbox" id="s_emoncmsSupport_' + obj.id + '" value="' + obj.emoncmsSupport + '">' +
-        '                               </td>' +
-        '                            </tr>' +
-        '                            </tbody>' +
-        '                        </table>' +
-        '                        <div class="box-footer save">' +
-        '                            <button onclick="removeSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span' +
-        '                                class="lang-remove">Remover</span></button>' +
-        '                            <button  onclick="saveSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span' +
-        '                                class="lang-save">Guardar</span></button>' +
-        '                        </div>' +
-        '                    </div>' +
-        '                </div>' +
-        '            </div>');
+    $('#sensors_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' + '                <div style="margin-bottom: 0" class="info-box bg-aqua">' + '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' + '                        <div class="pull-right">' + '                        </div>' + '                    </div>' + '                </div>' + '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">' + '                    <div class="box-body no-padding">' + '                        <table class="table table-condensed">' + '                            <tbody>' + '                            <tr style="  border-top: 1px solid #88bf9c;">' + '                                <td><span class="label-device "><span' + '                                    class="lang-sensor">Sensor</span></span></td>' + '                                <td><select onchange="applySensorRequiredGpio(\'' + obj.id + '\');" class="form-control select-device" id="s_type_' + obj.id + '">' + '                                    <option value="65">PIR</option>' + '                                    <option value="66">RCWL-0516</option>' + '                                    <option value="21">LDR</option>' + '                                    <option value="90">DS18B20</option>' + '                                    <option value="56">REED SWITCH NC</option>' + '                                    <option value="57">REED SWITCH NO</option>' + '                                    <option value="0">DHT 11</option>' + '                                    <option value="1">DHT 21</option>' + '                                    <option value="2">DHT 22</option>' + '                                    <option value="70">PZEM 004T V2</option>' + '                                    <option value="71">PZEM 004T V3</option>' + '                                    <option value="72">PZEM 017</option>' + '                                </select></td>' + '                            <tr>' + '                            <tr>' + '                                <td><span class="label-device"><span' + '                                    class="lang-name">NOME</span></span></td>' + '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"' + '                                                            type="text" id="s_name_' + obj.id + '" placeholder="ex: sala"' + '                                                            maxlength="30" required/>' + '                                </td>' + '                            </tr>' + '                            <tr style="  border-top: 1px solid #88bf9c;">' + '                                <td><span class="label-device "><span' + '                                    class="lang-pin-in-a">Pino Entrada A</span></span></td>' + '                                <td><select class="form-control select-device" id="s_primaryGpio_' + obj.id + '">' + '                                </select></td>' + '                            <tr>' + '                            <tr id="s_secondaryGpioRow_' + obj.id + '"">' + '                                <td><span class="label-device "><span' + '                                    class="lang-pin-in-b">Pino Entrada B</span></span></td>' + '                                <td><select class="form-control select-device" id="s_secondaryGpio_' + obj.id + '">' + '                                </select></td>' + '                            <tr>' + '                            <tr id="s_tertiaryGpioRow_' + obj.id + '"">' + '                                <td><span class="label-device "><span' + '                                    class="lang-pin-in-c">Pino Entrada C</span></span></td>' + '                                <td><select class="form-control select-device" id="s_tertiaryGpio_' + obj.id + '">' + '                                </select></td>' + '                            <tr>' + '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' + '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>' + '                            </tr>' + '                            <tr>' + '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' + '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="s_mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device-indent"><span' + '                                    class="lang-group">Grupo</span></span></td>' + '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' + '                                                            type="text" id="s_knxLevelOne_' + obj.id + '" placeholder="ex: 2"' + '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' + '                                                            type="text" id="s_knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' + '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree + '"' + '                                                            type="text" id="s_knxLevelThree_' + obj.id + '" placeholder="ex: 1"' + '                                                             maxlength="2" required/>' + '                                </td>' + '                            </tr>' + '                            <tr >' + '                                <td><span class="label-device"><span' + '                                    class="lang-reading-interval">Leituras a cada </span></span></td>' + '                                <td class="col-xs-8"><input style="float: left; width: 70%;" class="input-device form-control" value="' + obj.delayRead / 1000 + '"' + '                                                            type="text" id="s_delayRead_' + obj.id + '" placeholder="ex: 12"' + '                                                             maxlength="2" required/><span style=" margin-left' + ':10px; float: left;" ' + '                                    class="lang-seconds">Segundos</span> ' + '                                </td>' + '                            </tr>' + '                            <tr>' + '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' + '                                <td style="display: inline-flex">' + '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="s_haSupport_' + obj.id + '" value="' + obj.haSupport + '">' + '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Emoncms</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedEmoncmsSupport + ' type="checkbox" id="s_emoncmsSupport_' + obj.id + '" value="' + obj.emoncmsSupport + '">' + '                               </td>' + '                            </tr>' + '                            </tbody>' + '                        </table>' + '                        <div class="box-footer save">' + '                            <button onclick="removeSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span' + '                                class="lang-remove">Remover</span></button>' + '                            <button  onclick="saveSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span' + '                                class="lang-save">Guardar</span></button>' + '                        </div>' + '                    </div>' + '                </div>' + '            </div>');
     fillGpioSelect('s_primaryGpio_' + obj.id + '');
     fillGpioSelect('s_secondaryGpio_' + obj.id + '');
     fillGpioSelect('s_tertiaryGpio_' + obj.id + '');
@@ -621,27 +495,17 @@ function buildSensor(obj) {
     setOptionOnSelect('s_tertiaryGpio_' + obj.id, obj.tertiaryGpio);
     setOptionOnSelect('s_type_' + obj.id, obj.type);
     applySensorRequiredGpio(obj.id);
-    loadsLanguage(localStorage.getItem('lang'));
+    loadsLanguage(localStorage.getItem('lang'))
 }
 
 function updateSensorReadings(json) {
     Object.keys(json).forEach(function (key) {
         if ($('#' + key).length > 0) {
-            $("#" + key + "_value").text(json[key]);
+            $("#" + key + "_value").text(json[key])
         } else {
-            $('#readings').append('  <div id="' + key + '" style="margin-right: 10px; margin-left: 10px">' +
-                '                <div' +
-                '                     style="width: 50px; height: 50px; padding-top:13px; margin-left: 10px; margin-right: 10px; border-radius: 50px; border: solid 2px white;">' +
-                '                    <span id="' + key + '_value">' + json[key] + '</span>' +
-                '                </div>' +
-                '                <div' +
-                '                    style="margin-top: -5px;border-radius: 10px; font-size: 10px;height: 15px;background-color: #86bd9a">' +
-                '                    <span >' + key + '</span>' +
-                '                </div>' +
-                '            </div>')
+            $('#readings').append('  <div id="' + key + '" style="margin-right: 10px; margin-left: 10px">' + '                <div' + '                     style="width: 50px; height: 50px; padding-top:13px; margin-left: 10px; margin-right: 10px; border-radius: 50px; border: solid 2px white;">' + '                    <span id="' + key + '_value">' + json[key] + '</span>' + '                </div>' + '                <div' + '                    style="margin-top: -5px;border-radius: 10px; font-size: 10px;height: 15px;background-color: #86bd9a">' + '                    <span >' + key + '</span>' + '                </div>' + '            </div>')
         }
-    });
-
+    })
 }
 
 function buildSwitch(obj) {
@@ -652,182 +516,13 @@ function buildSwitch(obj) {
     let checkedHaSupport = obj.haSupport ? "checked" : "";
     let checkedCloudIOSupport = obj.cloudIOSupport ? "checked" : "";
     let checkedKnxSupport = obj.knxSupport ? "checked" : "";
-
-    $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
-        '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
-        '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
-        '                        <div class="pull-right">' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + ' btn btn-primary btn-control">' +
-        '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
-        '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>' +
-        '                                    <path d="M0 0h24v24H0z" fill="none"/>' +
-        '                                </svg>' +
-        '                            </button>' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'STOP\')" id="btn_stop_' + obj.id + '" class="' + ' btn btn-primary btn-control">' +
-        '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
-        '                                    <path d="M0 0h24v24H0z" fill="none"/>' +
-        '                                    <path d="M6 6h12v12H6z"/>' +
-        '                                </svg>' +
-        '                            </button>' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close + ' btn btn-primary btn-control">' +
-
-        '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
-        '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>' +
-        '                                    <path d="M0 0h24v24H0z" fill="none"/>' +
-        '                                </svg>' +
-        '                            </button>' +
-        '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'' + obj.stateControl + '\')" id="btn_on_' + obj.id + '" class="' + on + ' btn btn-primary btn-control">' +
-        '                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">' +
-        '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>' +
-        '                                </svg>' +
-        '                            </button>' +
-        '                        </div>' +
-        '                    </div>' +
-        '                </div>' +
-        '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">' +
-        '                    <div class="box-body no-padding">' +
-        '                        <table class="table table-condensed">' +
-        '                            <tbody>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-name">NOME</span></span></td>' +
-        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"' +
-        '                                                            type="text" id="name_' + obj.id + '" placeholder="ex: luz sala"' +
-        '                                                            maxlength="30" required/>' +
-        '                                </td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-family">FAMILIA</span></span></td>' +
-        '                                <td><select onchange="applySwitchFamily(\'' + obj.id + '\');" class="form-control select-device" id="family_' + obj.id + '">' +
-        '                                    <option class="lang-switch" value="switch">Interruptor</option>' +
-        '                                    <option class="lang-light" value="light">Luz</option>' +
-        '                                    <option class="lang-cover" value="cover">Estore</option>' +
-        '                                    <option class="lang-lock" value="lock">Fechadura</option>' +
-        '                                </select></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-mode">MODO</span></span></td>' +
-        '                                <td><select onchange="applySwitchMode(\'' + obj.id + '\');" class="form-control select-device" id="mode_' + obj.id + '">' +
-        '                                </select></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-control">Controla</span></span></td>' +
-        '                                <td><select onchange="applyTypeControl(\'' + obj.id + '\');" class="form-control select-device" id="typeControl_' + obj.id + '">' +
-        '                                    <option class="lang-relay-mqtt" value="1">Relé / MQTT</option>' +
-        '                                    <option class="lang-mqtt" value="2">MQTT</option>' +
-        '                                </select></td>' +
-        '                            </tr>' +
-        '                            <tr style="  border-top: 1px solid #88bf9c;">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-in-a">Pino Entrada A</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="primaryGpio_' + obj.id + '">' +
-        '                                </select></td>' +
-        '                            </tr>' +
-        '                            <tr id="secondaryGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-pin-in-b">Pino Entrada B</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="secondaryGpio_' + obj.id + '">' +
-        '                                </select></td>' +
-        '                            </tr>' +
-        '                            <tr id="primaryGpioControlRow_' + obj.id + '" style="  border-top: 1px solid #d9534f;">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-out-1">Pino Saida 1</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="primaryGpioControl_' + obj.id + '">' +
-        '                            </tr>' +
-        '                            <tr id="secondaryGpioControlRow_' + obj.id + '" ">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-out-2">Pino Saida 2</span></span></td>' +
-        '                                <td><select class="form-control select-device" id="secondaryGpioControl_' + obj.id + '">' +
-        '                                </select></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>' +
-        '                                <td> <span style="word-break: break-word" >' + obj.mqttCommandTopic + '</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>' +
-        '                            </tr>' +
-        '                            <tr id="mqttPositionCommandTopicRow_' + obj.id + '" ">' +
-        '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>' +
-        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionCommandTopic, "../setposition") + '</span></td>' +
-        '                            </tr>' +
-        '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">' +
-        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionStateTopic, "../position") + '</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
-        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span' +
-        '                                    class="lang-group">Grupo</span></span></td>' +
-        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' +
-        '                                                            type="text" id="knxLevelOne_' + obj.id + '" placeholder="ex: 2"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' +
-        '                                                            type="text" id="knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree + '"' +
-        '                                                            type="text" id="knxLevelThree_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/>' +
-
-        '                                </td>' +
-        '                            </tr>' +
-        '                            <tr id="timeBetweenStatesRow_' + obj.id + '" >' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-time">TEMPO</span></span></td>' +
-        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.timeBetweenStates / 1000 + '"' +
-        '                                                            type="text" id="timeBetweenStates_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="2" required/>' +
-        '                                </td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-auto-state">Estádo automático</span></span></td>' +
-        '                                <td class="col-xs-8"><span style="float: left" class="lang-in">em</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"' +
-        '                                                            type="text" id="autoStateDelay_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="4" required/><span style="float: left; margin-left: 5px;" class="lang-seconds">segundos</span> ' +
-        '                                <select class="form-control select-device" style="float: left; width: 100px; margin-left: 5px;" id="autoStateValue_' + obj.id + '">' +
-        '                                    <option class="lang-choose" value="">Escolha</option>' +
-
-        '                                </select>' +
-        '                                </td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
-        '                                <td style="display: inline-flex">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >KNX</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedKnxSupport + ' type="checkbox" id="knxSupport_' + obj.id + '" value="' + obj.knxSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="haSupport_' + obj.id + '" value="' + obj.haSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >CloudIO</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedCloudIOSupport + ' type="checkbox" id="cloudIOSupport_' + obj.id + '" value="' + obj.cloudIOupport + '">' +
-
-        '                               </td>' +
-        '                            </tr>' +
-        '                            </tbody>' +
-        '                        </table>' +
-        '                        <div class="box-footer save">' +
-        '                            <button onclick="removeSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span' +
-        '                                class="lang-remove">Remover</span></button>' +
-        '                            <button  onclick="saveSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span' +
-        '                                class="lang-save">Guardar</span></button>' +
-        '                        </div>' +
-        '                    </div>' +
-        '                </div>' +
-        '            </div>');
-
+    let checkedMqttSupport = obj.mqttSupport ? "checked" : "";
+    $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' + '                <div style="margin-bottom: 0" class="info-box bg-aqua">' + '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' + '                        <div class="pull-right">' + '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + ' btn btn-primary btn-control">' + '                                <svg width="24" height="24" viewBox="0 0 24 24">' + '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>' + '                                    <path d="M0 0h24v24H0z" fill="none"/>' + '                                </svg>' + '                            </button>' + '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'STOP\')" id="btn_stop_' + obj.id + '" class="' + ' btn btn-primary btn-control">' + '                                <svg width="24" height="24" viewBox="0 0 24 24">' + '                                    <path d="M0 0h24v24H0z" fill="none"/>' + '                                    <path d="M6 6h12v12H6z"/>' + '                                </svg>' + '                            </button>' + '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'CLOSE\')" id="btn_close_' + obj.id + '" class="' + close + ' btn btn-primary btn-control">' + '                                <svg width="24" height="24" viewBox="0 0 24 24">' + '                                    <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>' + '                                    <path d="M0 0h24v24H0z" fill="none"/>' + '                                </svg>' + '                            </button>' + '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'' + obj.stateControl + '\')" id="btn_on_' + obj.id + '" class="' + on + ' btn btn-primary btn-control">' + '                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">' + '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>' + '                                </svg>' + '                            </button>' + '                        </div>' + '                    </div>' + '                </div>' + '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">' + '                    <div class="box-body no-padding">' + '                        <table class="table table-condensed">' + '                            <tbody>' + '                            <tr>' + '                                <td><span class="label-device"><span' + '                                    class="lang-name">NOME</span></span></td>' + '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"' + '                                                            type="text" id="name_' + obj.id + '" placeholder="ex: luz sala"' + '                                                            maxlength="30" required/>' + '                                </td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device "><span' + '                                    class="lang-family">FAMILIA</span></span></td>' + '                                <td><select onchange="applySwitchFamily(\'' + obj.id + '\');" class="form-control select-device" id="family_' + obj.id + '">' + '                                    <option class="lang-switch" value="switch">Interruptor</option>' + '                                    <option class="lang-light" value="light">Luz</option>' + '                                    <option class="lang-cover" value="cover">Estore</option>' + '                                    <option class="lang-lock" value="lock">Fechadura</option>' + '                                </select></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device "><span' + '                                    class="lang-mode">MODO</span></span></td>' + '                                <td><select onchange="applySwitchMode(\'' + obj.id + '\');" class="form-control select-device" id="mode_' + obj.id + '">' + '                                </select></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device "><span' + '                                    class="lang-control">Controla</span></span></td>' + '                                <td><select onchange="applyTypeControl(\'' + obj.id + '\');" class="form-control select-device" id="typeControl_' + obj.id + '">' + '                                    <option class="lang-pin-output" value="1">PINO SAÍDA</option>' + '                                    <option class="lang-mqtt" value="2">MQTT</option>' + '                                    <option class="lang-knx" value="3">KNX</option>' + '                                </select></td>' + '                            </tr>' + '                            <tr style="  border-top: 1px solid #88bf9c;">' + '                                <td><span class="label-device "><span' + '                                    class="lang-pin-in-a">Pino Entrada A</span></span></td>' + '                                <td><select class="form-control select-device" id="primaryGpio_' + obj.id + '">' + '                                </select></td>' + '                            </tr>' + '                            <tr id="secondaryGpioRow_' + obj.id + '"">' + '                                <td><span class="label-device"><span' + '                                    class="lang-pin-in-b">Pino Entrada B</span></span></td>' + '                                <td><select class="form-control select-device" id="secondaryGpio_' + obj.id + '">' + '                                </select></td>' + '                            </tr>' + '                            <tr id="primaryGpioControlRow_' + obj.id + '" style="  border-top: 1px solid #d9534f;">' + '                                <td><span class="label-device "><span' + '                                    class="lang-pin-out-1">Pino Saida 1</span></span></td>' + '                                <td><select class="form-control select-device" id="primaryGpioControl_' + obj.id + '">' + '                            </tr>' + '                            <tr id="secondaryGpioControlRow_' + obj.id + '" ">' + '                                <td><span class="label-device "><span' + '                                    class="lang-pin-out-2">Pino Saida 2</span></span></td>' + '                                <td><select class="form-control select-device" id="secondaryGpioControl_' + obj.id + '">' + '                                </select></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>' + '                                <td> <span style="word-break: break-word" >' + obj.mqttCommandTopic + '</span></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' + '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>' + '                            </tr>' + '                            <tr id="mqttPositionCommandTopicRow_' + obj.id + '" ">' + '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>' + '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionCommandTopic, "../setposition") + '</span></td>' + '                            </tr>' + '                            <tr id="mqttPositionStateTopicRow_' + obj.id + '" ">' + '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' + '                                <td><span  style="word-break: break-word" >' + ifdef(obj.mqttPositionStateTopic, "../position") + '</span></td>' + '                            </tr>' + '                            <tr>' + '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' + '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device-indent"><span' + '                                    class="lang-group">Grupo</span></span></td>' + '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' + '                                                            type="text" id="knxLevelOne_' + obj.id + '" placeholder="ex: 2"' + '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' + '                                                            type="text" id="knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' + '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree + '"' + '                                                            type="text" id="knxLevelThree_' + obj.id + '" placeholder="ex: 1"' + '                                                             maxlength="2" required/>' + '                                </td>' + '                            </tr>' + '                            <tr>' + '                                <td><span class="label-device"><span' + '                                    class="lang-auto-state">Estádo automático</span></span></td>' + '                                <td class="col-xs-8"><span style="float: left" class="lang-in">em</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"' + '                                                            type="text" id="autoStateDelay_' + obj.id + '" placeholder="ex: 12"' + '                                                             maxlength="4" required/><span style="float: left; margin-left: 5px;" class="lang-seconds">segundos</span> ' + '                                <select class="form-control select-device" style="float: left; width: 100px; margin-left: 5px;" id="autoStateValue_' + obj.id + '">' + '                                    <option class="lang-choose" value="">Escolha</option>' + '                                </select>' + '                                </td>' + '                            </tr>' + '                            <tr>' + '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' + '                                <td style="display: inline-flex">' + '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >MQTT</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedMqttSupport + ' type="checkbox" id="mqttSupport_' + obj.id + '" value="' + obj.mqttSupport + '">' + '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >KNX</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedKnxSupport + ' type="checkbox" id="knxSupport_' + obj.id + '" value="' + obj.knxSupport + '">' + '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="haSupport_' + obj.id + '" value="' + obj.haSupport + '">' + '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >CloudIO</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedCloudIOSupport + ' type="checkbox" id="cloudIOSupport_' + obj.id + '" value="' + obj.cloudIOupport + '">' + '                               </td>' + '                            </tr>' + '                            </tbody>' + '                        </table>' + '                        <div class="box-footer save">' + '                            <button onclick="removeSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span' + '                                class="lang-remove">Remover</span></button>' + '                            <button  onclick="saveSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span' + '                                class="lang-save">Guardar</span></button>' + '                        </div>' + '                    </div>' + '                </div>' + '            </div>');
     if (obj.family === "cover") {
-        removeFromSelect('mode_' + obj.id, 1);
+        removeFromSelect('mode_' + obj.id, 1)
     } else {
         removeFromSelect('mode_' + obj.id, 4);
-        removeFromSelect('mode_' + obj.id, 5);
+        removeFromSelect('mode_' + obj.id, 5)
     }
     fillGpioSelect('primaryGpio_' + obj.id);
     fillGpioSelect('secondaryGpio_' + obj.id);
@@ -845,17 +540,16 @@ function buildSwitch(obj) {
     setOptionOnSelect('primaryGpio_' + obj.id, obj.primaryGpio);
     setOptionOnSelect('secondaryGpio_' + obj.id, obj.secondaryGpio);
     setOptionOnSelect('autoStateValue_' + obj.id, obj.autoStateValue);
-
-    loadsLanguage(localStorage.getItem('lang'));
+    loadsLanguage(localStorage.getItem('lang'))
 }
 
 function stateSwitch(id, state) {
     let toggleState = state;
     if ((toggleState === "ON" || toggleState === "OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
-        toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
+        toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON"
     }
     if (toggleState === "RELEASED") {
-        toggleState = "LOCK";
+        toggleState = "LOCK"
     }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
     $.ajax({
@@ -864,15 +558,13 @@ function stateSwitch(id, state) {
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
-
         },
         error: function () {
-
-        }, complete: function () {
-
+        },
+        complete: function () {
         },
         timeout: 2000
-    });
+    })
 }
 
 function saveSensor(id) {
@@ -890,7 +582,6 @@ function saveSensor(id) {
         "haSupport": document.getElementById('s_haSupport_' + id).checked,
         "emoncmsSupport": document.getElementById('s_emoncmsSupport_' + id).checked,
         "delayRead": parseInt($('#s_delayRead_' + id).val()) * 1000,
-
     };
     const targetUrl = endpoint.baseUrl + "/save-sensor?id=" + device.id;
     $.ajax({
@@ -904,20 +595,19 @@ function saveSensor(id) {
                 return item.id === device.id
             });
             if (idx >= 0) {
-                sensors.splice(idx, 1);
+                sensors.splice(idx, 1)
             }
             sensors.push(response);
             fillSensors(sensors);
             showMessage("Configuração Guardada", "Config Stored")
-
         },
         error: function () {
             showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
-        }, complete: function () {
-
+        },
+        complete: function () {
         },
         timeout: 2000
-    });
+    })
 }
 
 function saveSwitch(id) {
@@ -927,7 +617,8 @@ function saveSwitch(id) {
         "family": $('#family_' + id).val(),
         "primaryGpio": parseInt($('#primaryGpio_' + id).val()),
         "secondaryGpio": parseInt($('#secondaryGpio_' + id).val()),
-        "timeBetweenStates": parseInt($('#timeBetweenStates_' + id).val()) * 1000,
+        "automationTimeA": 0,
+        "automationTimeB": 0,
         "autoStateValue": $('#autoStateValue_' + id).val(),
         "autoStateDelay": parseInt($('#autoStateDelay_' + id).val()) * 1000,
         "typeControl": parseInt($('#typeControl_' + id).val()),
@@ -935,12 +626,13 @@ function saveSwitch(id) {
         "knxLevelOne": parseInt($('#knxLevelOne_' + id).val()),
         "knxLevelTwo": parseInt($('#knxLevelTwo_' + id).val()),
         "knxLevelThree": parseInt($('#knxLevelThree_' + id).val()),
-        "pullup": true,
+        "pullup": !0,
         "mqttRetain": document.getElementById('mqttRetain_' + id).checked,
         "haSupport": document.getElementById('haSupport_' + id).checked,
         "cloudIOSupport": document.getElementById('cloudIOSupport_' + id).checked,
         "knxSupport": document.getElementById('knxSupport_' + id).checked,
-        "inverted": false,
+        "mqttSupport": document.getElementById('mqttSupport_' + id).checked,
+        "inverted": !1,
         "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),
         "secondaryGpioControl": parseInt($('#secondaryGpioControl_' + id).val()),
     };
@@ -956,23 +648,20 @@ function saveSwitch(id) {
                 return item.id === device.id
             });
             if (idx >= 0) {
-                switches.splice(idx, 1);
+                switches.splice(idx, 1)
             }
             switches.push(response);
             fillSwitches(switches);
             showMessage("Configuração Guardada", "Config Stored")
-
         },
         error: function () {
             showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
-        }, complete: function () {
-
+        },
+        complete: function () {
         },
         timeout: 2000
-    });
+    })
 }
-
-
 
 function storeConfig() {
     const targetUrl = endpoint.baseUrl + "/save-config";
@@ -991,12 +680,12 @@ function storeConfig() {
             showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
         },
         timeout: 2000
-    });
+    })
 }
 
 function saveNode() {
     config.nodeId = $('#nodeId').val().trim();
-    storeConfig();
+    storeConfig()
 }
 
 function saveWifi() {
@@ -1007,66 +696,57 @@ function saveWifi() {
     config.wifiGw = $('#wifiGw').val().trim();
     config.staticIp = !document.getElementById("staticIp").checked;
     config.apSecret = $('#apSecret').val().trim();
-    storeConfig();
+    storeConfig()
 }
 
 function saveMqtt() {
     config.mqttIpDns = $('#mqtt_ip').val().trim();
     config.mqttUsername = $('#mqtt_username').val().trim();
     config.mqttPassword = $('#mqtt_password').val().trim();
-    storeConfig();
+    storeConfig()
 }
+
 function saveKnx() {
     config.knxArea = parseInt($('#knxArea').val().trim());
     config.knxLine = parseInt($('#knxLine').val().trim());
     config.knxMember = parseInt($('#knxMember').val().trim());
-    storeConfig();
+    storeConfig()
 }
+
 function saveEmoncms() {
     config.emoncmsServer = $('#emoncmsServer').val().trim();
     config.emoncmsPath = $('#emoncmsPath').val().trim();
     config.emoncmsApikey = $('#emoncmsApikey').val().trim();
-    storeConfig();
+    storeConfig()
 }
 
 function removeSwitch(id) {
     const targetUrl = endpoint.baseUrl + "/remove-switch?id=" + id;
     $.ajax({
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
+        url: targetUrl, contentType: "text/plain; charset=utf-8", dataType: "json", success: function (response) {
             switches.splice(switches.findIndex(function (item, i) {
                 return item.id === id
             }), 1);
-            fillSwitches(switches);
-        },
-        error: function () {
+            fillSwitches(switches)
+        }, error: function () {
             showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")
-        },
-        timeout: 2000
-    });
+        }, timeout: 2000
+    })
 }
 
 function removeSensor(id) {
     const targetUrl = endpoint.baseUrl + "/remove-sensor?id=" + id;
     $.ajax({
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
+        url: targetUrl, contentType: "text/plain; charset=utf-8", dataType: "json", success: function (response) {
             sensors.splice(sensors.findIndex(function (item, i) {
                 return item.id === id
             }), 1);
-            fillSensors(sensors);
-        },
-        error: function () {
+            fillSensors(sensors)
+        }, error: function () {
             showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")
-        },
-        timeout: 2000
-    });
+        }, timeout: 2000
+    })
 }
-
 
 function reboot() {
     $.ajax({
@@ -1075,28 +755,31 @@ function reboot() {
         dataType: "json",
         success: function (response) {
             showMessage("O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.", "The device is restartin, will be available in 10 seconds.")
-        }, error: function () {
+        },
+        error: function () {
             showMessage("Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
         },
         timeout: 2000
-    });
+    })
 }
-function getLastVersion(firmwareMode, currentVersion,chipId) {
+
+function getLastVersion(firmwareMode, currentVersion, chipId) {
     $.ajax({
-        url: "http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode="+ firmwareMode+"&chipId="+ chipId+"&currentVersion="+currentVersion,
+        url: "http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=" + firmwareMode + "&chipId=" + chipId + "&currentVersion=" + currentVersion,
         contentType: "text/plain; charset=utf-8",
         success: function (response) {
-            if(response <= currentVersion){
-                $("#box-auto-update").addClass('hide');
-            }else {
+            if (response <= currentVersion) {
+                $("#box-auto-update").addClass('hide')
+            } else {
                 $("#box-auto-update").removeClass('hide');
-                $("#lbl-lastversion").text(response);
+                $("#lbl-lastversion").text(response)
             }
-        }, error: function () {
-            $("#box-auto-update").addClass('hide');
+        },
+        error: function () {
+            $("#box-auto-update").addClass('hide')
         },
         timeout: 1000
-    });
+    })
 }
 
 function loadDefaults() {
@@ -1106,11 +789,12 @@ function loadDefaults() {
         dataType: "json",
         success: function (response) {
             showMessage("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.", "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.")
-        }, error: function () {
+        },
+        error: function () {
             showMessage("Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
         },
         timeout: 1000
-    });
+    })
 }
 
 function systemStatus() {
@@ -1123,44 +807,42 @@ function systemStatus() {
             if (document.getElementById("wifiIp") && ($('input[name="wifiIp"]').val().trim().length === 0 || $('input[name="wifiIp"]').val() === "(IP unset)")) {
                 $('input[name="wifiIp"]').val(response.wifiIp);
                 $('input[name="wifiMask"]').val(response.wifiMask);
-                $('input[name="wifiGw"]').val(response.wifiGw);
+                $('input[name="wifiGw"]').val(response.wifiGw)
             }
             let percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
             if (config) {
-                $('#mqtt_lbl').text(config.mqttIpDns);
+                $('#mqtt_lbl').text(config.mqttIpDns)
             }
             if (response.mqttConnected) {
-                $('#mqtt-state').text(showText("ligado", "connected"));
+                $('#mqtt-state').text(showText("ligado", "connected"))
             } else {
-                $('#mqtt-state').text(showText("desligado", "disconnected"));
+                $('#mqtt-state').text(showText("desligado", "disconnected"))
             }
             $('#lbl-heap').text((parseFloat(response.freeHeap / 1024).toFixed(2)).toString().concat(" KiB"));
-            $('#wifi-signal').text(percentage + "%");
-        }, error: function () {
-            $('#wifi-signal').text("0%");
+            $('#wifi-signal').text(percentage + "%")
+        },
+        error: function () {
+            $('#wifi-signal').text("0%")
         },
         timeout: 1000
-    });
+    })
 }
 
-
 $(document).ready(function () {
-
     let lang = localStorage.getItem('lang');
     if (lang) {
-        loadsLanguage(lang);
+        loadsLanguage(lang)
     } else {
-        window.navigator.language.startsWith("en") ? loadsLanguage("EN") : loadsLanguage("PT");
+        window.navigator.language.startsWith("en") ? loadsLanguage("EN") : loadsLanguage("PT")
     }
     loadConfig();
     $('#node_id').on('keypress', function (e) {
         if (e.which === 32)
-            return false;
+            return !1
     });
     $('.menu-item').click(function (e) {
         let menu = $(e.currentTarget).data('menu');
-        toggleActive(menu);
-
+        toggleActive(menu)
     });
     systemStatus();
     toggleActive("node");
@@ -1173,12 +855,11 @@ $(document).ready(function () {
             $("#btn_" + state + "_" + json.id).removeClass("ON");
             $("#btn_" + state + "_" + json.id).removeClass("OPEN");
             $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
-            $("#btn_" + state + "_" + json.id).addClass(json.state);
-        }, false);
+            $("#btn_" + state + "_" + json.id).addClass(json.state)
+        }, !1);
         source.addEventListener('sensors', function (e) {
             let json = JSON.parse(e.data);
-            updateSensorReadings(json);
-        }, false);
+            updateSensorReadings(json)
+        }, !1)
     }
-
-});
+})

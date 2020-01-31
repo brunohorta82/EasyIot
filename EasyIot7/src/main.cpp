@@ -11,7 +11,7 @@
 #include <esp-knx-ip.h>
 #include <ESP8266mDNS.h>
 #include "CloudIO.h"
-
+#include <EEPROM.h>
 void checkInternalRoutines()
 {
   if (cloudIOSync())
@@ -75,7 +75,7 @@ void setup()
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
-
+  EEPROM.begin(512);
   loadStoredConfiguration(getAtualConfig());
   load(getAtualSwitchesConfig());
   load(getAtualSensorsConfig());
