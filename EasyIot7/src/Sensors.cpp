@@ -109,7 +109,7 @@ void Sensors::load(File &file)
       break;
     case PZEM_017:
       item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
-      uint8_t result = item.pzemModbus->Begin(9600, 2);
+      item.pzemModbus->Begin(9600, 2);
 #if WITH_DISPLAY
       setupDisplay();
 #endif
@@ -460,7 +460,7 @@ void SensorT::updateFromJson(JsonObject doc)
     break;
   case PZEM_017:
     pzemModbus = new Modbus(primaryGpio, secondaryGpio);
-    uint8_t result = pzemModbus->Begin(9600, 2);
+    pzemModbus->Begin(9600, 2);
     break;
   }
   reloadMqttTopics();

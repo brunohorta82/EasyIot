@@ -123,9 +123,8 @@ constexpr uint16_t mqttPort{1883};
 namespace constanstsSwitch
 {
 
-constexpr const unsigned long delayDebounce{25ul};              //25 milliseconds
-constexpr const unsigned long delayCoverProtection{50ul};       //50 milliseconds
-constexpr const unsigned long coverAutoStopProtection{90000ul}; // after 90 seconds turn off all relay to enhance the lifecycle
+constexpr const unsigned long delayDebounce{25ul};       //25 milliseconds
+constexpr const unsigned long delayCoverProtection{0ul}; //50 milliseconds
 constexpr const char *payloadOn{"ON"};
 constexpr const char *payloadOff{"OFF"};
 constexpr const char *payloadClose{"CLOSE"};

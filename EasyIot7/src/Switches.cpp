@@ -11,27 +11,62 @@
 #include <Shutters.h>
 const byte eepromOffset = 0;
 
-void shuttersOperationHandler(Shutters* s, ShuttersOperation operation) {
-  switch (operation) {
-    case ShuttersOperation::UP:
-      Serial.println("Covers going up.");
-      // TODO: Implement the code for the shutters to go up
-      break;
-    case ShuttersOperation::DOWN:
-      Serial.println("Covers going down.");
-      // TODO: Implement the code for the shutters to go down
-      break;
-    case ShuttersOperation::HALT:
-      Serial.println("Covers halting.");
-      // TODO: Implement the code for the shutters to halt
-      break;
+void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
+{
+  switch (operation)
+  {
+  case ShuttersOperation::UP:
+    strlcpy(s->getSwitchT()->stateControl, constanstsSwitch::payloadOpen, sizeof(s->getSwitchT()->stateControl));
+    strlcpy(s->getSwitchT()->mqttPayload, constanstsSwitch::payloadOpen, sizeof(s->getSwitchT()->mqttPayload));
+    if (s->getSwitchT()->typeControl == SwitchControlType::PIN_OUTPUT)
+    {
+      configPIN(s->getSwitchT()->primaryGpioControl, OUTPUT);
+      configPIN(s->getSwitchT()->secondaryGpioControl, OUTPUT);
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . STOP
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH); //TURN ON . OPEN REQUEST
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH); //TURN ON . EXECUTE REQUEST
+    }
+    break;
+  case ShuttersOperation::DOWN:
+    strlcpy(s->getSwitchT()->stateControl, constanstsSwitch::payloadClose, sizeof(s->getSwitchT()->stateControl));
+    strlcpy(s->getSwitchT()->mqttPayload, constanstsSwitch::payloadStateClose, sizeof(s->getSwitchT()->mqttPayload));
+    if (s->getSwitchT()->typeControl == SwitchControlType::PIN_OUTPUT)
+    {
+      configPIN(s->getSwitchT()->primaryGpioControl, OUTPUT);
+      configPIN(s->getSwitchT()->secondaryGpioControl, OUTPUT);
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . STOP
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . CLOSE REQUEST
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH); //TURN ON . EXECUTE REQUEST
+    }
+
+    break;
+  case ShuttersOperation::HALT:
+    strlcpy(s->getSwitchT()->stateControl, constanstsSwitch::payloadStop, sizeof(s->getSwitchT()->stateControl));
+    strlcpy(s->getSwitchT()->mqttPayload, constanstsSwitch::payloadStateStop, sizeof(s->getSwitchT()->mqttPayload));
+    if (s->getSwitchT()->typeControl == SwitchControlType::PIN_OUTPUT)
+    {
+      configPIN(s->getSwitchT()->primaryGpioControl, OUTPUT);
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . STOP
+      delay(constanstsSwitch::delayCoverProtection);
+      configPIN(s->getSwitchT()->secondaryGpioControl, OUTPUT);
+      delay(constanstsSwitch::delayCoverProtection);
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . PROTECT RELAY LIFE
+      delay(constanstsSwitch::delayCoverProtection);
+    }
+    break;
   }
 }
 
-void onShuttersLevelReached(Shutters* shutters, byte level) {
-  Serial.print("Covers at ");
-  Serial.print(level);
-  Serial.println("%");
+void onShuttersLevelReached(Shutters *shutters, uint8_t level)
+{
+  publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, String(level).c_str(), shutters->getSwitchT()->mqttRetain);
 }
 
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
@@ -44,6 +79,7 @@ struct Switches &getAtualSwitchesConfig()
 
 void save(Switches &switches)
 {
+  switches.lastChange = 0ul;
   if (!SPIFFS.begin())
   {
 #ifdef DEBUG
@@ -66,7 +102,6 @@ void save(Switches &switches)
 #ifdef DEBUG
   Log.notice("%s Config stored." CR, tags::switches);
 #endif
-  switches.lastChange = 0ul;
 }
 size_t Switches::serializeToJson(Print &output)
 {
@@ -81,6 +116,7 @@ size_t Switches::serializeToJson(Print &output)
     JsonObject sdoc = doc.createNestedObject();
     sdoc["id"] = sw.id;
     sdoc["name"] = sw.name;
+    sdoc["firmware"] = sw.firmware;
     sdoc["family"] = sw.family;
     sdoc["primaryGpio"] = sw.primaryGpio;
     sdoc["secondaryGpio"] = sw.secondaryGpio;
@@ -98,26 +134,13 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["knxLevelThree"] = sw.knxLevelThree;
     if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
     {
-      sdoc["mqttPositionCommandTopic"] = sw.mqttPositionCommandTopic;
-      sdoc["mqttPositionStateTopic"] = sw.mqttPositionStateTopic;
-      sdoc["percentageRequest"] = sw.percentageRequest;
-      sdoc["lastPercentage"] = sw.lastPercentage;
-      sdoc["positionControlCover"] = sw.positionControlCover;
       sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
       sdoc["upCourseTime"] = sw.upCourseTime;
       sdoc["downCourseTime"] = sw.downCourseTime;
       sdoc["calibrationRatio"] = sw.calibrationRatio;
     }
-    sdoc["automationTimeA"] = sw.automationTimeA;
-    sdoc["automationTimeB"] = sw.automationTimeB;
+
     sdoc["primaryGpioControl"] = sw.primaryGpioControl;
-
-    sdoc["lastPrimaryGpioState"] = sw.lastPrimaryGpioState;
-    sdoc["lastSecondaryGpioState"] = sw.lastSecondaryGpioState;
-
-    sdoc["statePoolIdx"] = sw.statePoolIdx;
-    sdoc["statePoolStart"] = sw.statePoolStart;
-    sdoc["statePoolEnd"] = sw.statePoolEnd;
     sdoc["mqttPayload"] = sw.mqttPayload;
     sdoc["stateControl"] = sw.stateControl;
 
@@ -128,13 +151,22 @@ size_t Switches::serializeToJson(Print &output)
 
   return serializeJson(doc, output);
 }
-void readInEeprom(char* dest, byte length) {
- 
+void readInEeprom(char *dest, byte length, char *value)
+{
+  for (byte i = 0; i < length; i++)
+  {
+    dest[i] = value[i];
+  }
 }
-
-void shuttersWriteStateHandler(Shutters* shutters, const char* state, byte length) {
- Serial.println(state);
- Serial.println(length);
+void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte length)
+{
+  Serial.println(state);
+  for (byte i = 0; i < length; i++)
+  {
+    shutters->getSwitchT()->shutterState[i] = state[i];
+  }
+  Serial.println(shutters->getSwitchT()->shutterState);
+  getAtualSwitchesConfig().lastChange = millis();
 }
 
 void SwitchT::save(File &file) const
@@ -159,8 +191,8 @@ void SwitchT::save(File &file) const
   //MQTT
   file.write((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
   file.write((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
-  file.write((uint8_t *)mqttPositionStateTopic, sizeof(mqttPositionStateTopic));
-  file.write((uint8_t *)mqttPositionCommandTopic, sizeof(mqttPositionCommandTopic));
+  file.write((uint8_t *)infoA, sizeof(infoA));
+  file.write((uint8_t *)infoB, sizeof(infoB));
   file.write((uint8_t *)mqttPayload, sizeof(mqttPayload));
   file.write((uint8_t *)&mqttRetain, sizeof(mqttRetain));
 
@@ -187,8 +219,7 @@ void SwitchT::save(File &file) const
   file.write((uint8_t *)&upCourseTime, sizeof(upCourseTime));
   file.write((uint8_t *)&downCourseTime, sizeof(downCourseTime));
   file.write((uint8_t *)&mqttSupport, sizeof(mqttSupport));
-
-
+  file.write((uint8_t *)&shutterState, sizeof(shutterState));
 }
 void SwitchT::load(File &file)
 {
@@ -212,8 +243,8 @@ void SwitchT::load(File &file)
   //MQTT
   file.read((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
   file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
-  file.read((uint8_t *)mqttPositionStateTopic, sizeof(mqttPositionStateTopic));
-  file.read((uint8_t *)mqttPositionCommandTopic, sizeof(mqttPositionCommandTopic));
+  file.read((uint8_t *)infoA, sizeof(infoA));
+  file.read((uint8_t *)infoB, sizeof(infoB));
   file.read((uint8_t *)mqttPayload, sizeof(mqttPayload));
   file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
 
@@ -234,31 +265,36 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
   file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
   file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
-  if(firmware >= 7.851){
+  if (firmware >= 7.851)
+  {
     file.read((uint8_t *)&automationTimeB, sizeof(automationTimeB));
     file.read((uint8_t *)&calibrationRatio, sizeof(calibrationRatio));
     file.read((uint8_t *)&upCourseTime, sizeof(upCourseTime));
     file.read((uint8_t *)&downCourseTime, sizeof(downCourseTime));
     file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
-  }else
+    file.read((uint8_t *)&shutterState, sizeof(shutterState));
+  }
+  else
   {
     automationTimeA = 0;
     automationTimeB = 0;
     calibrationRatio = 0.1;
-    upCourseTime =  30 * 1000;
+    upCourseTime = 30 * 1000;
     downCourseTime = 45 * 1000;
     mqttSupport = true;
   }
-  shutter = new Shutters();
+  Serial.print("LOAD---------------------------------------------------");
+  shutter = new Shutters(this);
   char storedShuttersState[shutter->getStateLength()];
-  readInEeprom(storedShuttersState, shutter->getStateLength());
-  shutter->
-    setOperationHandler(shuttersOperationHandler)
-    .setWriteStateHandler(shuttersWriteStateHandler)
-    .restoreState(storedShuttersState)
-    .setCourseTime(upCourseTime, downCourseTime)
-    .onLevelReached(onShuttersLevelReached)
-    .begin();
+  readInEeprom(storedShuttersState, shutter->getStateLength(), shutterState);
+  Serial.print(storedShuttersState);
+  Serial.print("LOAD---------------------------------------------------");
+  shutter->setOperationHandler(shuttersOperationHandler)
+      .setWriteStateHandler(shuttersWriteStateHandler)
+      .restoreState(storedShuttersState)
+      .setCourseTime(upCourseTime, downCourseTime)
+      .onLevelReached(onShuttersLevelReached)
+      .begin();
   if (primaryGpio != constantsConfig::noGPIO)
   {
     debouncerPrimary = new Bounce();
@@ -347,15 +383,6 @@ void Switches::load(File &file)
     configPIN(item.secondaryGpio, item.secondaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     configPIN(item.primaryGpioControl, OUTPUT);
     configPIN(item.secondaryGpioControl, OUTPUT);
-
-    //INTEGRATIONS
-    //ALEXA
-#if EMULATE_ALEXA
-    if (item.cloudIOSupport)
-    {
-      addSwitchToAlexa(item.name);
-    }
-#endif
     //KNX
     if (item.knxSupport && item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
     {
@@ -383,9 +410,7 @@ bool Switches::remove(const char *id)
 
   publishOnMqtt(match->mqttCommandTopic, "", true);
   removeFromHaDiscovery(*match);
-#if EMULATE_ALEXA
-  removeSwitchFromAlexa(match->name);
-#endif
+
   unsubscribeOnMqtt(match->mqttCommandTopic);
 
   items.erase(match);
@@ -411,13 +436,6 @@ void SwitchT::reloadMqttTopics()
   strlcpy(mqttCommandTopic, mqttTopic.c_str(), sizeof(mqttCommandTopic));
   mqttTopic.replace("/set", "/state");
   strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
-  if (strcmp(family, constanstsSwitch::familyCover) == 0)
-  {
-    mqttTopic.replace("/state", "/setposition");
-    strlcpy(mqttPositionCommandTopic, mqttTopic.c_str(), sizeof(mqttPositionCommandTopic));
-    mqttTopic.replace("/setposition", "/position");
-    strlcpy(mqttPositionStateTopic, mqttTopic.c_str(), sizeof(mqttPositionStateTopic));
-  }
 }
 void reloadSwitches()
 {
@@ -427,7 +445,7 @@ void reloadSwitches()
   }
   save(getAtualSwitchesConfig());
 }
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = PIN_OUTPUT, unsigned long automationTimeA = 0ul, bool haSupport = false, bool cloudIOSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false,unsigned long automationTimeB = 0ul)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = PIN_OUTPUT, unsigned long automationTimeA = 0ul, bool haSupport = false, bool cloudIOSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false, unsigned long automationTimeB = 0ul)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -449,9 +467,18 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.reloadMqttTopics();
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
   {
+    Serial.print("TEMPLATE");
     sw.statePoolStart = constanstsSwitch::coverStartIdx;
     sw.statePoolEnd = constanstsSwitch::converEndIdx;
-    sw.shutter = new Shutters();
+    sw.shutter = new Shutters(&sw);
+    char storedShuttersState[sw.shutter->getStateLength()];
+    readInEeprom(storedShuttersState, sw.shutter->getStateLength(), sw.shutterState);
+    sw.shutter->setOperationHandler(shuttersOperationHandler)
+        .setWriteStateHandler(shuttersWriteStateHandler)
+        .restoreState(storedShuttersState)
+        .setCourseTime(sw.upCourseTime, sw.downCourseTime)
+        .onLevelReached(onShuttersLevelReached)
+        .begin();
   }
   else if (strcmp(sw.family, constanstsSwitch::familySwitch) == 0 || strcmp(sw.family, constanstsSwitch::familyLight) == 0)
   {
@@ -519,7 +546,7 @@ void SwitchT::updateFromJson(JsonObject doc)
                  doc["knxLevelTwo"] | 0,
                  doc["knxLevelThree"] | 0,
                  doc["knxSupport"],
-                doc["automationTimeB"] | 0ul);
+                 doc["automationTimeB"] | 0ul);
   doc["id"] = id;
   doc["stateControl"] = stateControl;
   if (!doc["mqttCommandTopic"].isNull())
@@ -532,27 +559,11 @@ void SwitchT::updateFromJson(JsonObject doc)
   }
   doc["mqttCommandTopic"] = mqttCommandTopic;
   doc["mqttStateTopic"] = mqttStateTopic;
-  if (strcmp(family, constanstsSwitch::familyCover) == 0)
-  {
-    doc["mqttPositionCommandTopic"] = mqttPositionCommandTopic;
-    doc["mqttPositionStateTopic"] = mqttPositionStateTopic;
-  }
 }
 void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 {
-
   save(switches);
   removeFromHaDiscovery(sw);
-#if EMULATE_ALEXA
-  removeSwitchFromAlexa(sw.name);
-#endif
-  delay(10);
-#if EMULATE_ALEXA
-  if (sw.cloudIOSupport)
-  {
-    addSwitchToAlexa(sw.name);
-  }
-#endif
   if (sw.haSupport)
   {
     addToHaDiscovery(sw);
@@ -732,131 +743,88 @@ void mqttCloudSwitchControl(Switches &switches, const char *topic, const char *p
     }
   }
 }
-void knkGroupNotifyState(const SwitchT &sw, const char *state)
-{
-}
+
 void SwitchT::changeState(const char *state)
 {
-  lastChangeState = millis();
-  bool dirty = strcmp(state, stateControl);
+
 #ifdef DEBUG
   Log.notice("%s Name:      %s" CR, tags::switches, name);
   Log.notice("%s State:     %s" CR, tags::switches, state);
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
 #endif
+  bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
+  if (isCover)
+  {
+    if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+    {
+      shutter->setLevel(100);
+    }
+    else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+    {
+      shutter->stop();
+    }
+    else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
+    {
+      shutter->setLevel(0);
+    }
+    else if (isValidNumber(state))
+    {
+      shutter->setLevel(max(0, min(100, atoi(state))));
+    }
+  }
+  else
+  {
+    lastChangeState = millis();
+    bool dirty = strcmp(state, stateControl);
+    if (strcmp(constanstsSwitch::payloadOn, state) == 0)
+    {
+      strlcpy(stateControl, constanstsSwitch::payloadOn, sizeof(stateControl));
+      strlcpy(mqttPayload, constanstsSwitch::payloadOn, sizeof(mqttPayload));
+      if (typeControl == SwitchControlType::PIN_OUTPUT)
+      {
+        configPIN(primaryGpioControl, OUTPUT);
+        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
+      }
+    }
+    else if (strcmp(constanstsSwitch::payloadOff, state) == 0)
+    {
+      strlcpy(stateControl, constanstsSwitch::payloadOff, sizeof(stateControl));
+      strlcpy(mqttPayload, constanstsSwitch::payloadOff, sizeof(mqttPayload));
+      if (typeControl == SwitchControlType::PIN_OUTPUT)
+      {
+        configPIN(primaryGpioControl, OUTPUT);
+        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
+      }
+    }
+    else if (strcmp(constanstsSwitch::payloadLock, state) == 0 || strcmp(constanstsSwitch::payloadUnlock, state) == 0)
+    {
+      strlcpy(stateControl, state, sizeof(stateControl)); //TODO CHECK STATE FROM SENSOR
+      strlcpy(mqttPayload, state, sizeof(mqttPayload));   //TODO CHECK STATE FROM SENSOR
+      if (typeControl == SwitchControlType::PIN_OUTPUT)
+      {
+        configPIN(primaryGpioControl, OUTPUT);
+        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
+      }
+    }
+    else if (strcmp(constanstsSwitch::payloadReleased, state) == 0)
+    {
+      strlcpy(stateControl, state, sizeof(stateControl));                       //TODO CHECK STATE FROM SENSOR
+      strlcpy(mqttPayload, constanstsSwitch::payloadLock, sizeof(mqttPayload)); //TODO CHECK STATE FROM SENSOR
+      if (typeControl == SwitchControlType::PIN_OUTPUT)
+      {
+        configPIN(primaryGpioControl, OUTPUT);
+        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
+      }
+    }
+    notifyStateToCloudIO(mqttCloudStateTopic, mqttPayload);
+    publishOnMqtt(mqttStateTopic, mqttPayload, true);
+    if (dirty)
+    {
+      Serial.println("D1");
+      getAtualSwitchesConfig().lastChange = millis();
+    }
+  }
 
-  if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
-  {
-    shutter->setLevel(100);
-    strlcpy(stateControl, constanstsSwitch::payloadOpen, sizeof(stateControl));
-    strlcpy(mqttPayload, constanstsSwitch::payloadOpen, sizeof(mqttPayload));
-    if (typeControl == SwitchControlType::PIN_OUTPUT)
-    {
-      configPIN(primaryGpioControl, OUTPUT);
-      configPIN(secondaryGpioControl, OUTPUT);
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF . STOP
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(secondaryGpioControl, inverted ? LOW : HIGH); //TURN ON . OPEN REQUEST
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON . EXECUTE REQUEST
-    }
-    publishOnMqtt(mqttPositionStateTopic, String(100).c_str(), mqttRetain);
-  }
-  else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
-  {
-    shutter->stop();
-    strlcpy(stateControl, constanstsSwitch::payloadStop, sizeof(stateControl));
-    strlcpy(mqttPayload, constanstsSwitch::payloadStateStop, sizeof(mqttPayload));
-    if (typeControl == SwitchControlType::PIN_OUTPUT)
-    {
-     
-      configPIN(primaryGpioControl, OUTPUT);
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF . STOP
-      delay(constanstsSwitch::delayCoverProtection);
-      configPIN(secondaryGpioControl, OUTPUT);
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(secondaryGpioControl, inverted ? HIGH : LOW); //TURN OFF . PROTECT RELAY LIFE
-      delay(constanstsSwitch::delayCoverProtection);
-    }
-  }
-  else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
-  {
-     shutter->setLevel(0);
-    strlcpy(stateControl, constanstsSwitch::payloadClose, sizeof(stateControl));
-    strlcpy(mqttPayload, constanstsSwitch::payloadStateClose, sizeof(mqttPayload));
-    if (typeControl == SwitchControlType::PIN_OUTPUT)
-    {
-      configPIN(primaryGpioControl, OUTPUT);
-      configPIN(secondaryGpioControl, OUTPUT);
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF . STOP
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(secondaryGpioControl, inverted ? HIGH : LOW); //TURN OFF . CLOSE REQUEST
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON . EXECUTE REQUEST
-    }
-    publishOnMqtt(mqttPositionStateTopic, String(0).c_str(), mqttRetain);
-  }
-  else if (strcmp(constanstsSwitch::payloadOn, state) == 0)
-  {
-    strlcpy(stateControl, constanstsSwitch::payloadOn, sizeof(stateControl));
-    strlcpy(mqttPayload, constanstsSwitch::payloadOn, sizeof(mqttPayload));
-    if (typeControl == SwitchControlType::PIN_OUTPUT)
-    {
-      configPIN(primaryGpioControl, OUTPUT);
-      writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
-    }
-  }
-  else if (strcmp(constanstsSwitch::payloadOff, state) == 0)
-  {
-    strlcpy(stateControl, constanstsSwitch::payloadOff, sizeof(stateControl));
-    strlcpy(mqttPayload, constanstsSwitch::payloadOff, sizeof(mqttPayload));
-    if (typeControl == SwitchControlType::PIN_OUTPUT)
-    {
-      configPIN(primaryGpioControl, OUTPUT);
-      writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
-    }
-  }
-  else if (strcmp(constanstsSwitch::payloadLock, state) == 0 || strcmp(constanstsSwitch::payloadUnlock, state) == 0)
-  {
-    strlcpy(stateControl, state, sizeof(stateControl)); //TODO CHECK STATE FROM SENSOR
-    strlcpy(mqttPayload, state, sizeof(mqttPayload));   //TODO CHECK STATE FROM SENSOR
-    if (typeControl == SwitchControlType::PIN_OUTPUT)
-    {
-      configPIN(primaryGpioControl, OUTPUT);
-      writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
-    }
-  }
-  else if (strcmp(constanstsSwitch::payloadReleased, state) == 0)
-  {
-    strlcpy(stateControl, state, sizeof(stateControl));                       //TODO CHECK STATE FROM SENSOR
-    strlcpy(mqttPayload, constanstsSwitch::payloadLock, sizeof(mqttPayload)); //TODO CHECK STATE FROM SENSOR
-    if (typeControl == SwitchControlType::PIN_OUTPUT)
-    {
-      configPIN(primaryGpioControl, OUTPUT);
-      writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
-    }
-  }
-  else if (isValidNumber(state))
-  {
-
-    percentageRequest = max(0, min(100, atoi(state)));
-    shutter->setLevel(percentageRequest);
-    if (positionControlCover > percentageRequest)
-    {
-      statePoolIdx = constanstsSwitch::closeIdx;
-      changeState(statesPool[statePoolIdx].c_str());
-    }
-    else
-    {
-      statePoolIdx = constanstsSwitch::openIdx;
-      changeState(statesPool[statePoolIdx].c_str());
-    }
-  }
-  notifyStateToCloudIO(mqttCloudStateTopic, mqttPayload);
-  publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
   payloadSe.concat("{\"id\":\"");
@@ -868,12 +836,9 @@ void SwitchT::changeState(const char *state)
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
   if (knxNotifyGroup && knxSupport)
   {
-
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
   }
   knxNotifyGroup = true;
-  if (dirty)
-    getAtualSwitchesConfig().lastChange = millis();
 }
 void stateSwitchById(Switches &switches, const char *id, const char *state)
 {
@@ -886,7 +851,6 @@ void stateSwitchById(Switches &switches, const char *id, const char *state)
   }
 }
 
-
 bool stateTimeout(const SwitchT &sw)
 {
   return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.stateControl) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
@@ -894,16 +858,18 @@ bool stateTimeout(const SwitchT &sw)
 void loop(Switches &switches)
 {
 
-  if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
+  if (switches.lastChange > 0ul && switches.lastChange + constantsConfig::storeConfigDelay < millis())
   {
+    Serial.println("AUTO SAVE");
     save(switches);
   }
   for (auto &sw : switches.items)
   {
     bool isCover = strcmp(sw.family, constanstsSwitch::familyCover) == 0;
-      if(isCover){
+    if (isCover)
+    {
       sw.shutter->loop();
-      }
+    }
     bool primaryGpioEvent = true;
     bool secondaryGpioEvent = true;
     if (sw.primaryGpio != constantsConfig::noGPIO)
@@ -938,7 +904,7 @@ void loop(Switches &switches)
     case DUAL_SWITCH:
       if (isCover && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
       {
-        
+
         if (primaryGpioEvent && secondaryGpioEvent && (sw.lastPrimaryGpioState != primaryGpioEvent || sw.lastSecondaryGpioState != secondaryGpioEvent))
         {
 

@@ -65,15 +65,14 @@ struct SwitchT
     //AUTOMATIONS
     unsigned long autoStateDelay;
     unsigned long automationTimeA;
-    unsigned long automationTimeB;//NEW
+    unsigned long automationTimeB; //NEW
     char autoStateValue[10];
-
 
     //MQTT
     char mqttCommandTopic[128];
     char mqttStateTopic[128];
-    char mqttPositionStateTopic[128];
-    char mqttPositionCommandTopic[128];
+    char infoA[128];
+    char infoB[128];
     char mqttPayload[10];
     bool mqttRetain;
 
@@ -85,22 +84,22 @@ struct SwitchT
     bool lastSecondaryGpioState;
     Bounce *debouncerPrimary;
     Bounce *debouncerSecondary;
-    int percentageRequest = -1;
     int statePoolIdx;
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
     bool slave;
     unsigned long lastChangeState;
-    
+
     //CLOUDIO
     char mqttCloudCommandTopic[128];
     char mqttCloudStateTopic[128];
 
     //VIRTUAL COVER CONTROLLER
     Shutters *shutter;
-    unsigned long upCourseTime = 30 * 1000; //NEW
-    unsigned long downCourseTime = 45 * 1000;//NEW
-    float calibrationRatio = 0.1;//NEW
+    unsigned long upCourseTime = 30 * 1000;   //NEW
+    unsigned long downCourseTime = 45 * 1000; //NEW
+    float calibrationRatio = 0.1;             //NEW
+    char shutterState[21];
 
     //METHODS
     void load(File &file);
@@ -116,8 +115,8 @@ struct Switches
     void load(File &file);
     void save(File &file) const;
     bool remove(const char *id);
-    
-    size_t serializeToJson( Print &output);
+
+    size_t serializeToJson(Print &output);
 };
 void loop(Switches &switches);
 void load(Switches &switches);
