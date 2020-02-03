@@ -61,14 +61,12 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
   shutters->getSwitchT()->lastPercentage = level;
   publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, String(level).c_str(), shutters->getSwitchT()->mqttRetain);
-  static unsigned long measurement_timestamp = millis( );
-  if( millis( ) - measurement_timestamp > 2000ul )
+  static unsigned long measurement_timestamp = millis();
+  if (millis() - measurement_timestamp > 2000ul)
   {
-      measurement_timestamp = millis( );
-      sendToServerEvents("shutters", String(level).c_str());
-
+    measurement_timestamp = millis();
+    sendToServerEvents("shutters", String(level).c_str());
   }
-  
 }
 
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
@@ -286,15 +284,18 @@ void SwitchT::load(File &file)
     downCourseTime = 45 * 1000;
     mqttSupport = true;
   }
-  shutter = new Shutters(this);
-  char storedShuttersState[shutter->getStateLength()];
-  readLastShutterState(storedShuttersState, shutter->getStateLength(), shutterState);
-  shutter->setOperationHandler(shuttersOperationHandler)
-      .setWriteStateHandler(shuttersWriteStateHandler)
-      .restoreState(storedShuttersState)
-      .setCourseTime(upCourseTime, downCourseTime)
-      .onLevelReached(onShuttersLevelReached)
-      .begin();
+  if (strcmp(family, constanstsSwitch::familyCover) == 0)
+  {
+    shutter = new Shutters(this);
+    char storedShuttersState[shutter->getStateLength()];
+    readLastShutterState(storedShuttersState, shutter->getStateLength(), shutterState);
+    shutter->setOperationHandler(shuttersOperationHandler)
+        .setWriteStateHandler(shuttersWriteStateHandler)
+        .restoreState(storedShuttersState)
+        .setCourseTime(upCourseTime, downCourseTime)
+        .onLevelReached(onShuttersLevelReached)
+        .begin();
+  }
   if (primaryGpio != constantsConfig::noGPIO)
   {
     debouncerPrimary = new Bounce();
@@ -444,9 +445,10 @@ void reloadSwitches()
   }
   save(getAtualSwitchesConfig());
 }
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = PIN_OUTPUT, unsigned long automationTimeA = 0ul, bool haSupport = false, bool cloudIOSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false, unsigned long automationTimeB = 0ul, bool mqttSupport = true,unsigned long upCourseTime = 45,unsigned long downCourseTime = 45)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = PIN_OUTPUT, unsigned long automationTimeA = 0ul, bool haSupport = false, bool cloudIOSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false, unsigned long automationTimeB = 0ul, bool mqttSupport = true, unsigned long upCourseTime = 45, unsigned long downCourseTime = 45, bool inverted = false)
 {
   String idStr;
+  sw.firmware = VERSION;
   generateId(idStr, name, sizeof(sw.id));
   strlcpy(sw.id, idStr.c_str(), sizeof(sw.id));
   strlcpy(sw.name, name.c_str(), sizeof(sw.name));
@@ -464,7 +466,8 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.cloudIOSupport = cloudIOSupport;
   sw.pullup = true;
   sw.mqttRetain = mqttRetaint;
-  sw.inverted = false;
+  if (!sw.inverted)
+    sw.inverted = inverted;
   sw.reloadMqttTopics();
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
   {
@@ -549,11 +552,12 @@ void SwitchT::updateFromJson(JsonObject doc)
                  doc["automationTimeB"] | 0ul,
                  doc["mqttSupport"] | true,
                  doc["upCourseTime"] | 45ul,
-                 doc["downCourseTime"] | 45ul);
+                 doc["downCourseTime"] | 45ul, doc["inverted"] | false);
   doc["id"] = id;
   doc["stateControl"] = stateControl;
   doc["lastPercentage"] = lastPercentage;
   doc["upCourseTime"] = upCourseTime;
+  doc["autoStateDelay"] = autoStateDelay;
   doc["downCourseTime"] = downCourseTime;
   if (!doc["mqttCommandTopic"].isNull())
   {
@@ -647,6 +651,35 @@ void load(Switches &switches)
     switches.items.push_back(two);
     switches.items.push_back(three);
     switches.items.push_back(four);
+#elif defined DISPENSER
+    SwitchT one;
+    templateSwitch(one, "D1", constanstsSwitch::familySwitch, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
+    one.autoStateDelay = 1000; //1 second
+    one.inverted = true;
+    strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
+    switches.items.push_back(one);
+
+    SwitchT two;
+    templateSwitch(two, "D2", constanstsSwitch::familySwitch, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
+    two.autoStateDelay = 1000; //1 second
+    two.inverted = true;
+    strlcpy(two.autoStateValue, constanstsSwitch::payloadOff, sizeof(two.autoStateValue));
+    switches.items.push_back(two);
+
+    SwitchT three;
+    templateSwitch(three, "D3", constanstsSwitch::familySwitch, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 14u, constantsConfig::noGPIO);
+    three.autoStateDelay = 1000; //1 second
+    three.inverted = true;
+    strlcpy(three.autoStateValue, constanstsSwitch::payloadOff, sizeof(three.autoStateValue));
+    switches.items.push_back(three);
+
+    SwitchT four;
+    templateSwitch(four, "D4", constanstsSwitch::familySwitch, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 13u, constantsConfig::noGPIO);
+    four.autoStateDelay = 1000; //1 second
+    four.inverted = true;
+    strlcpy(four.autoStateValue, constanstsSwitch::payloadOff, sizeof(four.autoStateValue));
+    switches.items.push_back(four);
+
 #elif defined VMC
     SwitchT one;
     SwitchT two;
