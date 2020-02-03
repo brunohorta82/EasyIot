@@ -96,8 +96,8 @@ struct SwitchT
 
     //VIRTUAL COVER CONTROLLER
     Shutters *shutter;
-    unsigned long upCourseTime = 30 * 1000;   //NEW
-    unsigned long downCourseTime = 45 * 1000; //NEW
+    unsigned long upCourseTime = 25 * 1000;   //NEW
+    unsigned long downCourseTime = 25 * 1000; //NEW
     float calibrationRatio = 0.1;             //NEW
     char shutterState[21];
 

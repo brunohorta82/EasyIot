@@ -9,7 +9,6 @@
 #include <Bounce2.h>
 #include "CloudIO.h"
 #include <Shutters.h>
-const byte eepromOffset = 0;
 
 void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 {
@@ -52,13 +51,7 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
     if (s->getSwitchT()->typeControl == SwitchControlType::PIN_OUTPUT)
     {
       configPIN(s->getSwitchT()->primaryGpioControl, OUTPUT);
-      delay(constanstsSwitch::delayCoverProtection);
       writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . STOP
-      delay(constanstsSwitch::delayCoverProtection);
-      configPIN(s->getSwitchT()->secondaryGpioControl, OUTPUT);
-      delay(constanstsSwitch::delayCoverProtection);
-      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . PROTECT RELAY LIFE
-      delay(constanstsSwitch::delayCoverProtection);
     }
     break;
   }
@@ -66,7 +59,16 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 
 void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
+  shutters->getSwitchT()->lastPercentage = level;
   publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, String(level).c_str(), shutters->getSwitchT()->mqttRetain);
+  static unsigned long measurement_timestamp = millis( );
+  if( millis( ) - measurement_timestamp > 2000ul )
+  {
+      measurement_timestamp = millis( );
+      sendToServerEvents("shutters", String(level).c_str());
+
+  }
+  
 }
 
 static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
@@ -136,6 +138,7 @@ size_t Switches::serializeToJson(Print &output)
     {
       sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
       sdoc["upCourseTime"] = sw.upCourseTime;
+      sdoc["lastPercentage"] = sw.lastPercentage;
       sdoc["downCourseTime"] = sw.downCourseTime;
       sdoc["calibrationRatio"] = sw.calibrationRatio;
     }
@@ -147,11 +150,12 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["cloudIOSupport"] = sw.cloudIOSupport;
     sdoc["haSupport"] = sw.haSupport;
     sdoc["knxSupport"] = sw.knxSupport;
+    sdoc["mqttSupport"] = sw.mqttSupport;
   }
 
   return serializeJson(doc, output);
 }
-void readInEeprom(char *dest, byte length, char *value)
+void readLastShutterState(char *dest, byte length, char *value)
 {
   for (byte i = 0; i < length; i++)
   {
@@ -160,13 +164,12 @@ void readInEeprom(char *dest, byte length, char *value)
 }
 void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte length)
 {
-  Serial.println(state);
   for (byte i = 0; i < length; i++)
   {
     shutters->getSwitchT()->shutterState[i] = state[i];
   }
-  Serial.println(shutters->getSwitchT()->shutterState);
   getAtualSwitchesConfig().lastChange = millis();
+  sendToServerEvents("shutters", String(shutters->getSwitchT()->lastPercentage).c_str());
 }
 
 void SwitchT::save(File &file) const
@@ -279,16 +282,13 @@ void SwitchT::load(File &file)
     automationTimeA = 0;
     automationTimeB = 0;
     calibrationRatio = 0.1;
-    upCourseTime = 30 * 1000;
+    upCourseTime = 45 * 1000;
     downCourseTime = 45 * 1000;
     mqttSupport = true;
   }
-  Serial.print("LOAD---------------------------------------------------");
   shutter = new Shutters(this);
   char storedShuttersState[shutter->getStateLength()];
-  readInEeprom(storedShuttersState, shutter->getStateLength(), shutterState);
-  Serial.print(storedShuttersState);
-  Serial.print("LOAD---------------------------------------------------");
+  readLastShutterState(storedShuttersState, shutter->getStateLength(), shutterState);
   shutter->setOperationHandler(shuttersOperationHandler)
       .setWriteStateHandler(shuttersWriteStateHandler)
       .restoreState(storedShuttersState)
@@ -342,7 +342,6 @@ void switchesCallback(message_t const &msg, void *arg)
   }
   case KNX_CT_READ:
   {
-    Serial.println("Read");
     break;
   }
   }
@@ -445,7 +444,7 @@ void reloadSwitches()
   }
   save(getAtualSwitchesConfig());
 }
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = PIN_OUTPUT, unsigned long automationTimeA = 0ul, bool haSupport = false, bool cloudIOSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false, unsigned long automationTimeB = 0ul)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = PIN_OUTPUT, unsigned long automationTimeA = 0ul, bool haSupport = false, bool cloudIOSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false, unsigned long automationTimeB = 0ul, bool mqttSupport = true,unsigned long upCourseTime = 45,unsigned long downCourseTime = 45)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -454,12 +453,14 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   strlcpy(sw.family, family, sizeof(sw.family));
   sw.primaryGpio = primaryGpio;
   sw.secondaryGpio = secondaryGpio;
-  sw.autoStateDelay = autoStateDelay;
+  sw.autoStateDelay = autoStateDelay * 1000;
   strlcpy(sw.autoStateValue, autoStateValue.c_str(), sizeof(sw.autoStateValue));
   sw.typeControl = typecontrol;
   sw.mode = mode;
   sw.knxSupport = knxSupport;
   sw.haSupport = haSupport;
+  sw.upCourseTime = upCourseTime * 1000;
+  sw.downCourseTime = downCourseTime * 1000;
   sw.cloudIOSupport = cloudIOSupport;
   sw.pullup = true;
   sw.mqttRetain = mqttRetaint;
@@ -467,12 +468,11 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.reloadMqttTopics();
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
   {
-    Serial.print("TEMPLATE");
     sw.statePoolStart = constanstsSwitch::coverStartIdx;
     sw.statePoolEnd = constanstsSwitch::converEndIdx;
     sw.shutter = new Shutters(&sw);
     char storedShuttersState[sw.shutter->getStateLength()];
-    readInEeprom(storedShuttersState, sw.shutter->getStateLength(), sw.shutterState);
+    readLastShutterState(storedShuttersState, sw.shutter->getStateLength(), sw.shutterState);
     sw.shutter->setOperationHandler(shuttersOperationHandler)
         .setWriteStateHandler(shuttersWriteStateHandler)
         .restoreState(storedShuttersState)
@@ -518,7 +518,7 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
   sw.lastSecondaryGpioState = true;
   strlcpy(sw.stateControl, constanstsSwitch::payloadOff, sizeof(sw.mqttPayload));
   strlcpy(sw.mqttPayload, sw.stateControl, sizeof(sw.mqttPayload));
-
+  sw.mqttSupport = mqttSupport;
   sw.knxLevelOne = knxLevelOne;
   sw.knxLevelTwo = knxLevelTwo;
   sw.knxLevelThree = knxLevelThree;
@@ -540,15 +540,21 @@ void SwitchT::updateFromJson(JsonObject doc)
                  doc["autoStateValue"] | "",
                  static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::MQTT)),
                  doc["automationTimeA"] | 0ul,
-                 doc["haSupport"] | true,
+                 doc["haSupport"] | false,
                  doc["cloudIOSupport"] | true,
                  doc["knxLevelOne"] | 0,
                  doc["knxLevelTwo"] | 0,
                  doc["knxLevelThree"] | 0,
                  doc["knxSupport"],
-                 doc["automationTimeB"] | 0ul);
+                 doc["automationTimeB"] | 0ul,
+                 doc["mqttSupport"] | true,
+                 doc["upCourseTime"] | 45ul,
+                 doc["downCourseTime"] | 45ul);
   doc["id"] = id;
   doc["stateControl"] = stateControl;
+  doc["lastPercentage"] = lastPercentage;
+  doc["upCourseTime"] = upCourseTime;
+  doc["downCourseTime"] = downCourseTime;
   if (!doc["mqttCommandTopic"].isNull())
   {
     strlcpy(mqttCommandTopic, doc["mqttCommandTopic"], sizeof(mqttCommandTopic));
@@ -757,7 +763,7 @@ void SwitchT::changeState(const char *state)
   {
     if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
     {
-      shutter->setLevel(100);
+      shutter->setLevel(0);
     }
     else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
     {
@@ -765,7 +771,7 @@ void SwitchT::changeState(const char *state)
     }
     else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
     {
-      shutter->setLevel(0);
+      shutter->setLevel(100);
     }
     else if (isValidNumber(state))
     {
@@ -820,7 +826,6 @@ void SwitchT::changeState(const char *state)
     publishOnMqtt(mqttStateTopic, mqttPayload, true);
     if (dirty)
     {
-      Serial.println("D1");
       getAtualSwitchesConfig().lastChange = millis();
     }
   }
@@ -860,7 +865,6 @@ void loop(Switches &switches)
 
   if (switches.lastChange > 0ul && switches.lastChange + constantsConfig::storeConfigDelay < millis())
   {
-    Serial.println("AUTO SAVE");
     save(switches);
   }
   for (auto &sw : switches.items)
