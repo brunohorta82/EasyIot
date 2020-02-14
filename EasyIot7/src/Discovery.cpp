@@ -1,4 +1,5 @@
 #include "Sensors.h"
+#include "Switches.h"
 #include "Discovery.h"
 #include "constants.h"
 #include "Mqtt.h"
@@ -9,10 +10,10 @@ void initHaDiscovery(const Switches &switches)
   {
     if (!sw.haSupport)
       continue;
-    publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, true);
+    publishOnMqtt(sw.mqttStateTopic,STATES_POLL[sw.statePoolIdx].c_str(), true);
     if (strcmp(constanstsSwitch::familyCover, sw.family) == 0)
     {
-      publishOnMqtt(sw.mqttPositionStateTopic, String(sw.lastPercentage).c_str(), true);
+      publishOnMqtt(sw.mqttStateTopic, String(sw.lastPercentage).c_str(), true);
     }
 
     addToHaDiscovery(sw);
@@ -102,8 +103,8 @@ void createHaCover(const SwitchT &sw)
   object["device_class"] = "blind";
   object["position_open"] = 100;
   object["position_closed"] = 0;
-  object["position_topic"] = sw.mqttPositionStateTopic;
-  object["set_position_topic"] = sw.mqttPositionCommandTopic;
+  object["position_topic"] = sw.mqttStateTopic;
+  object["set_position_topic"] = sw.mqttCommandTopic;
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }

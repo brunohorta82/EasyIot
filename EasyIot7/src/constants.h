@@ -112,7 +112,7 @@ namespace constanstsCloudIO
 {
 constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
 
-constexpr uint16_t mqttPort{1883};
+constexpr int mqttPort{1883};
 } // namespace constanstsCloudIO
 
 namespace constanstsSwitch
