@@ -146,7 +146,7 @@ void setupMQTT()
   mqttLocalClient.setServer(getAtualConfig().mqttIpDns,getAtualConfig().mqttPort);
   mqttLocalClient.setClientId(getAtualConfig().chipId);
   mqttLocalClient.setCredentials(getAtualConfig().mqttUsername, getAtualConfig().mqttPassword);
-mqttLocalClient.connect();
+  mqttLocalClient.connect();
 }
 
 void publishOnMqtt(const char *topic, const char *payload, bool retain)

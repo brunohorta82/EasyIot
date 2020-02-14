@@ -37,11 +37,6 @@ auto constexpr switches = "/config/switches.bin";
 } // namespace configFilenames
 namespace constantsConfig
 {
-#if DISPENSER
-constexpr const char *firmwareMode{"NO_FEATURES"};
-constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=NO_FEATURES"};
-constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=NO_FEATURES"};
-#endif
 #if NO_FEATURES
 constexpr const char *firmwareMode{"NO_FEATURES"};
 constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=NO_FEATURES"};
