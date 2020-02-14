@@ -7,7 +7,7 @@ void subscribeOnMqtt(const char *topic);
 String getBaseTopic();
 String getAvailableTopic();
 void setupMQTT();
-void connectLocalMqtt();
+void loopMqtt();
 void unsubscribeOnMqtt(const char *topic);
 bool mqttConnected();
 
