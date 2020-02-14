@@ -1,23 +1,41 @@
 #include "Mqtt.h"
 #include "Config.h"
-#include <AsyncMqttClient.h>
+#include <PubSubClient.h>
 #include "Switches.h"
 #include "WiFi.h"
-#include <Ticker.h>
 #include "constants.h"
 #include "ESP8266WiFi.h"
 #include "Discovery.h"
 
-AsyncMqttClient mqttLocalClient;
-Ticker mqttLocalReconnectTimer;
-Ticker mqttLocal;
-
+static WiFiClient espClient;
+static PubSubClient mqttClient(espClient);
 void processMqttAction(const char *topic, const char *payload)
 {
     mqttSwitchControl(getAtualSwitchesConfig(), topic, payload);
 }
-void connectLocalMqtt(){
-    mqttLocal.once(5, setupMQTT);
+void callbackMqtt(char *topic, byte *payload, unsigned int length)
+{
+#ifdef DEBUG
+    Log.notice("%s Message received" CR, tags::mqtt);
+#endif
+    char *payload_as_string = (char *)malloc(length + 1);
+    memcpy(payload_as_string, (char *)payload, length);
+    payload_as_string[length] = 0;
+#ifdef DEBUG
+    Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
+    Log.notice("%s Payload: " CR, tags::mqtt, payload_as_string);
+#endif
+    if (strcmp(topic, constantsMqtt::homeassistantOnlineTopic) == 0 && strcmp(payload_as_string, constantsMqtt::availablePayload) == 0)
+    {
+        initHaDiscovery(getAtualSwitchesConfig());
+        initHaDiscovery(getAtualSensorsConfig());
+    }
+    else
+    {
+        processMqttAction(topic, payload_as_string);
+    }
+
+    free(payload_as_string);
 }
 
 String getBaseTopic()
@@ -49,69 +67,17 @@ String getConfigStatusTopic()
     return baseTopic;
 }
 
-
-void connectToLocalMqtt()
+boolean reconnect()
 {
+
+    if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
+        return false;
 #ifdef DEBUG
-  Log.error("%s Connecting to MQTT..." CR, tags::mqtt);
+    Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 #endif
-  mqttLocalClient.connect();
-}
-
-
-void onMqttLocalPublish(uint16_t packetId)
-{
-}
-void onMqttLocalDisconnect(AsyncMqttClientDisconnectReason reason)
-{
-
-#ifdef DEBUG
-  Log.warning("%s Disconnected from MQTT." CR, tags::mqtt);
-#endif
-  if (WiFi.isConnected())
-  {
-    mqttLocalReconnectTimer.once(10, connectToLocalMqtt);
-  }
-}
-
-void onMqttLocalSubscribe(uint16_t packetId, uint8_t qos)
-{
-}
-
-void onMqttLocalUnsubscribe(uint16_t packetId)
-{
-}
-
-void onMqttLocalMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
-{
-  char msg[100];
-#ifdef DEBUG
-  Log.warning("%s Message from MQTT. %s %s" CR, tags::mqtt, topic, payload);
-#endif
-  strlcpy(msg, payload, len + 1);
-  #ifdef DEBUG
-    Log.notice("%s Message received" CR, tags::mqtt);
-#endif
-#ifdef DEBUG
-    Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
-    Log.notice("%s Payload: " CR, tags::mqtt, msg);
-#endif
-    if (strcmp(topic, constantsMqtt::homeassistantOnlineTopic) == 0 && strcmp(msg, constantsMqtt::availablePayload) == 0)
+    if (mqttClient.connect(getAtualConfig().chipId, String(getAtualConfig().mqttUsername).c_str(), String(getAtualConfig().mqttPassword).c_str(), getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, true))
     {
-        initHaDiscovery(getAtualSwitchesConfig());
-        initHaDiscovery(getAtualSensorsConfig());
-    }
-    else
-    {
-        processMqttAction(topic, msg);
-    }
-
-}
-
-
-void onMqttLocalConnect(bool sessionPresent)
-{
-    #ifdef DEBUG
+#ifdef DEBUG
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 #endif
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
@@ -124,9 +90,11 @@ void onMqttLocalConnect(bool sessionPresent)
             subscribeOnMqtt(sw.mqttCommandTopic);
             publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, sw.mqttRetain);
         }
+    }
 
-
+    return mqttConnected();
 }
+
 void setupMQTT()
 {
     if (strlen(getAtualConfig().mqttIpDns) == 0)
@@ -136,17 +104,40 @@ void setupMQTT()
 #ifdef DEBUG
     Log.notice("%s Setup" CR, tags::mqtt);
 #endif
-  mqttLocalClient.onConnect(onMqttLocalConnect);
-  mqttLocalClient.onDisconnect(onMqttLocalDisconnect);
-  mqttLocalClient.onSubscribe(onMqttLocalSubscribe);
-  mqttLocalClient.onUnsubscribe(onMqttLocalUnsubscribe);
-  mqttLocalClient.onMessage(onMqttLocalMessage);
-  mqttLocalClient.onPublish(onMqttLocalPublish);
-  mqttLocalClient.setCleanSession(true);
-  mqttLocalClient.setServer(getAtualConfig().mqttIpDns,getAtualConfig().mqttPort);
-  mqttLocalClient.setClientId(getAtualConfig().chipId);
-  mqttLocalClient.setCredentials(getAtualConfig().mqttUsername, getAtualConfig().mqttPassword);
-  mqttLocalClient.connect();
+    if (mqttConnected())
+    {
+        mqttClient.disconnect();
+        refreshMDNS(getAtualConfig().nodeId);
+    }
+
+    mqttClient.setServer(getAtualConfig().mqttIpDns, getAtualConfig().mqttPort);
+    mqttClient.setCallback(callbackMqtt);
+}
+
+void loopMqtt()
+{
+    if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
+        return;
+    static unsigned long lastReconnectAttempt = millis();
+    if (!mqttConnected())
+    {
+        long now = millis();
+        if (now - lastReconnectAttempt > 8000)
+        {
+#ifdef DEBUG
+            Log.notice("%s Disconnected" CR, tags::mqtt);
+#endif
+            lastReconnectAttempt = now;
+            if (reconnect())
+            {
+                lastReconnectAttempt = 0;
+            }
+        }
+    }
+    else
+    {
+        mqttClient.loop();
+    }
 }
 
 void publishOnMqtt(const char *topic, const char *payload, bool retain)
@@ -165,12 +156,28 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
 #endif
         return;
     }
-    mqttLocalClient.publish(topic,0,retain, payload, retain);
-    
+    static unsigned int retries = 0;
+    while (!mqttClient.publish(topic, payload, retain) && retries < 3)
+    {
+        retries++;
+    }
+#ifdef DEBUG
+    if (retries < 3)
+    {
+
+        Log.error("%s Message %s published to the topic %s successfully" CR, tags::mqtt, payload, topic);
+    }
+    else
+    {
+
+        Log.error("%s Error on try publish to the topic %s with message %s" CR, tags::mqtt, topic, payload);
+    }
+#endif
+    retries = 0;
 }
 bool mqttConnected()
 {
-    return mqttLocalClient.connected();
+    return mqttClient.connected();
 }
 void subscribeOnMqtt(const char *topic)
 {
@@ -188,7 +195,7 @@ void subscribeOnMqtt(const char *topic)
 #endif
         return;
     }
-    mqttLocalClient.subscribe(topic,0);
+    mqttClient.subscribe(topic);
 }
 void unsubscribeOnMqtt(const char *topic)
 {
@@ -197,6 +204,6 @@ void unsubscribeOnMqtt(const char *topic)
 #ifdef DEBUG
         Log.notice("%s Unsubscribe on topic %s " CR, tags::mqtt, topic);
 #endif
-        mqttLocalClient.unsubscribe(topic);
+        mqttClient.unsubscribe(topic);
     }
 }
