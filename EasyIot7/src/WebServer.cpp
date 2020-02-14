@@ -289,11 +289,9 @@ void setupWebserverAsync()
     if (request->hasArg("id"))
     {
       remove(getAtualSwitchesConfig(), request->arg("id").c_str());
-      requestCloudIOSync();
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSwitchesConfig().serializeToJson(*response);
- 
     request->send(response);
   });
 
@@ -348,7 +346,6 @@ void setupWebserverAsync()
     if (request->hasArg("id"))
     {
       remove(getAtualSensorsConfig(), request->arg("id").c_str());
-      requestCloudIOSync();
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSensorsConfig().serializeToJson(*response);

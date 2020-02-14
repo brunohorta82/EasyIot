@@ -25,11 +25,9 @@ bool mqttCloudIOConnected()
 {
   return mqttClient.connected();
 }
-void notifyStateToCloudIO(const char *topic, const char *state)
-{
-  if (!mqttClient.connected())
-    return;
-  mqttClient.publish(topic, 0, false, state);
+void notifyStateToCloudIO(const char *topic,const char *state){
+  if(!mqttClient.connected())return;
+  mqttClient.publish(topic,0,false,state);
 }
 void subscribeOnMqttCloudIO(const char *topic)
 {
@@ -59,14 +57,15 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(sw.id);
     topic.concat("/set");
-
-    strlcpy(sw.mqttCloudCommandTopic, topic.c_str(), sizeof(sw.mqttCloudCommandTopic));
+    
+    strlcpy(sw.mqttCloudCommandTopic,topic.c_str(),sizeof(sw.mqttCloudCommandTopic));
     subscribeOnMqttCloudIO(sw.mqttCloudCommandTopic);
-
+    
     topic.replace("/set", "/status");
-
-    strlcpy(sw.mqttCloudStateTopic, topic.c_str(), sizeof(sw.mqttCloudStateTopic));
+    
+    strlcpy(sw.mqttCloudStateTopic,topic.c_str(),sizeof(sw.mqttCloudStateTopic));
     mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.mqttPayload);
+    
   }
 }
 
@@ -93,11 +92,11 @@ void onMqttUnsubscribe(uint16_t packetId)
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
   char msg[100];
-#ifdef DEBUG
+  #ifdef DEBUG
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
-  strlcpy(msg, payload, len + 1);
-  mqttCloudSwitchControl(getAtualSwitchesConfig(), topic, msg);
+  strlcpy(msg,payload,len+1);
+  mqttCloudSwitchControl(getAtualSwitchesConfig(), topic,  msg);
 }
 
 void onMqttPublish(uint16_t packetId)
@@ -162,7 +161,7 @@ void connectoToCloudIO()
     sdoc["name"] = sw.name;
     sdoc["family"] = sw.family;
     sdoc["stateControl"] = sw.stateControl;
-    sdoc["cloudIOSupport"] = sw.cloudIOSupport;
+    sdoc["alexaSupport"] = sw.alexaSupport;
   }
   serializeJson(doc, payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");

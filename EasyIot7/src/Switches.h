@@ -5,7 +5,6 @@
 #include "ArduinoJson.h"
 #include "FS.h"
 class Bounce;
-class Shutters;
 enum SwitchMode
 {
     SWITCH = 1,
@@ -22,9 +21,8 @@ enum SwitchSlaveMode
 };
 enum SwitchControlType
 {
-    PIN_OUTPUT = 1,
-    MQTT = 2,
-    KNX = 3
+    RELAY_AND_MQTT = 1,
+    MQTT = 2
 };
 struct SwitchStatePool
 {
@@ -39,10 +37,9 @@ struct SwitchT
     char family[10];                      //switch, light, cover, lock
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT; //MQTT OR RELAY
-    bool cloudIOSupport = true;
+    bool alexaSupport = false;
     bool haSupport = false;
     bool knxSupport = false;
-    bool mqttSupport = true; //NEW
     bool childLock = false;
     //GPIOS INPUT
     unsigned int primaryGpio;
@@ -64,15 +61,14 @@ struct SwitchT
 
     //AUTOMATIONS
     unsigned long autoStateDelay;
-    unsigned long automationTimeA;
-    unsigned long automationTimeB; //NEW
     char autoStateValue[10];
+    unsigned long timeBetweenStates;
 
     //MQTT
     char mqttCommandTopic[128];
     char mqttStateTopic[128];
-    char infoA[128];
-    char infoB[128];
+    char mqttPositionStateTopic[128];
+    char mqttPositionCommandTopic[128];
     char mqttPayload[10];
     bool mqttRetain;
 
@@ -84,23 +80,17 @@ struct SwitchT
     bool lastSecondaryGpioState;
     Bounce *debouncerPrimary;
     Bounce *debouncerSecondary;
+    int percentageRequest = -1;
     int statePoolIdx;
     unsigned int statePoolStart;
     unsigned int statePoolEnd;
     bool slave;
     unsigned long lastChangeState;
-
+    
     //CLOUDIO
     char mqttCloudCommandTopic[128];
     char mqttCloudStateTopic[128];
-
-    //VIRTUAL COVER CONTROLLER
-    Shutters *shutter;
-    unsigned long upCourseTime = 25 * 1000;   //NEW
-    unsigned long downCourseTime = 25 * 1000; //NEW
-    float calibrationRatio = 0.1;             //NEW
-    char shutterState[21];
-
+    
     //METHODS
     void load(File &file);
     void save(File &file) const;
@@ -115,9 +105,10 @@ struct Switches
     void load(File &file);
     void save(File &file) const;
     bool remove(const char *id);
-
-    size_t serializeToJson(Print &output);
+    
+    size_t serializeToJson( Print &output);
 };
+void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
 void loop(Switches &switches);
 void load(Switches &switches);
 void remove(Switches &switches, const char *id);

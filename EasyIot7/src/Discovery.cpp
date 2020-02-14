@@ -10,6 +10,11 @@ void initHaDiscovery(const Switches &switches)
     if (!sw.haSupport)
       continue;
     publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, true);
+    if (strcmp(constanstsSwitch::familyCover, sw.family) == 0)
+    {
+      publishOnMqtt(sw.mqttPositionStateTopic, String(sw.lastPercentage).c_str(), true);
+    }
+
     addToHaDiscovery(sw);
   }
 }
@@ -95,10 +100,10 @@ void createHaCover(const SwitchT &sw)
   object["payload_close"] = constanstsSwitch::payloadClose;
   object["payload_stop"] = constanstsSwitch::payloadStop;
   object["device_class"] = "blind";
-  object["position_open"] = 0;
-  object["position_closed"] = 100;
-  object["position_topic"] = sw.mqttStateTopic;
-  object["set_position_topic"] = sw.mqttCommandTopic;
+  object["position_open"] = 100;
+  object["position_closed"] = 0;
+  object["position_topic"] = sw.mqttPositionStateTopic;
+  object["set_position_topic"] = sw.mqttPositionCommandTopic;
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }

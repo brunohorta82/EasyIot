@@ -158,8 +158,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_CONNECTED:
     knx.start(nullptr);
     infoWifi();
-    connectLocalMqtt();
-    //connectoToCloudIO();
+    connectoToCloudIO();
     break;
 #ifdef DEBUG
   case MESSAGE_DISCONNECTED:
