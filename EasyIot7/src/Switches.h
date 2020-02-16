@@ -1,10 +1,9 @@
 #ifndef SWITCHES_H
 #define SWITCHES_H
-#include "constants.h"
+
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "FS.h"
-static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 class Bounce;
 enum SwitchMode
 {
@@ -13,14 +12,23 @@ enum SwitchMode
     DUAL_SWITCH = 4,
     DUAL_PUSH = 5
 };
-
+enum SwitchSlaveMode
+{
+    S_MQTT_PUB,
+    S_MQTT_SUB,
+    S_HTTP_POST,
+    S_HTTP_GET,
+};
 enum SwitchControlType
 {
-    GPIO_OUTPUT = 1,
-    MQTT = 2,
-    KNX = 3
+    RELAY_AND_MQTT = 1,
+    MQTT = 2
 };
-
+struct SwitchStatePool
+{
+    char id[32];
+    char state[10];
+};
 struct SwitchT
 {
     double firmware;
@@ -28,17 +36,11 @@ struct SwitchT
     char name[24];
     char family[10];                      //switch, light, cover, lock
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
-    SwitchControlType typeControl = KNX;
-
-    //INTEGRATIONS
-    bool cloudIOSupport = true;
+    SwitchControlType typeControl = MQTT; //MQTT OR RELAY
+    bool alexaSupport = false;
     bool haSupport = false;
     bool knxSupport = false;
-    bool mqttSupport = true;
-    
-    //UTILS
     bool childLock = false;
-
     //GPIOS INPUT
     unsigned int primaryGpio;
     unsigned int secondaryGpio;
@@ -49,24 +51,40 @@ struct SwitchT
     unsigned int secondaryGpioControl;
     bool inverted;
 
+    //KNX
+    uint8_t knxLevelOne;
+    uint8_t knxLevelTwo;
+    uint8_t knxLevelThree;
+    uint8_t knxIdRegister;
+    uint8_t knxIdAssign;
+    bool knxNotifyGroup = true;
+
     //AUTOMATIONS
     unsigned long autoStateDelay;
     char autoStateValue[10];
+    unsigned long timeBetweenStates;
 
     //MQTT
     char mqttCommandTopic[128];
     char mqttStateTopic[128];
+    char mqttPositionStateTopic[128];
+    char mqttPositionCommandTopic[128];
+    char mqttPayload[10];
     bool mqttRetain;
 
     //CONTROL VARIABLES
-    
+    char stateControl[10];    //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
+    int positionControlCover; //COVER PERCENTAGE 100% = open, 0% close
     int lastPercentage;
     bool lastPrimaryGpioState;
     bool lastSecondaryGpioState;
     Bounce *debouncerPrimary;
     Bounce *debouncerSecondary;
+    int percentageRequest = -1;
     int statePoolIdx;
-    String currentState =  STATES_POLL[statePoolIdx];
+    unsigned int statePoolStart;
+    unsigned int statePoolEnd;
+    bool slave;
     unsigned long lastChangeState;
     
     //CLOUDIO
@@ -79,7 +97,6 @@ struct SwitchT
     void updateFromJson(JsonObject doc);
     void changeState(const char *state);
     void reloadMqttTopics();
-   String getCurrentState();
 };
 struct Switches
 {
@@ -97,9 +114,9 @@ void load(Switches &switches);
 void remove(Switches &switches, const char *id);
 void update(Switches &switches, const String &id, JsonObject doc);
 void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
+void mqttCloudSwitchControl(Switches &switches, const char *topic, const char *payload);
 void sendToServerEvents(const String &topic, const String &payload);
 void stateSwitchById(Switches &switches, const char *id, const char *state);
 struct Switches &getAtualSwitchesConfig();
-int findPoolIdx(const char *state, unsigned int currentIdx,  const char *family);
 void reloadSwitches();
 #endif

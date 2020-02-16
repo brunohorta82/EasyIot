@@ -172,6 +172,7 @@ void normalize(String &inputStr)
   inputStr.replace("ç", "c");
   inputStr.replace("á", "a");
   inputStr.replace("à", "a");
+  inputStr.replace("é", "e");
   inputStr.replace("&", "");
   inputStr.replace("%", "");
   inputStr.replace("$", "");
@@ -182,19 +183,6 @@ void normalize(String &inputStr)
   inputStr.replace("\"", "");
   inputStr.replace(" ", "");
   inputStr.replace("â", "a");
-  inputStr.replace("ã", "a");
-  inputStr.replace("ú", "u");
-  inputStr.replace("ù", "u");
-  inputStr.replace("é", "e");
-  inputStr.replace("è", "e");
-  inputStr.replace("ê", "e");
-  inputStr.replace("í", "i");
-  inputStr.replace("ì", "i");
-  inputStr.replace("õ", "o");
-  inputStr.replace("ó", "o");
-  inputStr.replace("ò", "o");
-  inputStr.replace("@", "o");
-  inputStr.replace("|", "");
 }
 
 size_t Config::serializeToJson(Print &output)
@@ -222,7 +210,7 @@ size_t Config::serializeToJson(Print &output)
   doc["apName"] = apName;
   doc["firmware"] = VERSION;
   doc["chipId"] = chipId;
-  doc["mac"] = WiFi.macAddress();
+  doc["mac"] = WiFi.softAPmacAddress();
   doc["apiUser"] = apiUser;
   doc["apiPassword"] = apiPassword;
   doc["emoncmsServer"] = emoncmsServer;

@@ -64,7 +64,7 @@ void onMqttConnect(bool sessionPresent)
     topic.replace("/set", "/status");
     
     strlcpy(sw.mqttCloudStateTopic,topic.c_str(),sizeof(sw.mqttCloudStateTopic));
-    mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.currentState.c_str());
+    mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.mqttPayload);
     
   }
 }
@@ -96,7 +96,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
   strlcpy(msg,payload,len+1);
-  mqttSwitchControl(getAtualSwitchesConfig(), topic,  msg);
+  mqttCloudSwitchControl(getAtualSwitchesConfig(), topic,  msg);
 }
 
 void onMqttPublish(uint16_t packetId)
@@ -160,8 +160,8 @@ void connectoToCloudIO()
     sdoc["id"] = sw.id;
     sdoc["name"] = sw.name;
     sdoc["family"] = sw.family;
-    sdoc["stateControl"] = sw.currentState;
-    sdoc["cloudIOSupport"] = sw.cloudIOSupport;
+    sdoc["stateControl"] = sw.stateControl;
+    sdoc["alexaSupport"] = sw.alexaSupport;
   }
   serializeJson(doc, payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");

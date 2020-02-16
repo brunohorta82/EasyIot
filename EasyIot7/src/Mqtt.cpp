@@ -88,7 +88,7 @@ boolean reconnect()
         for (auto &sw : getAtualSwitchesConfig().items)
         {
             subscribeOnMqtt(sw.mqttCommandTopic);
-            publishOnMqtt(sw.mqttStateTopic,sw.currentState.c_str(), sw.mqttRetain);
+            publishOnMqtt(sw.mqttStateTopic, sw.mqttPayload, sw.mqttRetain);
         }
     }
 
