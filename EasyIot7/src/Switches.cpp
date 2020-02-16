@@ -1,6 +1,6 @@
 #include "Switches.h"
 #include "Discovery.h"
-#include "WebServer.h"
+//#include "WebServer.h"
 #include "constants.h"
 #include "Config.h"
 #include "Mqtt.h"
@@ -68,7 +68,7 @@ size_t Switches::serializeToJson(Print &output)
     sdoc["mqttStateTopic"] = sw.mqttStateTopic;
     sdoc["primaryGpioControl"] = sw.primaryGpioControl;
     sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
-    sdoc["stateControl"] = sw.getCurrentState();
+    sdoc["stateControl"] = sw.currentState;
     sdoc["cloudIOSupport"] = sw.cloudIOSupport;
     sdoc["haSupport"] = sw.haSupport;
     sdoc["knxSupport"] = sw.knxSupport;

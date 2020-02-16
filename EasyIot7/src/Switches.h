@@ -13,24 +13,14 @@ enum SwitchMode
     DUAL_SWITCH = 4,
     DUAL_PUSH = 5
 };
-enum SwitchSlaveMode
-{
-    S_MQTT_PUB,
-    S_MQTT_SUB,
-    S_HTTP_POST,
-    S_HTTP_GET,
-};
+
 enum SwitchControlType
 {
     GPIO_OUTPUT = 1,
     MQTT = 2,
     KNX = 3
 };
-struct SwitchStatePool
-{
-    char id[32];
-    char state[10];
-};
+
 struct SwitchT
 {
     double firmware;
@@ -38,7 +28,7 @@ struct SwitchT
     char name[24];
     char family[10];                      //switch, light, cover, lock
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
-    SwitchControlType typeControl = MQTT;
+    SwitchControlType typeControl = KNX;
 
     //INTEGRATIONS
     bool cloudIOSupport = true;
