@@ -117,21 +117,6 @@ void loadUI()
     request->send(response);
   });
 }
-#if EMULATE_ALEXA
-void startAlexaDiscovery()
-{
-  fauxmo.createServer(false);
-  fauxmo.setPort(80); // required for gen3 devices
-  fauxmo.enable(true);
-  fauxmo.onSetState([](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
-    String valueStr = state ? String(map((int)value, 0, 255, 0, 100) + 1) : "0";
-#ifdef DEBUG
-    Log.notice("%s Device id: %s, name: %s, value: %s, state: %t" CR, tags::alexa, device_id, device_name, valueStr.c_str(), state);
-#endif
-    stateSwitchByName(getAtualSwitchesConfig(), device_name, state ? "ON" : "OFF", valueStr.c_str());
-  });
-}
-#endif
 void setupWebserverAsync()
 {
   server.addHandler(&events);
@@ -222,23 +207,25 @@ void setupWebserverAsync()
     request->send(response);
   });
 
-    //CONFIG
+  //CONFIG
   server.on("/assign", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication();
 #endif
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    
-    if(request->hasArg("configKey")){
-     strlcpy(getAtualConfig().configkey, request->arg("configKey").c_str(),sizeof(getAtualConfig().configkey));
-     response->setCode(200);
-     requestCloudIOSync();
-    }else
+
+    if (request->hasArg("configKey"))
+    {
+      strlcpy(getAtualConfig().configkey, request->arg("configKey").c_str(), sizeof(getAtualConfig().configkey));
+      response->setCode(200);
+      requestCloudIOSync();
+    }
+    else
     {
       response->setCode(400);
     }
-    
+
     request->send(response);
   });
 

@@ -5,6 +5,7 @@
 #include <AsyncMqttClient.h>
 #include "constants.h"
 #include "Switches.h"
+#include "Sensors.h"
 #include <ESP8266HTTPClient.h>
 AsyncMqttClient mqttClient;
 String user;
@@ -25,9 +26,11 @@ bool mqttCloudIOConnected()
 {
   return mqttClient.connected();
 }
-void notifyStateToCloudIO(const char *topic,const char *state){
-  if(!mqttClient.connected())return;
-  mqttClient.publish(topic,0,false,state);
+void notifyStateToCloudIO(const char *topic, const char *state)
+{
+  if (!mqttClient.connected())
+    return;
+  mqttClient.publish(topic, 0, false, state);
 }
 void subscribeOnMqttCloudIO(const char *topic)
 {
@@ -57,15 +60,14 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(sw.id);
     topic.concat("/set");
-    
-    strlcpy(sw.mqttCloudCommandTopic,topic.c_str(),sizeof(sw.mqttCloudCommandTopic));
+
+    strlcpy(sw.mqttCloudCommandTopic, topic.c_str(), sizeof(sw.mqttCloudCommandTopic));
     subscribeOnMqttCloudIO(sw.mqttCloudCommandTopic);
-    
+
     topic.replace("/set", "/status");
-    
-    strlcpy(sw.mqttCloudStateTopic,topic.c_str(),sizeof(sw.mqttCloudStateTopic));
+
+    strlcpy(sw.mqttCloudStateTopic, topic.c_str(), sizeof(sw.mqttCloudStateTopic));
     mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.mqttPayload);
-    
   }
 }
 
@@ -92,11 +94,11 @@ void onMqttUnsubscribe(uint16_t packetId)
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
   char msg[100];
-  #ifdef DEBUG
+#ifdef DEBUG
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
-  strlcpy(msg,payload,len+1);
-  mqttCloudSwitchControl(getAtualSwitchesConfig(), topic,  msg);
+  strlcpy(msg, payload, len + 1);
+  mqttCloudSwitchControl(getAtualSwitchesConfig(), topic, msg);
 }
 
 void onMqttPublish(uint16_t packetId)
@@ -144,7 +146,8 @@ void connectoToCloudIO()
   }
 
   size_t s = getAtualSwitchesConfig().items.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s) + s * (JSON_OBJECT_SIZE(12) + sizeof(SwitchT));
+  size_t ss = getAtualSensorsConfig().items.size();
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s) + s * (JSON_OBJECT_SIZE(12) + sizeof(SwitchT)) + ss * (JSON_OBJECT_SIZE(12) + sizeof(SensorT));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
   device["chipId"] = String(ESP.getChipId());
@@ -161,7 +164,60 @@ void connectoToCloudIO()
     sdoc["name"] = sw.name;
     sdoc["family"] = sw.family;
     sdoc["stateControl"] = sw.stateControl;
-    sdoc["alexaSupport"] = sw.alexaSupport;
+    sdoc["cloudIOSupport"] = sw.alexaSupport;
+  }
+  for (const auto &ss : getAtualSensorsConfig().items)
+  {
+    JsonObject sdoc = feactures.createNestedObject();
+    switch (ss.type)
+    {
+    case LDR:
+    case PIR:
+    case RCWL_0516:
+    case REED_SWITCH_NC:
+    case REED_SWITCH_NO:
+      sdoc["id"] = ss.id;
+      sdoc["name"] = ss.name;
+      sdoc["family"] = ss.family;
+      sdoc["stateControl"] = ss.lastBinaryState;
+      sdoc["cloudIOSupport"] = true;
+      break;
+    case DS18B20:
+
+      sdoc["id"] = ss.id;
+      sdoc["name"] = ss.name;
+      sdoc["family"] = ss.family;
+      sdoc["stateControl"] = ss.temperature;
+      sdoc["cloudIOSupport"] = true;
+      break;
+    case DHT_11:
+    case DHT_21:
+    case DHT_22:
+    {
+
+      sdoc["id"] = ss.id;
+      sdoc["name"] = ss.name;
+      sdoc["family"] = "TEMPERATURE";
+      sdoc["stateControl"] = ss.temperature;
+      sdoc["cloudIOSupport"] = true;
+      JsonObject sdoc2 = feactures.createNestedObject();
+      sdoc2["id"] = ss.id;
+      sdoc2["name"] = ss.name;
+      sdoc2["family"] = "HUMIDITY";
+      sdoc2["stateControl"] = ss.humidity;
+      sdoc2["cloudIOSupport"] = true;
+    }
+    break;
+      break;
+    case PZEM_004T:
+    case PZEM_004T_V03:
+      sdoc["id"] = ss.id;
+      sdoc["name"] = ss.name;
+      sdoc["family"] = "POWER";
+      sdoc["stateControl"] = ss.humidity;
+      sdoc["cloudIOSupport"] = true;
+      break;
+    }
   }
   serializeJson(doc, payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");
