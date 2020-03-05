@@ -237,6 +237,7 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
 }
 void setupWiFi()
 {
+  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);

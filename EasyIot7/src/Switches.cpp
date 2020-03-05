@@ -36,12 +36,11 @@ void save(Switches &switches)
   }
   switches.save(file);
   file.close();
-  SPIFFS.end();
+
 #ifdef DEBUG
   Log.notice("%s Config stored." CR, tags::switches);
 #endif
   switches.lastChange = 0ul;
- 
 }
 size_t Switches::serializeToJson(Print &output)
 {
@@ -411,7 +410,6 @@ void templateSwitch(SwitchT &sw, const String &name, const char *family, const S
     sw.debouncerSecondary->attach(sw.secondaryGpio, sw.secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     sw.debouncerSecondary->interval(5);
   }
-
   configPIN(sw.primaryGpioControl, OUTPUT);
   configPIN(sw.secondaryGpioControl, OUTPUT);
   sw.lastPrimaryGpioState = true;
@@ -534,27 +532,21 @@ void load(Switches &switches)
     switches.items.push_back(two);
 
 #elif defined FOUR_LOCK
-    SwitchT one;
-    SwitchT two;
-    SwitchT three;
-    SwitchT four;
-    templateSwitch(one, "Porta 1", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 14u, constantsConfig::noGPIO);
-    templateSwitch(two, "Porta 2", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 4u, constantsConfig::noGPIO);
-    templateSwitch(three, "Porta 3", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 12u, constantsConfig::noGPIO);
-    templateSwitch(four, "Porta 4", constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, 5u, constantsConfig::noGPIO);
-
-    one.autoStateDelay = 1000; //1 second
-    strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
-    two.autoStateDelay = 1000; //1 second
-    strlcpy(two.autoStateValue, constanstsSwitch::payloadOff, sizeof(two.autoStateValue));
-    three.autoStateDelay = 1000; //1 second
-    strlcpy(three.autoStateValue, constanstsSwitch::payloadOff, sizeof(three.autoStateValue));
-    four.autoStateDelay = 1000; //1 second
-    strlcpy(four.autoStateValue, constanstsSwitch::payloadOff, sizeof(four.autoStateValue));
-    switches.items.push_back(one);
-    switches.items.push_back(two);
-    switches.items.push_back(three);
-    switches.items.push_back(four);
+    int pinOut[4] = {
+        14,
+        4,
+        12,
+        5,
+    };
+    for (int i = 0; i < 4; i++)
+    {
+      SwitchT one;
+      templateSwitch(one, String("Porta ") + String(i + 1), constanstsSwitch::familyLock, PUSH, constantsConfig::noGPIO, constantsConfig::noGPIO, pinOut[i], constantsConfig::noGPIO);
+      one.autoStateDelay = 1000; //1 second
+      strlcpy(one.autoStateValue, constanstsSwitch::payloadOff, sizeof(one.autoStateValue));
+      Serial.println(ESP.getFreeHeap());
+      switches.items.push_back(one);
+    }
 #elif defined VMC
     SwitchT one;
     SwitchT two;
@@ -587,14 +579,14 @@ void load(Switches &switches)
     strlcpy(one.autoStateValue, constanstsSwitch::payloadReleased, sizeof(one.autoStateValue));
     switches.items.push_back(one);
 #endif
-    SPIFFS.end();
+
     return;
   }
 
   File file = SPIFFS.open(configFilenames::switches, "r+");
   switches.load(file);
   file.close();
-  SPIFFS.end();
+
 #ifdef DEBUG
   Log.notice("%s Stored values was loaded." CR, tags::switches);
 #endif
@@ -799,7 +791,7 @@ void SwitchT::changeState(const char *state)
       changeState(statesPool[statePoolIdx].c_str());
     }
   }
-  notifyStateToCloudIO(mqttCloudStateTopic,mqttPayload);
+  notifyStateToCloudIO(mqttCloudStateTopic, mqttPayload);
   publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);

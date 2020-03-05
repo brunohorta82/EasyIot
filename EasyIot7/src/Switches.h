@@ -4,6 +4,7 @@
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "FS.h"
+#include "constants.h"
 class Bounce;
 enum SwitchMode
 {
@@ -31,7 +32,7 @@ struct SwitchStatePool
 };
 struct SwitchT
 {
-    double firmware;
+    double firmware = VERSION;
     char id[32]; //Generated from name without spaces and no special characters
     char name[24];
     char family[10];                      //switch, light, cover, lock
@@ -42,27 +43,27 @@ struct SwitchT
     bool knxSupport = false;
     bool childLock = false;
     //GPIOS INPUT
-    unsigned int primaryGpio;
-    unsigned int secondaryGpio;
-    bool pullup; //USE INTERNAL RESISTOR
+    unsigned int primaryGpio = constantsConfig::noGPIO;
+    unsigned int secondaryGpio = constantsConfig::noGPIO;
+    bool pullup = false; //USE INTERNAL RESISTOR
 
     //GPIOS OUTPUT
-    unsigned int primaryGpioControl;
-    unsigned int secondaryGpioControl;
-    bool inverted;
+    unsigned int primaryGpioControl = constantsConfig::noGPIO;
+    unsigned int secondaryGpioControl = constantsConfig::noGPIO;
+    bool inverted = false;
 
     //KNX
-    uint8_t knxLevelOne;
-    uint8_t knxLevelTwo;
-    uint8_t knxLevelThree;
-    uint8_t knxIdRegister;
-    uint8_t knxIdAssign;
+    uint8_t knxLevelOne = 0;
+    uint8_t knxLevelTwo = 0;
+    uint8_t knxLevelThree = 0;
+    uint8_t knxIdRegister = 0;
+    uint8_t knxIdAssign = 0;
     bool knxNotifyGroup = true;
 
     //AUTOMATIONS
-    unsigned long autoStateDelay;
+    unsigned long autoStateDelay = 0;
     char autoStateValue[10];
-    unsigned long timeBetweenStates;
+    unsigned long timeBetweenStates = 0;
 
     //MQTT
     char mqttCommandTopic[128];
@@ -70,27 +71,26 @@ struct SwitchT
     char mqttPositionStateTopic[128];
     char mqttPositionCommandTopic[128];
     char mqttPayload[10];
-    bool mqttRetain;
+    bool mqttRetain = false;
 
     //CONTROL VARIABLES
     char stateControl[10];    //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
     int positionControlCover; //COVER PERCENTAGE 100% = open, 0% close
-    int lastPercentage;
-    bool lastPrimaryGpioState;
-    bool lastSecondaryGpioState;
+    int lastPercentage = 0;
+    bool lastPrimaryGpioState = false;
+    bool lastSecondaryGpioState = false;
     Bounce *debouncerPrimary;
     Bounce *debouncerSecondary;
     int percentageRequest = -1;
-    int statePoolIdx;
-    unsigned int statePoolStart;
-    unsigned int statePoolEnd;
-    bool slave;
-    unsigned long lastChangeState;
-    
+    int statePoolIdx = 0;
+    unsigned int statePoolStart = 0;
+    unsigned int statePoolEnd = 0;
+    unsigned long lastChangeState = 0;
+
     //CLOUDIO
     char mqttCloudCommandTopic[128];
     char mqttCloudStateTopic[128];
-    
+
     //METHODS
     void load(File &file);
     void save(File &file) const;
@@ -105,8 +105,8 @@ struct Switches
     void load(File &file);
     void save(File &file) const;
     bool remove(const char *id);
-    
-    size_t serializeToJson( Print &output);
+
+    size_t serializeToJson(Print &output);
 };
 void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
 void loop(Switches &switches);

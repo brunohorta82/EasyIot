@@ -193,7 +193,7 @@ void save(Sensors &sensors)
   }
   sensors.save(file);
   file.close();
-  SPIFFS.end();
+
 #ifdef DEBUG
   Log.notice("%s Config stored." CR, tags::sensors);
 #endif
@@ -251,7 +251,7 @@ void load(Sensors &sensors)
     strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
     strlcpy(pzem.deviceClass, constantsSensor::noneClass, sizeof(pzem.deviceClass));
     sensors.items.push_back(pzem);
-    SPIFFS.end();
+
     save(sensors);
     load(sensors);
     return;
@@ -294,7 +294,7 @@ void load(Sensors &sensors)
     strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
     strlcpy(pzem.deviceClass, constantsSensor::noneClass, sizeof(pzem.deviceClass));
     sensors.items.push_back(pzem);
-    SPIFFS.end();
+
     save(sensors);
     load(sensors);
     return;
@@ -304,7 +304,7 @@ void load(Sensors &sensors)
   File file = SPIFFS.open(configFilenames::sensors, "r+");
   sensors.load(file);
   file.close();
-  SPIFFS.end();
+
 #ifdef DEBUG
   Log.notice("%s Stored values was loaded." CR, tags::sensors);
 #endif

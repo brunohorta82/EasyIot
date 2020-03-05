@@ -343,7 +343,7 @@ void loadStoredConfiguration(Config &config)
     config.knxMember = 1;
     config.firmware = VERSION;
     strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
-    SPIFFS.end();
+
 #ifdef DEBUG
     Log.notice("%s Config %s loaded." CR, tags::config, String(config.firmware).c_str());
 #endif
@@ -352,7 +352,7 @@ void loadStoredConfiguration(Config &config)
   File file = SPIFFS.open(configFilenames::config, "r+");
   config.load(file);
   file.close();
-  SPIFFS.end();
+
 #ifdef DEBUG
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
@@ -370,7 +370,7 @@ Config &Config::saveConfigurationOnDefaultFile()
   File file = SPIFFS.open(configFilenames::config, "w+");
   save(file);
   file.close();
-  SPIFFS.end();
+
 #ifdef DEBUG
   Log.notice("%s Config stored." CR, tags::config);
 #endif
