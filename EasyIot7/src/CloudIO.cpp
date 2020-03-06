@@ -60,7 +60,7 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(sw.id);
     topic.concat("/set");
-
+    topic.toLowerCase();
     strlcpy(sw.mqttCloudCommandTopic, topic.c_str(), sizeof(sw.mqttCloudCommandTopic));
     subscribeOnMqttCloudIO(sw.mqttCloudCommandTopic);
 
@@ -81,6 +81,7 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(ss.id);
     topic.concat("/status");
+    topic.toLowerCase();
     strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
   }
 }

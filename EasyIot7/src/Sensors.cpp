@@ -2,6 +2,7 @@
 #include "Discovery.h"
 #include "constants.h"
 #include "WebServer.h"
+#include "WiFi.h"
 #include "Config.h"
 #include "Mqtt.h"
 #include "CloudIO.h"
@@ -509,9 +510,10 @@ void SensorT::reloadMqttTopics()
 }
 
 void publishReadings(String &readings , SensorT & sensor){
+     sendToServerEvents("sensors", readings.c_str());
+  if(!wifiConnected())return;
   notifyStateToCloudIO(sensor.mqttCloudStateTopic,readings.c_str());
   publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
-  sendToServerEvents("sensors", readings.c_str());
   if(sensor.emoncmsSupport){
       publishOnEmoncms(sensor, readings);
   }
@@ -559,7 +561,7 @@ void loop(Sensors &sensors)
         auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
       publishReadings(readings,ss);   
 #ifdef DEBUG
-        Log.notice("%s {\"illuminance\": %d }" CR, tags::mqtt, ldrRaw);
+        Log.notice("%s {\"illuminance\": %d }" CR, tags::sensors, ldrRaw);
 #endif
       }
     }

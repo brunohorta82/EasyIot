@@ -260,6 +260,9 @@ void loopWiFi()
   jw.loop();
   MDNS.update();
 }
+bool wifiConnected(){
+  return jw.connected();
+}
 size_t systemJSONStatus(Print &output)
 {
   const size_t CAPACITY = JSON_OBJECT_SIZE(13) + 400;
