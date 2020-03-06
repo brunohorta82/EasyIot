@@ -370,8 +370,6 @@ size_t Sensors::serializeToJson(Print &output)
     sdoc["pullup"] = ss.pullup;
     sdoc["delayRead"] = ss.delayRead;
     sdoc["lastBinaryState"] = ss.lastBinaryState;
-    sdoc["temperature"] = ss.temperature;
-    sdoc["humidity"] = ss.humidity;
     sdoc["payloadOff"] = ss.payloadOff;
     sdoc["payloadOn"] = ss.payloadOn;
     sdoc["haSupport"] = ss.haSupport;
@@ -509,8 +507,8 @@ void SensorT::reloadMqttTopics()
   strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
 }
 
-void publishReadings(String &rawReadings,String &readings, SensorT & sensor, const char   *overrideClass){
-     sendToServerEvents("sensors", readings.c_str());
+void publishReadings(String &rawReadings,String &readings, SensorT & sensor, const char *overrideClass, bool onlyCloudIO){
+  sendToServerEvents(sensor.id, readings.c_str());
   if(!wifiConnected())return;
    String topic = String(sensor.mqttCloudStateTopic);
   topic.replace("clazz",overrideClass);
@@ -560,7 +558,7 @@ void loop(Sensors &sensors)
         ss.lastRead = millis();
         int ldrRaw = analogRead(ss.primaryGpio);
         String analogReadAsString = String(ldrRaw);
-        publishReadings(analogReadAsString,analogReadAsString,ss,ss.deviceClass);   
+        publishReadings(analogReadAsString,analogReadAsString,ss,ss.deviceClass, false);   
 #ifdef DEBUG
         Log.notice("%s {\"%s\": %d }" CR, tags::sensors,ss.deviceClass, ldrRaw);
 #endif
@@ -577,7 +575,7 @@ void loop(Sensors &sensors)
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
-        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass);   
+        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass, false);   
 #ifdef DEBUG
         Log.notice("%s {\"%s\": %t }" CR, tags::sensors,ss.deviceClass, binaryState);
 #endif
@@ -591,7 +589,7 @@ void loop(Sensors &sensors)
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
-        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass);   
+        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass, false);    
 #ifdef DEBUG
         Log.notice("%s {\"%d\": %t }" CR, tags::sensors,ss.deviceClass, binaryState);
 #endif
@@ -611,8 +609,8 @@ void loop(Sensors &sensors)
           String temperatureAsString = String(ss.temperature);
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
-          publishReadings(temperatureAsString,readings,ss,ss.deviceClass);
-          publishReadings(humidityAsString,readings,ss,"humidity");   
+          publishReadings(temperatureAsString,readings,ss,ss.deviceClass, false);   
+          publishReadings(humidityAsString,readings,ss,"humidity", true);   
 #ifdef DEBUG
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
 #endif
@@ -627,22 +625,19 @@ void loop(Sensors &sensors)
       {
         ss.dallas->begin();
         ss.oneWireSensorsCount = ss.dallas->getDeviceCount();
-        StaticJsonDocument<256> doc;
-        JsonObject obj = doc.to<JsonObject>();
         for (int i = 0; i < ss.oneWireSensorsCount; i++)
         {
           ss.dallas->requestTemperatures();
           ss.lastRead = millis();
-          ss.temperature = ss.dallas->getTempCByIndex(i);
-          String temperatureAsString = String("temperature_") + String(i + 1);
-          obj[temperatureAsString] = trunc(ss.temperature);
+          String temperatureAsString = String(ss.dallas->getTempCByIndex(i));
+          publishReadings(temperatureAsString,temperatureAsString,ss,ss.deviceClass, false);  
+          #ifdef DEBUG
+          Log.notice("%s %s %s %d " CR, tags::sensors, temperatureAsString.c_str(), ss.deviceClass, i);
+          #endif
         }
-        String readings = "";
-        serializeJson(doc, readings);
-      publishReadings(readings,readings,ss,ss.deviceClass);   
-#ifdef DEBUG
-        Log.notice("%s %s " CR, tags::sensors, readings.c_str());
-#endif
+        
+          
+
       }
     }
     break;
@@ -677,7 +672,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-        publishReadings(readings,readings,ss,"POWER");   
+        publishReadings(readings,readings,ss,"POWER", false);     
 #ifdef DEBUG
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
 #endif
@@ -714,7 +709,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-           publishReadings(readings,readings,ss,"POWER");   
+           publishReadings(readings,readings,ss,"POWER", false);     
 #ifdef DEBUG
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
