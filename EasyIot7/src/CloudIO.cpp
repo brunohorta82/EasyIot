@@ -69,6 +69,20 @@ void onMqttConnect(bool sessionPresent)
     strlcpy(sw.mqttCloudStateTopic, topic.c_str(), sizeof(sw.mqttCloudStateTopic));
     mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.mqttPayload);
   }
+  for (auto &ss : getAtualSensorsConfig().items)
+  {
+    String topic;
+    topic.reserve(200);
+    topic.concat(user);
+    topic.concat("/");
+    topic.concat(getAtualConfig().chipId);
+    topic.concat("/");
+    topic.concat(ss.deviceClass);
+    topic.concat("/");
+    topic.concat(ss.id);
+    topic.concat("/status");
+    strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
+  }
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -136,18 +150,13 @@ WiFiClient client;
 HTTPClient http;
 void connectoToCloudIO()
 {
-  if (WiFi.status() != WL_CONNECTED)
+if (WiFi.status() != WL_CONNECTED)
     return;
 
   String payload = "";
-  if (getAtualSwitchesConfig().items.empty())
-  {
-    payload = "[]";
-  }
-
   size_t s = getAtualSwitchesConfig().items.size();
   size_t ss = getAtualSensorsConfig().items.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s) + s * (JSON_OBJECT_SIZE(12) + sizeof(SwitchT)) + ss * (JSON_OBJECT_SIZE(12) + sizeof(SensorT));
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
   device["chipId"] = String(ESP.getChipId());
@@ -166,62 +175,36 @@ void connectoToCloudIO()
     sdoc["stateControl"] = sw.stateControl;
     sdoc["cloudIOSupport"] = sw.alexaSupport;
   }
+
+
   for (const auto &ss : getAtualSensorsConfig().items)
   {
     JsonObject sdoc = feactures.createNestedObject();
+      sdoc["id"] = ss.id;
+      sdoc["name"] = ss.name;
+      sdoc["family"] = ss.deviceClass;
+      sdoc["cloudIOSupport"] = true;
     switch (ss.type)
     {
-    case LDR:
-    case PIR:
-    case RCWL_0516:
-    case REED_SWITCH_NC:
-    case REED_SWITCH_NO:
-      sdoc["id"] = ss.id;
-      sdoc["name"] = ss.name;
-      sdoc["family"] = ss.family;
-      sdoc["stateControl"] = ss.lastBinaryState;
-      sdoc["cloudIOSupport"] = true;
-      break;
-    case DS18B20:
-
-      sdoc["id"] = ss.id;
-      sdoc["name"] = ss.name;
-      sdoc["family"] = ss.family;
-      sdoc["stateControl"] = ss.temperature;
-      sdoc["cloudIOSupport"] = true;
-      break;
+    
     case DHT_11:
     case DHT_21:
     case DHT_22:
     {
-
-      sdoc["id"] = ss.id;
-      sdoc["name"] = ss.name;
-      sdoc["family"] = "TEMPERATURE";
-      sdoc["stateControl"] = ss.temperature;
-      sdoc["cloudIOSupport"] = true;
       JsonObject sdoc2 = feactures.createNestedObject();
       sdoc2["id"] = ss.id;
       sdoc2["name"] = ss.name;
       sdoc2["family"] = "HUMIDITY";
-      sdoc2["stateControl"] = ss.humidity;
       sdoc2["cloudIOSupport"] = true;
     }
     break;
-      break;
-    case PZEM_004T:
-    case PZEM_004T_V03:
-      sdoc["id"] = ss.id;
-      sdoc["name"] = ss.name;
-      sdoc["family"] = "POWER";
-      sdoc["stateControl"] = ss.humidity;
-      sdoc["cloudIOSupport"] = true;
-      break;
+    default:
+    break;
     }
   }
   serializeJson(doc, payload);
+  Serial.println(payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");
-  //http.begin(client, "http://192.168.187.94:8080/devices");
   http.addHeader("Content-Type", "application/json");
 #ifdef DEBUG
   Log.error("%s [HTTP] POST" CR, tags::cloudIO);

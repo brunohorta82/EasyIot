@@ -4,6 +4,7 @@
 #include "WebServer.h"
 #include "Config.h"
 #include "Mqtt.h"
+#include "CloudIO.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include <PZEM004T.h>
@@ -69,26 +70,31 @@ void Sensors::load(File &file)
       continue;
       break;
     case LDR:
-      //nothing to do
+       strlcpy(item.deviceClass, "LIGHTNESS", sizeof(item.deviceClass));
       break;
     case PIR:
     case RCWL_0516:
+    strlcpy(item.deviceClass, "MOTION", sizeof(item.deviceClass));
       configPIN(item.primaryGpio, INPUT);
       break;
     case REED_SWITCH_NC:
     case REED_SWITCH_NO:
+    strlcpy(item.deviceClass, "ALARM", sizeof(item.deviceClass));
       configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
       break;
     case DHT_11:
     case DHT_21:
     case DHT_22:
+    strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
       item.dht = new DHT_nonblocking(item.primaryGpio, item.type);
       break;
     case DS18B20:
+    strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
       break;
     case PZEM_004T:
     {
+      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
       IPAddress ip(192, 168, 1, item.primaryGpio);
       item.pzem->setAddress(ip);
@@ -99,6 +105,7 @@ void Sensors::load(File &file)
     }
     break;
     case PZEM_004T_V03:
+    strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
       item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
       configPIN(item.tertiaryGpio, INPUT);
 #if WITH_DISPLAY
@@ -444,7 +451,7 @@ void SensorT::updateFromJson(JsonObject doc)
     return;
     break;
   case LDR:
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    strlcpy(family, "constantsSensor::familySensor", sizeof(family));
     strlcpy(mqttPayload, "{\"illuminance\":0}", sizeof(mqttPayload));
     break;
   case PIR:
@@ -500,6 +507,15 @@ void SensorT::reloadMqttTopics()
   mqttTopic.concat("/state");
   strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
 }
+
+void publishReadings(String &readings , SensorT & sensor){
+  notifyStateToCloudIO(sensor.mqttCloudStateTopic,readings.c_str());
+  publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
+  sendToServerEvents("sensors", readings.c_str());
+  if(sensor.emoncmsSupport){
+      publishOnEmoncms(sensor, readings);
+  }
+}
 void loop(Sensors &sensors)
 {
 #if WITH_DISPLAY
@@ -526,9 +542,7 @@ void loop(Sensors &sensors)
 #endif
   for (auto &ss : sensors.items)
   {
-
-    if (ss.primaryGpio == constantsConfig::noGPIO)
-      continue;
+  if (ss.primaryGpio == constantsConfig::noGPIO)continue;
     switch (ss.type)
     {
     case UNDEFINED:
@@ -543,9 +557,7 @@ void loop(Sensors &sensors)
         int ldrRaw = analogRead(ss.primaryGpio);
         String analogReadAsString = String(ldrRaw);
         auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
-        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings.c_str());
-        publishOnEmoncms(ss, readings);
+      publishReadings(readings,ss);   
 #ifdef DEBUG
         Log.notice("%s {\"illuminance\": %d }" CR, tags::mqtt, ldrRaw);
 #endif
@@ -563,8 +575,7 @@ void loop(Sensors &sensors)
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
-        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings.c_str());
+    publishReadings(readings,ss);   
 #ifdef DEBUG
         Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
 #endif
@@ -579,8 +590,7 @@ void loop(Sensors &sensors)
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
-        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings.c_str());
+        publishReadings(readings,ss);   
 #ifdef DEBUG
         Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
 #endif
@@ -601,8 +611,7 @@ void loop(Sensors &sensors)
           String temperatureAsString = String(ss.temperature);
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
-          publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings.c_str());
+           publishReadings(readings,ss);   
 #ifdef DEBUG
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
 #endif
@@ -629,8 +638,7 @@ void loop(Sensors &sensors)
         }
         String readings = "";
         serializeJson(doc, readings);
-        publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-        sendToServerEvents("sensors", readings.c_str());
+      publishReadings(readings,ss);   
 #ifdef DEBUG
         Log.notice("%s %s " CR, tags::sensors, readings.c_str());
 #endif
@@ -668,9 +676,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-          publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings.c_str());
-          publishOnEmoncms(ss, readings);
+        publishReadings(readings,ss);   
 #ifdef DEBUG
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
 #endif
@@ -707,9 +713,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-          publishOnMqtt(ss.mqttStateTopic, readings.c_str(), ss.mqttRetain);
-          sendToServerEvents("sensors", readings.c_str());
-          publishOnEmoncms(ss, readings);
+           publishReadings(readings,ss);   
 #ifdef DEBUG
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif

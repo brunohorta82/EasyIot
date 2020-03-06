@@ -67,6 +67,8 @@ struct SensorT
   float temperature = static_cast<float>(0);
   float humidity = static_cast<float>(0);
 
+//CLOUDIO
+ char mqttCloudStateTopic[128];
   //CUSTOM PAYLOADS
   char payloadOff[10];
   char payloadOn[10];
