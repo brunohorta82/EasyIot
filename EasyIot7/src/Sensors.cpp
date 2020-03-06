@@ -509,10 +509,12 @@ void SensorT::reloadMqttTopics()
   strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
 }
 
-void publishReadings(String &readings , SensorT & sensor){
+void publishReadings(String &rawReadings,String &readings, SensorT & sensor, const char   *overrideClass){
      sendToServerEvents("sensors", readings.c_str());
   if(!wifiConnected())return;
-  notifyStateToCloudIO(sensor.mqttCloudStateTopic,readings.c_str());
+   String topic = String(sensor.mqttCloudStateTopic);
+  topic.replace("clazz",overrideClass);
+  notifyStateToCloudIO(topic.c_str(),rawReadings.c_str(), rawReadings.length());
   publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
   if(sensor.emoncmsSupport){
       publishOnEmoncms(sensor, readings);
@@ -558,10 +560,9 @@ void loop(Sensors &sensors)
         ss.lastRead = millis();
         int ldrRaw = analogRead(ss.primaryGpio);
         String analogReadAsString = String(ldrRaw);
-        auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
-      publishReadings(readings,ss);   
+        publishReadings(analogReadAsString,analogReadAsString,ss,ss.deviceClass);   
 #ifdef DEBUG
-        Log.notice("%s {\"illuminance\": %d }" CR, tags::sensors, ldrRaw);
+        Log.notice("%s {\"%s\": %d }" CR, tags::sensors,ss.deviceClass, ldrRaw);
 #endif
       }
     }
@@ -576,10 +577,9 @@ void loop(Sensors &sensors)
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
-        auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
-    publishReadings(readings,ss);   
+        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass);   
 #ifdef DEBUG
-        Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
+        Log.notice("%s {\"%s\": %t }" CR, tags::sensors,ss.deviceClass, binaryState);
 #endif
       }
     }
@@ -591,10 +591,9 @@ void loop(Sensors &sensors)
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
-        auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
-        publishReadings(readings,ss);   
+        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass);   
 #ifdef DEBUG
-        Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
+        Log.notice("%s {\"%d\": %t }" CR, tags::sensors,ss.deviceClass, binaryState);
 #endif
       }
     }
@@ -604,7 +603,6 @@ void loop(Sensors &sensors)
     case DHT_21:
     case DHT_22:
     {
-
       if (ss.dht->measure(&ss.temperature, &ss.humidity) == true)
       {
         if (ss.lastRead + ss.delayRead < millis())
@@ -613,7 +611,8 @@ void loop(Sensors &sensors)
           String temperatureAsString = String(ss.temperature);
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
-           publishReadings(readings,ss);   
+          publishReadings(temperatureAsString,readings,ss,ss.deviceClass);
+          publishReadings(humidityAsString,readings,ss,"humidity");   
 #ifdef DEBUG
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
 #endif
@@ -640,7 +639,7 @@ void loop(Sensors &sensors)
         }
         String readings = "";
         serializeJson(doc, readings);
-      publishReadings(readings,ss);   
+      publishReadings(readings,readings,ss,ss.deviceClass);   
 #ifdef DEBUG
         Log.notice("%s %s " CR, tags::sensors, readings.c_str());
 #endif
@@ -678,7 +677,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-        publishReadings(readings,ss);   
+        publishReadings(readings,readings,ss,"POWER");   
 #ifdef DEBUG
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
 #endif
@@ -715,7 +714,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-           publishReadings(readings,ss);   
+           publishReadings(readings,readings,ss,"POWER");   
 #ifdef DEBUG
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif

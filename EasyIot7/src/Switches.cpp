@@ -791,7 +791,7 @@ void SwitchT::changeState(const char *state)
       changeState(statesPool[statePoolIdx].c_str());
     }
   }
-  notifyStateToCloudIO(mqttCloudStateTopic, mqttPayload);
+  notifyStateToCloudIO(mqttCloudStateTopic,  statesPool[statePoolIdx].c_str(), statesPool[statePoolIdx].length());
   publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);

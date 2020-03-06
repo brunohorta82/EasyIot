@@ -112,14 +112,12 @@ void addToHaDiscovery(const SensorT &s)
   case LDR:
     object["unit_of_measurement"] = "lux";
     object["device_class"] = "illuminance";
-    object["value_template"] = "{{value_json.illuminance}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/I" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PIR:
   case RCWL_0516:
     object["device_class"] = "occupancy";
-    object["value_template"] = "{{value_json.binary_state}}";
     object["payload_on"] = 1;
     object["payload_off"] = 0;
     serializeJson(object, objectStr);
@@ -128,7 +126,6 @@ void addToHaDiscovery(const SensorT &s)
   case REED_SWITCH_NC:
   case REED_SWITCH_NO:
     object["device_class"] = "window";
-    object["value_template"] = "{{value_json.binary_state}}";
     object["payload_on"] = 1;
     object["payload_off"] = 0;
     serializeJson(object, objectStr);

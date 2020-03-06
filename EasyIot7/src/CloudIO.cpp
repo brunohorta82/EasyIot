@@ -26,11 +26,11 @@ bool mqttCloudIOConnected()
 {
   return mqttClient.connected();
 }
-void notifyStateToCloudIO(const char *topic, const char *state)
+void notifyStateToCloudIO(const char *topic, const char *state, size_t length)
 {
   if (!mqttClient.connected())
     return;
-  mqttClient.publish(topic, 0, false, state);
+  mqttClient.publish(topic, 0, false, state, length);
 }
 void subscribeOnMqttCloudIO(const char *topic)
 {
@@ -76,8 +76,7 @@ void onMqttConnect(bool sessionPresent)
     topic.concat(user);
     topic.concat("/");
     topic.concat(getAtualConfig().chipId);
-    topic.concat("/");
-    topic.concat(ss.deviceClass);
+    topic.concat("/clazz");
     topic.concat("/");
     topic.concat(ss.id);
     topic.concat("/status");
