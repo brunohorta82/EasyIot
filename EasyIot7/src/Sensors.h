@@ -52,7 +52,7 @@ struct SensorT
   //TEMPERATURE AND HUMIDITY SENSORS
   DHT_nonblocking *dht;
   DallasTemperature *dallas;
-  uint8_t oneWireSensorsCount = 0;
+  uint8_t busSensorCount = 0;
 
   PZEM004T *pzem;
   PZEM004Tv30 *pzemv03;
@@ -66,7 +66,7 @@ struct SensorT
   //READINGS
   float temperature = static_cast<float>(0);
   float humidity = static_cast<float>(0);
-
+  bool reading = false;
 //CLOUDIO
  char mqttCloudStateTopic[128];
   //CUSTOM PAYLOADS

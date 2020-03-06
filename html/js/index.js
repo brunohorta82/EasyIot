@@ -1,8 +1,9 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.4.1"
 };
 var switches = [];
 var sensors = [];
+var source = null;
 let sortByProperty = function (property) {
     return function (x, y) {
         return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
@@ -385,6 +386,21 @@ function fillSensors(payload) {
     $('#sensors_config').empty();
     for (let obj of payload.sort(sortByProperty('name'))) {
         buildSensor(obj);
+        if(obj.busSensorCount > 1){
+            for ( idx = 1  ; idx <= obj.busSensorCount ;idx++) {
+                let id = obj.id+"_"+(idx);
+                let name = obj.name+"_"+(idx);
+                updateSensorReadings(id ,name, "");
+                source.addEventListener(id, function (e) {
+                    updateSensorReadings(id,name, e.data);
+                }, false);
+            }
+        }else {
+            source.addEventListener(obj.id, function (e) {
+                updateSensorReadings(obj.id ,obj.name, e.data);
+            }, false);
+        }
+
     }
 }
 
@@ -568,22 +584,7 @@ function buildSensor(obj) {
         '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
         '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="s_mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
         '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span' +
-        '                                    class="lang-group">Grupo</span></span></td>' +
-        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' +
-        '                                                            type="text" id="s_knxLevelOne_' + obj.id + '" placeholder="ex: 2"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' +
-        '                                                            type="text" id="s_knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelThree + '"' +
-        '                                                            type="text" id="s_knxLevelThree_' + obj.id + '" placeholder="ex: 1"' +
-        '                                                             maxlength="2" required/>' +
 
-        '                                </td>' +
-        '                            </tr>' +
         '                            <tr >' +
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-reading-interval">Leituras a cada </span></span></td>' +
@@ -623,24 +624,21 @@ function buildSensor(obj) {
     loadsLanguage(localStorage.getItem('lang'));
 }
 
-function updateSensorReadings(json) {
-    Object.keys(json).forEach(function (key) {
-        if ($('#' + key).length > 0) {
-            $("#" + key + "_value").text(json[key]);
+function updateSensorReadings(id ,name, value) {
+        if ($('#' + id).length > 0) {
+            $("#" + id + "_value").text(value);
         } else {
-            $('#readings').append('  <div id="' + key + '" style="margin-right: 10px; margin-left: 10px">' +
+            $('#readings').append('  <div id="' + id + '" style="margin-right: 10px; margin-left: 10px">' +
                 '                <div' +
                 '                     style="width: 50px; height: 50px; padding-top:13px; margin-left: 10px; margin-right: 10px; border-radius: 50px; border: solid 2px white;">' +
-                '                    <span id="' + key + '_value">' + json[key] + '</span>' +
+                '                    <span id="' + id + '_value">' + value + '</span>' +
                 '                </div>' +
                 '                <div' +
                 '                    style="margin-top: -5px;border-radius: 10px; font-size: 10px;height: 15px;background-color: #86bd9a">' +
-                '                    <span >' + key + '</span>' +
+                '                    <span >' + name + '</span>' +
                 '                </div>' +
                 '            </div>')
         }
-    });
-
 }
 
 function buildSwitch(obj) {
@@ -1165,7 +1163,7 @@ $(document).ready(function () {
     toggleActive("node");
     setInterval(systemStatus, 15000);
     if (!!window.EventSource) {
-        let source = new EventSource(endpoint.baseUrl + '/events');
+        source = new EventSource(endpoint.baseUrl + '/events');
         source.addEventListener('states', function (e) {
             let json = JSON.parse(e.data);
             let state = json.state == "OFF" ? "on" : json.state.toLowerCase();
@@ -1174,10 +1172,7 @@ $(document).ready(function () {
             $("#btn_" + state + "_" + json.id).removeClass("CLOSE");
             $("#btn_" + state + "_" + json.id).addClass(json.state);
         }, false);
-        source.addEventListener('sensors', function (e) {
-            let json = JSON.parse(e.data);
-            updateSensorReadings(json);
-        }, false);
+
     }
 
 });

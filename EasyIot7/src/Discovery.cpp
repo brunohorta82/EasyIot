@@ -96,13 +96,12 @@ void addToHaDiscovery(const SensorT &s)
     publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
-    for (int i = 0; i < s.oneWireSensorsCount; i++)
+    for (int i = 0; i < s.busSensorCount; i++)
     {
       String idx = String(i + 1);
       object["name"] = String(s.name) + idx;
       object["unit_of_measurement"] = "ºC";
       object["device_class"] = "temperature";
-      object["value_template"] = String("{{value_json.temperature_") + idx + String("}}");
       objectStr = "";
       serializeJson(object, objectStr);
       publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + idx + "/config").c_str(), objectStr.c_str(), false);

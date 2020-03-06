@@ -92,6 +92,8 @@ void Sensors::load(File &file)
     case DS18B20:
     strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
+      item.dallas->begin();
+      item.busSensorCount = item.dallas->getDeviceCount();
       break;
     case PZEM_004T:
     {
@@ -359,6 +361,7 @@ size_t Sensors::serializeToJson(Print &output)
     JsonObject sdoc = doc.createNestedObject();
     sdoc["id"] = ss.id;
     sdoc["name"] = ss.name;
+    sdoc["busSensorCount"] = ss.busSensorCount;
     sdoc["family"] = ss.family;
     sdoc["type"] = static_cast<int>(ss.type);
     sdoc["deviceClass"] = ss.deviceClass;
@@ -374,9 +377,6 @@ size_t Sensors::serializeToJson(Print &output)
     sdoc["payloadOn"] = ss.payloadOn;
     sdoc["haSupport"] = ss.haSupport;
     sdoc["emoncmsSupport"] = ss.emoncmsSupport;
-    sdoc["knxLevelOne"] = ss.knxLevelOne;
-    sdoc["knxLevelTwo"] = ss.knxLevelTwo;
-    sdoc["knxLevelThree"] = ss.knxLevelThree;
   }
   return serializeJson(doc, output);
 }
@@ -478,6 +478,8 @@ void SensorT::updateFromJson(JsonObject doc)
     break;
   case DS18B20:
     dallas = new DallasTemperature(new OneWire(primaryGpio));
+    dallas->begin();
+    busSensorCount = dallas->getDeviceCount();
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
 
     break;
@@ -507,8 +509,14 @@ void SensorT::reloadMqttTopics()
   strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
 }
 
-void publishReadings(String &rawReadings,String &readings, SensorT & sensor, const char *overrideClass, bool onlyCloudIO){
-  sendToServerEvents(sensor.id, readings.c_str());
+void publishReadings(String &rawReadings,String &readings, SensorT & sensor, const char* suffixId, const char *overrideClass, bool onlyCloudIO){
+  String id = String(sensor.id);
+  id.concat(suffixId);
+      #ifdef DEBUG
+          Log.notice("%s %s %s %s " CR, tags::sensors, readings.c_str(), sensor.deviceClass, id.c_str());
+          #endif
+  sendToServerEvents(id, rawReadings.c_str());
+  
   if(!wifiConnected())return;
    String topic = String(sensor.mqttCloudStateTopic);
   topic.replace("clazz",overrideClass);
@@ -558,7 +566,7 @@ void loop(Sensors &sensors)
         ss.lastRead = millis();
         int ldrRaw = analogRead(ss.primaryGpio);
         String analogReadAsString = String(ldrRaw);
-        publishReadings(analogReadAsString,analogReadAsString,ss,ss.deviceClass, false);   
+        publishReadings(analogReadAsString,analogReadAsString,ss, "",ss.deviceClass, false);   
 #ifdef DEBUG
         Log.notice("%s {\"%s\": %d }" CR, tags::sensors,ss.deviceClass, ldrRaw);
 #endif
@@ -575,7 +583,7 @@ void loop(Sensors &sensors)
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
-        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass, false);   
+        publishReadings(binaryStateAsString,binaryStateAsString,ss,"",ss.deviceClass, false);   
 #ifdef DEBUG
         Log.notice("%s {\"%s\": %t }" CR, tags::sensors,ss.deviceClass, binaryState);
 #endif
@@ -589,7 +597,7 @@ void loop(Sensors &sensors)
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
-        publishReadings(binaryStateAsString,binaryStateAsString,ss,ss.deviceClass, false);    
+        publishReadings(binaryStateAsString,binaryStateAsString,ss,"",ss.deviceClass, false);    
 #ifdef DEBUG
         Log.notice("%s {\"%d\": %t }" CR, tags::sensors,ss.deviceClass, binaryState);
 #endif
@@ -609,8 +617,8 @@ void loop(Sensors &sensors)
           String temperatureAsString = String(ss.temperature);
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
-          publishReadings(temperatureAsString,readings,ss,ss.deviceClass, false);   
-          publishReadings(humidityAsString,readings,ss,"humidity", true);   
+          publishReadings(temperatureAsString,readings,ss,"",ss.deviceClass, false);   
+          publishReadings(humidityAsString,readings,ss,"","humidity", true);   
 #ifdef DEBUG
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
 #endif
@@ -621,22 +629,18 @@ void loop(Sensors &sensors)
     case DS18B20:
     {
 
-      if (ss.lastRead + ss.delayRead < millis())
+      if (ss.lastRead + ss.delayRead < millis() && !ss.reading)
       {
-        ss.dallas->begin();
-        ss.oneWireSensorsCount = ss.dallas->getDeviceCount();
-        for (int i = 0; i < ss.oneWireSensorsCount; i++)
+       ss.reading = true;
+        for (int i = 0; i < ss.busSensorCount; i++)
         {
           ss.dallas->requestTemperatures();
-          ss.lastRead = millis();
           String temperatureAsString = String(ss.dallas->getTempCByIndex(i));
-          publishReadings(temperatureAsString,temperatureAsString,ss,ss.deviceClass, false);  
-          #ifdef DEBUG
-          Log.notice("%s %s %s %d " CR, tags::sensors, temperatureAsString.c_str(), ss.deviceClass, i);
-          #endif
+          publishReadings(temperatureAsString,temperatureAsString,ss,String(String("_")+String(i+1)).c_str(),ss.deviceClass, false);  
+      
         }
-        
-          
+         ss.lastRead = millis();
+          ss.reading = false;
 
       }
     }
@@ -672,7 +676,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-        publishReadings(readings,readings,ss,"POWER", false);     
+        publishReadings(readings,readings,ss,"","POWER", false);     
 #ifdef DEBUG
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
 #endif
@@ -709,7 +713,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-           publishReadings(readings,readings,ss,"POWER", false);     
+           publishReadings(readings,readings,ss,"POWER", "",false);     
 #ifdef DEBUG
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
