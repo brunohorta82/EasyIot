@@ -30,7 +30,7 @@ void initHaDiscovery(const Sensors &sensors)
   }
 }
 
-void createHaLock(const SwitchT &sw)
+void createHaSwitch(const SwitchT &sw)
 {
   if (!sw.haSupport)
     return;
@@ -40,63 +40,16 @@ void createHaLock(const SwitchT &sw)
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
   object["command_topic"] = sw.mqttCommandTopic;
-  //object["state_topic"] = sw.mqttStateTopic; //TODO CHECK STATE FROM SENSOR
+  object["state_topic"] = sw.mqttStateTopic; 
   object["retain"] = sw.mqttRetain;
   object["availability_topic"] = getAvailableTopic();
+if (strcmp(sw.family, constanstsSwitch::familyLock) == 0){
   object["payload_lock"] = constanstsSwitch::payloadLock;
   object["payload_unlock"] = constanstsSwitch::payloadUnlock;
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
-void createHaSwitch(const SwitchT &sw)
-{
-  if (!sw.haSupport)
-    return;
-  String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
-  DynamicJsonDocument doc(capacity);
-  JsonObject object = doc.to<JsonObject>();
-  object["name"] = sw.name;
-  object["command_topic"] = sw.mqttCommandTopic;
-  object["state_topic"] = sw.mqttStateTopic;
-  object["retain"] = sw.mqttRetain;
-  object["availability_topic"] = getAvailableTopic();
-  object["payload_on"] = constanstsSwitch::payloadOn;
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
-}
-void createHaLight(const SwitchT &sw)
-{
-  if (!sw.haSupport)
-    return;
-  String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(7) + 300;
-  DynamicJsonDocument doc(capacity);
-  JsonObject object = doc.to<JsonObject>();
-  object["name"] = sw.name;
-  object["command_topic"] = sw.mqttCommandTopic;
-  object["state_topic"] = sw.mqttStateTopic;
-  object["retain"] = sw.mqttRetain;
-  object["availability_topic"] = getAvailableTopic();
-  object["payload_on"] = constanstsSwitch::payloadOn;
-  object["payload_off"] = constanstsSwitch::payloadOff;
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
-}
-void createHaCover(const SwitchT &sw)
-{
-  if (!sw.haSupport)
-    return;
-  String objectStr = "";
-  const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
-  DynamicJsonDocument doc(capacity);
-  JsonObject object = doc.to<JsonObject>();
-  object["name"] = sw.name;
-  object["command_topic"] = sw.mqttCommandTopic;
-  object["state_topic"] = sw.mqttStateTopic;
-  object["retain"] = sw.mqttRetain;
-  object["availability_topic"] = getAvailableTopic();
-  object["payload_open"] = constanstsSwitch::payloadOpen;
+
+if (strcmp(sw.family, constanstsSwitch::familyCover) == 0){
+object["payload_open"] = constanstsSwitch::payloadOpen;
   object["payload_close"] = constanstsSwitch::payloadClose;
   object["payload_stop"] = constanstsSwitch::payloadStop;
   object["device_class"] = "blind";
@@ -104,9 +57,15 @@ void createHaCover(const SwitchT &sw)
   object["position_closed"] = 0;
   object["position_topic"] = sw.mqttPositionStateTopic;
   object["set_position_topic"] = sw.mqttPositionCommandTopic;
+}
+if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0){
+  object["payload_on"] = constanstsSwitch::payloadOn;
+  object["payload_off"] = constanstsSwitch::payloadOff;
+}
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(getAtualConfig().homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
+
 
 void addToHaDiscovery(const SensorT &s)
 {
@@ -263,23 +222,7 @@ void addToHaDiscovery(const SwitchT &sw)
 #endif
     return;
   }
-
-  if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
-  {
-    createHaCover(sw);
-  }
-  else if (strcmp(sw.family, constanstsSwitch::familyLight) == 0)
-  {
-    createHaLight(sw);
-  }
-  else if (strcmp(sw.family, constanstsSwitch::familySwitch) == 0)
-  {
     createHaSwitch(sw);
-  }
-  else if (strcmp(sw.family, constanstsSwitch::familyLock) == 0)
-  {
-    createHaLock(sw);
-  }
 #ifdef DEBUG
   Log.notice("%s RELOAD HA SWITCH DISCOVERY OK" CR, tags::discovery);
 #endif
