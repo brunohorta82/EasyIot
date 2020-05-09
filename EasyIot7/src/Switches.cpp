@@ -41,7 +41,6 @@ void save(Switches &switches)
   Log.notice("%s Config stored." CR, tags::switches);
 #endif
   switches.lastChange = 0ul;
- 
 }
 size_t Switches::serializeToJson(Print &output)
 {
@@ -356,7 +355,7 @@ void reloadSwitches()
   }
   save(getAtualSwitchesConfig());
 }
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -799,7 +798,7 @@ void SwitchT::changeState(const char *state)
       changeState(statesPool[statePoolIdx].c_str());
     }
   }
-  notifyStateToCloudIO(mqttCloudStateTopic,mqttPayload);
+  notifyStateToCloudIO(mqttCloudStateTopic, mqttPayload);
   publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
