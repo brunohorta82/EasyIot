@@ -210,7 +210,7 @@ size_t Config::serializeToJson(Print &output)
   doc["apName"] = apName;
   doc["firmware"] = VERSION;
   doc["chipId"] = chipId;
-  doc["mac"] = WiFi.softAPmacAddress();
+  doc["mac"] = WiFi.macAddress();
   doc["apiUser"] = apiUser;
   doc["apiPassword"] = apiPassword;
   doc["emoncmsServer"] = emoncmsServer;

@@ -275,7 +275,7 @@ size_t systemJSONStatus(Print &output)
   object["signal"] = WiFi.RSSI();
   object["wifiMask"] = WiFi.subnetMask().toString();
   object["wifiGw"] = WiFi.gatewayIP().toString();
-  object["mac"] = WiFi.softAPmacAddress();
+  object["mac"] = WiFi.macAddress();
   object["channel"] = WiFi.channel();
   object["mode"] = (int)WiFi.getMode();
   object["mqttConnected"] = mqttConnected();
