@@ -32,10 +32,10 @@ struct SwitchStatePool
 };
 struct SwitchT
 {
-    double firmware = 0.0;
-    char id[32] = {0}; //Generated from name without spaces and no special characters
-    char name[24] = {0};
-    char family[10] = {0};                //switch, light, cover, lock
+    double firmware ;
+    char id[32] ; //Generated from name without spaces and no special characters
+    char name[24];
+    char family[10] ;                //switch, light, cover, lock
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT; //MQTT OR RELAY
     bool alexaSupport = true;
@@ -62,19 +62,19 @@ struct SwitchT
 
     //AUTOMATIONS
     unsigned long autoStateDelay = 0;
-    char autoStateValue[10] = {0};
+    char autoStateValue[10] ;
     unsigned long timeBetweenStates = 0;
 
     //MQTT
-    char mqttCommandTopic[128] = {0};
-    char mqttStateTopic[128] = {0};
-    char mqttPositionStateTopic[128] = {0};
-    char mqttPositionCommandTopic[128] = {0};
-    char mqttPayload[10] = {0};
+    char mqttCommandTopic[128] ;
+    char mqttStateTopic[128] ;
+    char mqttPositionStateTopic[128];
+    char mqttPositionCommandTopic[128] ;
+    char mqttPayload[10] ;
     bool mqttRetain = false;
 
     //CONTROL VARIABLES
-    char stateControl[10] = {0};  //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
+    char stateControl[10] ;  //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
     int positionControlCover = 0; //COVER PERCENTAGE 100% = open, 0% close
     int lastPercentage = 0;
     bool lastPrimaryGpioState = false;

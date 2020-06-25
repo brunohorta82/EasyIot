@@ -35,6 +35,7 @@ void printOnDisplay(float _voltage, float _amperage, float _power, float _energy
 
 void setupDisplay()
 {
+  Serial.println("INIT DISPLAY");
   pinMode(DISPLAY_BTN, INPUT_PULLDOWN_16);
   debouncer.attach(DISPLAY_BTN);
   debouncer.interval(5); // interval in ms
