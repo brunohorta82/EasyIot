@@ -15,36 +15,45 @@
 #include "WebRequests.h"
 #include <Bounce2.h>
 #if WITH_DISPLAY
-#include "SSD1306Wire.h" //https://github.com/ThingPulse/esp8266-oled-ssd1306
+#include <Adafruit_SSD1306.h>
 #define DISPLAY_SDA 2    //-1 if you don't use display
 #define DISPLAY_SCL 13   //-1 if you don't use display
 #define DISPLAY_BTN 16
 bool displayOn = true;
-SSD1306Wire display(0x3C, DISPLAY_SDA, DISPLAY_SCL);
-bool lastState = false;
-Bounce debouncer = Bounce();
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, DISPLAY_BTN);
+#define OLED_RESET     16 // Reset pin # (or -1 if sharing Arduino reset pin)
+
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
 {
-  display.clear();
-  display.setFont(ArialMT_Plain_16);
-  display.drawString(5, 0, String(_power) + "W");
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(5, 16, String(_energy) + " kWh");
-  display.drawString(5, 26, String(_voltage) + " V");
-  display.drawString(5, 36, String(_amperage) + " A");
+  display.clearDisplay();
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(5,0);  
+  display.println( (String(_power) + "W").c_str());
+  display.setCursor(5,8);  
+  display.println( (String(_energy) + "Kwh").c_str());
+  display.setCursor(5,16);  
+  display.println( (String(_voltage) + "V").c_str());
+  display.setCursor(5,24);  
+  display.println( (String(_amperage) + "A").c_str());
+  
+  
   display.display();
 }
 
 void setupDisplay()
 {
-  pinMode(DISPLAY_BTN, INPUT_PULLDOWN_16);
-  debouncer.attach(DISPLAY_BTN);
-  debouncer.interval(5); // interval in ms
-  display.init();
-  display.flipScreenVertically();
-  display.setFont(ArialMT_Plain_16);
-  display.setTextAlignment(TEXT_ALIGN_LEFT);
-  display.drawString(5, 0, "BH PZEM");
+  Wire.begin(DISPLAY_SDA,DISPLAY_SCL);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+   
+  }
+  display.clearDisplay();
+  display.setTextSize(1);             
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);             
+  display.println(F("BH PZEM"));
   display.display();
 }
 #endif
@@ -528,28 +537,7 @@ void publishReadings(String &rawReadings,String &readings, SensorT & sensor, con
 }
 void loop(Sensors &sensors)
 {
-#if WITH_DISPLAY
-  debouncer.update();
-  int value = debouncer.read();
-  if (lastState != value)
-  {
-    lastState = value;
-    if (value)
-    {
 
-      if (displayOn)
-      {
-        display.displayOff();
-        displayOn = false;
-      }
-      else
-      {
-        display.displayOn();
-        displayOn = true;
-      }
-    }
-  }
-#endif
   for (auto &ss : sensors.items)
   {
   if (ss.primaryGpio == constantsConfig::noGPIO)continue;
