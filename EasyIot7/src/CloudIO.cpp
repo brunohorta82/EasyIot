@@ -155,8 +155,7 @@ if (WiFi.status() != WL_CONNECTED)
 
   String payload = "";
   size_t s = getAtualSwitchesConfig().items.size();
-  size_t ss = getAtualSensorsConfig().items.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT)) ;
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
   device["chipId"] = String(ESP.getChipId());
@@ -176,34 +175,7 @@ if (WiFi.status() != WL_CONNECTED)
     sdoc["cloudIOSupport"] = sw.alexaSupport;
   }
 
-
-  for (const auto &ss : getAtualSensorsConfig().items)
-  {
-    JsonObject sdoc = feactures.createNestedObject();
-      sdoc["id"] = ss.id;
-      sdoc["name"] = ss.name;
-      sdoc["family"] = ss.deviceClass;
-      sdoc["cloudIOSupport"] = true;
-    switch (ss.type)
-    {
-    
-    case DHT_11:
-    case DHT_21:
-    case DHT_22:
-    {
-      JsonObject sdoc2 = feactures.createNestedObject();
-      sdoc2["id"] = ss.id;
-      sdoc2["name"] = ss.name;
-      sdoc2["family"] = "HUMIDITY";
-      sdoc2["cloudIOSupport"] = true;
-    }
-    break;
-    default:
-    break;
-    }
-  }
   serializeJson(doc, payload);
-  Serial.println(payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");
   http.addHeader("Content-Type", "application/json");
 #ifdef DEBUG
