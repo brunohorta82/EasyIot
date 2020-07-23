@@ -13,7 +13,7 @@
 #include "CloudIO.h"
 
 void checkInternalRoutines()
-{
+{ cloudIoKeepAlive();
   if (cloudIOSync())
   {
     connectoToCloudIO();
@@ -94,11 +94,8 @@ void loop()
   if (!autoUpdateRequested())
   {
     loop(getAtualSwitchesConfig());
-    loopMqtt();
     loop(getAtualSensorsConfig());
-    loopMqtt();
     loopTime();
   }
   knx.loop();
-  loopMqtt();
 }

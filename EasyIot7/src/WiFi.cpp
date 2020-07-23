@@ -158,7 +158,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_CONNECTED:
     knx.start(nullptr);
     infoWifi();
-    connectoToCloudIO();
+    requestCloudIOSync();
     break;
 #ifdef DEBUG
   case MESSAGE_DISCONNECTED:

@@ -134,7 +134,7 @@ void setupCloudIO()
   mqttClient.setCredentials(user.c_str(), pw.c_str());
   connectToClounIOMqtt();
 }
-bool tryCloudConnectio()
+bool tryCloudConnection()
 {
   if (!cloudIOReadyToConnect && user.length() > 0 && pw.length() > 0)
   {
@@ -243,7 +243,7 @@ if (WiFi.status() != WL_CONNECTED)
           mqttClient.disconnect();
         }
 
-        cloudIO.once(5, tryCloudConnectio);
+        cloudIO.once(5, tryCloudConnection);
       }
       else
       {
@@ -262,5 +262,10 @@ if (WiFi.status() != WL_CONNECTED)
       Log.error("%s [HTTP] POST... failed, error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
     }
+  }
+}
+void cloudIoKeepAlive(){
+  if(cloudIOReadyToConnect && !mqttClient.connected()){
+ cloudIO.once(5, tryCloudConnection);
   }
 }
