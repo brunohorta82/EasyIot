@@ -54,6 +54,7 @@ void setupDisplay()
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0,0);             
   display.println(F("BH PZEM"));
+
   display.display();
 }
 #endif

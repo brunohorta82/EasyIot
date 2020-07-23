@@ -36,6 +36,7 @@ struct SwitchT
     char id[32]; //Generated from name without spaces and no special characters
     char name[24];
     char family[10];                      //switch, light, cover, lock
+
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT; //MQTT OR RELAY
     bool alexaSupport = false;
@@ -76,6 +77,7 @@ struct SwitchT
     //CONTROL VARIABLES
     char stateControl[10];    //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
     int positionControlCover; //COVER PERCENTAGE 100% = open, 0% close
+
     int lastPercentage = 0;
     bool lastPrimaryGpioState = false;
     bool lastSecondaryGpioState = false;
