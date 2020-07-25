@@ -39,7 +39,7 @@ struct SwitchT
 
     SwitchMode mode = SWITCH;             // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = MQTT; //MQTT OR RELAY
-    bool alexaSupport = false;
+    bool alexaSupport = true;
     bool haSupport = false;
     bool knxSupport = false;
     bool childLock = false;
@@ -92,7 +92,7 @@ struct SwitchT
     //CLOUDIO
     char mqttCloudCommandTopic[128];
     char mqttCloudStateTopic[128];
-
+    bool cloudIOSupport = true;
     //METHODS
     void load(File &file);
     void save(File &file) const;

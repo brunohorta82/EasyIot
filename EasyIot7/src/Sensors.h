@@ -69,6 +69,7 @@ struct SensorT
   bool reading = false;
 //CLOUDIO
  char mqttCloudStateTopic[128];
+   bool cloudIOSupport = true;
   //CUSTOM PAYLOADS
   char payloadOff[10];
   char payloadOn[10];

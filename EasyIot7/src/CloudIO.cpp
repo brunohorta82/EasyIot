@@ -153,9 +153,10 @@ void connectoToCloudIO()
 if (WiFi.status() != WL_CONNECTED)
     return;
 
-  String payload = "";
+
   size_t s = getAtualSwitchesConfig().items.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT)) ;
+  size_t ss = getAtualSensorsConfig().items.size();
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s+ss) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT) + (ss * JSON_OBJECT_SIZE(7) + sizeof(SensorT))) ;
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
   device["chipId"] = String(ESP.getChipId());
@@ -174,7 +175,15 @@ if (WiFi.status() != WL_CONNECTED)
     sdoc["stateControl"] = sw.stateControl;
     sdoc["cloudIOSupport"] = sw.alexaSupport;
   }
-
+    for (const auto &ss : getAtualSensorsConfig().items)
+  {
+    JsonObject sdoc = feactures.createNestedObject();
+    sdoc["id"] = ss.id;
+    sdoc["name"] = ss.name;
+    sdoc["family"] = ss.deviceClass;
+    sdoc["cloudIOSupport"] = ss.cloudIOSupport;
+  }
+  String payload = "";
   serializeJson(doc, payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");
   http.addHeader("Content-Type", "application/json");
