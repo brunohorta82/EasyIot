@@ -604,7 +604,7 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
 {
   for (auto &sw : switches.items)
   {
-    if (strcmp(sw.mqttCommandTopic, topic) == 0)
+    if (strcmp(sw.mqttCommandTopic, topic) == 0 || strcmp(sw.mqttCloudCommandTopic, topic) == 0)
     {
 
       for (unsigned int p = sw.statePoolStart; p <= sw.statePoolEnd; p++)
@@ -621,26 +621,7 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
   }
 }
 
-void mqttCloudSwitchControl(Switches &switches, const char *topic, const char *payload)
-{
-  for (auto &sw : switches.items)
-  {
-    if (strcmp(sw.mqttCloudCommandTopic, topic) == 0)
-    {
 
-      for (unsigned int p = sw.statePoolStart; p <= sw.statePoolEnd; p++)
-      {
-        if (strcmp(payload, STATES_POLL[p].c_str()) == 0)
-        {
-          sw.statePoolIdx = p;
-          sw.changeState(STATES_POLL[p].c_str());
-          return;
-        }
-      }
-      sw.changeState(payload);
-    }
-  }
-}
 void knkGroupNotifyState(const SwitchT &sw, const char *state)
 {
 }
@@ -783,8 +764,7 @@ void SwitchT::changeState(const char *state)
       changeState(STATES_POLL[statePoolIdx].c_str());
     }
   }
-  notifyStateToCloudIO(mqttCloudStateTopic,  STATES_POLL[statePoolIdx].c_str(), STATES_POLL[statePoolIdx].length());
-  publishOnMqtt(mqttStateTopic, mqttPayload, true);
+  
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
   payloadSe.concat("{\"id\":\"");
@@ -794,6 +774,8 @@ void SwitchT::changeState(const char *state)
   payloadSe.concat("\"}");
   sendToServerEvents("states", payloadSe.c_str());
   statePoolIdx = findPoolIdx(stateControl, statePoolIdx, statePoolStart, statePoolEnd);
+  notifyStateToCloudIO(mqttCloudStateTopic,  STATES_POLL[statePoolIdx].c_str(), STATES_POLL[statePoolIdx].length());
+  publishOnMqtt(mqttStateTopic, mqttPayload, true);
   if (knxNotifyGroup && knxSupport)
   {
 

@@ -279,6 +279,7 @@ void setupWebserverAsync()
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSwitchesConfig().serializeToJson(*response);
+        requestCloudIOSync();
     request->send(response);
   });
 
@@ -336,6 +337,7 @@ void setupWebserverAsync()
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualSensorsConfig().serializeToJson(*response);
+        requestCloudIOSync();
     request->send(response);
   });
 #if EMULATE_ALEXA

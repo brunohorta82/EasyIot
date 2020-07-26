@@ -118,7 +118,6 @@ void load(Switches &switches);
 void remove(Switches &switches, const char *id);
 void update(Switches &switches, const String &id, JsonObject doc);
 void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
-void mqttCloudSwitchControl(Switches &switches, const char *topic, const char *payload);
 void sendToServerEvents(const String &topic, const String &payload);
 void stateSwitchById(Switches &switches, const char *id, const char *state);
 struct Switches &getAtualSwitchesConfig();
