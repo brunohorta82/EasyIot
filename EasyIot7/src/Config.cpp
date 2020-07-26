@@ -298,6 +298,9 @@ void Config::load(File &file)
   file.read((uint8_t *)&knxArea, sizeof(knxArea));
   file.read((uint8_t *)&knxLine, sizeof(knxLine));
   file.read((uint8_t *)&knxMember, sizeof(knxMember));
+  strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
+  strlcpy(available, String("1" + String(ESP.getChipId())).c_str(), sizeof(chipId));
+  strlcpy(offline, String("0" + String(ESP.getChipId())).c_str(), sizeof(chipId));
   if (firmware < VERSION)
   {
 #ifdef DEBUG
@@ -324,7 +327,6 @@ void loadStoredConfiguration(Config &config)
     Log.notice("%s Default config loaded." CR, tags::config);
 #endif
     strlcpy(config.nodeId, String(ESP.getChipId()).c_str(), sizeof(config.nodeId));
-    strlcpy(config.chipId, config.nodeId, sizeof(config.chipId));
     config.mqttPort = constantsMqtt::defaultPort;
     config.staticIp = false;
     strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));

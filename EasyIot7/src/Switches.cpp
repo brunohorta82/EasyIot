@@ -8,7 +8,7 @@
 #include <esp-knx-ip.h>
 #include <Bounce2.h>
 #include "CloudIO.h"
-static const String statesPool[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
+
 
 struct Switches &getAtualSwitchesConfig()
 {
@@ -98,7 +98,10 @@ size_t Switches::serializeToJson(Print &output)
 
   return serializeJson(doc, output);
 }
-
+const char *SwitchT::getCurrentState() const
+{
+  return STATES_POLL[statePoolIdx].c_str();
+}
 void SwitchT::save(File &file) const
 {
   file.write((uint8_t *)&firmware, sizeof(firmware));
@@ -229,7 +232,7 @@ void switchesCallback(message_t const &msg, void *arg)
     int stateIdx = (int)msg.data[1];
     s->knxNotifyGroup = false;
 
-    s->changeState(statesPool[stateIdx].c_str());
+    s->changeState(STATES_POLL[stateIdx].c_str());
 
     break;
   }
@@ -250,7 +253,7 @@ void allwitchesCallback(message_t const &msg, void *arg)
     for (auto &sw : getAtualSwitchesConfig().items)
     {
       sw.knxNotifyGroup = false;
-      sw.changeState(statesPool[stateIdx].c_str());
+      sw.changeState(STATES_POLL[stateIdx].c_str());
     }
     break;
   }
@@ -355,7 +358,7 @@ void reloadSwitches()
   }
   save(getAtualSwitchesConfig());
 }
-void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = false, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
+void templateSwitch(SwitchT &sw, const String &name, const char *family, const SwitchMode &mode, unsigned int primaryGpio, unsigned int secondaryGpio, unsigned int primaryGpioControl, unsigned int secondaryGpioControl, bool mqttRetaint = false, unsigned long autoStateDelay = 0ul, const String &autoStateValue = "", const SwitchControlType &typecontrol = RELAY_AND_MQTT, unsigned long timeBetweenStates = 0ul, bool haSupport = false, bool alexaSupport = true, uint8_t knxLevelOne = 0, uint8_t knxLevelTwo = 0, uint8_t knxLevelThree = 0, bool knxSupport = false)
 {
   String idStr;
   generateId(idStr, name, sizeof(sw.id));
@@ -463,19 +466,8 @@ void SwitchT::updateFromJson(JsonObject doc)
 }
 void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 {
-
   save(switches);
   removeFromHaDiscovery(sw);
-#if EMULATE_ALEXA
-  removeSwitchFromAlexa(sw.name);
-#endif
-  delay(10);
-#if EMULATE_ALEXA
-  if (sw.alexaSupport)
-  {
-    addSwitchToAlexa(sw.name);
-  }
-#endif
   if (sw.haSupport)
   {
     addToHaDiscovery(sw);
@@ -598,7 +590,7 @@ int findPoolIdx(const char *state, unsigned int currentIdx, unsigned int start, 
   unsigned int p = currentIdx;
   while (max > 0)
   {
-    if (strcmp(state, statesPool[p].c_str()) == 0)
+    if (strcmp(state, STATES_POLL[p].c_str()) == 0)
     {
       return p;
     }
@@ -617,10 +609,10 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
 
       for (unsigned int p = sw.statePoolStart; p <= sw.statePoolEnd; p++)
       {
-        if (strcmp(payload, statesPool[p].c_str()) == 0)
+        if (strcmp(payload, STATES_POLL[p].c_str()) == 0)
         {
           sw.statePoolIdx = p;
-          sw.changeState(statesPool[p].c_str());
+          sw.changeState(STATES_POLL[p].c_str());
           return;
         }
       }
@@ -638,10 +630,10 @@ void mqttCloudSwitchControl(Switches &switches, const char *topic, const char *p
 
       for (unsigned int p = sw.statePoolStart; p <= sw.statePoolEnd; p++)
       {
-        if (strcmp(payload, statesPool[p].c_str()) == 0)
+        if (strcmp(payload, STATES_POLL[p].c_str()) == 0)
         {
           sw.statePoolIdx = p;
-          sw.changeState(statesPool[p].c_str());
+          sw.changeState(STATES_POLL[p].c_str());
           return;
         }
       }
@@ -783,15 +775,15 @@ void SwitchT::changeState(const char *state)
     if (positionControlCover > percentageRequest)
     {
       statePoolIdx = constanstsSwitch::closeIdx;
-      changeState(statesPool[statePoolIdx].c_str());
+      changeState(STATES_POLL[statePoolIdx].c_str());
     }
     else
     {
       statePoolIdx = constanstsSwitch::openIdx;
-      changeState(statesPool[statePoolIdx].c_str());
+      changeState(STATES_POLL[statePoolIdx].c_str());
     }
   }
-  notifyStateToCloudIO(mqttCloudStateTopic,  statesPool[statePoolIdx].c_str(), statesPool[statePoolIdx].length());
+  notifyStateToCloudIO(mqttCloudStateTopic,  STATES_POLL[statePoolIdx].c_str(), STATES_POLL[statePoolIdx].length());
   publishOnMqtt(mqttStateTopic, mqttPayload, true);
   String payloadSe;
   payloadSe.reserve(strlen(mqttPayload) + strlen(id) + 21);
@@ -880,14 +872,14 @@ void loop(Switches &switches)
       if (sw.primaryGpio != constantsConfig::noGPIO && sw.lastPrimaryGpioState != primaryGpioEvent)
       {
         sw.statePoolIdx = ((sw.statePoolIdx - sw.statePoolStart + 1) % poolSize) + sw.statePoolStart;
-        sw.changeState(statesPool[sw.statePoolIdx].c_str());
+        sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
       }
       break;
     case PUSH:
       if (sw.primaryGpio != constantsConfig::noGPIO && !primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
       { //PUSHED
         sw.statePoolIdx = ((sw.statePoolIdx - sw.statePoolStart + 1) % poolSize) + sw.statePoolStart;
-        sw.changeState(statesPool[sw.statePoolIdx].c_str());
+        sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
       }
 
       break;
@@ -898,19 +890,19 @@ void loop(Switches &switches)
         {
 
           sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
-          sw.changeState(statesPool[sw.statePoolIdx].c_str());
+          sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
         }
         else if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
         {
 
           sw.statePoolIdx = constanstsSwitch::openIdx;
-          sw.changeState(statesPool[sw.statePoolIdx].c_str());
+          sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
         }
         else if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
         {
 
           sw.statePoolIdx = constanstsSwitch::closeIdx;
-          sw.changeState(statesPool[sw.statePoolIdx].c_str());
+          sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
         }
       }
       break;
@@ -921,13 +913,13 @@ void loop(Switches &switches)
         { //PUSHED
 
           sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::firtStopIdx : constanstsSwitch::openIdx;
-          sw.changeState(statesPool[sw.statePoolIdx].c_str());
+          sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
         }
         if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
         { //PUSHED
 
           sw.statePoolIdx = sw.statePoolIdx == constanstsSwitch::closeIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::closeIdx;
-          sw.changeState(statesPool[sw.statePoolIdx].c_str());
+          sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
         }
       }
       break;
@@ -940,9 +932,9 @@ void loop(Switches &switches)
     {
       sw.statePoolIdx = findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.statePoolStart, sw.statePoolEnd);
 #ifdef DEBUG
-      Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, statesPool[sw.statePoolIdx].c_str());
+      Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, STATES_POLL[sw.statePoolIdx].c_str());
 #endif
-      sw.changeState(statesPool[sw.statePoolIdx].c_str());
+      sw.changeState(STATES_POLL[sw.statePoolIdx].c_str());
     }
   }
 }

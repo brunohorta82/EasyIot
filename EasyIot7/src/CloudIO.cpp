@@ -14,6 +14,14 @@ bool cloudIOReadyToConnect = false;
 Ticker mqttReconnectTimer;
 Ticker cloudIO;
 
+
+void disconnectToClounIOMqtt()
+{
+#ifdef DEBUG
+  Log.error("%s Disconnect to MQTT..." CR, tags::cloudIO);
+#endif
+  mqttClient.disconnect();
+}
 void connectToClounIOMqtt()
 {
 #ifdef DEBUG
@@ -60,15 +68,25 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(sw.id);
     topic.concat("/set");
-    topic.toLowerCase();
+
     strlcpy(sw.mqttCloudCommandTopic, topic.c_str(), sizeof(sw.mqttCloudCommandTopic));
     subscribeOnMqttCloudIO(sw.mqttCloudCommandTopic);
 
     topic.replace("/set", "/status");
 
     strlcpy(sw.mqttCloudStateTopic, topic.c_str(), sizeof(sw.mqttCloudStateTopic));
-    mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.mqttPayload);
+    if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
+    {
+      char dump[4] = {0};
+      int l = sprintf(dump, "%d", sw.lastPercentage);
+      notifyStateToCloudIO(sw.mqttCloudStateTopic, dump, l);
+    }
+    else
+    {
+      mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.getCurrentState());
+    }
   }
+  mqttClient.publish("available", 0, true, getAtualConfig().available, strlen(getAtualConfig().available));
   for (auto &ss : getAtualSensorsConfig().items)
   {
     String topic;
@@ -76,11 +94,11 @@ void onMqttConnect(bool sessionPresent)
     topic.concat(user);
     topic.concat("/");
     topic.concat(getAtualConfig().chipId);
-    topic.concat("/clazz");
+    topic.concat("/");
+    topic.concat(ss.deviceClass);
     topic.concat("/");
     topic.concat(ss.id);
     topic.concat("/status");
-    topic.toLowerCase();
     strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
   }
 }
@@ -96,7 +114,10 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
     mqttReconnectTimer.once(10, connectToClounIOMqtt);
   }
 }
-
+bool cloudIOConnected()
+{
+  return mqttClient.connected();
+}
 void onMqttSubscribe(uint16_t packetId, uint8_t qos)
 {
 }
@@ -112,7 +133,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
   strlcpy(msg, payload, len + 1);
-  mqttCloudSwitchControl(getAtualSwitchesConfig(), topic, msg);
+  mqttSwitchControl(getAtualSwitchesConfig(), topic, msg);
 }
 
 void onMqttPublish(uint16_t packetId)
@@ -129,6 +150,7 @@ void setupCloudIO()
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setCleanSession(true);
+  mqttClient.setWill("available", 0, true, getAtualConfig().offline, strlen(getAtualConfig().offline));
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(getAtualConfig().chipId);
   mqttClient.setCredentials(user.c_str(), pw.c_str());
@@ -146,44 +168,66 @@ bool tryCloudConnection()
   }
   return true;
 }
+void cloudIoKeepAlive(){
+  if(cloudIOReadyToConnect && !mqttClient.connected()){
+ cloudIO.once(5, tryCloudConnection);
+  }
+}
 WiFiClient client;
 HTTPClient http;
 void connectoToCloudIO()
 {
-if (WiFi.status() != WL_CONNECTED)
+  if (WiFi.status() != WL_CONNECTED)
     return;
 
-
+  String payload = "";
   size_t s = getAtualSwitchesConfig().items.size();
   size_t ss = getAtualSensorsConfig().items.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s+ss) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT) + (ss * JSON_OBJECT_SIZE(7) + sizeof(SensorT))) ;
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
-  device["chipId"] = String(ESP.getChipId());
+  device["chipId"] = getAtualConfig().chipId;
   device["currentVersion"] = String(VERSION, 3);
   device["nodeId"] = getAtualConfig().nodeId;
-  device["firmwareMode"] = constantsConfig::firmwareMode;
-  device["macAddr"] = WiFi.softAPmacAddress();
-  device["configKey"] = getAtualConfig().configkey;
+  const char *firmwareMode = {FEATURES_TEMPLATE};
+  device["firmwareMode"] = firmwareMode;
+  device["macAddr"] = WiFi.macAddress();
   JsonArray feactures = device.createNestedArray("features");
-  for (const auto &sw : getAtualSwitchesConfig().items)
+  for (auto &sw : getAtualSwitchesConfig().items)
   {
     JsonObject sdoc = feactures.createNestedObject();
     sdoc["id"] = sw.id;
     sdoc["name"] = sw.name;
     sdoc["family"] = sw.family;
-    sdoc["stateControl"] = sw.stateControl;
-    sdoc["cloudIOSupport"] = sw.alexaSupport;
+    sdoc["shutterPercentage"] = sw.lastPercentage;
+    sdoc["stateControl"] = sw.getCurrentState();
+    sdoc["cloudIOSupport"] = sw.cloudIOSupport;
   }
-    for (const auto &ss : getAtualSensorsConfig().items)
+  for (const auto &ss : getAtualSensorsConfig().items)
   {
     JsonObject sdoc = feactures.createNestedObject();
     sdoc["id"] = ss.id;
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.deviceClass;
-    sdoc["cloudIOSupport"] = ss.cloudIOSupport;
+    sdoc["cloudIOSupport"] = true;
+    switch (ss.type)
+    {
+
+    case DHT_11:
+    case DHT_21:
+    case DHT_22:
+    {
+      JsonObject sdoc2 = feactures.createNestedObject();
+      sdoc2["id"] = ss.id;
+      sdoc2["name"] = ss.name;
+      sdoc2["family"] = "HUMIDITY";
+      sdoc2["cloudIOSupport"] = true;
+    }
+    break;
+    default:
+      break;
+    }
   }
-  String payload = "";
   serializeJson(doc, payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");
   http.addHeader("Content-Type", "application/json");
@@ -243,10 +287,5 @@ if (WiFi.status() != WL_CONNECTED)
       Log.error("%s [HTTP] POST... failed, error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
     }
-  }
-}
-void cloudIoKeepAlive(){
-  if(cloudIOReadyToConnect && !mqttClient.connected()){
- cloudIO.once(5, tryCloudConnection);
   }
 }

@@ -37,6 +37,8 @@ struct Config
   char emoncmsPath[20] ;
   char emoncmsApikey[80] ;
   char emoncmsFingerprint[100] ;
+    char available[11];
+  char offline[11];
   uint8_t knxArea = 0;
   uint8_t knxLine = 0;
   uint8_t knxMember = 0;

@@ -5,6 +5,7 @@
 #include "ArduinoJson.h"
 #include "FS.h"
 #include "constants.h"
+static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 class Bounce;
 enum SwitchMode
 {
@@ -73,7 +74,7 @@ struct SwitchT
     char mqttPositionCommandTopic[128];
     char mqttPayload[10];
     bool mqttRetain = false;
-
+    bool isCover = false;
     //CONTROL VARIABLES
     char stateControl[10];    //ON, OFF, STOP, CLOSE, OPEN, LOCK, UNLOCK
     int positionControlCover; //COVER PERCENTAGE 100% = open, 0% close
@@ -96,6 +97,7 @@ struct SwitchT
     //METHODS
     void load(File &file);
     void save(File &file) const;
+    const char *getCurrentState() const;
     void updateFromJson(JsonObject doc);
     void changeState(const char *state);
     void reloadMqttTopics();
