@@ -13,7 +13,7 @@ String pw;
 bool cloudIOReadyToConnect = false;
 Ticker mqttReconnectTimer;
 Ticker cloudIO;
-
+bool tryConnection = false;
 
 void disconnectToClounIOMqtt()
 {
@@ -56,6 +56,7 @@ void onMqttConnect(bool sessionPresent)
 #ifdef DEBUG
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
+    tryConnection = false;
     String topicAction;
     topicAction.reserve(200);
     topicAction.concat(user);
@@ -118,9 +119,10 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 #ifdef DEBUG
   Log.warning("%s Disconnected from MQTT." CR, tags::cloudIO);
 #endif
-  if (WiFi.isConnected())
+  if (WiFi.isConnected() && !tryConnection)
   {
-    mqttReconnectTimer.once(10, connectToClounIOMqtt);
+    tryConnection = true;
+    mqttReconnectTimer.once(2, connectToClounIOMqtt);
   }
 }
 bool cloudIOConnected()
@@ -190,8 +192,9 @@ bool tryCloudConnection()
   return true;
 }
 void cloudIoKeepAlive(){
-  if(cloudIOReadyToConnect && !mqttClient.connected()){
+  if(cloudIOReadyToConnect && !mqttClient.connected() && !tryConnection){
     cloudIO.once(5, tryCloudConnection);
+    tryConnection = true;
   }
 }
 WiFiClient client;

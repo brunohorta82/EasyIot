@@ -292,6 +292,23 @@ void setupWebserverAsync()
     requestCloudIOSync();
   });
 
+  server.on("/rotate-state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    if (!request->hasArg("id"))
+    {
+      request->send(errorResponse("Id missing"));
+      return;
+    }
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["stateControl"] = getAtualSwitchesConfig().rotate(request->arg("id").c_str());
+    response->setLength();
+    request->send(response);
+  });
+
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
@@ -300,7 +317,7 @@ void setupWebserverAsync()
       request->send(errorResponse("Id missing"));
       return;
     }
-    if (request->hasArg("state"))
+    if (!request->hasArg("state"))
     {
       request->send(errorResponse("State missing"));
       return;
@@ -349,7 +366,7 @@ void setupWebserverAsync()
     requestCloudIOSync();
   }));
 
-  server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/remove-sensor", HTTP_DELETE, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
@@ -381,7 +398,7 @@ void setupWebserverAsync()
   });
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET"));
+  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET, DELETE"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
   server.begin();
 }

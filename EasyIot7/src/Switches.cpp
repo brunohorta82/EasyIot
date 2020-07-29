@@ -590,6 +590,17 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
     }
   }
 }
+const char *Switches::rotate(const char *id)
+{
+  for (auto &sw : items)
+  {
+    if (strcmp(id, sw.id) == 0)
+    {
+      return sw.rotateState();
+    }
+  }
+  return "ERROR";
+}
 const char *SwitchT::rotateState()
 {
   int idx = findPoolIdx("", statePoolIdx, family);
