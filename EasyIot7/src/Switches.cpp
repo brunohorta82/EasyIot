@@ -694,15 +694,15 @@ const char *SwitchT::changeState(const char *state, const char *origin)
     {
       notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend, strlen(currentStateToSend));
     }
+    sendToServerEvents(id, currentStateToSend);
+    if(strcmp("LOAD",origin) != 0)
+      getAtualSwitchesConfig().save();
+  }
     if (knxNotifyGroup && knxSupport)
   {
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
   }
     knxNotifyGroup = true;
-    sendToServerEvents(id, currentStateToSend);
-    if(strcmp("LOAD",origin) != 0)
-      getAtualSwitchesConfig().save();
-  }
   return getCurrentState();
 }
 

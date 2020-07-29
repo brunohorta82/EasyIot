@@ -1,19 +1,13 @@
 const endpoint = {
-    baseUrl: "http://12704392.local"
+    baseUrl: ""
 };
 var switches = [];
 var sensors = [];
 var source = null;
-let sortByProperty = function (property) {
-    return function (x, y) {
-        return ((x[property] === y[property]) ? 0 : ((x[property] > y[property]) ? 1 : -1));
-    };
-};
 
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
 }
-
 function addToSelect(select, class_, value) {
     let sel = document.getElementById(select);
     if (sel) {
@@ -378,7 +372,7 @@ function fillSwitches(payload) {
     switches = payload;
     if (!payload) return;
     $('#switch_config').empty();
-    for (let obj of payload.sort(sortByProperty('name'))) {
+    for (let obj of payload) {
         buildSwitch(obj);
     }
 }
@@ -1132,7 +1126,6 @@ function systemStatus() {
 
 
 $(document).ready(function () {
-
     let lang = localStorage.getItem('lang');
     if (lang) {
         loadsLanguage(lang);
@@ -1154,7 +1147,5 @@ $(document).ready(function () {
     setInterval(systemStatus, 15000);
     if (!!window.EventSource) {
         source = new EventSource(endpoint.baseUrl + '/events');
-
     }
-
 });
