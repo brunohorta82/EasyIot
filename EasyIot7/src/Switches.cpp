@@ -104,6 +104,9 @@ void Switches::toJson(JsonVariant &root)
     sdoc["stateControl"] = sw.getCurrentState();
     sdoc["lastPercentage"] = sw.lastPercentage;
     sdoc["cloudIOSupport"] = sw.cloudIOSupport;
+    sdoc["mqttStateTopic"] = sw.mqttStateTopic;
+    sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
+    sdoc["lastPercentage"] = sw.lastPercentage;
     sdoc["haSupport"] = sw.haSupport;
     sdoc["knxSupport"] = sw.knxSupport;
     sdoc["mqttSupport"] = sw.mqttSupport;

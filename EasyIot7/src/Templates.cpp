@@ -31,7 +31,7 @@ void loadSensorsDefaults()
     SensorT pzem;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
     String idStr;
-    generateId(idStr, pzem.name, sizeof(pzem.id));
+    generateId(idStr, pzem.name,2, sizeof(pzem.id));
     strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
     strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
 #if defined BHPZEM_004T_2_0 || BHPZEM_004T
@@ -43,9 +43,7 @@ void loadSensorsDefaults()
 #if defined BHPZEM_004T_V03 || BHPZEM_004T_V03_2_0
     pzem.type = PZEM_004T_V03;
 #endif
-    pzem.knxLevelOne = 3;
-    pzem.knxLevelTwo = 1;
-    pzem.knxLevelThree = 1;
+
 #if defined BHPZEM_004T || BHPZEM_004T_V03
     pzem.primaryGpio = 4;
     pzem.secondaryGpio = 5;
@@ -59,20 +57,11 @@ void loadSensorsDefaults()
     pzem.haSupport = true;
     pzem.emoncmsSupport = true;
     pzem.delayRead = 5000;
-    String mqttTopic;
-    mqttTopic.reserve(sizeof(pzem.mqttStateTopic));
-    mqttTopic.concat(getBaseTopic());
-    mqttTopic.concat("/");
-    mqttTopic.concat(pzem.family);
-    mqttTopic.concat("/");
-    mqttTopic.concat(pzem.id);
-    mqttTopic.concat("/state");
-    strlcpy(pzem.mqttStateTopic, mqttTopic.c_str(), sizeof(pzem.mqttStateTopic));
     strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
     strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
     strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
     strlcpy(pzem.deviceClass, constantsSensor::noneClass, sizeof(pzem.deviceClass));
-    sensors.items.push_back(pzem);
+    getAtualSensorsConfig().items.push_back(pzem);
 #endif
 }
 void loadSwitchDefaults()

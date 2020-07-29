@@ -164,7 +164,7 @@ void SensorT::load(File &file)
   file.read((uint8_t *)&tertiaryGpio, sizeof(tertiaryGpio));
   file.read((uint8_t *)&pullup, sizeof(pullup));
   file.read((uint8_t *)&delayRead, sizeof(delayRead));
-  if (configFirmware < 8)
+  if (configFirmware < 7.94)
   {
     file.seek(sizeof(bool), SeekCur);     // remove lastBinaryState
     file.seek(sizeof(char[10]), SeekCur); // remove payloadOff
@@ -289,10 +289,12 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["primaryGpio"] = ss.primaryGpio;
     sdoc["secondaryGpio"] = ss.secondaryGpio;
     sdoc["tertiaryGpio"] = ss.tertiaryGpio;
+    sdoc["mqttStateTopic"] = ss.mqttStateTopic;
     sdoc["pullup"] = ss.pullup;
     sdoc["delayRead"] = ss.delayRead;
     sdoc["lastBinaryState"] = ss.lastBinaryState;
     sdoc["haSupport"] = ss.haSupport;
+    sdoc["emoncmsSupport"] = ss.emoncmsSupport;
     a.add(sdoc);
   }
 }
@@ -433,28 +435,6 @@ void publishReadings(String &readings , SensorT & sensor){
 }
 void loop(Sensors &sensors)
 {
-#if WITH_DISPLAY
-  debouncer.update();
-  int value = debouncer.read();
-  if (lastState != value)
-  {
-    lastState = value;
-    if (value)
-    {
-
-      if (displayOn)
-      {
-        display.displayOff();
-        displayOn = false;
-      }
-      else
-      {
-        display.displayOn();
-        displayOn = true;
-      }
-    }
-  }
-#endif
   for (auto &ss : sensors.items)
   {
 
