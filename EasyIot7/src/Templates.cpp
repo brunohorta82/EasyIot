@@ -60,7 +60,7 @@ void loadSensorsDefaults()
     strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
     strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
     strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
-    strlcpy(pzem.deviceClass, constantsSensor::noneClass, sizeof(pzem.deviceClass));
+    strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
     getAtualSensorsConfig().items.push_back(pzem);
 #endif
 }

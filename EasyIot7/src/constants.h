@@ -11,7 +11,8 @@ constexpr const char *homeassistantOnlineTopic{"hass/status"};
 } // namespace constantsMqtt
 namespace constantsSensor
 {
-constexpr const char *noneClass{"None"};
+constexpr const char *noneClass{"none"};
+constexpr const char *powerMeterClass{"power_meter"};
 constexpr const char *familySensor{"sensor"};
 constexpr const char *binarySensorFamily{"binary_sensor"};
 } // namespace constantsSensor

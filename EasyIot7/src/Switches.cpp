@@ -664,7 +664,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
         writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
       }
     }
-    else if (statePoolIdx == constanstsSwitch::offIdx)
+    else if (statePoolIdx == constanstsSwitch::offIdx || strcmp(constanstsSwitch::payloadReleased, state) == 0)
     {
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
@@ -678,14 +678,6 @@ const char *SwitchT::changeState(const char *state, const char *origin)
       {
         configPIN(primaryGpioControl, OUTPUT);
         writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
-      }
-    }
-    else if (strcmp(constanstsSwitch::payloadReleased, state) == 0)
-    {
-      if (typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-        configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
       }
     }
     const char *currentStateToSend = getCurrentState();
