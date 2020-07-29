@@ -81,11 +81,10 @@ void Switches::save(File &file) const
 }
 void Switches::toJson(JsonVariant &root)
 {
-  DynamicJsonDocument doc(1024);
-  JsonArray a = root.to<JsonArray>();
   for (const auto &sw : items)
   {
-    JsonVariant sdoc = doc.to<JsonVariant>();
+    Serial.println(sw.name);
+    JsonVariant sdoc = root.createNestedObject();
     sdoc["id"] = sw.id;
     sdoc["name"] = sw.name;
     sdoc["family"] = sw.family;
@@ -113,7 +112,7 @@ void Switches::toJson(JsonVariant &root)
     sdoc["knxLevelOne"] = sw.knxLevelOne;
     sdoc["knxLevelTwo"] = sw.knxLevelTwo;
     sdoc["knxLevelThree"] = sw.knxLevelThree;
-    a.add(sdoc);
+    
   }
 }
 const char *SwitchT::getCurrentState() const
@@ -336,6 +335,8 @@ void SwitchT::load(File &file)
     file.read((uint8_t *)&downCourseTime, sizeof(downCourseTime));
     file.read((uint8_t *)&calibrationRatio, sizeof(calibrationRatio));
     file.read((uint8_t *)shutterState, sizeof(shutterState));
+  }else{
+    mqttSupport = true;
   }
 
   firmware = VERSION;

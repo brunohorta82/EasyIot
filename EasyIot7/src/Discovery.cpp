@@ -54,8 +54,8 @@ object["payload_open"] = constanstsSwitch::payloadOpen;
   object["payload_close"] = constanstsSwitch::payloadClose;
   object["payload_stop"] = constanstsSwitch::payloadStop;
   object["device_class"] = "blind";
-  object["position_open"] = 100;
-  object["position_closed"] = 0;
+  object["position_open"] = 0;
+  object["position_closed"] = 100;
   object["position_topic"] = sw.mqttStateTopic;
   object["set_position_topic"] = sw.mqttCommandTopic;
 }

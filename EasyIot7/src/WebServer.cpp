@@ -249,7 +249,7 @@ void setupWebserverAsync()
       if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true,2048 );
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().toJson(root);
     response->setLength();

@@ -276,11 +276,9 @@ Sensors& Sensors::updateFromJson(const String &id, JsonObject doc)
 }
 void Sensors::toJson(JsonVariant &root)
 {
-  DynamicJsonDocument doc(1024);
-  JsonArray a = root.to<JsonArray>();
   for (const auto &ss : items)
   {
-    JsonVariant sdoc = doc.to<JsonVariant>();
+    JsonVariant sdoc = root.createNestedObject();
     sdoc["id"] = ss.id;
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.family;
@@ -295,7 +293,6 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["lastBinaryState"] = ss.lastBinaryState;
     sdoc["haSupport"] = ss.haSupport;
     sdoc["emoncmsSupport"] = ss.emoncmsSupport;
-    a.add(sdoc);
   }
 }
 Sensors & Sensors::remove(const char *id)
