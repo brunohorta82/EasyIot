@@ -103,7 +103,7 @@ constexpr const char *newID{"NEW"};
 constexpr unsigned int noGPIO{99u};
 constexpr unsigned long storeConfigDelay{5000ul};
 
-constexpr const char *apSecret{"EasyIot@"}; //AP PASSWORD
+constexpr const char *apSecret{"bhonofre"}; //AP PASSWORD
 constexpr const char *apiUser{"admin"};     //API USER
 constexpr const char *apiPassword{"xpto"};  //API PASSWORD
 } // namespace constantsConfig
@@ -112,7 +112,7 @@ namespace constanstsCloudIO
 {
 constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
 
-constexpr uint16_t mqttPort{1883};
+constexpr int mqttPort{1883};
 } // namespace constanstsCloudIO
 
 namespace constanstsSwitch

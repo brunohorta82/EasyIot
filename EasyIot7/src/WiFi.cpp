@@ -12,7 +12,7 @@ String getApName()
 {
   String version = String(VERSION);
   version.replace(".", "x");
-  return "EasyIot-" + String(ESP.getChipId()) + "-" + version;
+  return "OnOfre-" + String(ESP.getChipId()) + "-" + version;
 }
 
 void reloadWiFiConfig()
@@ -217,7 +217,7 @@ void refreshMDNS(const char *lastName)
     MDNS.addService("easyiot", "tcp", 80);
     MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
     MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION, 3));
-    MDNS.addServiceTxt("easyiot", "tcp", "lastChange", String(getTime()));
+    MDNS.addServiceTxt("easyiot", "tcp", "wifi", String(getAtualConfig().wifiSSID));
     MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", constantsConfig::firmwareMode);
   }
   else

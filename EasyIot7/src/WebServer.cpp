@@ -10,26 +10,30 @@
 
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncTCP.h>
-#if EMULATE_ALEXA
-#include <fauxmoESP.h>
-#endif
+
 #include <Config.h>
 #include "WiFi.h"
+#define REALM "onofre"
 
-// SKETCH BEGIN
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
-#if EMULATE_ALEXA
-static fauxmoESP fauxmo;
-#endif
 
+AsyncJsonResponse *errorResponse(const char *cause)
+{
+  AsyncJsonResponse *responseError = new AsyncJsonResponse();
+  JsonVariant &root = responseError->getRoot();
+  root["cause"] = cause;
+  responseError->setCode(400);
+  responseError->setLength();
+  return responseError;
+}
 void loadUI()
 {
   //HTML
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -40,8 +44,8 @@ void loadUI()
 
   server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -51,8 +55,8 @@ void loadUI()
 
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -63,7 +67,7 @@ void loadUI()
   server.on("/wifi.html", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", wifi_html, sizeof(wifi_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -74,7 +78,7 @@ void loadUI()
   server.on("/devices.html", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", devices_html, sizeof(devices_html));
     response->addHeader("Content-Encoding", "gzip");
@@ -85,8 +89,8 @@ void loadUI()
   //JS
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
     response->addHeader("Content-Encoding", "gzip");
@@ -96,8 +100,8 @@ void loadUI()
 
   server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
     response->addHeader("Content-Encoding", "gzip");
@@ -108,8 +112,8 @@ void loadUI()
   //CSS
   server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
     response->addHeader("Content-Encoding", "gzip");
@@ -128,23 +132,23 @@ void setupWebserverAsync()
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
     requestRestart();
     request->send(200, "application/json", "{\"result\":\"OK\"}");
   });
   server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     request->send(200, "application/json", "{\"result\":\"OK\"}");
     requestLoadDefaults();
   });
   server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     systemJSONStatus(*response);
@@ -152,8 +156,8 @@ void setupWebserverAsync()
   });
   server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     request->send(200, "application/json", "{\"result\":\"OK\"}");
     requestAutoUpdate();
@@ -161,8 +165,8 @@ void setupWebserverAsync()
 
   server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     bool error = Update.hasError();
     if(error){
@@ -198,8 +202,8 @@ void setupWebserverAsync()
   //CONFIG
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().serializeToJson(*response);
@@ -211,7 +215,7 @@ void setupWebserverAsync()
   server.on("/assign", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
@@ -232,7 +236,7 @@ void setupWebserverAsync()
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     getAtualConfig().updateFromJson(json).saveConfigurationOnDefaultFile().serializeToJson(*response);
@@ -240,120 +244,131 @@ void setupWebserverAsync()
     request->send(response);
   }));
 
-  //FEATURES
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getAtualSwitchesConfig().serializeToJson(*response);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    JsonVariant &root = response->getRoot();
+    getAtualSwitchesConfig().toJson(root);
+    response->setLength();
     request->send(response);
   });
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
     {
-      request->send(400, "Invalid id");
+      request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    update(getAtualSwitchesConfig(), request->arg("id").c_str(), json);
-    serializeJson(json, *response);
-    requestCloudIOSync();
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    JsonVariant &root = response->getRoot();
+    JsonObject switchJson = json.as<JsonObject>();
+    getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson).toJson(root);
+    response->setLength();
     request->send(response);
+    requestCloudIOSync();
   }));
-
-  server.on("/remove-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/remove-switch", HTTP_DELETE, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
-    if (request->hasArg("id"))
+    if (!request->hasArg("id"))
     {
-      remove(getAtualSwitchesConfig(), request->arg("id").c_str());
+      request->send(errorResponse("Id missing"));
+      return;
     }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getAtualSwitchesConfig().serializeToJson(*response);
-        requestCloudIOSync();
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    JsonVariant &root = response->getRoot();
+    getAtualSwitchesConfig().remove(request->arg("id").c_str()).toJson(root);
+    response->setLength();
     request->send(response);
+    requestCloudIOSync();
   });
 
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request) {
-#if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
-#endif
-    if (request->hasArg("id") && request->hasArg("state"))
+      return request->requestAuthentication(REALM);
+    if (!request->hasArg("id"))
     {
-      stateSwitchById(getAtualSwitchesConfig(), request->arg("id").c_str(), request->arg("state").c_str());
-      request->send(200, "application/json", "{\"result\":\"OK\"}");
+      request->send(errorResponse("Id missing"));
+      return;
     }
-    else
+    if (request->hasArg("state"))
     {
-      request->send(400, "application/json", "{\"result\":\"MISSING PARAMS\"}");
+      request->send(errorResponse("State missing"));
+      return;
     }
+    const char *stateResult = getAtualSwitchesConfig().stateSwitchById(request->arg("id").c_str(), request->arg("state").c_str());
+    if (strcmp("ERROR", stateResult) == 0)
+    {
+      request->send(errorResponse("Invalid State"));
+      return;
+    }
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["stateControl"] = stateResult;
+    response->setLength();
+    request->send(response);
   });
 
   server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getAtualSensorsConfig().serializeToJson(*response);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    JsonVariant &root = response->getRoot();
+    getAtualSensorsConfig().toJson(root);
+    response->setLength();
     request->send(response);
   });
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
     {
-      request->send(400, "Invalid id");
+      request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    update(getAtualSensorsConfig(), request->arg("id").c_str(), json);
-    serializeJson(json, *response);
-    requestCloudIOSync();
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    JsonVariant &root = response->getRoot();
+    JsonObject sensorJson = json.as<JsonObject>();
+    getAtualSensorsConfig().updateFromJson(request->arg("id").c_str(), sensorJson).toJson(root);
+    response->setLength();
     request->send(response);
+    requestCloudIOSync();
   }));
 
   server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication();
+      return request->requestAuthentication(REALM);
 #endif
-    if (request->hasArg("id"))
+    if (!request->hasArg("id"))
     {
-      remove(getAtualSensorsConfig(), request->arg("id").c_str());
+      request->send(errorResponse("Id missing"));
+      return;
     }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getAtualSensorsConfig().serializeToJson(*response);
-        requestCloudIOSync();
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    JsonVariant &root = response->getRoot();
+    getAtualSensorsConfig().remove(request->arg("id").c_str()).toJson(root);
+    response->setLength();
     request->send(response);
+    requestCloudIOSync();
   });
-#if EMULATE_ALEXA
-  //ALEXA SUPPORT
-  server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), String((char *)data)))
-      return;
-  });
-#endif
+
   server.onNotFound([](AsyncWebServerRequest *request) {
-#if EMULATE_ALEXA
-    //ALEXA
-    String body = (request->hasParam("body", true)) ? request->getParam("body", true)->value() : String();
-    if (fauxmo.process(request->client(), request->method() == HTTP_GET, request->url(), body))
-      return;
-#endif
+
     //CORS
     if (request->method() == HTTP_OPTIONS)
     {
@@ -369,21 +384,8 @@ void setupWebserverAsync()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
   server.begin();
-#if EMULATE_ALEXA
-  startAlexaDiscovery();
-#endif
 }
-#if EMULATE_ALEXA
-void addSwitchToAlexa(const char *name)
-{
-  fauxmo.removeDevice(name);
-  fauxmo.addDevice(name);
-}
-void removeSwitchFromAlexa(const char *name)
-{
-  fauxmo.removeDevice(name);
-}
-#endif
+
 void sendToServerEvents(const String &topic, const char *payload)
 {
   events.send(payload, topic.c_str(), millis());
@@ -391,7 +393,4 @@ void sendToServerEvents(const String &topic, const char *payload)
 
 void webserverServicesLoop()
 {
-#if EMULATE_ALEXA
-  fauxmo.handle();
-#endif
 }

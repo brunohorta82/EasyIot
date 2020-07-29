@@ -25,11 +25,12 @@ getAtualConfig()
   static Config config;
   return config;
 }
-void generateId(String &id, const String &name, size_t maxSize)
+void generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
   id.reserve(maxSize);
   id.concat(getAtualConfig().chipId);
   id.concat(name);
+  id.concat(familyCode);
   normalize(id);
 }
 long getTime()

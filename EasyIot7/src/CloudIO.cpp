@@ -56,8 +56,17 @@ void onMqttConnect(bool sessionPresent)
 #ifdef DEBUG
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
+    String topicAction;
+    topicAction.reserve(200);
+    topicAction.concat(user);
+    topicAction.concat("/");
+    topicAction.concat(getAtualConfig().chipId);
+    topicAction.concat("/remote-action");
+    strlcpy(getAtualConfig().mqttCloudRemoteActionsTopic, topicAction.c_str(), sizeof(getAtualConfig().mqttCloudRemoteActionsTopic));
+    subscribeOnMqttCloudIO(getAtualConfig().mqttCloudRemoteActionsTopic);
   for (auto &sw : getAtualSwitchesConfig().items)
   {
+    
     String topic;
     topic.reserve(200);
     topic.concat(user);
@@ -133,7 +142,19 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
   strlcpy(msg, payload, len + 1);
-  mqttSwitchControl(getAtualSwitchesConfig(), topic, msg);
+  if(strcmp(topic,getAtualConfig().mqttCloudRemoteActionsTopic) == 0){
+  if(strcmp(msg,"REBOOT") == 0){
+    requestRestart();
+  }
+  if(strcmp(msg,"UPDATE") == 0){
+    requestAutoUpdate();
+  }
+  }else
+  {
+  mqttSwitchControl(getAtualSwitchesConfig(), topic, msg);  
+  }
+  
+  
 }
 
 void onMqttPublish(uint16_t packetId)
@@ -170,7 +191,7 @@ bool tryCloudConnection()
 }
 void cloudIoKeepAlive(){
   if(cloudIOReadyToConnect && !mqttClient.connected()){
- cloudIO.once(5, tryCloudConnection);
+    cloudIO.once(5, tryCloudConnection);
   }
 }
 WiFiClient client;
@@ -183,12 +204,13 @@ void connectoToCloudIO()
   String payload = "";
   size_t s = getAtualSwitchesConfig().items.size();
   size_t ss = getAtualSensorsConfig().items.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(7) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
   device["chipId"] = getAtualConfig().chipId;
   device["currentVersion"] = String(VERSION, 3);
   device["nodeId"] = getAtualConfig().nodeId;
+  device["wifi"] = getAtualConfig().wifiSSID;
   const char *firmwareMode = {FEATURES_TEMPLATE};
   device["firmwareMode"] = firmwareMode;
   device["macAddr"] = WiFi.macAddress();
@@ -209,7 +231,7 @@ void connectoToCloudIO()
     sdoc["id"] = ss.id;
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.deviceClass;
-    sdoc["cloudIOSupport"] = true;
+    sdoc["cloudIOSupport"] = ss.cloudIOSupport;
     switch (ss.type)
     {
 

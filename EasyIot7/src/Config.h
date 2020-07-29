@@ -43,6 +43,7 @@ struct Config
   uint8_t knxLine = 0;
   uint8_t knxMember = 0;
   long connectedOn = -1;
+  char mqttCloudRemoteActionsTopic[128];
   Config &updateFromJson(JsonObject doc);
   void save(File &file) const;
   void load(File &file);
@@ -72,7 +73,7 @@ boolean isValidNumber(const char *str);
 void configPIN(uint8_t pin, uint8_t mode);
 void writeToPIN(uint8_t pin, uint8_t val);
 bool readPIN(uint8_t pin);
-void generateId(String &id, const String &name, size_t maxSize);
+void generateId(String &id, const String &name, int familyCode, size_t maxSize);
 void loopTime();
 long getTime();
 #endif

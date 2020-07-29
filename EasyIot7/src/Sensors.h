@@ -3,12 +3,14 @@
 
 #include <Arduino.h>
 #include "FS.h"
+#include "constants.h"
 #include <ArduinoJson.h>
 
 class PZEM004T;
 class PZEM004Tv30;
 class DHT_nonblocking;
 class DallasTemperature;
+class Modbus;
 enum SensorType
 {
   UNDEFINED = -1,
@@ -21,13 +23,14 @@ enum SensorType
   DHT_11 = 0,
   DHT_21 = 1,
   DHT_22 = 2,
-  PZEM_004T = 70,    // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
-  PZEM_004T_V03 = 71 // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
+  PZEM_004T = 70,     // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
+  PZEM_004T_V03 = 71, // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
+  PZEM_017 = 72
 };
 
 struct SensorT
 {
-  double firmware;
+  double firmware = VERSION;
   char id[32]; //Generated from name without spaces and no special characters
   char name[24];
   char family[16]; //sensor, binary_sensor
@@ -37,26 +40,26 @@ struct SensorT
   char mqttStateTopic[128];
   char mqttPayload[128];
   bool mqttRetain = true;
-  bool haSupport = true;
   bool emoncmsSupport = false;
-  //KNX
-  uint8_t knxLevelOne;
-  uint8_t knxLevelTwo;
-  uint8_t knxLevelThree;
+  bool cloudIOSupport = true;
+  bool haSupport = false;
+  bool knxSupport = false;
+  bool mqttSupport = false;
+
   //INPUT GPIO
-  unsigned int primaryGpio;
-  unsigned int secondaryGpio;
-  unsigned int tertiaryGpio;
-  bool pullup; //USE INTERNAL RESISTOR
+  unsigned int primaryGpio = constantsConfig::noGPIO;
+  unsigned int secondaryGpio = constantsConfig::noGPIO;
+  unsigned int tertiaryGpio = constantsConfig::noGPIO;
+  bool pullup = false; //USE INTERNAL RESISTOR
 
   //TEMPERATURE AND HUMIDITY SENSORS
   DHT_nonblocking *dht;
   DallasTemperature *dallas;
-  uint8_t busSensorCount = 0;
+  uint8_t oneWireSensorsCount = 0;
 
   PZEM004T *pzem;
   PZEM004Tv30 *pzemv03;
-
+  Modbus *pzemModbus;
   unsigned long delayRead = 0ul;
   unsigned long lastRead = 0ul;
 
@@ -66,10 +69,8 @@ struct SensorT
   //READINGS
   float temperature = static_cast<float>(0);
   float humidity = static_cast<float>(0);
-  bool reading = false;
 //CLOUDIO
  char mqttCloudStateTopic[128];
-   bool cloudIOSupport = true;
   //CUSTOM PAYLOADS
   char payloadOff[10];
   char payloadOn[10];
@@ -83,13 +84,13 @@ struct Sensors
   std::vector<SensorT> items;
   void load(File &file);
   void save(File &file) const;
-  bool remove(const char *id);
-  size_t serializeToJson(Print &output);
+  void save();
+  Sensors & remove( const char *id);
+  Sensors& updateFromJson(const String &id, JsonObject doc);
+  void toJson(JsonVariant &root);
 };
 struct Sensors &getAtualSensorsConfig();
 void loop(Sensors &sensors);
 void load(Sensors &sensors);
-void remove(Sensors &sensors, const char *id);
-void update(Sensors &sensors, const String &id, JsonObject doc);
 void reloadSensors();
 #endif
