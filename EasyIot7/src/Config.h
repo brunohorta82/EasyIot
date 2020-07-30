@@ -14,6 +14,8 @@ struct Config
   char nodeId[32] ;
   char homeAssistantAutoDiscoveryPrefix[32] ;
   char mqttIpDns[40] ;
+  char cloudIOUserName[40];
+  char cloudIOUserPassword[40];
   char mqttUsername[32] ;
   int mqttPort = 1883;
   char mqttPassword[24] ;
@@ -37,7 +39,7 @@ struct Config
   char emoncmsPath[20] ;
   char emoncmsApikey[80] ;
   char emoncmsFingerprint[100] ;
-    char available[11];
+  char available[11];
   char offline[11];
   uint8_t knxArea = 0;
   uint8_t knxLine = 0;

@@ -236,9 +236,11 @@ void addToHaDiscovery(const SwitchT &sw)
 void removeFromHaDiscovery(const SwitchT &sw)
 {
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), "", false);
+  delay(3);
 }
 
 void removeFromHaDiscovery(const SensorT &s)
 {
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/" + String(s.id) + "/config").c_str(), "", false);
+  delay(3);
 }

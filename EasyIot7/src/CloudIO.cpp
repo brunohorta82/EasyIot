@@ -8,12 +8,9 @@
 #include "Sensors.h"
 #include <ESP8266HTTPClient.h>
 AsyncMqttClient mqttClient;
-String user;
-String pw;
-bool cloudIOReadyToConnect = false;
 Ticker mqttReconnectTimer;
-Ticker cloudIO;
-bool tryConnection = false;
+Ticker cloudIOReconnectTimer;
+int reconectCount = 0;
 
 void disconnectToClounIOMqtt()
 {
@@ -56,10 +53,9 @@ void onMqttConnect(bool sessionPresent)
 #ifdef DEBUG
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
-    tryConnection = false;
     String topicAction;
     topicAction.reserve(200);
-    topicAction.concat(user);
+    topicAction.concat(getAtualConfig().cloudIOUserName);
     topicAction.concat("/");
     topicAction.concat(getAtualConfig().chipId);
     topicAction.concat("/remote-action");
@@ -70,7 +66,7 @@ void onMqttConnect(bool sessionPresent)
     
     String topic;
     topic.reserve(200);
-    topic.concat(user);
+    topic.concat(getAtualConfig().cloudIOUserName);
     topic.concat("/");
     topic.concat(getAtualConfig().chipId);
     topic.concat("/");
@@ -101,7 +97,7 @@ void onMqttConnect(bool sessionPresent)
   {
     String topic;
     topic.reserve(200);
-    topic.concat(user);
+    topic.concat(getAtualConfig().cloudIOUserName);
     topic.concat("/");
     topic.concat(getAtualConfig().chipId);
     topic.concat("/");
@@ -119,11 +115,10 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 #ifdef DEBUG
   Log.warning("%s Disconnected from MQTT." CR, tags::cloudIO);
 #endif
-  if (WiFi.isConnected() && !tryConnection)
+  if (WiFi.isConnected())
   {
-    tryConnection = true;
     mqttReconnectTimer.once(2, connectToClounIOMqtt);
-  }
+  }  
 }
 bool cloudIOConnected()
 {
@@ -176,32 +171,30 @@ void setupCloudIO()
   mqttClient.setWill("available", 0, true, getAtualConfig().offline, strlen(getAtualConfig().offline));
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(getAtualConfig().chipId);
-  mqttClient.setCredentials(user.c_str(), pw.c_str());
+  mqttClient.setCredentials(getAtualConfig().cloudIOUserName,getAtualConfig().cloudIOUserPassword);
   connectToClounIOMqtt();
 }
 bool tryCloudConnection()
 {
-  if (!cloudIOReadyToConnect && user.length() > 0 && pw.length() > 0)
+  if (strlen(getAtualConfig().cloudIOUserName) > 0 && strlen( getAtualConfig().cloudIOUserPassword) > 0)
   {
 #ifdef DEBUG
     Log.error("%s Ready to try..." CR, tags::cloudIO);
 #endif
-    cloudIOReadyToConnect = true;
     setupCloudIO();
   }
   return true;
 }
+
 void cloudIoKeepAlive(){
-  if(cloudIOReadyToConnect && !mqttClient.connected() && !tryConnection){
-    cloudIO.once(5, tryCloudConnection);
-    tryConnection = true;
-  }
+ requestCloudIOSync();
 }
 WiFiClient client;
 HTTPClient http;
 void connectoToCloudIO()
-{
-  if (WiFi.status() != WL_CONNECTED)
+{  reconectCount++;
+   cloudIOReconnectTimer.detach(); 
+  if (WiFi.status() != WL_CONNECTED || reconectCount  > 20)
     return;
 
   String payload = "";
@@ -257,7 +250,7 @@ void connectoToCloudIO()
   http.begin(client, "http://easyiot.bhonofre.pt/devices");
   http.addHeader("Content-Type", "application/json");
 #ifdef DEBUG
-  Log.error("%s [HTTP] POST" CR, tags::cloudIO);
+  Log.error("%s [HTTP] POST %d" CR, tags::cloudIO,reconectCount);
 #endif
   // start connection and send HTTP header and body
   int httpCode = http.POST(payload.c_str());
@@ -277,23 +270,22 @@ void connectoToCloudIO()
       DeserializationError error = deserializeJson(doc, payload);
       const char *_user = doc["username"];
       const char *_pw = doc["password"];
+     strlcpy(getAtualConfig().cloudIOUserName,doc["username"] | "", sizeof(getAtualConfig().cloudIOUserName));
+     strlcpy(getAtualConfig().cloudIOUserPassword,doc["password"] | "", sizeof(getAtualConfig().cloudIOUserPassword));
 #ifdef DEBUG
       Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, _user, _pw);
 #endif
-      if (!error && user && pw)
+      if (!error && _user && _pw)
       {
 #ifdef DEBUG
         Log.error("%s SETUP MQTT CLOUD" CR, tags::cloudIO);
 #endif
-        user = String(_user);
-        pw = String(_pw);
-
         if (mqttClient.connected())
         {
           mqttClient.disconnect();
         }
-
-        cloudIO.once(5, tryCloudConnection);
+        reconectCount = 0;
+        tryCloudConnection();
       }
       else
       {
@@ -311,6 +303,12 @@ void connectoToCloudIO()
 #ifdef DEBUG
       Log.error("%s [HTTP] POST... failed, error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
+    cloudIOReconnectTimer.once(10,cloudIoKeepAlive);
     }
+  }else{
+    #ifdef DEBUG
+      Log.error("%s [HTTP] POST... error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
+#endif
+    cloudIOReconnectTimer.once(10,cloudIoKeepAlive);
   }
 }

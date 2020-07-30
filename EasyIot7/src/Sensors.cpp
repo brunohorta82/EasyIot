@@ -538,11 +538,12 @@ void loop(Sensors &sensors)
           String readings = "";
           serializeJson(doc, readings);
           publishReadings(readings,ss);
+          #ifdef DEBUG
+        Log.notice("%s %s " CR, tags::sensors, readings.c_str());
+          #endif
         }
       
-#ifdef DEBUG
-        Log.notice("%s %s " CR, tags::sensors, readings.c_str());
-#endif
+
       }
     }
     break;

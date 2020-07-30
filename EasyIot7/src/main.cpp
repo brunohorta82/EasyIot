@@ -13,7 +13,7 @@
 #include "CloudIO.h"
 
 void checkInternalRoutines()
-{ cloudIoKeepAlive();
+{ 
   if (cloudIOSync())
   {
     connectoToCloudIO();

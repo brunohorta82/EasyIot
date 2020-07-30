@@ -274,6 +274,7 @@ void Config::save(File &file) const
   file.write((uint8_t *)&knxArea, sizeof(knxArea));
   file.write((uint8_t *)&knxLine, sizeof(knxLine));
   file.write((uint8_t *)&knxMember, sizeof(knxMember));
+  file.write((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
 }
 void Config::load(File &file)
 {
@@ -313,6 +314,12 @@ void Config::load(File &file)
   strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
   strlcpy(available, String("1" + String(ESP.getChipId())).c_str(), sizeof(chipId));
   strlcpy(offline, String("0" + String(ESP.getChipId())).c_str(), sizeof(chipId));
+  if(firmware >= 7.941){
+    file.read((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
+  }else{
+    strlcpy(cloudIOUserName, "", sizeof(cloudIOUserName));
+  }
+  
   if (firmware < VERSION)
   {
 #ifdef DEBUG
