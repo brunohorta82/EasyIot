@@ -292,6 +292,8 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["delayRead"] = ss.delayRead;
     sdoc["lastBinaryState"] = ss.lastBinaryState;
     sdoc["haSupport"] = ss.haSupport;
+    sdoc["cloudIOSupport"] = ss.cloudIOSupport;
+    sdoc["mqttSupport"] = ss.mqttSupport;
     sdoc["emoncmsSupport"] = ss.emoncmsSupport;
   }
 }
@@ -345,6 +347,8 @@ void SensorT::updateFromJson(JsonObject doc)
   tertiaryGpio = doc["tertiaryGpio"] | constantsConfig::noGPIO;
   delayRead = doc["delayRead"] | 0;
   mqttRetain = doc["mqttRetain"] | true;
+  cloudIOSupport = doc["cloudIOSupport"] | true;
+  mqttSupport = doc["mqttSupport"] | false;
   haSupport = doc["haSupport"] | true;
   emoncmsSupport = doc["emoncmsSupport"] | false;
   strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOn));
@@ -486,7 +490,7 @@ void loop(Sensors &sensors)
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
-    publishReadings(readings,ss);
+        publishReadings(readings,ss);
 #ifdef DEBUG
         Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
 #endif
@@ -522,19 +526,20 @@ void loop(Sensors &sensors)
       {
         ss.dallas->begin();
         ss.oneWireSensorsCount = ss.dallas->getDeviceCount();
-        StaticJsonDocument<256> doc;
-        JsonObject obj = doc.to<JsonObject>();
         for (int i = 0; i < ss.oneWireSensorsCount; i++)
         {
+          StaticJsonDocument<256> doc;
+          JsonObject obj = doc.to<JsonObject>();
           ss.dallas->requestTemperatures();
           ss.lastRead = millis();
           ss.temperature = ss.dallas->getTempCByIndex(i);
           String temperatureAsString = String("temperature_") + String(i + 1);
           obj[temperatureAsString] = trunc(ss.temperature);
+          String readings = "";
+          serializeJson(doc, readings);
+          publishReadings(readings,ss);
         }
-        String readings = "";
-        serializeJson(doc, readings);
- publishReadings(readings,ss);
+      
 #ifdef DEBUG
         Log.notice("%s %s " CR, tags::sensors, readings.c_str());
 #endif

@@ -40,17 +40,17 @@ void createHaSwitch(const SwitchT &sw)
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
-  object["command_topic"] = sw.mqttCommandTopic;
-  object["state_topic"] = sw.mqttStateTopic; 
-  object["retain"] = sw.mqttRetain;
-  object["availability_topic"] = getAvailableTopic();
+  object["unique_id"] = sw.id;
+  object["cmd_t"] = sw.mqttCommandTopic;
+  object["stat_t"] = sw.mqttStateTopic; 
+  object["avty_t"] = getAvailableTopic();
 if (strcmp(sw.family, constanstsSwitch::familyLock) == 0){
   object["payload_lock"] = constanstsSwitch::payloadLock;
   object["payload_unlock"] = constanstsSwitch::payloadUnlock;
 }
 
 if (strcmp(sw.family, constanstsSwitch::familyCover) == 0){
-object["payload_open"] = constanstsSwitch::payloadOpen;
+  object["payload_open"] = constanstsSwitch::payloadOpen;
   object["payload_close"] = constanstsSwitch::payloadClose;
   object["payload_stop"] = constanstsSwitch::payloadStop;
   object["device_class"] = "blind";
@@ -77,8 +77,9 @@ void addToHaDiscovery(const SensorT &s)
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = s.name;
-  object["state_topic"] = s.mqttStateTopic;
-  object["availability_topic"] = getAvailableTopic();
+  object["unique_id"] = s.id;
+  object["stat_t"] = s.mqttStateTopic;
+  object["avty_t"] = getAvailableTopic();
   switch (s.type)
   {
   case DHT_11:
