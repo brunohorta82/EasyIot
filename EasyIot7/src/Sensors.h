@@ -69,6 +69,7 @@ struct SensorT
   //READINGS
   float temperature = static_cast<float>(0);
   float humidity = static_cast<float>(0);
+  char lastReading[200];
 //CLOUDIO
  char mqttCloudStateTopic[128];
   //CUSTOM PAYLOADS

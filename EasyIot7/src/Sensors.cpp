@@ -424,19 +424,21 @@ void SensorT::reloadMqttTopics()
 }
 
 void publishReadings(String &readings , SensorT & sensor){
+  strlcpy(sensor.lastReading,readings.c_str(), sizeof(sensor.lastReading));
   String id = String(sensor.id);
-     sendToServerEvents(id, readings.c_str());
+  sendToServerEvents(id, readings.c_str());
   if(!wifiConnected())return;
    if(sensor.cloudIOSupport)
-  notifyStateToCloudIO(sensor.mqttCloudStateTopic,readings.c_str(),readings.length());
+      notifyStateToCloudIO(sensor.mqttCloudStateTopic,readings.c_str(),readings.length());
    if(sensor.mqttSupport)
-  publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
+      publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
   if(sensor.emoncmsSupport)
       publishOnEmoncms(sensor, readings);
-  
 }
+bool initRealTimeSensors = true;
 void loop(Sensors &sensors)
 {
+
   for (auto &ss : sensors.items)
   {
 
@@ -449,7 +451,6 @@ void loop(Sensors &sensors)
       break;
     case LDR:
     {
-
       if (ss.lastRead + ss.delayRead < millis())
       {
         ss.lastRead = millis();
@@ -469,8 +470,9 @@ void loop(Sensors &sensors)
     case RCWL_0516:
     {
       bool binaryState = readPIN(ss.primaryGpio);
-      if (ss.lastBinaryState != binaryState)
+      if (ss.lastBinaryState != binaryState || initRealTimeSensors)
       {
+       
         ss.lastRead = millis();
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
@@ -485,7 +487,7 @@ void loop(Sensors &sensors)
     case REED_SWITCH_NO:
     {
       bool binaryState = !readPIN(ss.primaryGpio);
-      if (ss.lastBinaryState != binaryState)
+      if (ss.lastBinaryState != binaryState || initRealTimeSensors )
       {
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
@@ -677,4 +679,5 @@ publishReadings(readings,ss);
       break;
     }
   }
+initRealTimeSensors = false;
 }

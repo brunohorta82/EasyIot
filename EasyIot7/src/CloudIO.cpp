@@ -106,6 +106,7 @@ void onMqttConnect(bool sessionPresent)
     topic.concat(ss.id);
     topic.concat("/status");
     strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
+     mqttClient.publish(ss.mqttCloudStateTopic, 0, false, ss.lastReading);
   }
 }
 
@@ -227,6 +228,7 @@ void connectoToCloudIO()
     sdoc["id"] = ss.id;
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.deviceClass;
+    sdoc["stateControl"] = ss.lastReading;
     sdoc["cloudIOSupport"] = ss.cloudIOSupport;
   }
   serializeJson(doc, payload);
