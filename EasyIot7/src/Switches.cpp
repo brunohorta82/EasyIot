@@ -78,6 +78,8 @@ void Switches::save(File &file) const
   file.write((uint8_t *)&n_items, sizeof(n_items));
   for (const auto &item : items)
     item.save(file);
+    getAtualSwitchesConfig().lastChange = 0ul;
+
 }
 void Switches::toJson(JsonVariant &root)
 {

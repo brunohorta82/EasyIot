@@ -472,14 +472,13 @@ void loop(Sensors &sensors)
       bool binaryState = readPIN(ss.primaryGpio);
       if (ss.lastBinaryState != binaryState || initRealTimeSensors)
       {
-       
         ss.lastRead = millis();
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + (binaryStateAsString) + "}");
         publishReadings(readings,ss);
 #ifdef DEBUG
-        Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
+        Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
       }
     }
@@ -489,12 +488,13 @@ void loop(Sensors &sensors)
       bool binaryState = !readPIN(ss.primaryGpio);
       if (ss.lastBinaryState != binaryState || initRealTimeSensors )
       {
+        ss.lastRead = millis();
         ss.lastBinaryState = binaryState;
-        String binaryStateAsString = String(binaryState);
+        String binaryStateAsString = String(binaryState ? 0 : 1);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
         publishReadings(readings,ss);
 #ifdef DEBUG
-        Log.notice("%s {\"binary_state\": %t }" CR, tags::sensors, binaryState);
+        Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
       }
     }
