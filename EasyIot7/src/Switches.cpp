@@ -83,7 +83,6 @@ void Switches::toJson(JsonVariant &root)
 {
   for (const auto &sw : items)
   {
-    Serial.println(sw.name);
     JsonVariant sdoc = root.createNestedObject();
     sdoc["id"] = sw.id;
     sdoc["name"] = sw.name;
@@ -268,8 +267,11 @@ void SwitchT::configPins()
     debouncerSecondary->attach(secondaryGpio, secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     debouncerSecondary->interval(5);
   }
-  lastPrimaryGpioState = pullup;
-  lastSecondaryGpioState = pullup;
+  #ifdef DEBUG
+    Log.notice("%s lastPrimaryGpioState %d" CR, tags::switches,lastPrimaryGpioState);
+    Log.notice("%s lastSecondaryGpioState %d" CR, tags::switches,lastSecondaryGpioState);
+#endif
+
 
 }
 void SwitchT::load(File &file)
@@ -378,7 +380,6 @@ void switchesCallback(message_t const &msg, void *arg)
   }
   case KNX_CT_READ:
   {
-    Serial.println("Read");
     break;
   }
   }
