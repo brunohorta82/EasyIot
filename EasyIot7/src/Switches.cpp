@@ -745,7 +745,13 @@ void loop(Switches &switches)
     case SWITCH:
       if (sw.primaryGpio != constantsConfig::noGPIO && sw.lastPrimaryGpioState != primaryGpioEvent)
       {
+          #ifdef DEBUG
+    Log.notice("%s 1 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches,sw.lastPrimaryGpioState, primaryGpioEvent);
+    #endif
         sw.rotateState();
+              #ifdef DEBUG
+    Log.notice("%s 2 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches,sw.lastPrimaryGpioState, primaryGpioEvent);
+    #endif
       }
       break;
     case PUSH:

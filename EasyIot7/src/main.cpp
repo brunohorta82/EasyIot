@@ -21,6 +21,7 @@ void checkInternalRoutines()
   if (restartRequested())
   {
 #ifdef DEBUG
+
     Log.notice("%s Rebooting...", tags::system);
 #endif
     ESP.restart();
