@@ -490,7 +490,7 @@ void loop(Sensors &sensors)
       {
         ss.lastRead = millis();
         ss.lastBinaryState = binaryState;
-        String binaryStateAsString = String(binaryState ? 0 : 1);
+        String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
         publishReadings(readings,ss);
 #ifdef DEBUG
