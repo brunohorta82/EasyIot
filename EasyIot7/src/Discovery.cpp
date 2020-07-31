@@ -85,17 +85,22 @@ void addToHaDiscovery(const SensorT &s)
   case DHT_11:
   case DHT_21:
   case DHT_22:
-    object["unit_of_measurement"] = "%";
-    object["device_class"] = "humidity";
-    object["value_template"] = "{{value_json.humidity}}";
-    serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-    objectStr = "";
+    object["unique_id"] = String(s.id) + "T";
     object["unit_of_measurement"] = "ºC";
     object["device_class"] = "temperature";
     object["value_template"] = "{{value_json.temperature}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    
+    delay(100);
+    objectStr = "";
+    object["unique_id"] = String(s.id) + "H";
+    object["unit_of_measurement"] = "%";
+    object["device_class"] = "humidity";
+    object["value_template"] = "{{value_json.humidity}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+   
     break;
   case DS18B20:
     for (int i = 0; i < s.oneWireSensorsCount; i++)
@@ -103,6 +108,7 @@ void addToHaDiscovery(const SensorT &s)
       String idx = String(i + 1);
       object["name"] = String(s.name) + idx;
       object["unit_of_measurement"] = "ºC";
+      object["unique_id"] = String(s.id) + idx;
       object["device_class"] = "temperature";
       object["value_template"] = String("{{value_json.temperature_") + idx + String("}}");
       objectStr = "";
