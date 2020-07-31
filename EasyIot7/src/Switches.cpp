@@ -720,7 +720,10 @@ bool stateTimeout(SwitchT &sw)
 }
 void loop(Switches &switches)
 {
-
+  if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
+  {
+    getAtualSwitchesConfig().save();
+  }
   for (auto &sw : switches.items)
   {
     if (sw.isCover)
