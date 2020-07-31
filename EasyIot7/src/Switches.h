@@ -99,6 +99,7 @@ struct SwitchT
 };
 struct Switches
 {
+      unsigned long lastChange = 0ul;
     std::vector<SwitchT> items;
     void load(File &file);
     const char *rotate(const char *id);

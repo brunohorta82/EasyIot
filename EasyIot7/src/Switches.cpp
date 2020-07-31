@@ -626,7 +626,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
   Log.notice("%s From : %s" CR, tags::switches, origin);
 #endif
-
+  bool dirty = strcmp(state,getCurrentState()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
   if (isCover)
   {
@@ -692,8 +692,8 @@ const char *SwitchT::changeState(const char *state, const char *origin)
       notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend, strlen(currentStateToSend));
     }
     sendToServerEvents(id, currentStateToSend);
-    if(strcmp("LOAD",origin) != 0)
-      getAtualSwitchesConfig().save();
+      if(dirty)
+      getAtualSwitchesConfig().lastChange = millis();
   }
     if (knxNotifyGroup && knxSupport)
   {
