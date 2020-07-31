@@ -228,23 +228,6 @@ void connectoToCloudIO()
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.deviceClass;
     sdoc["cloudIOSupport"] = ss.cloudIOSupport;
-    switch (ss.type)
-    {
-
-    case DHT_11:
-    case DHT_21:
-    case DHT_22:
-    {
-      JsonObject sdoc2 = feactures.createNestedObject();
-      sdoc2["id"] = ss.id;
-      sdoc2["name"] = ss.name;
-      sdoc2["family"] = "HUMIDITY";
-      sdoc2["cloudIOSupport"] = true;
-    }
-    break;
-    default:
-      break;
-    }
   }
   serializeJson(doc, payload);
   http.begin(client, "http://easyiot.bhonofre.pt/devices");
