@@ -722,6 +722,9 @@ void loop(Switches &switches)
 {
   if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
   {
+              #ifdef DEBUG
+    Log.notice("%s AUTO SAVE" CR, tags::switches);
+    #endif
     getAtualSwitchesConfig().save();
   }
   for (auto &sw : switches.items)
