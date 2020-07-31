@@ -69,6 +69,8 @@ void loadSwitchDefaults()
 #if defined SINGLE_SWITCH || DUAL_LIGHT || COVER || GATE
     SwitchT one;
     one.firmware = VERSION;
+    one.lastPrimaryGpioState = false;
+    one.lastSecondaryGpioState = false;
 #if defined DUAL_LIGHT || SINGLE_SWITCH
     one.mode = SWITCH;
     strlcpy(one.name, "Interruptor1", sizeof(one.name));
@@ -124,6 +126,8 @@ void loadSwitchDefaults()
 #endif
 #if defined DUAL_LIGHT
     SwitchT two;
+    two.lastPrimaryGpioState = false;
+    two.lastSecondaryGpioState = false;
     two.firmware = VERSION;
     strlcpy(two.name, "Interruptor2", sizeof(two.name));
     String idStr2;
