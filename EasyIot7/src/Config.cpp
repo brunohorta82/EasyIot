@@ -332,7 +332,7 @@ void loadStoredConfiguration(Config &config)
 {
   configTime(0, 0, NTP_SERVER);
   setenv("TZ", TZ_INFO, 1);
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
@@ -340,7 +340,7 @@ void loadStoredConfiguration(Config &config)
     return;
   }
 
-  if (!SPIFFS.exists(configFilenames::config))
+  if (!LittleFS.exists(configFilenames::config))
   {
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::config);
@@ -370,7 +370,7 @@ void loadStoredConfiguration(Config &config)
 #endif
   }
 
-  File file = SPIFFS.open(configFilenames::config, "r+");
+  File file = LittleFS.open(configFilenames::config, "r+");
   config.load(file);
   file.close();
 
@@ -380,7 +380,7 @@ void loadStoredConfiguration(Config &config)
 }
 Config &Config::saveConfigurationOnDefaultFile()
 {
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
@@ -388,7 +388,7 @@ Config &Config::saveConfigurationOnDefaultFile()
     return getAtualConfig();
   }
 
-  File file = SPIFFS.open(configFilenames::config, "w+");
+  File file = LittleFS.open(configFilenames::config, "w+");
   save(file);
   file.close();
 

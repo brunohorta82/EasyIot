@@ -205,7 +205,7 @@ void SensorT::save(File &file) const
 
 void Sensors::save()
 {
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::sensors);
@@ -213,7 +213,7 @@ void Sensors::save()
     return;
   }
 
-  File file = SPIFFS.open(configFilenames::sensors, "w+");
+  File file = LittleFS.open(configFilenames::sensors, "w+");
   if (!file)
   {
 #ifdef DEBUG
@@ -230,7 +230,7 @@ void Sensors::save()
 }
 void load(Sensors &sensors)
 {
-  if (!SPIFFS.exists(configFilenames::sensors))
+  if (!LittleFS.exists(configFilenames::sensors))
   {
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::sensors);
@@ -239,7 +239,7 @@ void load(Sensors &sensors)
     getAtualSensorsConfig().save();
   }
 
-  File file = SPIFFS.open(configFilenames::sensors, "r+");
+  File file = LittleFS.open(configFilenames::sensors, "r+");
   sensors.load(file);
   file.close();
 

@@ -31,7 +31,7 @@ void checkInternalRoutines()
 #ifdef DEBUG
     Log.notice("%s Loading defaults...", tags::system);
 #endif
-    SPIFFS.format();
+    LittleFS.format();
     requestRestart();
   }
   if (autoUpdateRequested())

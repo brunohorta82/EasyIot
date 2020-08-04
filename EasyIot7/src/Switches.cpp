@@ -351,14 +351,14 @@ void SwitchT::load(File &file)
 
 void Switches::save()
 {
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::switches);
 #endif
     return;
   }
-  File file = SPIFFS.open(configFilenames::switches, "w+");
+  File file = LittleFS.open(configFilenames::switches, "w+");
   if (!file)
     return;
   this->save(file);
@@ -516,7 +516,7 @@ void update(Switches &switches, const String &id, JsonObject doc)
 void load(Switches &switches)
 {
 
-  if (!SPIFFS.exists(configFilenames::switches))
+  if (!LittleFS.exists(configFilenames::switches))
   {
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::switches);
@@ -524,7 +524,7 @@ void load(Switches &switches)
     loadSwitchDefaults();
     getAtualSwitchesConfig().save();
   }
-  File file = SPIFFS.open(configFilenames::switches, "r+");
+  File file = LittleFS.open(configFilenames::switches, "r+");
   switches.load(file);
   file.close();
 

@@ -12,7 +12,8 @@ enum SwitchMode
     SWITCH = 1,
     PUSH = 2,
     DUAL_SWITCH = 4,
-    DUAL_PUSH = 5
+    DUAL_PUSH = 5,
+    GATE_SWITCH = 6
 };
 
 enum SwitchControlType
@@ -42,11 +43,13 @@ struct SwitchT
     //GPIOS INPUT
     unsigned int primaryGpio = constantsConfig::noGPIO;
     unsigned int secondaryGpio = constantsConfig::noGPIO;
+    unsigned int primaryStateGpio = constantsConfig::noGPIO;
     bool pullup = true; //USE INTERNAL RESISTOR
 
     //GPIOS OUTPUT
     unsigned int primaryGpioControl = constantsConfig::noGPIO;
     unsigned int secondaryGpioControl = constantsConfig::noGPIO;
+    unsigned int thirdGpioControl = constantsConfig::noGPIO;
     bool inverted = false;
 
     //AUTOMATIONS
