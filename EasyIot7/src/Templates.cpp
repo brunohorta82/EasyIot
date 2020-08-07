@@ -83,14 +83,13 @@ void loadSwitchDefaults()
     one.secondaryGpioControl = 5u;
 #endif
 #if defined GATE
-    one.mode = PUSH;
+    one.mode = GATE_SWITCH;
     strlcpy(one.name, "Portão", sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyLock, sizeof(one.family));
     one.primaryGpio = constantsConfig::noGPIO;
-    one.autoStateDelay = 1000;
-    strlcpy(one.autoStateValue, constanstsSwitch::payloadReleased, sizeof(one.autoStateValue));
+    one.primaryStateGpio = 13;
+    one.autoStateDelay = 0;
 #endif
-
     String idStr;
     generateId(idStr, one.name, 1, sizeof(one.id));
     strlcpy(one.id, idStr.c_str(), sizeof(one.id));
