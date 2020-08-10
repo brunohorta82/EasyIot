@@ -114,6 +114,7 @@ void Switches::toJson(JsonVariant &root)
     sdoc["mqttSupport"] = sw.mqttSupport;
     sdoc["knxLevelOne"] = sw.knxLevelOne;
     sdoc["knxLevelTwo"] = sw.knxLevelTwo;
+    sdoc["knxLevelThree"] = sw.knxLevelThree;
     sdoc["primaryStateGpio"] = sw.primaryStateGpio;
     sdoc["secondaryStateGpio"] = sw.secondaryStateGpio;
     sdoc["thirdGpioControl"] = sw.thirdGpioControl;
@@ -394,8 +395,6 @@ void switchesCallback(message_t const &msg, void *arg)
   case KNX_CT_WRITE:
   {
     int stateIdx = (int)msg.data[1];
-    s->knxNotifyGroup = false;
-
     s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
 
     break;
@@ -415,8 +414,7 @@ void allwitchesCallback(message_t const &msg, void *arg)
     int stateIdx = (int)msg.data[0];
     for (auto &sw : getAtualSwitchesConfig().items)
     {
-      sw.knxNotifyGroup = false;
-      sw.changeState(STATES_POLL[stateIdx].c_str(), "KNX_GROUP");
+      sw.changeState(STATES_POLL[stateIdx].c_str(), "KNX");
     }
     break;
   }
@@ -643,12 +641,10 @@ const void SwitchT::notifyState(bool dirty)
   sendToServerEvents(id, currentStateToSend);
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
-
   if (knxNotifyGroup && knxSupport)
   {
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
   }
-  knxNotifyGroup = true;
 }
 const char *SwitchT::rotateState()
 {
@@ -673,26 +669,46 @@ const char *SwitchT::changeState(const char *state, const char *origin)
   bool dirty = strcmp(state, getCurrentState()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
   bool isGate = SwitchMode::GATE_SWITCH == mode;
+  knxNotifyGroup = strcmp(origin, "KNX") != 0;
   if (isCover)
   {
-    if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+    if (typeControl == SwitchControlType::GPIO_OUTPUT)
     {
-      shutter->setLevel(0);
-      statePoolIdx = constanstsSwitch::openIdx;
+      if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+      {
+        shutter->setLevel(0);
+        statePoolIdx = constanstsSwitch::openIdx;
+      }
+      else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+      {
+        shutter->stop();
+        statePoolIdx = statePoolIdx == 3 ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
+      }
+      else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
+      {
+        shutter->setLevel(100);
+        statePoolIdx = constanstsSwitch::closeIdx;
+      }
+      else if (isValidNumber(state))
+      {
+        shutter->setLevel(max(0, min(100, atoi(state))));
+      }
     }
-    else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+    else
     {
-      shutter->stop();
-      statePoolIdx = statePoolIdx == 3 ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
-    }
-    else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
-    {
-      shutter->setLevel(100);
-      statePoolIdx = constanstsSwitch::closeIdx;
-    }
-    else if (isValidNumber(state))
-    {
-      shutter->setLevel(max(0, min(100, atoi(state))));
+      if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+      {
+        statePoolIdx = constanstsSwitch::openIdx;
+      }
+      else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+      {
+        statePoolIdx = statePoolIdx == 3 ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
+      }
+      else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
+      {
+        statePoolIdx = constanstsSwitch::closeIdx;
+      }
+      notifyState(dirty);
     }
   }
   else if (isGate)
