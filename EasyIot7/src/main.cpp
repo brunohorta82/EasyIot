@@ -13,10 +13,14 @@
 #include "CloudIO.h"
 
 void checkInternalRoutines()
-{ 
+{
   if (cloudIOSync())
   {
     connectoToCloudIO();
+  }
+  if (wifiScanRequested())
+  {
+    scanNewWifiNetworks();
   }
   if (restartRequested())
   {
@@ -77,7 +81,7 @@ void setup()
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
 
-  loadStoredConfiguration(getAtualConfig());
+  load(getAtualConfig());
   load(getAtualSwitchesConfig());
   load(getAtualSensorsConfig());
   setupWiFi();

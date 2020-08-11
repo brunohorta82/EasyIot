@@ -368,7 +368,9 @@ void SwitchT::load(File &file)
   }
   firmware = VERSION;
   configPins();
-  changeState(getCurrentState(), "LOAD");
+  bool isGate = SwitchMode::GATE_SWITCH == mode;
+  if (!isGate)
+    changeState(getCurrentState(), "LOAD");
 }
 
 void Switches::save()
@@ -650,13 +652,29 @@ const char *SwitchT::rotateState()
 {
   int idx = findPoolIdx("", statePoolIdx, family);
   if (idx < 0)
+  {
+#ifdef DEBUG
+    Log.error("%s Error on rotate" CR, tags::switches);
+#endif
     return "ERROR";
+  }
+
   const char *state = STATES_POLL[idx].c_str();
   changeState(state, "ROTATE");
   return state;
 }
 void knkGroupNotifyState(const SwitchT &sw, const char *state)
 {
+}
+void timedOn(unsigned int gpio, bool inverted, unsigned onTime)
+{
+  configPIN(gpio, OUTPUT);
+  writeToPIN(gpio, inverted ? LOW : HIGH); //TURN ON
+  unsigned long pressOn = millis();
+  while (pressOn + 1000 > millis())
+  {
+  }
+  writeToPIN(gpio, inverted ? HIGH : LOW); //TURN OFF
 }
 const char *SwitchT::changeState(const char *state, const char *origin)
 {
@@ -716,20 +734,44 @@ const char *SwitchT::changeState(const char *state, const char *origin)
     statePoolIdx = findPoolIdx(state, statePoolIdx, family);
     if (statePoolIdx < 0)
       return "ERROR";
-    if (statePoolIdx == constanstsSwitch::lockIdx || statePoolIdx == constanstsSwitch::unlockIdx)
+
+    if (typeControl == SwitchControlType::GPIO_OUTPUT)
     {
-      if (typeControl == SwitchControlType::GPIO_OUTPUT)
+      if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl == constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
-        configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
-        delay(1000);
-        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
+        if (statePoolIdx == constanstsSwitch::lockIdx || statePoolIdx == constanstsSwitch::unlockIdx)
+        {
+          timedOn(primaryGpioControl, inverted, 1000);
+        }
+      }
+      else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
+      {
+        if (statePoolIdx == constanstsSwitch::lockIdx)
+        {
+          timedOn(primaryGpioControl, inverted, 1000);
+        }
+        else if (statePoolIdx == constanstsSwitch::unlockIdx)
+        {
+          timedOn(secondaryGpioControl, inverted, 1000);
+        }
+      }
+      else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl != constantsConfig::noGPIO)
+      {
+        if (statePoolIdx == constanstsSwitch::lockIdx)
+        {
+          timedOn(primaryGpio, inverted, 1000);
+        }
+        else if (statePoolIdx == constanstsSwitch::unlockIdx)
+        {
+          timedOn(secondaryGpioControl, inverted, 1000);
+        }
+        else
+        {
+          timedOn(thirdGpioControl, inverted, 1000);
+        }
       }
     }
-    if (primaryStateGpio == constantsConfig::noGPIO)
-    {
-      notifyState(dirty);
-    }
+    notifyState(dirty);
   }
   else
   {

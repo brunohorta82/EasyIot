@@ -7,14 +7,18 @@
 #include <ESP8266mDNS.h>
 #include <esp-knx-ip.h>
 #include "CloudIO.h"
+int retryCount = 0;
 unsigned long connectedOn = 0ul;
 String getApName()
 {
   String version = String(VERSION);
   version.replace(".", "x");
-  return "OnOfre-" + String(ESP.getChipId()) + "-" + version;
+  return "OnOfre-" + String(getAtualConfig().chipId) + "-" + version;
 }
-
+bool wifiConnected()
+{
+  return jw.connected();
+}
 void reloadWiFiConfig()
 {
   jw.disconnect();
@@ -25,17 +29,14 @@ void reloadWiFiConfig()
   if (getAtualConfig().staticIp)
   {
     jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret, getAtualConfig().wifiIp, getAtualConfig().wifiGw, getAtualConfig().wifiMask, getAtualConfig().wifiGw, true);
-    jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2, getAtualConfig().wifiIp, getAtualConfig().wifiGw, getAtualConfig().wifiMask, getAtualConfig().wifiGw, false);
   }
-  else if (strlen(getAtualConfig().wifiSecret) > 0 || strlen(getAtualConfig().wifiSecret2) > 0)
+  else if (strlen(getAtualConfig().wifiSecret) > 0)
   {
     jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret);
-    jw.addNetwork(getAtualConfig().wifiSSID2, getAtualConfig().wifiSecret2);
   }
   else
   {
     jw.addNetwork(getAtualConfig().wifiSSID);
-    jw.addNetwork(getAtualConfig().wifiSSID2);
   }
 }
 void infoWifi()
@@ -73,24 +74,31 @@ void infoWifi()
     refreshMDNS(getAtualConfig().nodeId);
   }
 }
-
+void enableScan()
+{
+  jw.enableScan(true);
+}
 void scanNewWifiNetworks()
 {
+
   unsigned char result = WiFi.scanNetworks();
   if (result == WIFI_SCAN_FAILED)
   {
 #ifdef DEBUG
-    Log.error("%s Scan Failed" CR, tags::wifi);
+    Log.notice("%s Scan Failed" CR, tags::wifi);
 #endif
   }
   else if (result == 0)
   {
 #ifdef DEBUG
-    Log.notice("%s No networks found" CR, tags::wifi);
+    Log.notice("%s No networks found " CR, tags::wifi);
 #endif
   }
   else
   {
+    const size_t CAPACITY = JSON_ARRAY_SIZE(result) + 200;
+    DynamicJsonDocument doc(CAPACITY);
+    JsonArray object = doc.to<JsonArray>();
     for (int8_t i = 0; i < result; ++i)
     {
       String ssid_scan;
@@ -99,16 +107,16 @@ void scanNewWifiNetworks()
       uint8_t *BSSID_scan;
       int32_t chan_scan;
       bool hidden_scan;
-      char buffer[128];
       WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
-      snprintf_P(buffer, sizeof(buffer),
-                 PSTR("BSSID: %02X:%02X:%02X:%02X:%02X:%02X SEC: %s RSSI: %3d CH: %2d SSID: %s"),
-                 BSSID_scan[1], BSSID_scan[2], BSSID_scan[3], BSSID_scan[4], BSSID_scan[5], BSSID_scan[6],
-                 (sec_scan != ENC_TYPE_NONE ? "YES" : "NO "),
-                 rssi_scan,
-                 chan_scan,
-                 (char *)ssid_scan.c_str());
+      object.add(ssid_scan);
+
+#ifdef DEBUG
+      Log.notice("%s Network found %s" CR, tags::wifi, ssid_scan.c_str());
+#endif
     }
+    String networks = "";
+    serializeJson(doc, networks);
+    sendToServerEvents("wifi-networks", networks.c_str());
   }
   WiFi.scanDelete();
 }
@@ -156,9 +164,17 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
 #endif
   case MESSAGE_CONNECTED:
+    if (strlen(getAtualConfig().wifiSSID) == 0)
+    {
+      strlcpy(getAtualConfig().wifiSSID, WiFi.SSID().c_str(), sizeof(getAtualConfig().wifiSSID));
+      strlcpy(getAtualConfig().wifiSecret, WiFi.psk().c_str(), sizeof(getAtualConfig().wifiSecret));
+      getAtualConfig().save();
+    }
+
     knx.start(nullptr);
     infoWifi();
-    requestCloudIOSync();
+    connectoToCloudIO();
+    setupWebserverAsync();
     break;
 #ifdef DEBUG
   case MESSAGE_DISCONNECTED:
@@ -167,6 +183,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
 #endif
   case MESSAGE_ACCESSPOINT_CREATED:
     infoWifi();
+    setupWebserverAsync();
     break;
 
   case MESSAGE_ACCESSPOINT_DESTROYED:
@@ -197,7 +214,8 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     Log.notice("%s Smart Config started" CR, tags::wifi);
     break;
   case MESSAGE_SMARTCONFIG_SUCCESS:
-    Log.notice("%s mart Config succeded!" CR, tags::wifi);
+
+    Log.notice("%smart Config succeded!" CR, tags::wifi);
     break;
   case MESSAGE_SMARTCONFIG_ERROR:
     Log.error("%s Smart Config failed" CR, tags::wifi);
@@ -241,10 +259,12 @@ void setupWiFi()
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
+
 #if JUSTWIFI_ENABLE_SMARTCONFIG
-  jw.startSmartConfig();
+  if (strlen(getAtualConfig().wifiSSID) == 0)
+    jw.startSmartConfig();
 #endif
-  jw.setSoftAP(getAtualConfig().apName, getAtualConfig().apSecret);
+  jw.setSoftAP(getApName().c_str(), getAtualConfig().apSecret);
   jw.enableAP(false);
   jw.enableAPFallback(true);
   jw.enableSTA(true);
@@ -259,26 +279,5 @@ void loopWiFi()
   }
   jw.loop();
   MDNS.update();
-}
-bool wifiConnected(){
-  return jw.connected();
-}
-size_t systemJSONStatus(Print &output)
-{
-  const size_t CAPACITY = JSON_OBJECT_SIZE(13) + 400;
-  StaticJsonDocument<CAPACITY> doc;
-  JsonObject object = doc.to<JsonObject>();
-  object["wifiIp"] = WiFi.localIP().toString();
-  object["wifiAPSSID"] = jw.getAPSSID();
-  object["wifiSSID"] = WiFi.SSID();
-  object["status"] = jw.connected();
-  object["signal"] = WiFi.RSSI();
-  object["wifiMask"] = WiFi.subnetMask().toString();
-  object["wifiGw"] = WiFi.gatewayIP().toString();
-  object["mac"] = WiFi.macAddress();
-  object["channel"] = WiFi.channel();
-  object["mode"] = (int)WiFi.getMode();
-  object["mqttConnected"] = mqttConnected();
-  object["freeHeap"] = String(ESP.getFreeHeap());
-  return serializeJson(doc, output);
+  webserverServicesLoop();
 }
