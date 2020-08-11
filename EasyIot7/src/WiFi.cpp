@@ -11,7 +11,7 @@ int retryCount = 0;
 unsigned long connectedOn = 0ul;
 String getApName()
 {
-  String version = String(VERSION);
+  String version = String(VERSION, 3);
   version.replace(".", "x");
   return "OnOfre-" + String(getAtualConfig().chipId) + "-" + version;
 }

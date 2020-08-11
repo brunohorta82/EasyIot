@@ -1,6 +1,9 @@
 #include "WebServer.h"
 #include <DNSServer.h>
 #include "constants.h"
+#include "StaticSite.h"
+#include "StaticCss.h"
+#include "StaticJs.h"
 #include "AsyncJson.h"
 #include "Switches.h"
 #include "Sensors.h"
@@ -153,8 +156,98 @@ AsyncJsonResponse *errorResponse(const char *cause)
   return responseError;
 }
 void loadUI()
-{ //HTML
-  server.serveStatic("/", SPIFFS, "/www/").setCacheControl("max-age=600").setAuthentication(getAtualConfig().apiUser, getAtualConfig().apiPassword);
+{
+  //HTML
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+
+    request->send(response);
+  });
+
+  server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+    request->send(response);
+  });
+
+  server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+    request->send(response);
+  });
+
+  server.on("/wifi.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", wifi_html, sizeof(wifi_html));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+    request->send(response);
+  });
+
+  server.on("/devices.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", devices_html, sizeof(devices_html));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+    request->send(response);
+  });
+
+  //JS
+  server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+    request->send(response);
+  });
+
+  server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+    request->send(response);
+  });
+
+  //CSS
+  server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
+    response->addHeader("Content-Encoding", "gzip");
+    response->addHeader("Cache-Control", "max-age=600");
+    request->send(response);
+  });
 }
 void loadAPI()
 {
@@ -338,8 +431,8 @@ void loadAPI()
     JsonObject switchJson = json.as<JsonObject>();
     getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson);
     getAtualSwitchesConfig().toJson(root);
-    request->send(response);
     response->setLength();
+    request->send(response);
     requestCloudIOSync();
   }));
 
@@ -356,8 +449,8 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse(true);
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().remove(request->arg("id").c_str()).toJson(root);
-    request->send(response);
     response->setLength();
+    request->send(response);
     requestCloudIOSync();
   });
 
