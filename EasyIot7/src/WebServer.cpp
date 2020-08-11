@@ -322,59 +322,40 @@ void loadAPI()
     requestAutoUpdate();
   });
   server.on(
-      "/upload-firmware", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      "/update", HTTP_POST, [](AsyncWebServerRequest *request) {
+#if WEB_SECURE_ON
+      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
+#endif
     bool error = Update.hasError();
-    if (error)
-    {
+    if(error){
       requestRestart();
-    }
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error ? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Update</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update successfully, will be redirected automatically in 20 seconds. Please Wait...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>" : "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update failed, it may be necessary to manually reset the device and try again.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
+      }
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Update</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update successfully, will be redirected automatically in 20 seconds. Please Wait...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update failed, it may be necessary to manually reset the device and try again.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
     response->addHeader("Connection", "close");
     request->send(response); }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-    if (!index)
-    {
+    if(!index){
 #ifdef DEBUG
-      Log.notice("%s Update Start: %s" CR, tags::system, filename.c_str());
+      Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
 #endif
       Update.runAsync(true);
-      size_t targetSize = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-      int command = U_FLASH;
-      if (filename.endsWith("_spiffs.bin"))
-      {
-        command = U_FS;
-        targetSize = ((size_t)&_FS_end - (size_t)&_FS_start);
-        SPIFFS.end();
-      }
-      if (!Update.begin(targetSize, command))
-      {
+      if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
         Update.printError(Serial);
       }
     }
-    if (!Update.hasError())
-    {
-      if (Update.write(data, len) != len)
-      {
+    if(!Update.hasError()){
+      if(Update.write(data, len) != len){
         Update.printError(Serial);
       }
     }
-    if (final)
-    {
-      if (Update.end(true))
-      {
-        getAtualConfig().save();
-        getAtualSwitchesConfig().save();
-        getAtualSensorsConfig().save();
-
+    if(final){
+      if(Update.end(true)){
 #ifdef DEBUG
-        Log.notice("%s Update Success: %d" CR, tags::system, index + len);
+        Log.notice("%s Update Success: %d" CR, tags::system, index+len);
 #endif
         requestRestart();
-      }
-      else
-      {
-        requestRestart();
+      } else {
+         requestRestart();
       }
     } });
 
