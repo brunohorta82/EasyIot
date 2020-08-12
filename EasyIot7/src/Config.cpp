@@ -475,5 +475,6 @@ Config &Config::updateFromJson(JsonObject &root)
     reloadSensors();
   }
   refreshMDNS(lastNodeId);
+  getAtualConfig().save();
   return *this;
 }

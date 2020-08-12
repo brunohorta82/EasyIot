@@ -407,7 +407,7 @@ void loadAPI()
       request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncJsonResponse *response = new AsyncJsonResponse(true, 1300U);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true, 2024U);
     JsonVariant &root = response->getRoot();
     JsonObject switchJson = json.as<JsonObject>();
     getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson);
