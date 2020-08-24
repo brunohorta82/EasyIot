@@ -390,7 +390,7 @@ void loadAPI()
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true, 5120U);
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().toJson(root);
     response->setLength();
@@ -407,7 +407,7 @@ void loadAPI()
       request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncJsonResponse *response = new AsyncJsonResponse(true, 2024U);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true, 5120U);
     JsonVariant &root = response->getRoot();
     JsonObject switchJson = json.as<JsonObject>();
     getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson);
@@ -427,7 +427,7 @@ void loadAPI()
       request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true, 5120U);
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().remove(request->arg("id").c_str()).toJson(root);
     response->setLength();
@@ -548,7 +548,7 @@ void setupWebserverAsync()
   });
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT,DELETE, GET"));
+  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
   server.begin();
 }
