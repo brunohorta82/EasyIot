@@ -35,7 +35,7 @@ void notifyStateToCloudIO(const char *topic, const char *state, size_t length)
 {
   if (!mqttClient.connected())
     return;
-  mqttClient.publish(topic, 0, false, state, length);
+  mqttClient.publish(topic, 0, true, state, length);
 }
 void subscribeOnMqttCloudIO(const char *topic)
 {
@@ -89,7 +89,7 @@ void onMqttConnect(bool sessionPresent)
     }
     else
     {
-      mqttClient.publish(sw.mqttCloudStateTopic, 0, false, sw.getCurrentState());
+      mqttClient.publish(sw.mqttCloudStateTopic, 0, true, sw.getCurrentState());
     }
   }
   mqttClient.publish("available", 0, true, getAtualConfig().available, strlen(getAtualConfig().available));
@@ -106,7 +106,7 @@ void onMqttConnect(bool sessionPresent)
     topic.concat(ss.id);
     topic.concat("/status");
     strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
-     mqttClient.publish(ss.mqttCloudStateTopic, 0, false, ss.lastReading);
+     mqttClient.publish(ss.mqttCloudStateTopic, 0, true, ss.lastReading);
   }
 }
 
