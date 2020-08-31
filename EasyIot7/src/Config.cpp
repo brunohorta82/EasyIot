@@ -367,7 +367,19 @@ void load(Config &config)
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
 #endif
-    return;
+    // We can't return here, or else the application will continue, thinking
+    // it can access Config::* when in fact it wasn't initialized yet.
+    // We inform the user about the error, but, we do not return
+    // triggering the next if, where it'll load defaults.
+    // If we do not initialize defaults, app will crash at MDNS refresh
+    // when it attempts to create a service using Config::* variables.
+    //return;
+    if(!LittleFS.format())
+    {
+#ifdef DEBUG
+    Log.error("%s Unable to format Filesystem, please ensure you built firmware with filesystem support." CR, tags::config);
+#endif
+    }
   }
 
   if (!LittleFS.exists(configFilenames::config))
