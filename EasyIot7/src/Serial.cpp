@@ -322,7 +322,7 @@ void TasmotaSerial::rxRead()
     }
     // Store the received value in the buffer unless we have an overflow
     unsigned int next = (m_in_pos + 1) % TM_SERIAL_BUFFER_SIZE;
-    if (next != (int)m_out_pos)
+    if (next != static_cast<unsigned int>(m_out_pos))
     {
         m_buffer[m_in_pos] = rec;
         m_in_pos = next;

@@ -394,39 +394,63 @@ void switchesCallback(message_t const &msg, void *arg)
   auto s = static_cast<SwitchT *>(arg);
   switch (msg.ct)
   {
-  case KNX_CT_WRITE:
-  {
-    int stateIdx = (int)msg.data[1];
-    s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-
-    break;
-  }
-  case KNX_CT_READ:
-  {
-    break;
-  }
-  }
+    case KNX_CT_ADC_ANSWER:
+    case KNX_CT_ADC_READ:
+    case KNX_CT_ANSWER:
+    case KNX_CT_ESCAPE:
+    case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
+    case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
+    case KNX_CT_INDIVIDUAL_ADDR_WRITE:
+    case KNX_CT_MASK_VERSION_READ:
+    case KNX_CT_MASK_VERSION_RESPONSE:
+    case KNX_CT_MEM_ANSWER:
+    case KNX_CT_MEM_READ:
+    case KNX_CT_MEM_WRITE:
+    case KNX_CT_READ:
+    case KNX_CT_RESTART:
+      break;
+  
+    case KNX_CT_WRITE:
+    {
+      int stateIdx = (int)msg.data[1];
+      s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
+      break;
+    }
+  };
 }
+
 void allwitchesCallback(message_t const &msg, void *arg)
 {
   switch (msg.ct)
   {
-  case KNX_CT_WRITE:
-  {
-    int stateIdx = (int)msg.data[0];
-    for (auto &sw : getAtualSwitchesConfig().items)
-    {
-      sw.changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-    }
-    break;
-  }
-  case KNX_CT_READ:
-  {
+    case KNX_CT_ADC_ANSWER:
+    case KNX_CT_ADC_READ:
+    case KNX_CT_ANSWER:
+    case KNX_CT_ESCAPE:
+    case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
+    case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
+    case KNX_CT_INDIVIDUAL_ADDR_WRITE:
+    case KNX_CT_MASK_VERSION_READ:
+    case KNX_CT_MASK_VERSION_RESPONSE:
+    case KNX_CT_MEM_ANSWER:
+    case KNX_CT_MEM_READ:
+    case KNX_CT_MEM_WRITE:
+    case KNX_CT_READ:
+    case KNX_CT_RESTART:
+      break;
 
-    break;
-  }
-  }
+    case KNX_CT_WRITE:
+    {
+      int stateIdx = (int)msg.data[0];
+      for (auto &sw : getAtualSwitchesConfig().items)
+      {
+        sw.changeState(STATES_POLL[stateIdx].c_str(), "KNX");
+      }
+      break;
+    }
+  };
 }
+
 void Switches::load(File &file)
 {
   knx.start(nullptr);
