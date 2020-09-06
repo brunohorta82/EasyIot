@@ -44,7 +44,7 @@ String getBaseTopic()
 
     if (strlen(getAtualConfig().mqttUsername) == 0)
     {
-        topic.concat("easyiot");
+        topic.concat("bhonofre");
     }
     else
     {

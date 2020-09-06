@@ -302,70 +302,33 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&inverted, sizeof(inverted));
   file.read((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
   file.read((uint8_t *)autoStateValue, sizeof(autoStateValue));
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(unsigned long), SeekCur); // remove timeBetweenStates
-  }
   file.read((uint8_t *)&childLock, sizeof(childLock));
-
   //MQTT
   file.read((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
   file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(char[128]), SeekCur); // remove mqttPositionStateTopic
-    file.seek(sizeof(char[128]), SeekCur); // remove mqttPositionCommandTopic
-    file.seek(sizeof(char[10]), SeekCur);  // remove mqttPayload
-  }
   file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
 
   //CONTROL VARIABLES
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(char[10]), SeekCur); // remove stateControl
-    file.seek(sizeof(int), SeekCur);      // remove positionControlCover
-  }
   file.read((uint8_t *)&lastPercentage, sizeof(lastPercentage));
 
   file.read((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
   file.read((uint8_t *)&lastSecondaryGpioState, sizeof(lastSecondaryGpioState));
   file.read((uint8_t *)&statePoolIdx, sizeof(statePoolIdx));
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(unsigned int), SeekCur); // remove statePoolStart
-    file.seek(sizeof(unsigned int), SeekCur); // remove statePoolEnd
-  }
-
   file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
   file.read((uint8_t *)&knxSupport, sizeof(knxSupport));
   file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
   file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
   file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
-  if (configFirmware >= 7.94)
-  {
-    file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
-    file.read((uint8_t *)&upCourseTime, sizeof(upCourseTime));
-    file.read((uint8_t *)&downCourseTime, sizeof(downCourseTime));
-    file.read((uint8_t *)&calibrationRatio, sizeof(calibrationRatio));
-    file.read((uint8_t *)shutterState, sizeof(shutterState));
-  }
-  else
-  {
-    mqttSupport = true;
-  }
-  if (configFirmware >= 7.947)
-  {
-    file.read((uint8_t *)&primaryStateGpio, sizeof(primaryStateGpio));
-    file.read((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
-    file.read((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
-  }
-  else
-  {
-    primaryStateGpio = constantsConfig::noGPIO;
-    secondaryStateGpio = constantsConfig::noGPIO;
-    thirdGpioControl = constantsConfig::noGPIO;
-  }
+
+  file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
+  file.read((uint8_t *)&upCourseTime, sizeof(upCourseTime));
+  file.read((uint8_t *)&downCourseTime, sizeof(downCourseTime));
+  file.read((uint8_t *)&calibrationRatio, sizeof(calibrationRatio));
+  file.read((uint8_t *)shutterState, sizeof(shutterState));
+  file.read((uint8_t *)&primaryStateGpio, sizeof(primaryStateGpio));
+  file.read((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
+  file.read((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
   firmware = VERSION;
   configPins();
   bool isGate = SwitchMode::GATE_SWITCH == mode;
@@ -394,28 +357,28 @@ void switchesCallback(message_t const &msg, void *arg)
   auto s = static_cast<SwitchT *>(arg);
   switch (msg.ct)
   {
-    case KNX_CT_ADC_ANSWER:
-    case KNX_CT_ADC_READ:
-    case KNX_CT_ANSWER:
-    case KNX_CT_ESCAPE:
-    case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
-    case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
-    case KNX_CT_INDIVIDUAL_ADDR_WRITE:
-    case KNX_CT_MASK_VERSION_READ:
-    case KNX_CT_MASK_VERSION_RESPONSE:
-    case KNX_CT_MEM_ANSWER:
-    case KNX_CT_MEM_READ:
-    case KNX_CT_MEM_WRITE:
-    case KNX_CT_READ:
-    case KNX_CT_RESTART:
-      break;
-  
-    case KNX_CT_WRITE:
-    {
-      int stateIdx = (int)msg.data[1];
-      s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-      break;
-    }
+  case KNX_CT_ADC_ANSWER:
+  case KNX_CT_ADC_READ:
+  case KNX_CT_ANSWER:
+  case KNX_CT_ESCAPE:
+  case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
+  case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
+  case KNX_CT_INDIVIDUAL_ADDR_WRITE:
+  case KNX_CT_MASK_VERSION_READ:
+  case KNX_CT_MASK_VERSION_RESPONSE:
+  case KNX_CT_MEM_ANSWER:
+  case KNX_CT_MEM_READ:
+  case KNX_CT_MEM_WRITE:
+  case KNX_CT_READ:
+  case KNX_CT_RESTART:
+    break;
+
+  case KNX_CT_WRITE:
+  {
+    int stateIdx = (int)msg.data[1];
+    s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
+    break;
+  }
   };
 }
 
@@ -423,31 +386,31 @@ void allwitchesCallback(message_t const &msg, void *arg)
 {
   switch (msg.ct)
   {
-    case KNX_CT_ADC_ANSWER:
-    case KNX_CT_ADC_READ:
-    case KNX_CT_ANSWER:
-    case KNX_CT_ESCAPE:
-    case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
-    case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
-    case KNX_CT_INDIVIDUAL_ADDR_WRITE:
-    case KNX_CT_MASK_VERSION_READ:
-    case KNX_CT_MASK_VERSION_RESPONSE:
-    case KNX_CT_MEM_ANSWER:
-    case KNX_CT_MEM_READ:
-    case KNX_CT_MEM_WRITE:
-    case KNX_CT_READ:
-    case KNX_CT_RESTART:
-      break;
+  case KNX_CT_ADC_ANSWER:
+  case KNX_CT_ADC_READ:
+  case KNX_CT_ANSWER:
+  case KNX_CT_ESCAPE:
+  case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
+  case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
+  case KNX_CT_INDIVIDUAL_ADDR_WRITE:
+  case KNX_CT_MASK_VERSION_READ:
+  case KNX_CT_MASK_VERSION_RESPONSE:
+  case KNX_CT_MEM_ANSWER:
+  case KNX_CT_MEM_READ:
+  case KNX_CT_MEM_WRITE:
+  case KNX_CT_READ:
+  case KNX_CT_RESTART:
+    break;
 
-    case KNX_CT_WRITE:
+  case KNX_CT_WRITE:
+  {
+    int stateIdx = (int)msg.data[0];
+    for (auto &sw : getAtualSwitchesConfig().items)
     {
-      int stateIdx = (int)msg.data[0];
-      for (auto &sw : getAtualSwitchesConfig().items)
-      {
-        sw.changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-      }
-      break;
+      sw.changeState(STATES_POLL[stateIdx].c_str(), "KNX");
     }
+    break;
+  }
   };
 }
 

@@ -228,15 +228,15 @@ void infoCallback(justwifi_messages_t code, char *parameter)
 
 void refreshMDNS(const char *lastName)
 {
-  MDNS.removeService(lastName, "easyiot", "tcp");
+  MDNS.removeService(lastName, "bhonofre", "tcp");
   MDNS.close();
   if (MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10))
   {
-    MDNS.addService("easyiot", "tcp", 80);
-    MDNS.addServiceTxt("easyiot", "tcp", "hardwareId", String(ESP.getChipId()));
-    MDNS.addServiceTxt("easyiot", "tcp", "firmware", String(VERSION, 3));
-    MDNS.addServiceTxt("easyiot", "tcp", "wifi", String(getAtualConfig().wifiSSID));
-    MDNS.addServiceTxt("easyiot", "tcp", "firmwareMode", constantsConfig::firmwareMode);
+    MDNS.addService("bhonofre", "tcp", 80);
+    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(ESP.getChipId()));
+    MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
+    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
+    MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
   }
   else
   {

@@ -53,17 +53,17 @@ void onMqttConnect(bool sessionPresent)
 #ifdef DEBUG
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
-    String topicAction;
-    topicAction.reserve(200);
-    topicAction.concat(getAtualConfig().cloudIOUserName);
-    topicAction.concat("/");
-    topicAction.concat(getAtualConfig().chipId);
-    topicAction.concat("/remote-action");
-    strlcpy(getAtualConfig().mqttCloudRemoteActionsTopic, topicAction.c_str(), sizeof(getAtualConfig().mqttCloudRemoteActionsTopic));
-    subscribeOnMqttCloudIO(getAtualConfig().mqttCloudRemoteActionsTopic);
+  String topicAction;
+  topicAction.reserve(200);
+  topicAction.concat(getAtualConfig().cloudIOUserName);
+  topicAction.concat("/");
+  topicAction.concat(getAtualConfig().chipId);
+  topicAction.concat("/remote-action");
+  strlcpy(getAtualConfig().mqttCloudRemoteActionsTopic, topicAction.c_str(), sizeof(getAtualConfig().mqttCloudRemoteActionsTopic));
+  subscribeOnMqttCloudIO(getAtualConfig().mqttCloudRemoteActionsTopic);
   for (auto &sw : getAtualSwitchesConfig().items)
   {
-    
+
     String topic;
     topic.reserve(200);
     topic.concat(getAtualConfig().cloudIOUserName);
@@ -92,7 +92,7 @@ void onMqttConnect(bool sessionPresent)
       mqttClient.publish(sw.mqttCloudStateTopic, 0, true, sw.getCurrentState());
     }
   }
-  mqttClient.publish("available", 0, true, getAtualConfig().available, strlen(getAtualConfig().available));
+  mqttClient.publish(getAtualConfig().availableCloudIO, 0, true, "1\0");
   for (auto &ss : getAtualSensorsConfig().items)
   {
     String topic;
@@ -106,7 +106,7 @@ void onMqttConnect(bool sessionPresent)
     topic.concat(ss.id);
     topic.concat("/status");
     strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
-     mqttClient.publish(ss.mqttCloudStateTopic, 0, true, ss.lastReading);
+    mqttClient.publish(ss.mqttCloudStateTopic, 0, true, ss.lastReading);
   }
 }
 
@@ -119,7 +119,7 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
   if (WiFi.isConnected())
   {
     mqttReconnectTimer.once(2, connectToClounIOMqtt);
-  }  
+  }
 }
 bool cloudIOConnected()
 {
@@ -140,19 +140,21 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
   strlcpy(msg, payload, len + 1);
-  if(strcmp(topic,getAtualConfig().mqttCloudRemoteActionsTopic) == 0){
-  if(strcmp(msg,"REBOOT") == 0){
-    requestRestart();
-  }
-  if(strcmp(msg,"UPDATE") == 0){
-    requestAutoUpdate();
-  }
-  }else
+  if (strcmp(topic, getAtualConfig().mqttCloudRemoteActionsTopic) == 0)
   {
-  mqttSwitchControl(getAtualSwitchesConfig(), topic, msg);  
+    if (strcmp(msg, "REBOOT") == 0)
+    {
+      requestRestart();
+    }
+    if (strcmp(msg, "UPDATE") == 0)
+    {
+      requestAutoUpdate();
+    }
   }
-  
-  
+  else
+  {
+    mqttSwitchControl(getAtualSwitchesConfig(), topic, msg);
+  }
 }
 
 void onMqttPublish(uint16_t packetId)
@@ -169,15 +171,15 @@ void setupCloudIO()
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setCleanSession(true);
-  mqttClient.setWill("available", 0, true, getAtualConfig().offline, strlen(getAtualConfig().offline));
+  mqttClient.setWill(getAtualConfig().availableCloudIO, 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(getAtualConfig().chipId);
-  mqttClient.setCredentials(getAtualConfig().cloudIOUserName,getAtualConfig().cloudIOUserPassword);
+  mqttClient.setCredentials(getAtualConfig().cloudIOUserName, getAtualConfig().cloudIOUserPassword);
   connectToClounIOMqtt();
 }
 bool tryCloudConnection()
 {
-  if (strlen(getAtualConfig().cloudIOUserName) > 0 && strlen( getAtualConfig().cloudIOUserPassword) > 0)
+  if (strlen(getAtualConfig().cloudIOUserName) > 0 && strlen(getAtualConfig().cloudIOUserPassword) > 0)
   {
 #ifdef DEBUG
     Log.error("%s Ready to try..." CR, tags::cloudIO);
@@ -187,15 +189,17 @@ bool tryCloudConnection()
   return true;
 }
 
-void cloudIoKeepAlive(){
- requestCloudIOSync();
+void cloudIoKeepAlive()
+{
+  requestCloudIOSync();
 }
 WiFiClient client;
 HTTPClient http;
 void connectoToCloudIO()
-{  reconectCount++;
-   cloudIOReconnectTimer.detach(); 
-  if (WiFi.status() != WL_CONNECTED || reconectCount  > 20)
+{
+  reconectCount++;
+  cloudIOReconnectTimer.detach();
+  if (WiFi.status() != WL_CONNECTED || reconectCount > 20)
     return;
 
   String payload = "";
@@ -232,10 +236,10 @@ void connectoToCloudIO()
     sdoc["cloudIOSupport"] = ss.cloudIOSupport;
   }
   serializeJson(doc, payload);
-  http.begin(client, "http://easyiot.bhonofre.pt/devices");
+  http.begin(client, "http://cloudio.bhonofre.pt/devices");
   http.addHeader("Content-Type", "application/json");
 #ifdef DEBUG
-  Log.error("%s [HTTP] POST %d" CR, tags::cloudIO,reconectCount);
+  Log.error("%s [HTTP] POST %d" CR, tags::cloudIO, reconectCount);
 #endif
   // start connection and send HTTP header and body
   int httpCode = http.POST(payload.c_str());
@@ -255,8 +259,15 @@ void connectoToCloudIO()
       DeserializationError error = deserializeJson(doc, payload);
       const char *_user = doc["username"];
       const char *_pw = doc["password"];
-     strlcpy(getAtualConfig().cloudIOUserName,doc["username"] | "", sizeof(getAtualConfig().cloudIOUserName));
-     strlcpy(getAtualConfig().cloudIOUserPassword,doc["password"] | "", sizeof(getAtualConfig().cloudIOUserPassword));
+      strlcpy(getAtualConfig().cloudIOUserName, doc["username"] | "", sizeof(getAtualConfig().cloudIOUserName));
+      strlcpy(getAtualConfig().cloudIOUserPassword, doc["password"] | "", sizeof(getAtualConfig().cloudIOUserPassword));
+      String topicAvailable;
+      topicAvailable.reserve(sizeof(getAtualConfig().availableCloudIO));
+      topicAvailable.concat(getAtualConfig().cloudIOUserName);
+      topicAvailable.concat("/");
+      topicAvailable.concat(getAtualConfig().chipId);
+      topicAvailable.concat("/available");
+      strlcpy(getAtualConfig().availableCloudIO, topicAvailable.c_str(), sizeof(getAtualConfig().availableCloudIO));
 #ifdef DEBUG
       Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, _user, _pw);
 #endif
@@ -288,12 +299,14 @@ void connectoToCloudIO()
 #ifdef DEBUG
       Log.error("%s [HTTP] POST... failed, error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
-    cloudIOReconnectTimer.once(10,cloudIoKeepAlive);
+      cloudIOReconnectTimer.once(10, cloudIoKeepAlive);
     }
-  }else{
-    #ifdef DEBUG
-      Log.error("%s [HTTP] POST... error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
+  }
+  else
+  {
+#ifdef DEBUG
+    Log.error("%s [HTTP] POST... error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
-    cloudIOReconnectTimer.once(10,cloudIoKeepAlive);
+    cloudIOReconnectTimer.once(10, cloudIoKeepAlive);
   }
 }

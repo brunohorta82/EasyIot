@@ -16,12 +16,14 @@
 #include "CloudIO.h"
 #include <Config.h>
 #include "WiFi.h"
+#include <Ticker.h>
 #define REALM "onofre"
 extern "C" uint32_t _FS_start;
 extern "C" uint32_t _FS_end;
 DNSServer dnsServer;
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
+Ticker configStore;
 int getRSSIasQuality(int RSSI)
 {
   int quality = 0;
@@ -53,14 +55,18 @@ public:
 
   void handleRequest(AsyncWebServerRequest *request)
   {
+
     AsyncResponseStream *response = request->beginResponseStream("text/html");
     bool store = false;
     response->print(FPSTR(HTTP_HEADER));
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s"))
+    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
     {
+      String n_name = String(request->arg("i"));
+      normalize(n_name);
+      strlcpy(getAtualConfig().nodeId, n_name.c_str(), sizeof(getAtualConfig().nodeId));
       strlcpy(getAtualConfig().wifiSSID, request->arg("s").c_str(), sizeof(getAtualConfig().wifiSSID));
       if (request->hasArg("p"))
       {
@@ -71,8 +77,11 @@ public:
       {
         strlcpy(getAtualConfig().wifiSecret, "", sizeof(getAtualConfig().wifiSecret));
       }
-      response->print(FPSTR(HTTP_SAVED));
-
+      String storedR = FPSTR(HTTP_SAVED);
+      storedR.replace("{o}", String("http://" + String(getAtualConfig().nodeId) + ".local").c_str());
+      response->print(storedR.c_str());
+      response->print(FPSTR(HTTP_END));
+      request->send(response);
       store = true;
     }
 
@@ -136,13 +145,15 @@ public:
       }
     }
     if (!store)
+    {
       response->print(FPSTR(HTTP_FORM_START));
-    response->print(FPSTR(HTTP_END));
-    request->send(response);
+      response->print(FPSTR(HTTP_END));
+      request->send(response);
+    }
     if (store)
     {
       getAtualConfig().save();
-      requestRestart();
+      configStore.once(1, requestRestart);
     }
   }
 };

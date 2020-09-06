@@ -35,69 +35,70 @@ namespace configFilenames
     auto constexpr config = "/config/config.bin";
     auto constexpr sensors = "/config/sensors.bin";
     auto constexpr switches = "/config/switches.bin";
+
 } // namespace configFilenames
 namespace constantsConfig
 {
 #if NO_FEATURES
     constexpr const char *firmwareMode{"NO_FEATURES"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=NO_FEATURES"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=NO_FEATURES"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=NO_FEATURES"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=NO_FEATURES"};
 #endif
 #if SINGLE_SWITCH
     constexpr const char *firmwareMode{"SINGLE_SWITCH"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=SINGLE_SWITCH"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=SINGLE_SWITCH"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=SINGLE_SWITCH"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=SINGLE_SWITCH"};
 #endif
 #if DUAL_LIGHT
     constexpr const char *firmwareMode{"DUAL_LIGHT"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=DUAL_LIGHT"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=DUAL_LIGHT"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=DUAL_LIGHT"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=DUAL_LIGHT"};
 #endif
 #if VMC
     constexpr const char *firmwareMode{"VMC"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=VMC"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=VMC"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=VMC"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=VMC"};
 #endif
 #if COVER
     constexpr const char *firmwareMode{"COVER"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=COVER"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=COVER"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=COVER"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=COVER"};
 #endif
 #if LOCK
     constexpr const char *firmwareMode{"LOCK"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=LOCK"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=LOCK"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=LOCK"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=LOCK"};
 #endif
 #if FOUR_LOCK
     constexpr const char *firmwareMode{"FOUR_LOCK"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=FOUR_LOCK"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=FOUR_LOCK"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=FOUR_LOCK"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=FOUR_LOCK"};
 #endif
 #if BHPZEM_004T
     constexpr const char *firmwareMode{"BHPZEM_004T"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T"};
 #endif
 #if BHPZEM_004T_2_0
     constexpr const char *firmwareMode{"BHPZEM_004T_2_0"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_2_0"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_2_0"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_2_0"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_2_0"};
 #endif
 #if BHPZEM_004T_V03
     constexpr const char *firmwareMode{"BHPZEM_004T_V03"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_V03"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_V03"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_V03"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_V03"};
 #endif
 
 #if BHPZEM_004T_V03_2_0
     constexpr const char *firmwareMode{"BHPZEM_004T_V03_2_0"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_V03_2_0"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_V03_2_0"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=BHPZEM_004T_V03_2_0"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=BHPZEM_004T_V03_2_0"};
 #endif
 #if GATE
     constexpr const char *firmwareMode{"GATE"};
-    constexpr const char *updateURL{"http://easyiot.bhonofre.pt/firmware/latest-binary?firmwareMode=GATE"};
-    constexpr const char *lastVersionURL{"http://easyiot.bhonofre.pt/firmware/latest-version?firmwareMode=GATE"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=GATE"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=GATE"};
 #endif
 
     constexpr const char *newID{"NEW"};
