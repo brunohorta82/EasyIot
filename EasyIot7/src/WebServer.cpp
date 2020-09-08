@@ -1,23 +1,162 @@
 #include "WebServer.h"
+#include <DNSServer.h>
 #include "constants.h"
-
-#include "AsyncJson.h"
-#include "Switches.h"
-#include "Sensors.h"
 #include "StaticSite.h"
 #include "StaticCss.h"
 #include "StaticJs.h"
-
+#include "AsyncJson.h"
+#include "Switches.h"
+#include "Sensors.h"
+#include "ArduinoJson.h"
+#include <SPIFFSEditor.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncTCP.h>
-
+#include <FS.h>
+#include "Mqtt.h"
+#include "CloudIO.h"
 #include <Config.h>
 #include "WiFi.h"
+#include <Ticker.h>
 #define REALM "onofre"
-
+extern "C" uint32_t _FS_start;
+extern "C" uint32_t _FS_end;
+DNSServer dnsServer;
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
+Ticker configStore;
+int getRSSIasQuality(int RSSI)
+{
+  int quality = 0;
 
+  if (RSSI <= -100)
+  {
+    quality = 0;
+  }
+  else if (RSSI >= -50)
+  {
+    quality = 100;
+  }
+  else
+  {
+    quality = 2 * (RSSI + 100);
+  }
+  return quality;
+}
+class CaptiveRequestHandler : public AsyncWebHandler
+{
+public:
+  CaptiveRequestHandler() {}
+  virtual ~CaptiveRequestHandler() {}
+
+  bool canHandle(AsyncWebServerRequest *request)
+  {
+    return true;
+  }
+
+  void handleRequest(AsyncWebServerRequest *request)
+  {
+
+    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    bool store = false;
+    response->print(FPSTR(HTTP_HEADER));
+    response->print(FPSTR(HTTP_SCRIPT));
+    response->print(FPSTR(HTTP_STYLE));
+    response->print(FPSTR(HTTP_HEADER_END));
+    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
+    {
+      String n_name = String(request->arg("i"));
+      normalize(n_name);
+      strlcpy(getAtualConfig().nodeId, n_name.c_str(), sizeof(getAtualConfig().nodeId));
+      strlcpy(getAtualConfig().wifiSSID, request->arg("s").c_str(), sizeof(getAtualConfig().wifiSSID));
+      if (request->hasArg("p"))
+      {
+        Serial.println(request->arg("p"));
+        strlcpy(getAtualConfig().wifiSecret, request->arg("p").c_str(), sizeof(getAtualConfig().wifiSecret));
+      }
+      else
+      {
+        strlcpy(getAtualConfig().wifiSecret, "", sizeof(getAtualConfig().wifiSecret));
+      }
+      String storedR = FPSTR(HTTP_SAVED);
+      storedR.replace("{o}", String("http://" + String(getAtualConfig().nodeId) + ".local").c_str());
+      response->print(storedR.c_str());
+      response->print(FPSTR(HTTP_END));
+      request->send(response);
+      store = true;
+    }
+
+    if (request->hasArg("sc"))
+    {
+      int n = WiFi.scanComplete();
+      if (n == -2)
+      {
+        WiFi.scanNetworks(true);
+      }
+      else if (n)
+
+      {
+        int indices[n];
+        for (int i = 0; i < n; i++)
+        {
+          indices[i] = i;
+        }
+        for (int i = 0; i < n; i++)
+        {
+          for (int j = i + 1; j < n; j++)
+          {
+            if (WiFi.RSSI(indices[j]) > WiFi.RSSI(indices[i]))
+            {
+              std::swap(indices[i], indices[j]);
+            }
+          }
+        }
+
+        //display networks in page
+        String scan = "<div class=\"sc\">";
+        for (int i = 0; i < n; i++)
+        {
+          if (indices[i] == -1)
+            continue; // skip dups
+          int quality = getRSSIasQuality(WiFi.RSSI(indices[i]));
+
+          String item = FPSTR(HTTP_ITEM);
+          String rssiQ;
+          rssiQ += quality;
+          item.replace("{v}", WiFi.SSID(indices[i]));
+          item.replace("{r}", rssiQ);
+          if (WiFi.encryptionType(indices[i]) != ENC_TYPE_NONE)
+          {
+            item.replace("{i}", "l");
+          }
+          else
+          {
+            item.replace("{i}", "");
+          }
+          //DEBUG_WM(item);
+          scan += item;
+        }
+        WiFi.scanDelete();
+        if (WiFi.scanComplete() == -2)
+        {
+          WiFi.scanNetworks(true);
+        }
+        scan += "</div>";
+        response->print(scan.c_str());
+      }
+    }
+    if (!store)
+    {
+      response->print(FPSTR(HTTP_FORM_START));
+      response->print(FPSTR(HTTP_END));
+      request->send(response);
+    }
+    if (store)
+    {
+      getAtualConfig().save();
+      configStore.once(1, requestRestart);
+    }
+  }
+};
 AsyncJsonResponse *errorResponse(const char *cause)
 {
   AsyncJsonResponse *responseError = new AsyncJsonResponse();
@@ -44,7 +183,7 @@ void loadUI()
 
   server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
@@ -55,7 +194,7 @@ void loadUI()
 
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
@@ -89,7 +228,7 @@ void loadUI()
   //JS
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
@@ -100,7 +239,7 @@ void loadUI()
 
   server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
@@ -112,7 +251,7 @@ void loadUI()
   //CSS
   server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
@@ -121,49 +260,80 @@ void loadUI()
     request->send(response);
   });
 }
-void setupWebserverAsync()
+void loadAPI()
 {
-  server.addHandler(&events);
-  loadUI();
-
-  //-------- API ---------
-
-  //SYSTEM
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["result"] = "Reboot requested";
+    response->setLength();
+    request->send(response);
+    requestRestart();
+  });
+
+  server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["result"] = "Load defaults requested";
+    response->setLength();
+    request->send(response);
+    requestLoadDefaults();
+  });
+
+  server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
-    requestRestart();
-    request->send(200, "application/json", "{\"result\":\"OK\"}");
-  });
-  server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request) {
-#if WEB_SECURE_ON
-     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication(REALM);
-#endif
-    request->send(200, "application/json", "{\"result\":\"OK\"}");
-    requestLoadDefaults();
-  });
-  server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request) {
-#if WEB_SECURE_ON
-     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    systemJSONStatus(*response);
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["wifiSSID"] = WiFi.SSID();
+    root["wifiIp"] = WiFi.localIP().toString();
+    root["wifiGw"] = WiFi.gatewayIP().toString();
+    root["wifiMask"] = WiFi.subnetMask().toString();
+    root["status"] = WiFi.isConnected();
+    root["signal"] = WiFi.RSSI();
+    root["mac"] = WiFi.macAddress();
+    root["mode"] = (int)WiFi.getMode();
+    root["freeHeap"] = String(ESP.getFreeHeap());
+    root["mqtt"] = mqttConnected();
+    root["cloudIO"] = cloudIOConnected();
+    root["connectedOn"] = getAtualConfig().connectedOn;
+    root["currentTime"] = getTime();
+    response->setLength();
     request->send(response);
   });
-  server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  server.on("/scan-wifi-networks", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
-    request->send(200, "application/json", "{\"result\":\"OK\"}");
-    requestAutoUpdate();
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["result"] = "Wi-Fi Scan started";
+    response->setLength();
+    request->send(response);
+    requestWifiScan();
   });
 
-  server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+      return request->requestAuthentication(REALM);
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["result"] = "Auto-Update started";
+    response->setLength();
+    request->send(response);
+    requestAutoUpdate();
+  });
+  server.on(
+      "/update", HTTP_POST, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
       if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
@@ -199,37 +369,16 @@ void setupWebserverAsync()
          requestRestart();
       }
     } });
-  //CONFIG
+
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
-#if WEB_SECURE_ON
-     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getAtualConfig().serializeToJson(*response);
-
-    request->send(response);
-  });
-
-  //CONFIG
-  server.on("/assign", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-
-    if (request->hasArg("configKey"))
-    {
-      strlcpy(getAtualConfig().configkey, request->arg("configKey").c_str(), sizeof(getAtualConfig().configkey));
-      response->setCode(200);
-      requestCloudIOSync();
-    }
-    else
-    {
-      response->setCode(400);
-    }
-
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    getAtualConfig().toJson(root);
+    response->setLength();
     request->send(response);
   });
 
@@ -238,18 +387,21 @@ void setupWebserverAsync()
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    getAtualConfig().updateFromJson(json).saveConfigurationOnDefaultFile().serializeToJson(*response);
-    requestCloudIOSync();
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    JsonObject config = json.as<JsonObject>();
+    getAtualConfig().updateFromJson(config).toJson(root);
+    response->setLength();
     request->send(response);
+    requestCloudIOSync();
   }));
 
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
-      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncJsonResponse *response = new AsyncJsonResponse(true,2048 );
+    AsyncJsonResponse *response = new AsyncJsonResponse(true, 5120U);
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().toJson(root);
     response->setLength();
@@ -258,7 +410,7 @@ void setupWebserverAsync()
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json) {
 #if WEB_SECURE_ON
-      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
@@ -266,14 +418,16 @@ void setupWebserverAsync()
       request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true, 5120U);
     JsonVariant &root = response->getRoot();
     JsonObject switchJson = json.as<JsonObject>();
-    getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson).toJson(root);
+    getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson);
+    getAtualSwitchesConfig().toJson(root);
     response->setLength();
     request->send(response);
     requestCloudIOSync();
   }));
+
   server.on("/remove-switch", HTTP_DELETE, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
@@ -284,7 +438,7 @@ void setupWebserverAsync()
       request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncJsonResponse *response = new AsyncJsonResponse(true);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true, 5120U);
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().remove(request->arg("id").c_str()).toJson(root);
     response->setLength();
@@ -317,7 +471,7 @@ void setupWebserverAsync()
       request->send(errorResponse("Id missing"));
       return;
     }
-    if (!request->hasArg("state"))
+    if (request->hasArg("state"))
     {
       request->send(errorResponse("State missing"));
       return;
@@ -366,7 +520,7 @@ void setupWebserverAsync()
     requestCloudIOSync();
   }));
 
-  server.on("/remove-sensor", HTTP_DELETE, [](AsyncWebServerRequest *request) {
+  server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request) {
 #if WEB_SECURE_ON
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword))
       return request->requestAuthentication(REALM);
@@ -383,10 +537,17 @@ void setupWebserverAsync()
     request->send(response);
     requestCloudIOSync();
   });
+}
+void setupWebserverAsync()
+{
+  WiFi.scanNetworks(true);
+  server.addHandler(&events);
+  dnsServer.start(53, "*", WiFi.softAPIP());
+  server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER); //only when requested from AP
+  loadUI();
+  loadAPI();
 
   server.onNotFound([](AsyncWebServerRequest *request) {
-
-    //CORS
     if (request->method() == HTTP_OPTIONS)
     {
       request->send(200);
@@ -398,8 +559,8 @@ void setupWebserverAsync()
   });
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST, PUT, GET, DELETE"));
-  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Content-Type, Origin, Referer, User-Agent"));
+  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
+  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
   server.begin();
 }
 
@@ -410,4 +571,6 @@ void sendToServerEvents(const String &topic, const char *payload)
 
 void webserverServicesLoop()
 {
+
+  dnsServer.processNextRequest();
 }

@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "FS.h"
-static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadReleased, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
+static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
 class Bounce;
 class Shutters;
 enum SwitchMode
@@ -12,7 +12,8 @@ enum SwitchMode
     SWITCH = 1,
     PUSH = 2,
     DUAL_SWITCH = 4,
-    DUAL_PUSH = 5
+    DUAL_PUSH = 5,
+    GATE_SWITCH = 6
 };
 
 enum SwitchControlType
@@ -42,11 +43,14 @@ struct SwitchT
     //GPIOS INPUT
     unsigned int primaryGpio = constantsConfig::noGPIO;
     unsigned int secondaryGpio = constantsConfig::noGPIO;
-    bool pullup = true; //USE INTERNAL RESISTOR
+    unsigned int primaryStateGpio = constantsConfig::noGPIO;   //NEW
+    unsigned int secondaryStateGpio = constantsConfig::noGPIO; //NEW
+    bool pullup = true;                                        //USE INTERNAL RESISTOR
 
     //GPIOS OUTPUT
     unsigned int primaryGpioControl = constantsConfig::noGPIO;
     unsigned int secondaryGpioControl = constantsConfig::noGPIO;
+    unsigned int thirdGpioControl = constantsConfig::noGPIO; //NEW
     bool inverted = false;
 
     //AUTOMATIONS
@@ -62,16 +66,16 @@ struct SwitchT
     int lastPercentage = 0;
     bool lastPrimaryGpioState = true;
     bool lastSecondaryGpioState = true;
+    bool lastPrimaryStateGpioState = true;
     Bounce *debouncerPrimary = nullptr;
     Bounce *debouncerSecondary = nullptr;
     int statePoolIdx = -1;
     bool isCover = false;
     unsigned long lastChangeState = 0;
-    
+
     //CLOUDIO
     char mqttCloudCommandTopic[128] = {0};
     char mqttCloudStateTopic[128] = {0};
-    
 
     //VIRTUAL COVER CONTROLLER
     Shutters *shutter;
@@ -79,7 +83,7 @@ struct SwitchT
     unsigned long downCourseTime = 25 * 1000;
     float calibrationRatio = 0.1;
     char shutterState[21] = {0};
-    
+
     //KNX
     uint8_t knxLevelOne = 0;
     uint8_t knxLevelTwo = 0;
@@ -95,11 +99,12 @@ struct SwitchT
     const char *rotateState();
     const char *getCurrentState() const;
     void configPins();
+    const void notifyState(bool dirty);
     void reloadMqttTopics();
 };
 struct Switches
 {
-      unsigned long lastChange = 0ul;
+    unsigned long lastChange = 0ul;
     std::vector<SwitchT> items;
     void load(File &file);
     const char *rotate(const char *id);

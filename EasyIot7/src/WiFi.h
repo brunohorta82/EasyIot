@@ -7,6 +7,7 @@ void setupWiFi();
 void loopWiFi();
 bool wifiConnected();
 void reloadWiFiConfig();
+void scanNewWifiNetworks();
+void enableScan();
 void refreshMDNS(const char *lastName);
-size_t systemJSONStatus(Print &output);
 #endif

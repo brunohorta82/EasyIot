@@ -13,7 +13,7 @@
 #include "CloudIO.h"
 
 void checkInternalRoutines()
-{ 
+{
   if (cloudIOSync())
   {
     connectoToCloudIO();
@@ -72,12 +72,19 @@ void checkInternalRoutines()
 
 void setup()
 {
+  pinMode(1, INPUT);
+  pinMode(3, INPUT);
+  if (digitalRead(1) && !digitalRead(3))
+  {
+    SPIFFS.format();
+    ESP.restart();
+  }
 #ifdef DEBUG
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
 
-  loadStoredConfiguration(getAtualConfig());
+  load(getAtualConfig());
   load(getAtualSwitchesConfig());
   load(getAtualSensorsConfig());
   setupWiFi();
