@@ -758,7 +758,6 @@ const char *SwitchT::changeState(const char *state, const char *origin)
         }
       }
     }
-    notifyState(dirty);
   }
   else
   {
