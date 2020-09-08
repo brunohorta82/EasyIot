@@ -471,7 +471,7 @@ void loadAPI()
       request->send(errorResponse("Id missing"));
       return;
     }
-    if (request->hasArg("state"))
+    if (!request->hasArg("state"))
     {
       request->send(errorResponse("State missing"));
       return;
