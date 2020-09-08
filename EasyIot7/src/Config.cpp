@@ -18,7 +18,7 @@ static bool g_loadDefaults = false;
 static bool g_autoUpdate = false;
 static bool g_wifiReload = false;
 static bool g_cloudIOSync = false;
-
+static bool g_wifiScan = false;
 struct Config &
 getAtualConfig()
 {
@@ -62,6 +62,19 @@ boolean isValidNumber(const char *str)
   {
     if (isDigit(str[i]))
       return true;
+  }
+  return false;
+}
+void requestWifiScan()
+{
+  g_wifiScan = true;
+}
+bool wifiScanRequested()
+{
+  if (g_wifiScan)
+  {
+    g_wifiScan = false;
+    return true;
   }
   return false;
 }
@@ -197,50 +210,57 @@ void normalize(String &inputStr)
   inputStr.replace("@", "o");
   inputStr.replace("|", "");
 }
-size_t Config::serializeToJson(Print &output)
-{
-  const size_t CAPACITY = JSON_OBJECT_SIZE(39) + sizeof(Config);
-  StaticJsonDocument<CAPACITY> doc;
-  doc["nodeId"] = nodeId;
-  doc["homeAssistantAutoDiscoveryPrefix"] = homeAssistantAutoDiscoveryPrefix;
-  doc["mqttIpDns"] = mqttIpDns;
-  doc["mqttPort"] = mqttPort;
-  doc["mqttUsername"] = mqttUsername;
-  doc["mqttPassword"] = mqttPassword;
-  doc["mqttAvailableTopic"] = mqttAvailableTopic;
-  doc["wifiSSID"] = wifiSSID;
-  doc["wifiSSID2"] = wifiSSID2;
-  doc["wifiSecret"] = wifiSecret;
-  doc["wifiSecret2"] = wifiSecret2;
-  doc["wifiIp"] = wifiIp;
-  doc["wifiMask"] = wifiMask;
-  doc["wifiGw"] = wifiGw;
-  doc["staticIp"] = staticIp;
-  doc["apSecret"] = apSecret;
-  doc["configTime"] = configTime;
-  doc["configkey"] = configkey;
-  doc["apName"] = apName;
-  doc["firmware"] = VERSION;
-  doc["chipId"] = chipId;
-  doc["mac"] = WiFi.macAddress();
-  doc["apiUser"] = apiUser;
-  doc["apiPassword"] = apiPassword;
-  doc["emoncmsServer"] = emoncmsServer;
-  doc["emoncmsPath"] = emoncmsPath;
-  doc["emoncmsApikey"] = emoncmsApikey;
-  doc["knxArea"] = knxArea;
-  doc["knxLine"] = knxLine;
-  doc["knxMember"] = knxMember;
-  doc["currentWifiIp"] = WiFi.localIP().toString();
-  doc["wifiStatus"] = WiFi.isConnected();
-  doc["signal"] = WiFi.RSSI();
-  doc["mode"] = (int)WiFi.getMode();
-  doc["mqttConnected"] = mqttConnected();
-  doc["freeHeap"] = String(ESP.getFreeHeap());
-  doc["connectedOn"] = connectedOn;
-  doc["firmwareMode"] = constantsConfig::firmwareMode;
 
-  return serializeJson(doc, output);
+void Config::save()
+{
+  if (!SPIFFS.begin())
+  {
+#ifdef DEBUG
+    Log.error("%s File storage can't start" CR, tags::config);
+#endif
+    return;
+  }
+  File file = SPIFFS.open(configFilenames::config, "w+");
+  this->save(file);
+  file.close();
+
+#ifdef DEBUG
+  Log.notice("%s Config stored." CR, tags::config);
+#endif
+}
+void Config::toJson(JsonVariant &root)
+{
+
+  root["nodeId"] = nodeId;
+  root["mqttIpDns"] = mqttIpDns;
+  root["mqttPort"] = mqttPort;
+  root["mqttUsername"] = mqttUsername;
+  root["mqttPassword"] = mqttPassword;
+  root["wifiSSID"] = wifiSSID;
+  root["wifiSecret"] = wifiSecret;
+  root["wifiIp"] = wifiIp;
+  root["wifiMask"] = wifiMask;
+  root["wifiGw"] = wifiGw;
+  root["staticIp"] = staticIp;
+  root["apName"] = apName;
+  root["firmware"] = VERSION;
+  root["chipId"] = chipId;
+  root["mac"] = WiFi.macAddress();
+  root["apiUser"] = apiUser;
+  root["apiPassword"] = apiPassword;
+  root["emoncmsServer"] = emoncmsServer;
+  root["emoncmsPath"] = emoncmsPath;
+  root["emoncmsApikey"] = emoncmsApikey;
+  root["knxArea"] = knxArea;
+  root["knxLine"] = knxLine;
+  root["knxMember"] = knxMember;
+  root["currentWifiIp"] = WiFi.localIP().toString();
+  root["wifiStatus"] = WiFi.isConnected();
+  root["signal"] = WiFi.RSSI();
+  root["mode"] = (int)WiFi.getMode();
+  root["mqttConnected"] = mqttConnected();
+  root["connectedOn"] = connectedOn;
+  root["firmwareMode"] = constantsConfig::firmwareMode;
 }
 
 void Config::save(File &file) const
@@ -314,12 +334,15 @@ void Config::load(File &file)
   strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
   strlcpy(available, String("1" + String(ESP.getChipId())).c_str(), sizeof(chipId));
   strlcpy(offline, String("0" + String(ESP.getChipId())).c_str(), sizeof(chipId));
-  if(firmware >= 7.941){
+  if (firmware >= 7.941)
+  {
     file.read((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
-  }else{
+  }
+  else
+  {
     strlcpy(cloudIOUserName, "", sizeof(cloudIOUserName));
   }
-  
+
   if (firmware < VERSION)
   {
 #ifdef DEBUG
@@ -328,7 +351,7 @@ void Config::load(File &file)
     firmware = VERSION;
   }
 }
-void loadStoredConfiguration(Config &config)
+void load(Config &config)
 {
   configTime(0, 0, NTP_SERVER);
   setenv("TZ", TZ_INFO, 1);
@@ -337,9 +360,13 @@ void loadStoredConfiguration(Config &config)
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
 #endif
-    return;
+    if (!SPIFFS.format())
+    {
+#ifdef DEBUG
+      Log.error("%s Unable to format Filesystem, please ensure you built firmware with filesystem support." CR, tags::config);
+#endif
+    }
   }
-
   if (!SPIFFS.exists(configFilenames::config))
   {
 #ifdef DEBUG
@@ -378,47 +405,25 @@ void loadStoredConfiguration(Config &config)
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
 }
-Config &Config::saveConfigurationOnDefaultFile()
-{
-  if (!SPIFFS.begin())
-  {
-#ifdef DEBUG
-    Log.error("%s File storage can't start" CR, tags::config);
-#endif
-    return getAtualConfig();
-  }
-
-  File file = SPIFFS.open(configFilenames::config, "w+");
-  save(file);
-  file.close();
-
-#ifdef DEBUG
-  Log.notice("%s Config stored." CR, tags::config);
-#endif
-  return *this;
-}
-
-Config &Config::updateFromJson(JsonObject doc)
+Config &Config::updateFromJson(JsonObject &root)
 {
   char lastNodeId[32];
   strlcpy(lastNodeId, getAtualConfig().nodeId, sizeof(lastNodeId));
-  bool reloadWifi = staticIp != doc["staticIp"] || strcmp(wifiIp, doc["wifiIp"] | "") != 0 || strcmp(wifiMask, doc["wifiMask"] | "") != 0 || strcmp(wifiGw, doc["wifiGw"] | "") != 0 || strcmp(wifiSSID, doc["wifiSSID"] | "") != 0 || strcmp(wifiSecret, doc["wifiSecret"] | "") != 0 || strcmp(wifiSSID2, doc["wifiSSID2"] | "") != 0 || strcmp(wifiSecret2, doc["wifiSecret2"] | "") != 0;
-  bool reloadMqtt = strcmp(mqttIpDns, doc["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, doc["mqttUsername"] | "") != 0 || strcmp(mqttPassword, doc["mqttPassword"] | "") != 0 || mqttPort != (doc["mqttPort"] | constantsMqtt::defaultPort);
-  String n_name = doc["nodeId"] | String(ESP.getChipId());
+  bool reloadWifi = staticIp != root["staticIp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
+  bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
+  String n_name = root["nodeId"] | String(ESP.getChipId());
   normalize(n_name);
   strlcpy(nodeId, n_name.c_str(), sizeof(nodeId));
-  strlcpy(mqttIpDns, doc["mqttIpDns"] | "", sizeof(mqttIpDns));
-  mqttPort = doc["mqttPort"] | constantsMqtt::defaultPort;
-  strlcpy(mqttUsername, doc["mqttUsername"] | "", sizeof(mqttUsername));
-  strlcpy(mqttPassword, doc["mqttPassword"] | "", sizeof(mqttPassword));
-  strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
-  strlcpy(wifiSSID2, doc["wifiSSID2"] | "", sizeof(wifiSSID2));
-  strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
-  strlcpy(wifiSecret2, doc["wifiSecret2"] | "", sizeof(wifiSecret2));
-  String emoncmsServerStr = doc["emoncmsServer"] | "";
-  knxArea = static_cast<uint8_t>(doc["knxArea"] | 0);
-  knxLine = static_cast<uint8_t>(doc["knxLine"] | 0);
-  knxMember = static_cast<uint8_t>(doc["knxMember"] | 0);
+  strlcpy(mqttIpDns, root["mqttIpDns"] | "", sizeof(mqttIpDns));
+  mqttPort = root["mqttPort"] | constantsMqtt::defaultPort;
+  strlcpy(mqttUsername, root["mqttUsername"] | "", sizeof(mqttUsername));
+  strlcpy(mqttPassword, root["mqttPassword"] | "", sizeof(mqttPassword));
+  strlcpy(wifiSSID, root["wifiSSID"] | "", sizeof(wifiSSID));
+  strlcpy(wifiSecret, root["wifiSecret"] | "", sizeof(wifiSecret));
+  String emoncmsServerStr = root["emoncmsServer"] | "";
+  knxArea = static_cast<uint8_t>(root["knxArea"] | 0);
+  knxLine = static_cast<uint8_t>(root["knxLine"] | 0);
+  knxMember = static_cast<uint8_t>(root["knxMember"] | 0);
   emoncmsServerStr.replace("https", "http");
   knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   while (emoncmsServerStr.endsWith("/"))
@@ -427,22 +432,21 @@ Config &Config::updateFromJson(JsonObject doc)
     emoncmsServerStr.remove(emoncmsServerStr.lastIndexOf("/"));
   }
   strlcpy(emoncmsServer, emoncmsServerStr.c_str(), sizeof(emoncmsServer));
-  String emoncmsPathStr = doc["emoncmsPath"] | "";
+  String emoncmsPathStr = root["emoncmsPath"] | "";
   while (emoncmsPathStr.endsWith("/"))
   {
     emoncmsPathStr.remove(emoncmsPathStr.lastIndexOf("/"));
   }
   strlcpy(emoncmsPath, emoncmsPathStr.c_str(), sizeof(emoncmsPath));
 
-  strlcpy(emoncmsApikey, doc["emoncmsApikey"] | "", sizeof(emoncmsApikey));
-  strlcpy(wifiIp, doc["wifiIp"] | "", sizeof(wifiIp));
-  strlcpy(wifiMask, doc["wifiMask"] | "", sizeof(wifiMask));
-  strlcpy(wifiGw, doc["wifiGw"] | "", sizeof(wifiGw));
-  staticIp = doc["staticIp"];
-  strlcpy(apSecret, doc["apSecret"] | constantsConfig::apSecret, sizeof(apSecret));
-  configTime = doc["configTime"];
-  strlcpy(configkey, doc["configkey"] | "", sizeof(configkey));
-  firmware = doc["firmware"] | VERSION;
+  strlcpy(emoncmsApikey, root["emoncmsApikey"] | "", sizeof(emoncmsApikey));
+  strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
+  strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
+  strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
+  staticIp = root["staticIp"];
+  strlcpy(apSecret, root["apSecret"] | constantsConfig::apSecret, sizeof(apSecret));
+  configTime = root["configTime"];
+  firmware = root["firmware"] | VERSION;
   strlcpy(mqttAvailableTopic, getAvailableTopic().c_str(), sizeof(mqttAvailableTopic));
   if (strcmp(constantsMqtt::mqttCloudURL, mqttIpDns) == 0)
   {
@@ -464,5 +468,6 @@ Config &Config::updateFromJson(JsonObject doc)
     reloadSensors();
   }
   refreshMDNS(lastNodeId);
+  getAtualConfig().save();
   return *this;
 }
