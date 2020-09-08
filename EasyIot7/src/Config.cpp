@@ -231,20 +231,16 @@ void Config::save()
 void Config::toJson(JsonVariant &root)
 {
   root["nodeId"] = nodeId;
-  root["homeAssistantAutoDiscoveryPrefix"] = homeAssistantAutoDiscoveryPrefix;
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
   root["mqttPassword"] = mqttPassword;
-  root["mqttAvailableTopic"] = mqttAvailableTopic;
   root["wifiSSID"] = wifiSSID;
   root["wifiSecret"] = wifiSecret;
   root["wifiIp"] = wifiIp;
   root["wifiMask"] = wifiMask;
   root["wifiGw"] = wifiGw;
   root["staticIp"] = staticIp;
-  root["apSecret"] = apSecret;
-  root["configTime"] = configTime;
   root["apName"] = apName;
   root["firmware"] = VERSION;
   root["chipId"] = chipId;
@@ -262,8 +258,6 @@ void Config::toJson(JsonVariant &root)
   root["signal"] = WiFi.RSSI();
   root["mode"] = (int)WiFi.getMode();
   root["mqttConnected"] = mqttConnected();
-  root["freeHeap"] = String(ESP.getFreeHeap());
-  root["connectedOn"] = connectedOn;
   root["firmwareMode"] = constantsConfig::firmwareMode;
 }
 
@@ -271,7 +265,6 @@ void Config::save(File &file) const
 {
   file.write((uint8_t *)&firmware, sizeof(firmware));
   file.write((uint8_t *)nodeId, sizeof(nodeId));
-  file.write((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.write((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
   file.write((uint8_t *)mqttUsername, sizeof(mqttUsername));
   file.write((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
@@ -285,7 +278,6 @@ void Config::save(File &file) const
   file.write((uint8_t *)wifiGw, sizeof(wifiGw));
   file.write((uint8_t *)apSecret, sizeof(apSecret));
   file.write((uint8_t *)apName, sizeof(apName));
-  file.write((uint8_t *)&configTime, sizeof(configTime));
   file.write((uint8_t *)chipId, sizeof(chipId));
   file.write((uint8_t *)apiUser, sizeof(apiUser));
   file.write((uint8_t *)apiPassword, sizeof(apiPassword));
@@ -300,12 +292,11 @@ void Config::save(File &file) const
 void Config::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  if (firmware < 8)
+  if (firmware < 8.1)
   {
     requestLoadDefaults();
   }
   file.read((uint8_t *)nodeId, sizeof(nodeId));
-  file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
   file.read((uint8_t *)mqttUsername, sizeof(mqttUsername));
   file.read((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
@@ -319,8 +310,6 @@ void Config::load(File &file)
   file.read((uint8_t *)wifiGw, sizeof(wifiGw));
   file.read((uint8_t *)apSecret, sizeof(apSecret));
   file.read((uint8_t *)apName, sizeof(apName));
-  file.read((uint8_t *)&configTime, sizeof(configTime));
-
   file.read((uint8_t *)chipId, sizeof(chipId));
   file.read((uint8_t *)apiUser, sizeof(apiUser));
   file.read((uint8_t *)apiPassword, sizeof(apiPassword));
@@ -387,7 +376,6 @@ void load(Config &config)
     config.knxLine = 1;
     config.knxMember = 1;
     config.firmware = VERSION;
-    strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
 
 #ifdef DEBUG
     Log.notice("%s Config %s loaded." CR, tags::config, String(config.firmware).c_str());
@@ -443,17 +431,8 @@ Config &Config::updateFromJson(JsonObject &root)
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
   staticIp = root["staticIp"];
   strlcpy(apSecret, root["apSecret"] | constantsConfig::apSecret, sizeof(apSecret));
-  configTime = root["configTime"];
   firmware = root["firmware"] | VERSION;
   strlcpy(mqttAvailableTopic, getAvailableTopic().c_str(), sizeof(mqttAvailableTopic));
-  if (strcmp(constantsMqtt::mqttCloudURL, mqttIpDns) == 0)
-  {
-    strlcpy(homeAssistantAutoDiscoveryPrefix, mqttUsername, sizeof(homeAssistantAutoDiscoveryPrefix));
-  }
-  else
-  {
-    strlcpy(homeAssistantAutoDiscoveryPrefix, "homeassistant", sizeof(homeAssistantAutoDiscoveryPrefix));
-  }
 
   if (reloadWifi)
   {

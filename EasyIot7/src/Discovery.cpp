@@ -10,7 +10,7 @@ void initHaDiscovery(const Switches &switches)
   {
     if (!sw.haSupport)
       continue;
-    publishOnMqtt(sw.mqttStateTopic,STATES_POLL[sw.statePoolIdx].c_str(), true);
+    publishOnMqtt(sw.mqttStateTopic, STATES_POLL[sw.statePoolIdx].c_str(), true);
     if (strcmp(constanstsSwitch::familyCover, sw.family) == 0)
     {
       publishOnMqtt(sw.mqttStateTopic, String(sw.lastPercentage).c_str(), true);
@@ -42,31 +42,33 @@ void createHaSwitch(const SwitchT &sw)
   object["name"] = sw.name;
   object["unique_id"] = sw.id;
   object["cmd_t"] = sw.mqttCommandTopic;
-  object["stat_t"] = sw.mqttStateTopic; 
+  object["stat_t"] = sw.mqttStateTopic;
   object["avty_t"] = getAvailableTopic();
-if (strcmp(sw.family, constanstsSwitch::familyLock) == 0){
-  object["payload_lock"] = constanstsSwitch::payloadLock;
-  object["payload_unlock"] = constanstsSwitch::payloadUnlock;
-}
+  if (strcmp(sw.family, constanstsSwitch::familyLock) == 0)
+  {
+    object["payload_lock"] = constanstsSwitch::payloadLock;
+    object["payload_unlock"] = constanstsSwitch::payloadUnlock;
+  }
 
-if (strcmp(sw.family, constanstsSwitch::familyCover) == 0){
-  object["payload_open"] = constanstsSwitch::payloadOpen;
-  object["payload_close"] = constanstsSwitch::payloadClose;
-  object["payload_stop"] = constanstsSwitch::payloadStop;
-  object["device_class"] = "blind";
-  object["position_open"] = 0;
-  object["position_closed"] = 100;
-  object["position_topic"] = sw.mqttStateTopic;
-  object["set_position_topic"] = sw.mqttCommandTopic;
-}
-if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0){
-  object["payload_on"] = constanstsSwitch::payloadOn;
-  object["payload_off"] = constanstsSwitch::payloadOff;
-}
+  if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
+  {
+    object["payload_open"] = constanstsSwitch::payloadOpen;
+    object["payload_close"] = constanstsSwitch::payloadClose;
+    object["payload_stop"] = constanstsSwitch::payloadStop;
+    object["device_class"] = "blind";
+    object["position_open"] = 0;
+    object["position_closed"] = 100;
+    object["position_topic"] = sw.mqttStateTopic;
+    object["set_position_topic"] = sw.mqttCommandTopic;
+  }
+  if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0)
+  {
+    object["payload_on"] = constanstsSwitch::payloadOn;
+    object["payload_off"] = constanstsSwitch::payloadOff;
+  }
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
-
 
 void addToHaDiscovery(const SensorT &s)
 {
@@ -91,7 +93,7 @@ void addToHaDiscovery(const SensorT &s)
     object["value_template"] = "{{value_json.temperature}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-    
+
     delay(100);
     objectStr = "";
     object["unique_id"] = String(s.id) + "H";
@@ -100,7 +102,7 @@ void addToHaDiscovery(const SensorT &s)
     object["value_template"] = "{{value_json.humidity}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-   
+
     break;
   case DS18B20:
     for (int i = 0; i < s.oneWireSensorsCount; i++)
@@ -231,9 +233,8 @@ void addToHaDiscovery(const SwitchT &sw)
     return;
   }
 
-  
-    createHaSwitch(sw);
-  
+  createHaSwitch(sw);
+
 #ifdef DEBUG
   Log.notice("%s RELOAD HA SWITCH DISCOVERY OK" CR, tags::discovery);
 #endif

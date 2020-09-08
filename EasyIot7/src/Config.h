@@ -12,7 +12,6 @@ struct Config
 {
   double firmware = VERSION;
   char nodeId[32];
-  char homeAssistantAutoDiscoveryPrefix[32];
   char mqttIpDns[40];
   char cloudIOUserName[40];
   char cloudIOUserPassword[64];
@@ -28,7 +27,6 @@ struct Config
   char wifiGw[24];
   char apSecret[64];
   char apName[30];
-  long configTime = 0ul;
   char chipId[24];
   char apiUser[32];
   char apiPassword[64];
