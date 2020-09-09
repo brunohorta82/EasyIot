@@ -300,11 +300,7 @@ void loadAPI()
     root["signal"] = WiFi.RSSI();
     root["mac"] = WiFi.macAddress();
     root["mode"] = (int)WiFi.getMode();
-    root["freeHeap"] = String(ESP.getFreeHeap());
     root["mqtt"] = mqttConnected();
-    root["cloudIO"] = cloudIOConnected();
-    root["connectedOn"] = getAtualConfig().connectedOn;
-    root["currentTime"] = getTime();
     response->setLength();
     request->send(response);
   });
