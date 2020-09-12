@@ -87,38 +87,39 @@ void Switches::toJson(JsonVariant &root)
 {
   for (const auto &sw : items)
   {
-    JsonVariant sdoc = root.createNestedObject();
-    sdoc["id"] = sw.id;
-    sdoc["name"] = sw.name;
-    sdoc["family"] = sw.family;
-    sdoc["primaryGpio"] = sw.primaryGpio;
-    sdoc["secondaryGpio"] = sw.secondaryGpio;
-    sdoc["downCourseTime"] = sw.downCourseTime;
-    sdoc["upCourseTime"] = sw.upCourseTime;
-    sdoc["calibrationRatio"] = sw.calibrationRatio;
-    sdoc["autoStateValue"] = sw.autoStateValue;
-    sdoc["autoStateDelay"] = sw.autoStateDelay;
-    sdoc["childLock"] = sw.childLock;
-    sdoc["typeControl"] = static_cast<int>(sw.typeControl);
-    sdoc["mode"] = static_cast<int>(sw.mode);
-    sdoc["primaryGpioControl"] = sw.primaryGpioControl;
-    sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
-    sdoc["stateControl"] = sw.getCurrentState();
-    sdoc["lastPercentage"] = sw.lastPercentage;
-    sdoc["cloudIOSupport"] = sw.cloudIOSupport;
-    sdoc["mqttStateTopic"] = sw.mqttStateTopic;
-    sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
-    sdoc["lastPercentage"] = sw.lastPercentage;
-    sdoc["haSupport"] = sw.haSupport;
-    sdoc["knxSupport"] = sw.knxSupport;
-    sdoc["mqttSupport"] = sw.mqttSupport;
-    sdoc["knxLevelOne"] = sw.knxLevelOne;
-    sdoc["knxLevelTwo"] = sw.knxLevelTwo;
-    sdoc["knxLevelThree"] = sw.knxLevelThree;
-    sdoc["primaryStateGpio"] = sw.primaryStateGpio;
-    sdoc["secondaryStateGpio"] = sw.secondaryStateGpio;
-    sdoc["thirdGpioControl"] = sw.thirdGpioControl;
+    sw.toJson(root);
   }
+}
+void SwitchT::toJson(JsonVariant &root) const
+{
+
+  JsonVariant sdoc = root.createNestedObject();
+  sdoc["id"] = id;
+  sdoc["name"] = name;
+  sdoc["family"] = family;
+  sdoc["primaryGpio"] = primaryGpio;
+  sdoc["secondaryGpio"] = secondaryGpio;
+  sdoc["downCourseTime"] = downCourseTime;
+  sdoc["upCourseTime"] = upCourseTime;
+  sdoc["calibrationRatio"] = calibrationRatio;
+  sdoc["autoStateValue"] = autoStateValue;
+  sdoc["autoStateDelay"] = autoStateDelay;
+  sdoc["childLock"] = childLock;
+  sdoc["typeControl"] = static_cast<int>(typeControl);
+  sdoc["mode"] = static_cast<int>(mode);
+  sdoc["primaryGpioControl"] = primaryGpioControl;
+  sdoc["secondaryGpioControl"] = secondaryGpioControl;
+  sdoc["stateControl"] = getCurrentState();
+  sdoc["cloudIOSupport"] = cloudIOSupport;
+  sdoc["haSupport"] = haSupport;
+  sdoc["knxSupport"] = knxSupport;
+  sdoc["mqttSupport"] = mqttSupport;
+  sdoc["knxLevelOne"] = knxLevelOne;
+  sdoc["knxLevelTwo"] = knxLevelTwo;
+  sdoc["knxLevelThree"] = knxLevelThree;
+  sdoc["primaryStateGpio"] = primaryStateGpio;
+  sdoc["secondaryStateGpio"] = secondaryStateGpio;
+  sdoc["thirdGpioControl"] = thirdGpioControl;
 }
 const char *SwitchT::getCurrentState() const
 {

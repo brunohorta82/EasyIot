@@ -97,6 +97,7 @@ struct SwitchT
     void updateFromJson(JsonObject doc);
     const char *changeState(const char *state, const char *origin);
     const char *rotateState();
+    void toJson(JsonVariant &root) const;
     const char *getCurrentState() const;
     void configPins();
     const void notifyState(bool dirty);
