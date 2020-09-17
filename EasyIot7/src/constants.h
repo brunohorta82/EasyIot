@@ -64,6 +64,11 @@ namespace constantsConfig
     constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=COVER"};
     constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=COVER"};
 #endif
+#if COVER_V3
+    constexpr const char *firmwareMode{"COVER_V3"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=COVER_V3"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=COVER_V3"};
+#endif
 #if LOCK
     constexpr const char *firmwareMode{"LOCK"};
     constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=LOCK"};
