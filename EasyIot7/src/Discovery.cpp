@@ -44,10 +44,11 @@ void createHaSwitch(const SwitchT &sw)
   object["cmd_t"] = sw.mqttCommandTopic;
   object["stat_t"] = sw.mqttStateTopic;
   object["avty_t"] = getAvailableTopic();
-  if (strcmp(sw.family, constanstsSwitch::familyLock) == 0)
+  if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
   {
     object["payload_lock"] = constanstsSwitch::payloadLock;
     object["payload_unlock"] = constanstsSwitch::payloadUnlock;
+    object["device_class"] = "garage";
   }
 
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)

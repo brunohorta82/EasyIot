@@ -325,7 +325,8 @@ void SensorT::updateFromJson(JsonObject doc)
   strlcpy(name, doc.getMember("name").as<String>().c_str(), sizeof(name));
   generateId(idStr, name, static_cast<int>(type), sizeof(id));
   strlcpy(id, idStr.c_str(), sizeof(id));
-  strlcpy(deviceClass, doc["deviceClass"] | constantsSensor::powerMeterClass, sizeof(deviceClass));
+  String classDevice = doc["deviceClass"] | String(constantsSensor::powerMeterClass);
+  strlcpy(deviceClass,classDevice.c_str(), sizeof(deviceClass));
   dht = NULL;
   dallas = NULL;
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;

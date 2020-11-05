@@ -24,7 +24,15 @@ void SwitchT::updateFromJson(JsonObject doc)
   mode = static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH));
   generateId(idStr, name, static_cast<int>(mode), sizeof(id));
   strlcpy(id, idStr.c_str(), sizeof(id));
-  strlcpy(family, doc["family"], sizeof(family));
+  if (SwitchMode::GATE_SWITCH == mode)
+  {
+    strlcpy(family, constanstsSwitch::familyGate, sizeof(family));
+  }
+  else
+  {
+    strlcpy(family, doc["family"], sizeof(family));
+  }
+
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
   secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
   autoStateDelay = doc["autoStateDelay"] | 0ul;
@@ -549,7 +557,7 @@ int findPoolIdx(const char *state, int currentIdx, const char *family)
     start = constanstsSwitch::coverStartIdx;
     end = constanstsSwitch::converEndIdx;
   }
-  else if (strcmp(family, constanstsSwitch::familyLock) == 0)
+  else if (strcmp(family, constanstsSwitch::familyGate) == 0)
   {
     start = constanstsSwitch::lockStartIdx;
     end = constanstsSwitch::lockEndIdx;

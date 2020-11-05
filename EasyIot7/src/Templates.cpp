@@ -90,7 +90,7 @@ void loadSwitchDefaults()
 #if defined GATE
     one.mode = GATE_SWITCH;
     strlcpy(one.name, "Portão", sizeof(one.name));
-    strlcpy(one.family, constanstsSwitch::familyLock, sizeof(one.family));
+    strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
     one.primaryGpio = constantsConfig::noGPIO;
     one.primaryStateGpio = 13;
     one.autoStateDelay = 0;
