@@ -1,13 +1,10 @@
 const endpoint = {
     baseUrl: ""
 };
-var v = "8.101";
 var source = null;
-
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
 }
-
 function addToSelect(select, class_, value) {
     let sel = document.getElementById(select);
     if (sel) {
@@ -17,7 +14,6 @@ function addToSelect(select, class_, value) {
         opt.value = value;
         sel.appendChild(opt);
         $("#" + select + " option[value='" + value + "']").addClass(class_);
-
     }
 }
 function buildSwitchTemplate() {
@@ -122,7 +118,7 @@ var WORDS_EN = {
     "switch": "Switch",
     "light": "Light",
     "cover": "Cover",
-    "lock": "Lock",
+    "garage": "Garage",
     "released": "Released",
     "disconnected": "disconnected",
     "dconnected": "connected",
@@ -146,8 +142,6 @@ var WORDS_EN = {
     "on": "On",
     "auto-state": "Auto State",
     "off": "Off",
-    "locked": "Lock",
-    "unlock": "Unlocked",
     "open": "Open",
     "close": "Closed",
     "mqtt": "MQTT",
@@ -209,7 +203,7 @@ var WORDS_PT = {
     "switch": "Interruptor",
     "light": "Luz",
     "cover": "Estore",
-    "lock": "Fechadura",
+    "garage": "Garagem",
     "normal": "Normal",
     "push": "Pressão",
     "dual-push": "Duplo Pressão",
@@ -229,8 +223,6 @@ var WORDS_PT = {
     "state": "Estado",
     "on": "Ligado",
     "off": "Desligado",
-    "locked": "Trancado",
-    "unlock": "Destrancado",
     "open": "Aberto",
     "close": "Fechado",
     "stop": "Parar",
@@ -345,7 +337,7 @@ function fillConfig() {
 function toggleActive(menu) {
     $('.sidebar-menu').find('li').removeClass('active');
     $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
-    $(".content").load(menu + ".html?"+v, function () {
+    $(".content").load(menu + ".html", function () {
         if (menu === "devices") {
             loadDevice(fillSwitches, "switches", function () {
                 loadDevice(fillSensors, "sensors", function () {
@@ -397,8 +389,6 @@ function applySwitchFamily(id) {
     removeFromSelect('autoStateValue_' + id, "STOP");
     removeFromSelect('autoStateValue_' + id, "ON");
     removeFromSelect('autoStateValue_' + id, "OFF");
-    removeFromSelect('autoStateValue_' + id, "UNLOCK");
-    removeFromSelect('autoStateValue_' + id, "LOCK");
     if ($('#family_' + id).val() == "cover") {
         show("btn_close_" + id);
         show("btn_stop_" + id);
@@ -677,7 +667,7 @@ function buildSwitch(obj) {
         '                                    <option class="lang-switch" value="switch">Interruptor</option>' +
         '                                    <option class="lang-light" value="light">Luz</option>' +
         '                                    <option class="lang-cover" value="cover">Estore</option>' +
-        '                                    <option class="lang-lock" value="garage">Portão</option>' +
+        '                                    <option class="lang-garage" value="garage">Garagem</option>' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr>' +
@@ -839,9 +829,6 @@ function stateSwitch(id, state) {
     let toggleState = state;
     if ((toggleState === "ON" || toggleState === "OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
         toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
-    }
-    if (toggleState === "RELEASED") {
-        toggleState = "LOCK";
     }
     const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
     $.ajax({
@@ -1119,7 +1106,6 @@ function systemStatus() {
         timeout: 1000
     });
 }
-
 
 $(document).ready(function () {
     let lang = localStorage.getItem('lang');

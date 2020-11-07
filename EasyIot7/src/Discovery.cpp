@@ -46,8 +46,9 @@ void createHaSwitch(const SwitchT &sw)
   object["avty_t"] = getAvailableTopic();
   if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
   {
-    object["payload_lock"] = constanstsSwitch::payloadLock;
-    object["payload_unlock"] = constanstsSwitch::payloadUnlock;
+    object["payload_open"] = constanstsSwitch::payloadOpen;
+    object["payload_close"] = constanstsSwitch::payloadClose;
+    object["payload_stop"] = constanstsSwitch::payloadStop;
     object["device_class"] = "garage";
   }
 

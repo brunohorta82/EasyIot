@@ -783,7 +783,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
         writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
       }
     }
-    else if (statePoolIdx == constanstsSwitch::offIdx || strcmp(constanstsSwitch::payloadReleased, state) == 0)
+    else if (statePoolIdx == constanstsSwitch::offIdx)
     {
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {

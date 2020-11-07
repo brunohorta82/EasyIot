@@ -136,11 +136,7 @@ namespace constanstsSwitch
     constexpr const char *payloadStateOpen{"open"};
     constexpr const char *payloadStop{"STOP"};
     constexpr const char *payloadStateStop{""};
-    constexpr const char *payloadLock{"LOCK"};
-    constexpr const char *payloasStateLock{"LOCK"};
-    constexpr const char *payloadUnlock{"UNLOCK"};
-    constexpr const char *payloadStateUnlock{"UNLOCK"};
-    constexpr const char *payloadReleased{"RELEASED"};
+    
 
     constexpr const char *familyLight{"light"};
     constexpr const char *familySwitch{"switch"};
