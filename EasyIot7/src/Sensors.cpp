@@ -16,11 +16,12 @@
 #include <Bounce2.h>
 #include <Modbus.h>
 #include "Templates.h"
-
+#include "MCP4725.h"
+#define BUS_SDA 2  //-1 if you don't use display
+#define BUS_SCL 13 //-1 if you don't use display
 #if WITH_DISPLAY
 #include <Adafruit_SSD1306.h>
-#define DISPLAY_SDA 2  //-1 if you don't use display
-#define DISPLAY_SCL 13 //-1 if you don't use display
+
 #define DISPLAY_BTN 16
 bool displayOn = true;
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -47,7 +48,7 @@ void printOnDisplay(float _voltage, float _amperage, float _power, float _energy
 
 void setupDisplay()
 {
-  Wire.begin(DISPLAY_SDA, DISPLAY_SCL);
+  Wire.begin(BUS_SDA, BUS_SCL);
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
   {
   }
@@ -104,6 +105,10 @@ void Sensors::load(File &file)
     case DS18B20:
       strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
+      break;
+    case DAC_MCP4725:
+      strlcpy(item.deviceClass, "DAC", sizeof(item.deviceClass));
+      item.dac = new MCP4725(0x60);
       break;
     case PZEM_004T:
     {
@@ -325,7 +330,6 @@ void SensorT::updateFromJson(JsonObject doc)
   strlcpy(name, doc.getMember("name").as<String>().c_str(), sizeof(name));
   generateId(idStr, name, static_cast<int>(type), sizeof(id));
   strlcpy(id, idStr.c_str(), sizeof(id));
-  strlcpy(deviceClass, doc["deviceClass"] | constantsSensor::powerMeterClass, sizeof(deviceClass));
   dht = NULL;
   dallas = NULL;
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
@@ -349,21 +353,25 @@ void SensorT::updateFromJson(JsonObject doc)
     return;
     break;
   case LDR:
+    strlcpy(deviceClass, "LIGHTNESS", sizeof(deviceClass));
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     strlcpy(mqttPayload, "{\"illuminance\":0}", sizeof(mqttPayload));
     break;
   case PIR:
   case RCWL_0516:
+    strlcpy(deviceClass, "MOTION", sizeof(deviceClass));
     configPIN(primaryGpio, INPUT);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NC:
+    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":1}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NO:
+    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":0}", sizeof(mqttPayload));
@@ -371,24 +379,33 @@ void SensorT::updateFromJson(JsonObject doc)
   case DHT_11:
   case DHT_21:
   case DHT_22:
+    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
     dht = new DHT_nonblocking(primaryGpio, type);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     strlcpy(mqttPayload, "{\"humidity\":0,\"temperature\":0}", sizeof(mqttPayload));
     break;
   case DS18B20:
+    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
     dallas = new DallasTemperature(new OneWire(primaryGpio));
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
-
+    break;
+  case DAC_MCP4725:
+    strlcpy(deviceClass, "DAC", sizeof(deviceClass));
+    dac = new MCP4725(0x60);
+    strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_004T:
+    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
     pzem = new PZEM004T(primaryGpio, secondaryGpio);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_004T_V03:
+    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
     pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_017:
+    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
     pzemModbus = new Modbus(primaryGpio, secondaryGpio);
     pzemModbus->Begin(9600, 2);
     break;
@@ -532,6 +549,19 @@ void loop(Sensors &sensors)
           Log.notice("%s %s " CR, tags::sensors, readings.c_str());
 #endif
         }
+      }
+    }
+    case DAC_MCP4725:
+    {
+      if (ss.lastRead + ss.delayRead < millis())
+      {
+        ss.lastRead = millis();
+        ss.dac->begin(BUS_SDA, BUS_SCL);
+        auto readings = String("{\"dac_voltage\":" + String(ss.dac->getValue()) + "}");
+        publishReadings(readings, ss);
+#ifdef DEBUG
+        Log.notice("%s %s " CR, tags::sensors, readings.c_str());
+#endif
       }
     }
     break;

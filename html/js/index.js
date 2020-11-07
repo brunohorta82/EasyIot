@@ -413,7 +413,7 @@ function applySwitchFamily(id) {
         addToSelect('autoStateValue_' + id, "lang-open", "OPEN");
         addToSelect('autoStateValue_' + id, "lang-close", "CLOSE");
         addToSelect('autoStateValue_' + id, "lang-stop", "STOP");
-    } else if ($('#family_' + id).val() == "lock") {
+    } else if ($('#family_' + id).val() == "garage") {
         show("btn_on_" + id);
         addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('mode_' + id, "lang-gate", 6);
@@ -448,7 +448,7 @@ function applySwitchMode(id) {
             show("secondaryGpioRow_" + id)
         }
         show("secondaryGpioControlRow_" + id)
-    }else   if ($('#family_' + id).val() == "lock") {
+    }else   if ($('#family_' + id).val() == "gate") {
         show("secondaryGpioControlRow_" + id)
     }
     loadsLanguage(localStorage.getItem('lang'));
@@ -677,7 +677,7 @@ function buildSwitch(obj) {
         '                                    <option class="lang-switch" value="switch">Interruptor</option>' +
         '                                    <option class="lang-light" value="light">Luz</option>' +
         '                                    <option class="lang-cover" value="cover">Estore</option>' +
-        '                                    <option class="lang-lock" value="lock">Fechadura</option>' +
+        '                                    <option class="lang-lock" value="garage">Portão</option>' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr>' +
