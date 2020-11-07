@@ -44,12 +44,14 @@ void createHaSwitch(const SwitchT &sw)
   object["cmd_t"] = sw.mqttCommandTopic;
   object["stat_t"] = sw.mqttStateTopic;
   object["avty_t"] = getAvailableTopic();
+  String family = String(sw.family);
   if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
   {
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
     object["payload_stop"] = constanstsSwitch::payloadStop;
     object["device_class"] = "garage";
+    family = "cover";
   }
 
   if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
@@ -69,7 +71,7 @@ void createHaSwitch(const SwitchT &sw)
     object["payload_off"] = constanstsSwitch::payloadOff;
   }
   serializeJson(object, objectStr);
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
 
 void addToHaDiscovery(const SensorT &s)
