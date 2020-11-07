@@ -430,7 +430,8 @@ Config &Config::updateFromJson(JsonObject &root)
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
   staticIp = root["staticIp"];
-  strlcpy(apSecret, root["apSecret"] | constantsConfig::apSecret, sizeof(apSecret));
+  String ap = root["apSecret"] | String(constantsConfig::apSecret);
+  strlcpy(apSecret, ap.c_str(), sizeof(apSecret));
   firmware = root["firmware"] | VERSION;
   strlcpy(mqttAvailableTopic, getAvailableTopic().c_str(), sizeof(mqttAvailableTopic));
 
