@@ -49,7 +49,6 @@ void createHaSwitch(const SwitchT &sw)
   {
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
-    object["payload_stop"] = constanstsSwitch::payloadStop;
     object["device_class"] = "garage";
     family = "cover";
   }

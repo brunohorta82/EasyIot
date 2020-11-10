@@ -874,6 +874,7 @@ void loop(Switches &switches)
     case GATE_SWITCH:
     {
       bool primaryStateGpioEvent = true;
+      bool secondaryStateGpioEvent = true;
       if (sw.primaryStateGpio != constantsConfig::noGPIO)
       {
         primaryStateGpioEvent = readPIN(sw.primaryStateGpio);
@@ -887,6 +888,23 @@ void loop(Switches &switches)
           else
           {
             sw.statePoolIdx = constanstsSwitch::unlockIdx;
+          }
+          sw.notifyState(true);
+        }
+      }
+       if (sw.secondaryStateGpio != constantsConfig::noGPIO)
+      {
+        secondaryStateGpioEvent = readPIN(sw.secondaryStateGpio);
+        if (sw.lastSecondaryStateGpioState != secondaryStateGpioEvent)
+        {
+          sw.lastSecondaryStateGpioState = secondaryStateGpioEvent;
+          if (secondaryStateGpioEvent)
+          {
+            sw.statePoolIdx = constanstsSwitch::unlockIdx;
+          }
+          else
+          {
+            sw.statePoolIdx = constanstsSwitch::lockIdx;
           }
           sw.notifyState(true);
         }

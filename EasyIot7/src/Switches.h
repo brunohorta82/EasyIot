@@ -67,6 +67,7 @@ struct SwitchT
     bool lastPrimaryGpioState = true;
     bool lastSecondaryGpioState = true;
     bool lastPrimaryStateGpioState = true;
+    bool lastSecondaryStateGpioState = true;
     Bounce *debouncerPrimary = nullptr;
     Bounce *debouncerSecondary = nullptr;
     int statePoolIdx = -1;
