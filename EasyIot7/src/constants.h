@@ -147,13 +147,10 @@ namespace constanstsSwitch
     constexpr const int openIdx{3};
     constexpr const int secondStopIdx{4};
     constexpr const int closeIdx{5};
-    constexpr const int lockIdx{6};
-    constexpr const int unlockIdx{7};
     constexpr const int coverStartIdx{2};
     constexpr const int converEndIdx{5};
     constexpr const int switchStartIdx{0};
     constexpr const int switchEndIdx{1};
-    constexpr const int lockStartIdx{6};
-    constexpr const int lockEndIdx{7};
+
 } // namespace constanstsSwitch
 #endif

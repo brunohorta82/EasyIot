@@ -552,15 +552,10 @@ int findPoolIdx(const char *state, int currentIdx, const char *family)
 {
   int start, end;
 
-  if (strcmp(family, constanstsSwitch::familyCover) == 0)
+  if (strcmp(family, constanstsSwitch::familyCover) == 0 || strcmp(family, constanstsSwitch::familyGate) == 0)
   {
     start = constanstsSwitch::coverStartIdx;
     end = constanstsSwitch::converEndIdx;
-  }
-  else if (strcmp(family, constanstsSwitch::familyGate) == 0)
-  {
-    start = constanstsSwitch::lockStartIdx;
-    end = constanstsSwitch::lockEndIdx;
   }
   else
   {
@@ -735,29 +730,29 @@ const char *SwitchT::changeState(const char *state, const char *origin)
     {
       if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl == constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::lockIdx || statePoolIdx == constanstsSwitch::unlockIdx)
+        if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
         {
           timedOn(primaryGpioControl, inverted, 1000);
         }
       }
       else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::lockIdx)
+        if (statePoolIdx == constanstsSwitch::closeIdx)
         {
           timedOn(primaryGpioControl, inverted, 1000);
         }
-        else if (statePoolIdx == constanstsSwitch::unlockIdx)
+        else if (statePoolIdx == constanstsSwitch::openIdx)
         {
           timedOn(secondaryGpioControl, inverted, 1000);
         }
       }
       else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl != constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::lockIdx)
+        if (statePoolIdx == constanstsSwitch::closeIdx)
         {
           timedOn(primaryGpio, inverted, 1000);
         }
-        else if (statePoolIdx == constanstsSwitch::unlockIdx)
+        else if (statePoolIdx == constanstsSwitch::openIdx)
         {
           timedOn(secondaryGpioControl, inverted, 1000);
         }
@@ -791,7 +786,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
         writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
       }
     }
-    else if (statePoolIdx == constanstsSwitch::lockIdx || statePoolIdx == constanstsSwitch::unlockIdx)
+    else if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
     {
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
@@ -883,16 +878,16 @@ void loop(Switches &switches)
           sw.lastPrimaryStateGpioState = primaryStateGpioEvent;
           if (primaryStateGpioEvent)
           {
-            sw.statePoolIdx = constanstsSwitch::lockIdx;
+            sw.statePoolIdx = constanstsSwitch::closeIdx;
           }
           else
           {
-            sw.statePoolIdx = constanstsSwitch::unlockIdx;
+            sw.statePoolIdx = constanstsSwitch::openIdx;
           }
           sw.notifyState(true);
         }
       }
-       if (sw.secondaryStateGpio != constantsConfig::noGPIO)
+      if (sw.secondaryStateGpio != constantsConfig::noGPIO)
       {
         secondaryStateGpioEvent = readPIN(sw.secondaryStateGpio);
         if (sw.lastSecondaryStateGpioState != secondaryStateGpioEvent)
@@ -900,11 +895,11 @@ void loop(Switches &switches)
           sw.lastSecondaryStateGpioState = secondaryStateGpioEvent;
           if (secondaryStateGpioEvent)
           {
-            sw.statePoolIdx = constanstsSwitch::unlockIdx;
+            sw.statePoolIdx = constanstsSwitch::openIdx;
           }
           else
           {
-            sw.statePoolIdx = constanstsSwitch::lockIdx;
+            sw.statePoolIdx = constanstsSwitch::closeIdx;
           }
           sw.notifyState(true);
         }
