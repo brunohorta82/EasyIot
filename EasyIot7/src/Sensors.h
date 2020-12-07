@@ -11,7 +11,6 @@ class PZEM004Tv30;
 class DHT_nonblocking;
 class DallasTemperature;
 class Modbus;
-class MCP4725;
 enum SensorType
 {
   UNDEFINED = -1,
@@ -58,7 +57,7 @@ struct SensorT
   DHT_nonblocking *dht;
   DallasTemperature *dallas;
   uint8_t oneWireSensorsCount = 0;
-  MCP4725 *dac;
+
   PZEM004T *pzem;
   PZEM004Tv30 *pzemv03;
   Modbus *pzemModbus;
