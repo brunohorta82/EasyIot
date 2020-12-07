@@ -16,7 +16,6 @@
 #include <Bounce2.h>
 #include <Modbus.h>
 #include "Templates.h"
-#include "MCP4725.h"
 #define BUS_SDA 2  //-1 if you don't use display
 #define BUS_SCL 13 //-1 if you don't use display
 #if WITH_DISPLAY
@@ -106,10 +105,7 @@ void Sensors::load(File &file)
       strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
       break;
-    case DAC_MCP4725:
-      strlcpy(item.deviceClass, "DAC", sizeof(item.deviceClass));
-      item.dac = new MCP4725(0x60);
-      break;
+
     case PZEM_004T:
     {
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
@@ -274,7 +270,7 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.family;
     sdoc["type"] = static_cast<int>(ss.type);
-    sdoc["deviceClass"] = "motion";
+    sdoc["deviceClass"] = ss.deviceClass;
     sdoc["primaryGpio"] = ss.primaryGpio;
     sdoc["secondaryGpio"] = ss.secondaryGpio;
     sdoc["tertiaryGpio"] = ss.tertiaryGpio;
@@ -389,11 +385,6 @@ void SensorT::updateFromJson(JsonObject doc)
   case DS18B20:
     strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
     dallas = new DallasTemperature(new OneWire(primaryGpio));
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
-    break;
-  case DAC_MCP4725:
-    strlcpy(deviceClass, "DAC", sizeof(deviceClass));
-    dac = new MCP4725(0x60);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_004T:
@@ -553,20 +544,7 @@ void loop(Sensors &sensors)
         }
       }
     }
-    case DAC_MCP4725:
-    {
-      if (ss.lastRead + ss.delayRead < millis())
-      {
-        ss.lastRead = millis();
-        ss.dac->begin(BUS_SDA, BUS_SCL);
-        auto readings = String("{\"dac_voltage\":" + String(ss.dac->getValue()) + "}");
-        publishReadings(readings, ss);
-#ifdef DEBUG
-        Log.notice("%s %s " CR, tags::sensors, readings.c_str());
-#endif
-      }
-    }
-    break;
+
     case PZEM_004T:
       if (ss.lastRead + ss.delayRead < millis())
       {

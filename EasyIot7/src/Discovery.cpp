@@ -91,7 +91,7 @@ void addToHaDiscovery(const SensorT &s)
   case DHT_21:
   case DHT_22:
     object["unique_id"] = String(s.id) + "T";
-    object["unit_of_measurement"] = "ºC";
+    object["unit_of_measurement"] = "º";
     object["device_class"] = "temperature";
     object["value_template"] = "{{value_json.temperature}}";
     serializeJson(object, objectStr);
