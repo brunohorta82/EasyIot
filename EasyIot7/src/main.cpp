@@ -107,7 +107,7 @@ void loop()
   {
     loop(getAtualSwitchesConfig());
     loop(getAtualSensorsConfig());
-    loopTime();
+    // loopTime();
   }
   knx.loop();
 }
