@@ -10,12 +10,7 @@ void initHaDiscovery(const Switches &switches)
   {
     if (!sw.haSupport)
       continue;
-    publishOnMqtt(sw.mqttStateTopic, STATES_POLL[sw.statePoolIdx].c_str(), true);
-    if (strcmp(constanstsSwitch::familyCover, sw.family) == 0)
-    {
-      publishOnMqtt(sw.mqttStateTopic, String(sw.lastPercentage).c_str(), true);
-    }
-
+    publishOnMqtt(sw.mqttStateTopic, sw.getCurrentState().c_str(), true);
     addToHaDiscovery(sw);
   }
 }
@@ -42,11 +37,11 @@ void createHaSwitch(const SwitchT &sw)
   object["name"] = sw.name;
   object["unique_id"] = sw.id;
   object["cmd_t"] = sw.mqttCommandTopic;
-  object["stat_t"] = sw.mqttStateTopic;
+ 
   object["avty_t"] = getAvailableTopic();
   String family = String(sw.family);
   if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
-  {
+  { object["stat_t"] = sw.mqttStateTopic;
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
     object["device_class"] = "garage";
@@ -58,14 +53,14 @@ void createHaSwitch(const SwitchT &sw)
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
     object["payload_stop"] = constanstsSwitch::payloadStop;
-    object["device_class"] = "blind";
+    object["device_class"] = "shutter";
     object["position_open"] = 0;
     object["position_closed"] = 100;
     object["position_topic"] = sw.mqttStateTopic;
     object["set_position_topic"] = sw.mqttCommandTopic;
   }
   if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0)
-  {
+  { object["stat_t"] = sw.mqttStateTopic;
     object["payload_on"] = constanstsSwitch::payloadOn;
     object["payload_off"] = constanstsSwitch::payloadOff;
   }

@@ -48,7 +48,6 @@ void infoWifi()
 #ifdef DEBUG
     Log.notice("%s MODE STA -------------------------------------" CR, tags::wifi);
     Log.notice("%s SSID  %s  " CR, tags::wifi, WiFi.SSID().c_str());
-    Log.notice("%s BSSID %X:%X:%X:%X:%X:%X" CR, tags::wifi, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
     Log.notice("%s CH    %d   " CR, tags::wifi, WiFi.channel());
     Log.notice("%s RSSI  %d " CR, tags::wifi, WiFi.RSSI());
     Log.notice("%s IP    %s  " CR, tags::wifi, WiFi.localIP().toString().c_str());

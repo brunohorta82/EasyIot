@@ -99,7 +99,7 @@ struct SwitchT
     const char *changeState(const char *state, const char *origin);
     const char *rotateState();
     void toJson(JsonVariant &root) const;
-    const char *getCurrentState() const;
+    const String getCurrentState() const;
     void configPins();
     const void notifyState(bool dirty);
     void reloadMqttTopics();

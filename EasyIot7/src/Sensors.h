@@ -26,7 +26,6 @@ enum SensorType
   PZEM_004T = 70,     // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
   PZEM_004T_V03 = 71, // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
   PZEM_017 = 72,
-  DAC_MCP4725 = 73
 };
 
 struct SensorT

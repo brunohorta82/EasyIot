@@ -129,9 +129,13 @@ void SwitchT::toJson(JsonVariant &root) const
   sdoc["secondaryStateGpio"] = secondaryStateGpio;
   sdoc["thirdGpioControl"] = thirdGpioControl;
 }
-const char *SwitchT::getCurrentState() const
+const String SwitchT::getCurrentState() const
 {
-  return STATES_POLL[statePoolIdx].c_str();
+  if (isCover)
+  {
+    return String(lastPercentage);
+  }
+  return STATES_POLL[statePoolIdx];
 }
 void SwitchT::save(File &file) const
 {
@@ -190,13 +194,13 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
   getAtualSwitchesConfig().save();
   if (shutters->getSwitchT()->mqttSupport)
   {
-    publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, shutters->getSwitchT()->getCurrentState(), false);
+    publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), false);
   }
   if (shutters->getSwitchT()->cloudIOSupport)
   {
-    if (strcmp(shutters->getSwitchT()->getCurrentState(), constanstsSwitch::payloadStop) == 0)
+    if (shutters->getSwitchT()->getCurrentState().equalsIgnoreCase(constanstsSwitch::payloadStop))
     {
-      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, shutters->getSwitchT()->getCurrentState(), strlen(shutters->getSwitchT()->getCurrentState()));
+      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), strlen(shutters->getSwitchT()->getCurrentState().c_str()));
     }
     else
     {
@@ -342,7 +346,7 @@ void SwitchT::load(File &file)
   configPins();
   bool isGate = SwitchMode::GATE_SWITCH == mode;
   if (!isGate)
-    changeState(getCurrentState(), "LOAD");
+    changeState(getCurrentState().c_str(), "LOAD");
 }
 
 void Switches::save()
@@ -619,7 +623,7 @@ const char *Switches::rotate(const char *id)
 }
 const void SwitchT::notifyState(bool dirty)
 {
-  const char *currentStateToSend = getCurrentState();
+  const char *currentStateToSend = getCurrentState().c_str();
 #ifdef DEBUG
   Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend);
 #endif
@@ -675,7 +679,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
   Log.notice("%s From : %s" CR, tags::switches, origin);
 #endif
-  bool dirty = strcmp(state, getCurrentState()) != 0;
+  bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
   bool isGate = SwitchMode::GATE_SWITCH == mode;
   knxNotifyGroup = strcmp(origin, "KNX") != 0;
@@ -797,7 +801,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
     notifyState(dirty);
   }
 
-  return getCurrentState();
+  return getCurrentState().c_str();
 }
 
 const char *Switches::stateSwitchById(const char *id, const char *state)
@@ -813,7 +817,7 @@ const char *Switches::stateSwitchById(const char *id, const char *state)
 }
 bool stateTimeout(SwitchT &sw)
 {
-  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.getCurrentState()) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
+  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.getCurrentState().c_str()) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
 }
 void loop(Switches &switches)
 {
