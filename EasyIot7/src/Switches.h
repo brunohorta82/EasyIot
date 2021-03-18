@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "ArduinoJson.h"
 #include "FS.h"
-static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadUnlock, constanstsSwitch::payloadLock};
+static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadOpen, constanstsSwitch::payloadClose};
 class Bounce;
 class Shutters;
 enum SwitchMode
@@ -43,14 +43,14 @@ struct SwitchT
     //GPIOS INPUT
     unsigned int primaryGpio = constantsConfig::noGPIO;
     unsigned int secondaryGpio = constantsConfig::noGPIO;
-    unsigned int primaryStateGpio = constantsConfig::noGPIO;   //NEW
-    unsigned int secondaryStateGpio = constantsConfig::noGPIO; //NEW
-    bool pullup = true;                                        //USE INTERNAL RESISTOR
+    unsigned int primaryStateGpio = constantsConfig::noGPIO;
+    unsigned int secondaryStateGpio = constantsConfig::noGPIO;
+    bool pullup = true; //USE INTERNAL RESISTOR
 
     //GPIOS OUTPUT
     unsigned int primaryGpioControl = constantsConfig::noGPIO;
     unsigned int secondaryGpioControl = constantsConfig::noGPIO;
-    unsigned int thirdGpioControl = constantsConfig::noGPIO; //NEW
+    unsigned int thirdGpioControl = constantsConfig::noGPIO;
     bool inverted = false;
 
     //AUTOMATIONS
@@ -67,6 +67,7 @@ struct SwitchT
     bool lastPrimaryGpioState = true;
     bool lastSecondaryGpioState = true;
     bool lastPrimaryStateGpioState = true;
+    bool lastSecondaryStateGpioState = true;
     Bounce *debouncerPrimary = nullptr;
     Bounce *debouncerSecondary = nullptr;
     int statePoolIdx = -1;
@@ -97,7 +98,8 @@ struct SwitchT
     void updateFromJson(JsonObject doc);
     const char *changeState(const char *state, const char *origin);
     const char *rotateState();
-    const char *getCurrentState() const;
+    void toJson(JsonVariant &root) const;
+    const String getCurrentState() const;
     void configPins();
     const void notifyState(bool dirty);
     void reloadMqttTopics();

@@ -44,7 +44,7 @@ String getBaseTopic()
 
     if (strlen(getAtualConfig().mqttUsername) == 0)
     {
-        topic.concat("easyiot");
+        topic.concat("bhonofre");
     }
     else
     {
@@ -88,7 +88,7 @@ boolean reconnect()
         for (auto &sw : getAtualSwitchesConfig().items)
         {
             subscribeOnMqtt(sw.mqttCommandTopic);
-            publishOnMqtt(sw.mqttStateTopic, sw.getCurrentState(), sw.mqttRetain);
+            publishOnMqtt(sw.mqttStateTopic, sw.getCurrentState().c_str(), sw.mqttRetain);
         }
     }
 

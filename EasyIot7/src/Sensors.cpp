@@ -16,46 +16,45 @@
 #include <Bounce2.h>
 #include <Modbus.h>
 #include "Templates.h"
-
+#define BUS_SDA 2  //-1 if you don't use display
+#define BUS_SCL 13 //-1 if you don't use display
 #if WITH_DISPLAY
 #include <Adafruit_SSD1306.h>
-#define DISPLAY_SDA 2    //-1 if you don't use display
-#define DISPLAY_SCL 13   //-1 if you don't use display
+
 #define DISPLAY_BTN 16
 bool displayOn = true;
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, DISPLAY_BTN);
-#define OLED_RESET     16 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define OLED_RESET 16 // Reset pin # (or -1 if sharing Arduino reset pin)
 
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
 {
   display.clearDisplay();
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(5,0);  
-  display.println( (String(_power) + "W").c_str());
-  display.setCursor(5,8);  
-  display.println( (String(_energy) + "Kwh").c_str());
-  display.setCursor(5,16);  
-  display.println( (String(_voltage) + "V").c_str());
-  display.setCursor(5,24);  
-  display.println( (String(_amperage) + "A").c_str());
-  
-  
+  display.setTextSize(1);              // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE); // Draw white text
+  display.setCursor(5, 0);
+  display.println((String(_power) + "W").c_str());
+  display.setCursor(5, 8);
+  display.println((String(_energy) + "Kwh").c_str());
+  display.setCursor(5, 16);
+  display.println((String(_voltage) + "V").c_str());
+  display.setCursor(5, 24);
+  display.println((String(_amperage) + "A").c_str());
+
   display.display();
 }
 
 void setupDisplay()
 {
-  Wire.begin(DISPLAY_SDA,DISPLAY_SCL);
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-   
+  Wire.begin(BUS_SDA, BUS_SCL);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
   }
   display.clearDisplay();
-  display.setTextSize(1);             
+  display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);             
+  display.setCursor(0, 0);
   display.println(F("BH PZEM"));
 
   display.display();
@@ -84,31 +83,32 @@ void Sensors::load(File &file)
       continue;
       break;
     case LDR:
-   strlcpy(item.deviceClass, "LIGHTNESS", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "LIGHTNESS", sizeof(item.deviceClass));
       break;
     case PIR:
     case RCWL_0516:
-     strlcpy(item.deviceClass, "MOTION", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "MOTION", sizeof(item.deviceClass));
       configPIN(item.primaryGpio, INPUT);
       break;
     case REED_SWITCH_NC:
     case REED_SWITCH_NO:
-     strlcpy(item.deviceClass, "ALARM", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "ALARM", sizeof(item.deviceClass));
       configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
       break;
     case DHT_11:
     case DHT_21:
     case DHT_22:
-     strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
       item.dht = new DHT_nonblocking(item.primaryGpio, item.type);
       break;
     case DS18B20:
-     strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
       break;
+
     case PZEM_004T:
     {
-       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
       IPAddress ip(192, 168, 1, item.secondaryGpio);
       item.pzem->setAddress(ip);
@@ -119,7 +119,7 @@ void Sensors::load(File &file)
     }
     break;
     case PZEM_004T_V03:
-     strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
       item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
       configPIN(item.tertiaryGpio, INPUT);
 #if WITH_DISPLAY
@@ -127,7 +127,7 @@ void Sensors::load(File &file)
 #endif
       break;
     case PZEM_017:
-     strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
       item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
       item.pzemModbus->Begin(9600, 2);
 #if WITH_DISPLAY
@@ -164,22 +164,9 @@ void SensorT::load(File &file)
   file.read((uint8_t *)&tertiaryGpio, sizeof(tertiaryGpio));
   file.read((uint8_t *)&pullup, sizeof(pullup));
   file.read((uint8_t *)&delayRead, sizeof(delayRead));
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(bool), SeekCur);     // remove lastBinaryState
-    file.seek(sizeof(char[10]), SeekCur); // remove payloadOff
-    file.seek(sizeof(char[10]), SeekCur); // remove payloadOn
-    file.seek(sizeof(uint8_t), SeekCur);  // remove knxLevelOne
-    file.seek(sizeof(uint8_t), SeekCur);  // remove knxLevelTwo
-    file.seek(sizeof(uint8_t), SeekCur);  // remove knxLevelThree
-    mqttSupport = true;
-    cloudIOSupport = true;
-  }
-  else
-  {
-    file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
-    file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
-  }
+  file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
+  file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
+
   firmware = VERSION;
 }
 void SensorT::save(File &file) const
@@ -205,7 +192,7 @@ void SensorT::save(File &file) const
 
 void Sensors::save()
 {
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::sensors);
@@ -213,7 +200,7 @@ void Sensors::save()
     return;
   }
 
-  File file = SPIFFS.open(configFilenames::sensors, "w+");
+  File file = LittleFS.open(configFilenames::sensors, "w+");
   if (!file)
   {
 #ifdef DEBUG
@@ -230,7 +217,7 @@ void Sensors::save()
 }
 void load(Sensors &sensors)
 {
-  if (!SPIFFS.exists(configFilenames::sensors))
+  if (!LittleFS.exists(configFilenames::sensors))
   {
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::sensors);
@@ -239,7 +226,7 @@ void load(Sensors &sensors)
     getAtualSensorsConfig().save();
   }
 
-  File file = SPIFFS.open(configFilenames::sensors, "r+");
+  File file = LittleFS.open(configFilenames::sensors, "r+");
   sensors.load(file);
   file.close();
 
@@ -257,7 +244,7 @@ void saveAndRefreshServices(Sensors &sensors, const SensorT &ss)
     addToHaDiscovery(ss);
   }
 }
-Sensors& Sensors::updateFromJson(const String &id, JsonObject doc)
+Sensors &Sensors::updateFromJson(const String &id, JsonObject doc)
 {
   for (auto &ss : items)
   {
@@ -283,7 +270,7 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.family;
     sdoc["type"] = static_cast<int>(ss.type);
-    sdoc["deviceClass"] = "motion";
+    sdoc["deviceClass"] = ss.deviceClass;
     sdoc["primaryGpio"] = ss.primaryGpio;
     sdoc["secondaryGpio"] = ss.secondaryGpio;
     sdoc["tertiaryGpio"] = ss.tertiaryGpio;
@@ -297,7 +284,7 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["emoncmsSupport"] = ss.emoncmsSupport;
   }
 }
-Sensors & Sensors::remove(const char *id)
+Sensors &Sensors::remove(const char *id)
 {
   auto match = std::find_if(items.begin(), items.end(), [id](const SensorT &item) {
     return strcmp(id, item.id) == 0;
@@ -339,7 +326,8 @@ void SensorT::updateFromJson(JsonObject doc)
   strlcpy(name, doc.getMember("name").as<String>().c_str(), sizeof(name));
   generateId(idStr, name, static_cast<int>(type), sizeof(id));
   strlcpy(id, idStr.c_str(), sizeof(id));
-  strlcpy(deviceClass, doc["deviceClass"] | constantsSensor::powerMeterClass, sizeof(deviceClass));
+  String classDevice = doc["deviceClass"] | String(constantsSensor::powerMeterClass);
+  strlcpy(deviceClass, classDevice.c_str(), sizeof(deviceClass));
   dht = NULL;
   dallas = NULL;
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
@@ -363,21 +351,25 @@ void SensorT::updateFromJson(JsonObject doc)
     return;
     break;
   case LDR:
+    strlcpy(deviceClass, "LIGHTNESS", sizeof(deviceClass));
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     strlcpy(mqttPayload, "{\"illuminance\":0}", sizeof(mqttPayload));
     break;
   case PIR:
   case RCWL_0516:
+    strlcpy(deviceClass, "MOTION", sizeof(deviceClass));
     configPIN(primaryGpio, INPUT);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NC:
+    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":1}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NO:
+    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
     configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":0}", sizeof(mqttPayload));
@@ -385,24 +377,28 @@ void SensorT::updateFromJson(JsonObject doc)
   case DHT_11:
   case DHT_21:
   case DHT_22:
+    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
     dht = new DHT_nonblocking(primaryGpio, type);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     strlcpy(mqttPayload, "{\"humidity\":0,\"temperature\":0}", sizeof(mqttPayload));
     break;
   case DS18B20:
+    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
     dallas = new DallasTemperature(new OneWire(primaryGpio));
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
-
     break;
   case PZEM_004T:
+    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
     pzem = new PZEM004T(primaryGpio, secondaryGpio);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_004T_V03:
+    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
     pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_017:
+    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
     pzemModbus = new Modbus(primaryGpio, secondaryGpio);
     pzemModbus->Begin(9600, 2);
     break;
@@ -423,17 +419,19 @@ void SensorT::reloadMqttTopics()
   strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
 }
 
-void publishReadings(String &readings , SensorT & sensor){
-  strlcpy(sensor.lastReading,readings.c_str(), sizeof(sensor.lastReading));
+void publishReadings(String &readings, SensorT &sensor)
+{
+  strlcpy(sensor.lastReading, readings.c_str(), sizeof(sensor.lastReading));
   String id = String(sensor.id);
   sendToServerEvents(id, readings.c_str());
-  if(!wifiConnected())return;
-   if(sensor.cloudIOSupport)
-      notifyStateToCloudIO(sensor.mqttCloudStateTopic,readings.c_str(),readings.length());
-   if(sensor.mqttSupport)
-      publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
-  if(sensor.emoncmsSupport)
-      publishOnEmoncms(sensor, readings);
+  if (!wifiConnected())
+    return;
+  if (sensor.cloudIOSupport)
+    notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str(), readings.length());
+  if (sensor.mqttSupport)
+    publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
+  if (sensor.emoncmsSupport)
+    publishOnEmoncms(sensor, readings);
 }
 bool initRealTimeSensors = true;
 void loop(Sensors &sensors)
@@ -457,7 +455,7 @@ void loop(Sensors &sensors)
         int ldrRaw = analogRead(ss.primaryGpio);
         String analogReadAsString = String(ldrRaw);
         auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
-        publishReadings(readings,ss);
+        publishReadings(readings, ss);
 #ifdef DEBUG
         Log.notice("%s {\"illuminance\": %d }" CR, tags::sensors, ldrRaw);
 #endif
@@ -476,7 +474,7 @@ void loop(Sensors &sensors)
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + (binaryStateAsString) + "}");
-        publishReadings(readings,ss);
+        publishReadings(readings, ss);
 #ifdef DEBUG
         Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
@@ -486,13 +484,13 @@ void loop(Sensors &sensors)
     case REED_SWITCH_NO:
     {
       bool binaryState = !readPIN(ss.primaryGpio);
-      if (ss.lastBinaryState != binaryState || initRealTimeSensors )
+      if (ss.lastBinaryState != binaryState || initRealTimeSensors)
       {
         ss.lastRead = millis();
         ss.lastBinaryState = binaryState;
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
-        publishReadings(readings,ss);
+        publishReadings(readings, ss);
 #ifdef DEBUG
         Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
@@ -513,7 +511,7 @@ void loop(Sensors &sensors)
           String temperatureAsString = String(ss.temperature);
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
-       publishReadings(readings,ss);
+          publishReadings(readings, ss);
 #ifdef DEBUG
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
 #endif
@@ -536,19 +534,17 @@ void loop(Sensors &sensors)
           ss.lastRead = millis();
           ss.temperature = ss.dallas->getTempCByIndex(i);
           String temperatureAsString = String("temperature_") + String(i + 1);
-          obj[temperatureAsString] = trunc(ss.temperature);
+          obj[temperatureAsString] = ss.temperature;
           String readings = "";
           serializeJson(doc, readings);
-          publishReadings(readings,ss);
-          #ifdef DEBUG
-        Log.notice("%s %s " CR, tags::sensors, readings.c_str());
-          #endif
+          publishReadings(readings, ss);
+#ifdef DEBUG
+          Log.notice("%s %s " CR, tags::sensors, readings.c_str());
+#endif
         }
-      
-
       }
     }
-    break;
+
     case PZEM_004T:
       if (ss.lastRead + ss.delayRead < millis())
       {
@@ -582,7 +578,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-   publishReadings(readings,ss);
+          publishReadings(readings, ss);
 #ifdef DEBUG
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
 #endif
@@ -619,7 +615,7 @@ void loop(Sensors &sensors)
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
-publishReadings(readings,ss);
+          publishReadings(readings, ss);
 #ifdef DEBUG
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
@@ -658,7 +654,7 @@ publishReadings(readings,ss);
 #if WITH_DISPLAY
             printOnDisplay(v, i, p, c);
 #endif
-publishReadings(readings,ss);
+            publishReadings(readings, ss);
 #ifdef DEBUG
             Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
@@ -679,5 +675,5 @@ publishReadings(readings,ss);
       break;
     }
   }
-initRealTimeSensors = false;
+  initRealTimeSensors = false;
 }

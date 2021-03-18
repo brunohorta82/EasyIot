@@ -64,6 +64,11 @@ namespace constantsConfig
     constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=COVER"};
     constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=COVER"};
 #endif
+#if COVER_V3
+    constexpr const char *firmwareMode{"COVER_V3"};
+    constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=COVER_V3"};
+    constexpr const char *lastVersionURL{"http://update.bhonofre.pt/firmware/latest-version?firmwareMode=COVER_V3"};
+#endif
 #if LOCK
     constexpr const char *firmwareMode{"LOCK"};
     constexpr const char *updateURL{"http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=LOCK"};
@@ -126,21 +131,14 @@ namespace constanstsSwitch
     constexpr const char *payloadOn{"ON"};
     constexpr const char *payloadOff{"OFF"};
     constexpr const char *payloadClose{"CLOSE"};
-    constexpr const char *payloadStateClose{"closed"};
     constexpr const char *payloadOpen{"OPEN"};
-    constexpr const char *payloadStateOpen{"open"};
     constexpr const char *payloadStop{"STOP"};
-    constexpr const char *payloadStateStop{""};
-    constexpr const char *payloadLock{"LOCK"};
-    constexpr const char *payloasStateLock{"LOCK"};
-    constexpr const char *payloadUnlock{"UNLOCK"};
-    constexpr const char *payloadStateUnlock{"UNLOCK"};
-    constexpr const char *payloadReleased{"RELEASED"};
+    
 
     constexpr const char *familyLight{"light"};
     constexpr const char *familySwitch{"switch"};
     constexpr const char *familyCover{"cover"};
-    constexpr const char *familyLock{"lock"};
+    constexpr const char *familyGate{"garage"};
 
     constexpr const int offIdx{0};
     constexpr const int onIdx{1};
@@ -148,13 +146,10 @@ namespace constanstsSwitch
     constexpr const int openIdx{3};
     constexpr const int secondStopIdx{4};
     constexpr const int closeIdx{5};
-    constexpr const int lockIdx{6};
-    constexpr const int unlockIdx{7};
     constexpr const int coverStartIdx{2};
     constexpr const int converEndIdx{5};
     constexpr const int switchStartIdx{0};
     constexpr const int switchEndIdx{1};
-    constexpr const int lockStartIdx{6};
-    constexpr const int lockEndIdx{7};
+
 } // namespace constanstsSwitch
 #endif

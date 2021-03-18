@@ -24,7 +24,15 @@ void SwitchT::updateFromJson(JsonObject doc)
   mode = static_cast<SwitchMode>(doc["mode"] | static_cast<int>(SWITCH));
   generateId(idStr, name, static_cast<int>(mode), sizeof(id));
   strlcpy(id, idStr.c_str(), sizeof(id));
-  strlcpy(family, doc["family"], sizeof(family));
+  if (SwitchMode::GATE_SWITCH == mode)
+  {
+    strlcpy(family, constanstsSwitch::familyGate, sizeof(family));
+  }
+  else
+  {
+    strlcpy(family, doc["family"], sizeof(family));
+  }
+
   primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
   secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
   autoStateDelay = doc["autoStateDelay"] | 0ul;
@@ -87,42 +95,47 @@ void Switches::toJson(JsonVariant &root)
 {
   for (const auto &sw : items)
   {
-    JsonVariant sdoc = root.createNestedObject();
-    sdoc["id"] = sw.id;
-    sdoc["name"] = sw.name;
-    sdoc["family"] = sw.family;
-    sdoc["primaryGpio"] = sw.primaryGpio;
-    sdoc["secondaryGpio"] = sw.secondaryGpio;
-    sdoc["downCourseTime"] = sw.downCourseTime;
-    sdoc["upCourseTime"] = sw.upCourseTime;
-    sdoc["calibrationRatio"] = sw.calibrationRatio;
-    sdoc["autoStateValue"] = sw.autoStateValue;
-    sdoc["autoStateDelay"] = sw.autoStateDelay;
-    sdoc["childLock"] = sw.childLock;
-    sdoc["typeControl"] = static_cast<int>(sw.typeControl);
-    sdoc["mode"] = static_cast<int>(sw.mode);
-    sdoc["primaryGpioControl"] = sw.primaryGpioControl;
-    sdoc["secondaryGpioControl"] = sw.secondaryGpioControl;
-    sdoc["stateControl"] = sw.getCurrentState();
-    sdoc["lastPercentage"] = sw.lastPercentage;
-    sdoc["cloudIOSupport"] = sw.cloudIOSupport;
-    sdoc["mqttStateTopic"] = sw.mqttStateTopic;
-    sdoc["mqttCommandTopic"] = sw.mqttCommandTopic;
-    sdoc["lastPercentage"] = sw.lastPercentage;
-    sdoc["haSupport"] = sw.haSupport;
-    sdoc["knxSupport"] = sw.knxSupport;
-    sdoc["mqttSupport"] = sw.mqttSupport;
-    sdoc["knxLevelOne"] = sw.knxLevelOne;
-    sdoc["knxLevelTwo"] = sw.knxLevelTwo;
-    sdoc["knxLevelThree"] = sw.knxLevelThree;
-    sdoc["primaryStateGpio"] = sw.primaryStateGpio;
-    sdoc["secondaryStateGpio"] = sw.secondaryStateGpio;
-    sdoc["thirdGpioControl"] = sw.thirdGpioControl;
+    sw.toJson(root);
   }
 }
-const char *SwitchT::getCurrentState() const
+void SwitchT::toJson(JsonVariant &root) const
 {
-  return STATES_POLL[statePoolIdx].c_str();
+
+  JsonVariant sdoc = root.createNestedObject();
+  sdoc["id"] = id;
+  sdoc["name"] = name;
+  sdoc["family"] = family;
+  sdoc["primaryGpio"] = primaryGpio;
+  sdoc["secondaryGpio"] = secondaryGpio;
+  sdoc["downCourseTime"] = downCourseTime;
+  sdoc["upCourseTime"] = upCourseTime;
+  sdoc["calibrationRatio"] = calibrationRatio;
+  sdoc["autoStateValue"] = autoStateValue;
+  sdoc["autoStateDelay"] = autoStateDelay;
+  sdoc["childLock"] = childLock;
+  sdoc["typeControl"] = static_cast<int>(typeControl);
+  sdoc["mode"] = static_cast<int>(mode);
+  sdoc["primaryGpioControl"] = primaryGpioControl;
+  sdoc["secondaryGpioControl"] = secondaryGpioControl;
+  sdoc["stateControl"] = getCurrentState();
+  sdoc["cloudIOSupport"] = cloudIOSupport;
+  sdoc["haSupport"] = haSupport;
+  sdoc["knxSupport"] = knxSupport;
+  sdoc["mqttSupport"] = mqttSupport;
+  sdoc["knxLevelOne"] = knxLevelOne;
+  sdoc["knxLevelTwo"] = knxLevelTwo;
+  sdoc["knxLevelThree"] = knxLevelThree;
+  sdoc["primaryStateGpio"] = primaryStateGpio;
+  sdoc["secondaryStateGpio"] = secondaryStateGpio;
+  sdoc["thirdGpioControl"] = thirdGpioControl;
+}
+const String SwitchT::getCurrentState() const
+{
+  if (isCover)
+  {
+    return String(lastPercentage);
+  }
+  return STATES_POLL[statePoolIdx];
 }
 void SwitchT::save(File &file) const
 {
@@ -165,10 +178,12 @@ void SwitchT::save(File &file) const
   file.write((uint8_t *)&downCourseTime, sizeof(downCourseTime));
   file.write((uint8_t *)&calibrationRatio, sizeof(calibrationRatio));
   file.write((uint8_t *)shutterState, sizeof(shutterState));
+
   file.write((uint8_t *)&primaryStateGpio, sizeof(primaryStateGpio));
   file.write((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
   file.write((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
 }
+
 void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte length)
 {
   for (byte i = 0; i < length; i++)
@@ -179,13 +194,13 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
   getAtualSwitchesConfig().save();
   if (shutters->getSwitchT()->mqttSupport)
   {
-    publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, shutters->getSwitchT()->getCurrentState(), false);
+    publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), false);
   }
   if (shutters->getSwitchT()->cloudIOSupport)
   {
-    if (strcmp(shutters->getSwitchT()->getCurrentState(), constanstsSwitch::payloadStop) == 0)
+    if (shutters->getSwitchT()->getCurrentState().equalsIgnoreCase(constanstsSwitch::payloadStop))
     {
-      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, shutters->getSwitchT()->getCurrentState(), strlen(shutters->getSwitchT()->getCurrentState()));
+      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), strlen(shutters->getSwitchT()->getCurrentState().c_str()));
     }
     else
     {
@@ -300,86 +315,50 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&inverted, sizeof(inverted));
   file.read((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
   file.read((uint8_t *)autoStateValue, sizeof(autoStateValue));
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(unsigned long), SeekCur); // remove timeBetweenStates
-  }
   file.read((uint8_t *)&childLock, sizeof(childLock));
-
   //MQTT
   file.read((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
   file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(char[128]), SeekCur); // remove mqttPositionStateTopic
-    file.seek(sizeof(char[128]), SeekCur); // remove mqttPositionCommandTopic
-    file.seek(sizeof(char[10]), SeekCur);  // remove mqttPayload
-  }
   file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
 
   //CONTROL VARIABLES
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(char[10]), SeekCur); // remove stateControl
-    file.seek(sizeof(int), SeekCur);      // remove positionControlCover
-  }
   file.read((uint8_t *)&lastPercentage, sizeof(lastPercentage));
 
   file.read((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
   file.read((uint8_t *)&lastSecondaryGpioState, sizeof(lastSecondaryGpioState));
   file.read((uint8_t *)&statePoolIdx, sizeof(statePoolIdx));
-  if (configFirmware < 7.94)
-  {
-    file.seek(sizeof(unsigned int), SeekCur); // remove statePoolStart
-    file.seek(sizeof(unsigned int), SeekCur); // remove statePoolEnd
-  }
-
   file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
   file.read((uint8_t *)&knxSupport, sizeof(knxSupport));
   file.read((uint8_t *)&knxLevelOne, sizeof(knxLevelOne));
   file.read((uint8_t *)&knxLevelTwo, sizeof(knxLevelTwo));
   file.read((uint8_t *)&knxLevelThree, sizeof(knxLevelThree));
-  if (configFirmware >= 7.94)
-  {
-    file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
-    file.read((uint8_t *)&upCourseTime, sizeof(upCourseTime));
-    file.read((uint8_t *)&downCourseTime, sizeof(downCourseTime));
-    file.read((uint8_t *)&calibrationRatio, sizeof(calibrationRatio));
-    file.read((uint8_t *)shutterState, sizeof(shutterState));
-  }
-  else
-  {
-    mqttSupport = true;
-  }
-  if (configFirmware >= 7.99)
-  {
-    file.read((uint8_t *)&primaryStateGpio, sizeof(primaryStateGpio));
-    file.read((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
-    file.read((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
-  }
-  else
-  {
-    primaryStateGpio = constantsConfig::noGPIO;
-    secondaryStateGpio = constantsConfig::noGPIO;
-    thirdGpioControl = constantsConfig::noGPIO;
-  }
 
+  file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
+  file.read((uint8_t *)&upCourseTime, sizeof(upCourseTime));
+  file.read((uint8_t *)&downCourseTime, sizeof(downCourseTime));
+  file.read((uint8_t *)&calibrationRatio, sizeof(calibrationRatio));
+  file.read((uint8_t *)shutterState, sizeof(shutterState));
+  file.read((uint8_t *)&primaryStateGpio, sizeof(primaryStateGpio));
+  file.read((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
+  file.read((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
   firmware = VERSION;
   configPins();
-  changeState(getCurrentState(), "LOAD");
+  bool isGate = SwitchMode::GATE_SWITCH == mode;
+  if (!isGate)
+    changeState(getCurrentState().c_str(), "LOAD");
 }
 
 void Switches::save()
 {
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::switches);
 #endif
     return;
   }
-  File file = SPIFFS.open(configFilenames::switches, "w+");
+  File file = LittleFS.open(configFilenames::switches, "w+");
   if (!file)
     return;
   this->save(file);
@@ -447,6 +426,7 @@ void allwitchesCallback(message_t const &msg, void *arg)
   }
   };
 }
+
 void Switches::load(File &file)
 {
   knx.start(nullptr);
@@ -555,7 +535,7 @@ void update(Switches &switches, const String &id, JsonObject doc)
 void load(Switches &switches)
 {
 
-  if (!SPIFFS.exists(configFilenames::switches))
+  if (!LittleFS.exists(configFilenames::switches))
   {
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::switches);
@@ -563,7 +543,7 @@ void load(Switches &switches)
     loadSwitchDefaults();
     getAtualSwitchesConfig().save();
   }
-  File file = SPIFFS.open(configFilenames::switches, "r+");
+  File file = LittleFS.open(configFilenames::switches, "r+");
   switches.load(file);
   file.close();
 
@@ -576,15 +556,10 @@ int findPoolIdx(const char *state, int currentIdx, const char *family)
 {
   int start, end;
 
-  if (strcmp(family, constanstsSwitch::familyCover) == 0)
+  if (strcmp(family, constanstsSwitch::familyCover) == 0 || strcmp(family, constanstsSwitch::familyGate) == 0)
   {
     start = constanstsSwitch::coverStartIdx;
     end = constanstsSwitch::converEndIdx;
-  }
-  else if (strcmp(family, constanstsSwitch::familyLock) == 0)
-  {
-    start = constanstsSwitch::lockStartIdx;
-    end = constanstsSwitch::lockEndIdx;
   }
   else
   {
@@ -648,7 +623,7 @@ const char *Switches::rotate(const char *id)
 }
 const void SwitchT::notifyState(bool dirty)
 {
-  const char *currentStateToSend = getCurrentState();
+  const char *currentStateToSend = getCurrentState().c_str();
 #ifdef DEBUG
   Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend);
 #endif
@@ -704,7 +679,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
   Log.notice("%s From : %s" CR, tags::switches, origin);
 #endif
-  bool dirty = strcmp(state, getCurrentState()) != 0;
+  bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
   bool isGate = SwitchMode::GATE_SWITCH == mode;
   knxNotifyGroup = strcmp(origin, "KNX") != 0;
@@ -759,29 +734,29 @@ const char *SwitchT::changeState(const char *state, const char *origin)
     {
       if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl == constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::lockIdx || statePoolIdx == constanstsSwitch::unlockIdx)
+        if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
         {
           timedOn(primaryGpioControl, inverted, 1000);
         }
       }
       else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::lockIdx)
+        if (statePoolIdx == constanstsSwitch::closeIdx)
         {
           timedOn(primaryGpioControl, inverted, 1000);
         }
-        else if (statePoolIdx == constanstsSwitch::unlockIdx)
+        else if (statePoolIdx == constanstsSwitch::openIdx)
         {
           timedOn(secondaryGpioControl, inverted, 1000);
         }
       }
       else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl != constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::lockIdx)
+        if (statePoolIdx == constanstsSwitch::closeIdx)
         {
           timedOn(primaryGpio, inverted, 1000);
         }
-        else if (statePoolIdx == constanstsSwitch::unlockIdx)
+        else if (statePoolIdx == constanstsSwitch::openIdx)
         {
           timedOn(secondaryGpioControl, inverted, 1000);
         }
@@ -807,7 +782,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
         writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
       }
     }
-    else if (statePoolIdx == constanstsSwitch::offIdx || strcmp(constanstsSwitch::payloadReleased, state) == 0)
+    else if (statePoolIdx == constanstsSwitch::offIdx)
     {
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
@@ -815,7 +790,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
         writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
       }
     }
-    else if (statePoolIdx == constanstsSwitch::lockIdx || statePoolIdx == constanstsSwitch::unlockIdx)
+    else if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
     {
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
@@ -826,7 +801,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
     notifyState(dirty);
   }
 
-  return getCurrentState();
+  return getCurrentState().c_str();
 }
 
 const char *Switches::stateSwitchById(const char *id, const char *state)
@@ -842,7 +817,7 @@ const char *Switches::stateSwitchById(const char *id, const char *state)
 }
 bool stateTimeout(SwitchT &sw)
 {
-  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.getCurrentState()) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
+  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.getCurrentState().c_str()) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
 }
 void loop(Switches &switches)
 {
@@ -898,6 +873,7 @@ void loop(Switches &switches)
     case GATE_SWITCH:
     {
       bool primaryStateGpioEvent = true;
+      bool secondaryStateGpioEvent = true;
       if (sw.primaryStateGpio != constantsConfig::noGPIO)
       {
         primaryStateGpioEvent = readPIN(sw.primaryStateGpio);
@@ -906,11 +882,28 @@ void loop(Switches &switches)
           sw.lastPrimaryStateGpioState = primaryStateGpioEvent;
           if (primaryStateGpioEvent)
           {
-            sw.statePoolIdx = constanstsSwitch::lockIdx;
+            sw.statePoolIdx = constanstsSwitch::closeIdx;
           }
           else
           {
-            sw.statePoolIdx = constanstsSwitch::unlockIdx;
+            sw.statePoolIdx = constanstsSwitch::openIdx;
+          }
+          sw.notifyState(true);
+        }
+      }
+      if (sw.secondaryStateGpio != constantsConfig::noGPIO)
+      {
+        secondaryStateGpioEvent = readPIN(sw.secondaryStateGpio);
+        if (sw.lastSecondaryStateGpioState != secondaryStateGpioEvent)
+        {
+          sw.lastSecondaryStateGpioState = secondaryStateGpioEvent;
+          if (secondaryStateGpioEvent)
+          {
+            sw.statePoolIdx = constanstsSwitch::openIdx;
+          }
+          else
+          {
+            sw.statePoolIdx = constanstsSwitch::closeIdx;
           }
           sw.notifyState(true);
         }

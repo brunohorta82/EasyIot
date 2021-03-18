@@ -213,14 +213,14 @@ void normalize(String &inputStr)
 
 void Config::save()
 {
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
 #endif
     return;
   }
-  File file = SPIFFS.open(configFilenames::config, "w+");
+  File file = LittleFS.open(configFilenames::config, "w+");
   this->save(file);
   file.close();
 
@@ -230,7 +230,6 @@ void Config::save()
 }
 void Config::toJson(JsonVariant &root)
 {
-
   root["nodeId"] = nodeId;
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
@@ -259,7 +258,6 @@ void Config::toJson(JsonVariant &root)
   root["signal"] = WiFi.RSSI();
   root["mode"] = (int)WiFi.getMode();
   root["mqttConnected"] = mqttConnected();
-  root["connectedOn"] = connectedOn;
   root["firmwareMode"] = constantsConfig::firmwareMode;
 }
 
@@ -267,7 +265,6 @@ void Config::save(File &file) const
 {
   file.write((uint8_t *)&firmware, sizeof(firmware));
   file.write((uint8_t *)nodeId, sizeof(nodeId));
-  file.write((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.write((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
   file.write((uint8_t *)mqttUsername, sizeof(mqttUsername));
   file.write((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
@@ -275,16 +272,12 @@ void Config::save(File &file) const
   file.write((uint8_t *)mqttPassword, sizeof(mqttPassword));
   file.write((uint8_t *)wifiSSID, sizeof(wifiSSID));
   file.write((uint8_t *)wifiSecret, sizeof(wifiSecret));
-  file.write((uint8_t *)wifiSSID2, sizeof(wifiSSID2));
-  file.write((uint8_t *)wifiSecret2, sizeof(wifiSecret2));
   file.write((uint8_t *)&staticIp, sizeof(staticIp));
   file.write((uint8_t *)wifiIp, sizeof(wifiIp));
   file.write((uint8_t *)wifiMask, sizeof(wifiMask));
   file.write((uint8_t *)wifiGw, sizeof(wifiGw));
   file.write((uint8_t *)apSecret, sizeof(apSecret));
   file.write((uint8_t *)apName, sizeof(apName));
-  file.write((uint8_t *)&configTime, sizeof(configTime));
-  file.write((uint8_t *)configkey, sizeof(configkey));
   file.write((uint8_t *)chipId, sizeof(chipId));
   file.write((uint8_t *)apiUser, sizeof(apiUser));
   file.write((uint8_t *)apiPassword, sizeof(apiPassword));
@@ -299,12 +292,11 @@ void Config::save(File &file) const
 void Config::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  if (firmware < 7.8)
+  if (firmware < 8.1)
   {
     requestLoadDefaults();
   }
   file.read((uint8_t *)nodeId, sizeof(nodeId));
-  file.read((uint8_t *)homeAssistantAutoDiscoveryPrefix, sizeof(homeAssistantAutoDiscoveryPrefix));
   file.read((uint8_t *)mqttIpDns, sizeof(mqttIpDns));
   file.read((uint8_t *)mqttUsername, sizeof(mqttUsername));
   file.read((uint8_t *)mqttAvailableTopic, sizeof(mqttAvailableTopic));
@@ -312,16 +304,12 @@ void Config::load(File &file)
   file.read((uint8_t *)mqttPassword, sizeof(mqttPassword));
   file.read((uint8_t *)wifiSSID, sizeof(wifiSSID));
   file.read((uint8_t *)wifiSecret, sizeof(wifiSecret));
-  file.read((uint8_t *)wifiSSID2, sizeof(wifiSSID2));
-  file.read((uint8_t *)wifiSecret2, sizeof(wifiSecret2));
   file.read((uint8_t *)&staticIp, sizeof(staticIp));
   file.read((uint8_t *)wifiIp, sizeof(wifiIp));
   file.read((uint8_t *)wifiMask, sizeof(wifiMask));
   file.read((uint8_t *)wifiGw, sizeof(wifiGw));
   file.read((uint8_t *)apSecret, sizeof(apSecret));
   file.read((uint8_t *)apName, sizeof(apName));
-  file.read((uint8_t *)&configTime, sizeof(configTime));
-  file.read((uint8_t *)configkey, sizeof(configkey));
   file.read((uint8_t *)chipId, sizeof(chipId));
   file.read((uint8_t *)apiUser, sizeof(apiUser));
   file.read((uint8_t *)apiPassword, sizeof(apiPassword));
@@ -332,17 +320,7 @@ void Config::load(File &file)
   file.read((uint8_t *)&knxLine, sizeof(knxLine));
   file.read((uint8_t *)&knxMember, sizeof(knxMember));
   strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
-  strlcpy(available, String("1" + String(ESP.getChipId())).c_str(), sizeof(chipId));
-  strlcpy(offline, String("0" + String(ESP.getChipId())).c_str(), sizeof(chipId));
-  if (firmware >= 7.941)
-  {
-    file.read((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
-  }
-  else
-  {
-    strlcpy(cloudIOUserName, "", sizeof(cloudIOUserName));
-  }
-
+  file.read((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
   if (firmware < VERSION)
   {
 #ifdef DEBUG
@@ -355,19 +333,27 @@ void load(Config &config)
 {
   configTime(0, 0, NTP_SERVER);
   setenv("TZ", TZ_INFO, 1);
-  if (!SPIFFS.begin())
+  if (!LittleFS.begin())
   {
 #ifdef DEBUG
     Log.error("%s File storage can't start" CR, tags::config);
 #endif
-    if (!SPIFFS.format())
+    // We can't return here, or else the application will continue, thinking
+    // it can access Config::* when in fact it wasn't initialized yet.
+    // We inform the user about the error, but, we do not return
+    // triggering the next if, where it'll load defaults.
+    // If we do not initialize defaults, app will crash at MDNS refresh
+    // when it attempts to create a service using Config::* variables.
+    //return;
+    if (!LittleFS.format())
     {
 #ifdef DEBUG
       Log.error("%s Unable to format Filesystem, please ensure you built firmware with filesystem support." CR, tags::config);
 #endif
     }
   }
-  if (!SPIFFS.exists(configFilenames::config))
+
+  if (!LittleFS.exists(configFilenames::config))
   {
 #ifdef DEBUG
     Log.notice("%s Default config loaded." CR, tags::config);
@@ -390,14 +376,13 @@ void load(Config &config)
     config.knxLine = 1;
     config.knxMember = 1;
     config.firmware = VERSION;
-    strlcpy(config.homeAssistantAutoDiscoveryPrefix, constantsMqtt::homeAssistantAutoDiscoveryPrefix, sizeof(config.homeAssistantAutoDiscoveryPrefix));
 
 #ifdef DEBUG
     Log.notice("%s Config %s loaded." CR, tags::config, String(config.firmware).c_str());
 #endif
   }
 
-  File file = SPIFFS.open(configFilenames::config, "r+");
+  File file = LittleFS.open(configFilenames::config, "r+");
   config.load(file);
   file.close();
 
@@ -405,6 +390,7 @@ void load(Config &config)
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
 }
+
 Config &Config::updateFromJson(JsonObject &root)
 {
   char lastNodeId[32];
@@ -444,18 +430,10 @@ Config &Config::updateFromJson(JsonObject &root)
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
   staticIp = root["staticIp"];
-  strlcpy(apSecret, root["apSecret"] | constantsConfig::apSecret, sizeof(apSecret));
-  configTime = root["configTime"];
+  String ap = root["apSecret"] | String(constantsConfig::apSecret);
+  strlcpy(apSecret, ap.c_str(), sizeof(apSecret));
   firmware = root["firmware"] | VERSION;
   strlcpy(mqttAvailableTopic, getAvailableTopic().c_str(), sizeof(mqttAvailableTopic));
-  if (strcmp(constantsMqtt::mqttCloudURL, mqttIpDns) == 0)
-  {
-    strlcpy(homeAssistantAutoDiscoveryPrefix, mqttUsername, sizeof(homeAssistantAutoDiscoveryPrefix));
-  }
-  else
-  {
-    strlcpy(homeAssistantAutoDiscoveryPrefix, "homeassistant", sizeof(homeAssistantAutoDiscoveryPrefix));
-  }
 
   if (reloadWifi)
   {

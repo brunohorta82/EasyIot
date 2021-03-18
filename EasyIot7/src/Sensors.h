@@ -25,7 +25,7 @@ enum SensorType
   DHT_22 = 2,
   PZEM_004T = 70,     // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
   PZEM_004T_V03 = 71, // primaryGPIO is RX, secondaryGPIO is TX and tertiaryGPIO is CurrentDetection
-  PZEM_017 = 72
+  PZEM_017 = 72,
 };
 
 struct SensorT
@@ -70,8 +70,8 @@ struct SensorT
   float temperature = static_cast<float>(0);
   float humidity = static_cast<float>(0);
   char lastReading[200];
-//CLOUDIO
- char mqttCloudStateTopic[128];
+  //CLOUDIO
+  char mqttCloudStateTopic[128];
   //CUSTOM PAYLOADS
   char payloadOff[10];
   char payloadOn[10];
@@ -86,8 +86,8 @@ struct Sensors
   void load(File &file);
   void save(File &file) const;
   void save();
-  Sensors & remove( const char *id);
-  Sensors& updateFromJson(const String &id, JsonObject doc);
+  Sensors &remove(const char *id);
+  Sensors &updateFromJson(const String &id, JsonObject doc);
   void toJson(JsonVariant &root);
 };
 struct Sensors &getAtualSensorsConfig();

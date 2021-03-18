@@ -45,11 +45,9 @@ void infoWifi()
   if (WiFi.isConnected())
   {
     connectedOn = millis();
-    uint8_t *bssid = WiFi.BSSID();
 #ifdef DEBUG
     Log.notice("%s MODE STA -------------------------------------" CR, tags::wifi);
     Log.notice("%s SSID  %s  " CR, tags::wifi, WiFi.SSID().c_str());
-    Log.notice("%s BSSID %X:%X:%X:%X:%X:%X" CR, tags::wifi, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
     Log.notice("%s CH    %d   " CR, tags::wifi, WiFi.channel());
     Log.notice("%s RSSI  %d " CR, tags::wifi, WiFi.RSSI());
     Log.notice("%s IP    %s  " CR, tags::wifi, WiFi.localIP().toString().c_str());
@@ -130,39 +128,29 @@ void infoCallback(justwifi_messages_t code, char *parameter)
 
   switch (code)
   {
-#ifdef DEBUG
+  case MESSAGE_ACCESSPOINT_FAILED:
+  case MESSAGE_WPS_START:
+  case MESSAGE_WPS_SUCCESS:
+  case MESSAGE_WPS_ERROR:
+  case MESSAGE_SMARTCONFIG_START:
+  case MESSAGE_SMARTCONFIG_SUCCESS:
+  case MESSAGE_SMARTCONFIG_ERROR:
+  case MESSAGE_HOSTNAME_ERROR:
+  case MESSAGE_DISCONNECTED:
   case MESSAGE_TURNING_OFF:
-    Log.notice("%s Turning OFF" CR, tags::wifi);
-    break;
   case MESSAGE_TURNING_ON:
-    Log.notice("%s Turning ON" CR, tags::wifi);
-    break;
   case MESSAGE_SCANNING:
-    Log.notice("%s Scanning" CR, tags::wifi);
-    break;
   case MESSAGE_SCAN_FAILED:
-    Log.error("%s Scan failed" CR, tags::wifi);
-    break;
   case MESSAGE_NO_NETWORKS:
-    Log.warning("%s No networks found" CR, tags::wifi);
-
-    break;
   case MESSAGE_NO_KNOWN_NETWORKS:
-    Log.warning("%s No known networks found" CR, tags::wifi);
-    break;
   case MESSAGE_FOUND_NETWORK:
-    Log.warning("%s Network found %s" CR, tags::wifi, parameter);
-    break;
   case MESSAGE_CONNECTING:
-    Log.notice("%s Connecting to %s" CR, tags::wifi, parameter);
-    break;
   case MESSAGE_CONNECT_WAITING:
-    // too much noise
-    break;
   case MESSAGE_CONNECT_FAILED:
-    Log.error("%s Could not connect to %s" CR, tags::wifi, parameter);
+  case MESSAGE_ACCESSPOINT_DESTROYED:
+  case MESSAGE_ACCESSPOINT_CREATING:
     break;
-#endif
+
   case MESSAGE_CONNECTED:
     if (strlen(getAtualConfig().wifiSSID) == 0)
     {
@@ -176,53 +164,11 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     connectoToCloudIO();
     setupWebserverAsync();
     break;
-#ifdef DEBUG
-  case MESSAGE_DISCONNECTED:
-    Log.warning("%s Disconnected" CR, tags::wifi);
-    break;
-#endif
+
   case MESSAGE_ACCESSPOINT_CREATED:
     infoWifi();
     setupWebserverAsync();
     break;
-
-  case MESSAGE_ACCESSPOINT_DESTROYED:
-#ifdef DEBUG
-    Log.notice("%s Disconnecting access point" CR, tags::wifi);
-#endif
-    break;
-  case MESSAGE_ACCESSPOINT_CREATING:
-#ifdef DEBUG
-    Log.notice("%s Creating access point" CR, tags::wifi);
-#endif
-
-    break;
-#ifdef DEBUG
-  case MESSAGE_ACCESSPOINT_FAILED:
-    Log.error("%s Could not create access point" CR, tags::wifi);
-    break;
-  case MESSAGE_WPS_START:
-    Log.notice("%s WPS started" CR, tags::wifi);
-    break;
-  case MESSAGE_WPS_SUCCESS:
-    Log.notice("%s WPS succeded!" CR, tags::wifi);
-    break;
-  case MESSAGE_WPS_ERROR:
-    Log.error("%s WPS failed" CR, tags::wifi);
-    break;
-  case MESSAGE_SMARTCONFIG_START:
-    Log.notice("%s Smart Config started" CR, tags::wifi);
-    break;
-  case MESSAGE_SMARTCONFIG_SUCCESS:
-
-    Log.notice("%smart Config succeded!" CR, tags::wifi);
-    break;
-  case MESSAGE_SMARTCONFIG_ERROR:
-    Log.error("%s Smart Config failed" CR, tags::wifi);
-  case MESSAGE_HOSTNAME_ERROR:
-    Log.error("%s Hostname Error" CR, tags::wifi);
-    break;
-#endif
   }
 }
 

@@ -10,12 +10,7 @@ void initHaDiscovery(const Switches &switches)
   {
     if (!sw.haSupport)
       continue;
-    publishOnMqtt(sw.mqttStateTopic,STATES_POLL[sw.statePoolIdx].c_str(), true);
-    if (strcmp(constanstsSwitch::familyCover, sw.family) == 0)
-    {
-      publishOnMqtt(sw.mqttStateTopic, String(sw.lastPercentage).c_str(), true);
-    }
-
+    publishOnMqtt(sw.mqttStateTopic, sw.getCurrentState().c_str(), true);
     addToHaDiscovery(sw);
   }
 }
@@ -42,31 +37,36 @@ void createHaSwitch(const SwitchT &sw)
   object["name"] = sw.name;
   object["unique_id"] = sw.id;
   object["cmd_t"] = sw.mqttCommandTopic;
-  object["stat_t"] = sw.mqttStateTopic; 
+ 
   object["avty_t"] = getAvailableTopic();
-if (strcmp(sw.family, constanstsSwitch::familyLock) == 0){
-  object["payload_lock"] = constanstsSwitch::payloadLock;
-  object["payload_unlock"] = constanstsSwitch::payloadUnlock;
-}
+  String family = String(sw.family);
+  if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
+  { object["stat_t"] = sw.mqttStateTopic;
+    object["payload_open"] = constanstsSwitch::payloadOpen;
+    object["payload_close"] = constanstsSwitch::payloadClose;
+    object["device_class"] = "garage";
+    family = "cover";
+  }
 
-if (strcmp(sw.family, constanstsSwitch::familyCover) == 0){
-  object["payload_open"] = constanstsSwitch::payloadOpen;
-  object["payload_close"] = constanstsSwitch::payloadClose;
-  object["payload_stop"] = constanstsSwitch::payloadStop;
-  object["device_class"] = "blind";
-  object["position_open"] = 0;
-  object["position_closed"] = 100;
-  object["position_topic"] = sw.mqttStateTopic;
-  object["set_position_topic"] = sw.mqttCommandTopic;
-}
-if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0){
-  object["payload_on"] = constanstsSwitch::payloadOn;
-  object["payload_off"] = constanstsSwitch::payloadOff;
-}
+  if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
+  {
+    object["payload_open"] = constanstsSwitch::payloadOpen;
+    object["payload_close"] = constanstsSwitch::payloadClose;
+    object["payload_stop"] = constanstsSwitch::payloadStop;
+    object["device_class"] = "shutter";
+    object["position_open"] = 0;
+    object["position_closed"] = 100;
+    object["position_topic"] = sw.mqttStateTopic;
+    object["set_position_topic"] = sw.mqttCommandTopic;
+  }
+  if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0)
+  { object["stat_t"] = sw.mqttStateTopic;
+    object["payload_on"] = constanstsSwitch::payloadOn;
+    object["payload_off"] = constanstsSwitch::payloadOff;
+  }
   serializeJson(object, objectStr);
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
-
 
 void addToHaDiscovery(const SensorT &s)
 {
@@ -86,12 +86,12 @@ void addToHaDiscovery(const SensorT &s)
   case DHT_21:
   case DHT_22:
     object["unique_id"] = String(s.id) + "T";
-    object["unit_of_measurement"] = "ºC";
+    object["unit_of_measurement"] = "º";
     object["device_class"] = "temperature";
     object["value_template"] = "{{value_json.temperature}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-    
+
     delay(100);
     objectStr = "";
     object["unique_id"] = String(s.id) + "H";
@@ -100,7 +100,7 @@ void addToHaDiscovery(const SensorT &s)
     object["value_template"] = "{{value_json.humidity}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-   
+
     break;
   case DS18B20:
     for (int i = 0; i < s.oneWireSensorsCount; i++)
@@ -171,41 +171,53 @@ void addToHaDiscovery(const SensorT &s)
     break;
   case PZEM_004T_V03:
     object["name"] = String(s.name) + " Power";
+    object["unique_id"] = "P" + String(s.secondaryGpio);
     object["unit_of_measurement"] = "W";
     object["device_class"] = "power";
     object["value_template"] = "{{value_json.power}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PW" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PW" + String(s.secondaryGpio) + "/config").c_str(), objectStr.c_str(), false);
+    delay(200);
     object["name"] = String(s.name) + " Current";
+    object["unique_id"] = "C" + String(s.secondaryGpio);
     object["unit_of_measurement"] = "A";
     object["value_template"] = "{{value_json.current}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/CU" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/CU" + String(s.secondaryGpio) + "/config").c_str(), objectStr.c_str(), false);
+    delay(200);
     object["name"] = String(s.name) + " Voltage";
+    object["unique_id"] = "V" + String(s.secondaryGpio);
     object["unit_of_measurement"] = "V";
     object["value_template"] = "{{value_json.voltage}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/VT" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/VT" + String(s.secondaryGpio) + "/config").c_str(), objectStr.c_str(), false);
+    delay(200);
     object["name"] = String(s.name) + " Energy";
-    object["unit_of_measurement"] = "KhW";
+    object["unique_id"] = "E" + String(s.secondaryGpio);
+    object["unit_of_measurement"] = "Kwh";
     object["device_class"] = "power";
     object["value_template"] = "{{value_json.energy}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/EN" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/EN" + String(s.secondaryGpio) + "/config").c_str(), objectStr.c_str(), false);
+    delay(200);
     object["name"] = String(s.name) + " PF";
+    object["unit_of_measurement"] = "";
+    object["unique_id"] = "PF" + String(s.secondaryGpio);
     object["value_template"] = "{{value_json.pf}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PF" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PF" + String(s.secondaryGpio) + "/config").c_str(), objectStr.c_str(), false);
+    delay(200);
     object["name"] = String(s.name) + " Frequency";
+    object["unique_id"] = "F" + String(s.secondaryGpio);
     object["unit_of_measurement"] = "Hz";
     object["value_template"] = "{{value_json.frequency}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/FR" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/FR" + String(s.secondaryGpio) + "/config").c_str(), objectStr.c_str(), false);
     break;
 
   default:
@@ -231,9 +243,8 @@ void addToHaDiscovery(const SwitchT &sw)
     return;
   }
 
-  
-    createHaSwitch(sw);
-  
+  createHaSwitch(sw);
+
 #ifdef DEBUG
   Log.notice("%s RELOAD HA SWITCH DISCOVERY OK" CR, tags::discovery);
 #endif

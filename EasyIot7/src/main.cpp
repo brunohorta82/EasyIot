@@ -18,6 +18,10 @@ void checkInternalRoutines()
   {
     connectoToCloudIO();
   }
+  if (wifiScanRequested())
+  {
+    scanNewWifiNetworks();
+  }
   if (restartRequested())
   {
 #ifdef DEBUG
@@ -31,7 +35,7 @@ void checkInternalRoutines()
 #ifdef DEBUG
     Log.notice("%s Loading defaults...", tags::system);
 #endif
-    SPIFFS.format();
+    LittleFS.format();
     requestRestart();
   }
   if (autoUpdateRequested())
@@ -76,7 +80,7 @@ void setup()
   pinMode(3, INPUT);
   if (digitalRead(1) && !digitalRead(3))
   {
-    SPIFFS.format();
+    LittleFS.format();
     ESP.restart();
   }
 #ifdef DEBUG
@@ -103,7 +107,7 @@ void loop()
   {
     loop(getAtualSwitchesConfig());
     loop(getAtualSensorsConfig());
-    loopTime();
+    // loopTime();
   }
   knx.loop();
 }

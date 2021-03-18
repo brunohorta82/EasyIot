@@ -89,7 +89,7 @@ void onMqttConnect(bool sessionPresent)
     }
     else
     {
-      mqttClient.publish(sw.mqttCloudStateTopic, 0, true, sw.getCurrentState());
+      mqttClient.publish(sw.mqttCloudStateTopic, 0, true, sw.getCurrentState().c_str());
     }
   }
   mqttClient.publish(getAtualConfig().availableCloudIO, 0, true, "1\0");
