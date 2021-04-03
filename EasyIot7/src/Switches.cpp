@@ -135,6 +135,7 @@ const String SwitchT::getCurrentState() const
   {
     return String(lastPercentage);
   }
+
   return STATES_POLL[statePoolIdx];
 }
 void SwitchT::save(File &file) const
@@ -623,19 +624,19 @@ const char *Switches::rotate(const char *id)
 }
 const void SwitchT::notifyState(bool dirty)
 {
-  const char *currentStateToSend = getCurrentState().c_str();
+  const String currentStateToSend = getCurrentState();
 #ifdef DEBUG
-  Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend);
+  Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
 #endif
   if (mqttSupport)
   {
-    publishOnMqtt(mqttStateTopic, currentStateToSend, true);
+    publishOnMqtt(mqttStateTopic, currentStateToSend.c_str(), true);
   }
   if (cloudIOSupport)
   {
-    notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend, strlen(currentStateToSend));
+    notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend.c_str(), currentStateToSend.length());
   }
-  sendToServerEvents(id, currentStateToSend);
+  sendToServerEvents(id, currentStateToSend.c_str());
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
   if (knxNotifyGroup && knxSupport)

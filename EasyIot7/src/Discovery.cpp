@@ -37,13 +37,18 @@ void createHaSwitch(const SwitchT &sw)
   object["name"] = sw.name;
   object["unique_id"] = sw.id;
   object["cmd_t"] = sw.mqttCommandTopic;
- 
+
   object["avty_t"] = getAvailableTopic();
   String family = String(sw.family);
   if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
-  { object["stat_t"] = sw.mqttStateTopic;
+  {
+    object["stat_t"] = sw.mqttStateTopic;
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
+    object["payload_stop"] = constanstsSwitch::payloadStop;
+    object["state_open"] = constanstsSwitch::payloadOpen;
+    object["state_closed"] = constanstsSwitch::payloadClose;
+    object["state_stopped"] = constanstsSwitch::payloadStop;
     object["device_class"] = "garage";
     family = "cover";
   }
@@ -60,7 +65,8 @@ void createHaSwitch(const SwitchT &sw)
     object["set_position_topic"] = sw.mqttCommandTopic;
   }
   if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0)
-  { object["stat_t"] = sw.mqttStateTopic;
+  {
+    object["stat_t"] = sw.mqttStateTopic;
     object["payload_on"] = constanstsSwitch::payloadOn;
     object["payload_off"] = constanstsSwitch::payloadOff;
   }
