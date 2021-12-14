@@ -34,6 +34,9 @@ void loadSensorsDefaults()
     generateId(idStr, pzem.name, 2, sizeof(pzem.id));
     strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
     strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
+    pzem.primaryGpio = constantsConfig::noGPIO;
+    pzem.secondaryGpio = constantsConfig::noGPIO;
+    pzem.tertiaryGpio = constantsConfig::noGPIO;
 #if defined BHPZEM_004T_2_0 || BHPZEM_004T
     pzem.type = PZEM_004T;
 #endif
@@ -56,11 +59,14 @@ void loadSensorsDefaults()
     pzem.mqttRetain = true;
     pzem.haSupport = true;
     pzem.emoncmsSupport = true;
+    pzem.cloudIOSupport = true;
     pzem.delayRead = 5000;
+
     strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
     strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
     strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
+    pzem.reloadMqttTopics();
     getAtualSensorsConfig().items.push_back(pzem);
 #endif
 }
@@ -125,7 +131,7 @@ void loadSwitchDefaults()
     one.inverted = false;
     one.reloadMqttTopics();
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
-#if defined DUAL_LIGHT || SINGLE_SWITCH || COVER || GATE 
+#if defined DUAL_LIGHT || SINGLE_SWITCH || COVER || GATE
     one.primaryGpioControl = 4u;
 #endif
 #if defined COVER_V3

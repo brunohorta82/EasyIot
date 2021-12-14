@@ -32,9 +32,9 @@ namespace tags
 } // namespace tags
 namespace configFilenames
 {
-    auto constexpr config = "/config/config.bin";
-    auto constexpr sensors = "/config/sensors.bin";
-    auto constexpr switches = "/config/switches.bin";
+    constexpr const char *config = "config.bin";
+    constexpr const char *sensors = "sensors.bin";
+    constexpr const char *switches = "switches.bin";
 
 } // namespace configFilenames
 namespace constantsConfig
@@ -110,9 +110,9 @@ namespace constantsConfig
     constexpr unsigned int noGPIO{99u};
     constexpr unsigned long storeConfigDelay{5000ul};
 
-    constexpr const char *apSecret{"bhonofre"}; //AP PASSWORD
-    constexpr const char *apiUser{"admin"};     //API USER
-    constexpr const char *apiPassword{"xpto"};  //API PASSWORD
+    constexpr const char *apSecret{"bhonofre"}; // AP PASSWORD
+    constexpr const char *apiUser{"admin"};     // API USER
+    constexpr const char *apiPassword{"xpto"};  // API PASSWORD
 } // namespace constantsConfig
 
 namespace constanstsCloudIO
@@ -125,15 +125,14 @@ namespace constanstsCloudIO
 namespace constanstsSwitch
 {
 
-    constexpr const unsigned long delayDebounce{25ul};              //25 milliseconds
-    constexpr const unsigned long delayCoverProtection{50ul};       //50 milliseconds
+    constexpr const unsigned long delayDebounce{25ul};              // 25 milliseconds
+    constexpr const unsigned long delayCoverProtection{50ul};       // 50 milliseconds
     constexpr const unsigned long coverAutoStopProtection{90000ul}; // after 90 seconds turn off all relay to enhance the lifecycle
     constexpr const char *payloadOn{"ON"};
     constexpr const char *payloadOff{"OFF"};
     constexpr const char *payloadClose{"CLOSE"};
     constexpr const char *payloadOpen{"OPEN"};
     constexpr const char *payloadStop{"STOP"};
-    
 
     constexpr const char *familyLight{"light"};
     constexpr const char *familySwitch{"switch"};

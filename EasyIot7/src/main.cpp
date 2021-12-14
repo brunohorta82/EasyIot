@@ -78,6 +78,7 @@ void setup()
 {
   pinMode(1, INPUT);
   pinMode(3, INPUT);
+  LittleFS.begin();
   if (digitalRead(1) && !digitalRead(3))
   {
     LittleFS.format();

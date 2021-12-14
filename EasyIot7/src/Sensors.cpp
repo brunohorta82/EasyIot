@@ -1,5 +1,6 @@
 #include "Sensors.h"
 #include "Discovery.h"
+#include <ArduinoLog.h>
 #include "constants.h"
 #include "WebServer.h"
 #include "Config.h"
@@ -78,7 +79,7 @@ void Sensors::load(File &file)
     {
     case UNDEFINED:
 #ifdef DEBUG
-      Log.error("%s Invalid type" CR, tags::sensors);
+      Log.errorln("%s Invalid type", tags::sensors);
 #endif
       continue;
       break;
@@ -149,7 +150,6 @@ void Sensors::save(File &file) const
 void SensorT::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  double configFirmware = (double)firmware;
   file.read((uint8_t *)id, sizeof(id));
   file.read((uint8_t *)name, sizeof(name));
   file.read((uint8_t *)family, sizeof(family));
@@ -166,11 +166,11 @@ void SensorT::load(File &file)
   file.read((uint8_t *)&delayRead, sizeof(delayRead));
   file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
   file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
-
   firmware = VERSION;
 }
 void SensorT::save(File &file) const
 {
+
   file.write((uint8_t *)&firmware, sizeof(firmware));
   file.write((uint8_t *)id, sizeof(id));
   file.write((uint8_t *)name, sizeof(name));
@@ -217,6 +217,7 @@ void Sensors::save()
 }
 void load(Sensors &sensors)
 {
+
   if (!LittleFS.exists(configFilenames::sensors))
   {
 #ifdef DEBUG
@@ -226,7 +227,7 @@ void load(Sensors &sensors)
     getAtualSensorsConfig().save();
   }
 
-  File file = LittleFS.open(configFilenames::sensors, "r+");
+  File file = LittleFS.open(configFilenames::sensors, "r");
   sensors.load(file);
   file.close();
 
@@ -286,9 +287,8 @@ void Sensors::toJson(JsonVariant &root)
 }
 Sensors &Sensors::remove(const char *id)
 {
-  auto match = std::find_if(items.begin(), items.end(), [id](const SensorT &item) {
-    return strcmp(id, item.id) == 0;
-  });
+  auto match = std::find_if(items.begin(), items.end(), [id](const SensorT &item)
+                            { return strcmp(id, item.id) == 0; });
 
   if (match == items.end())
   {
