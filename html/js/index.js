@@ -756,9 +756,9 @@ function buildSwitch(obj) {
         '                                    class="lang-time">TEMPO Subida/Descida</span></span></td>' +
         '                                <td class="col-xs-4"><span style="float: left" class="lang-up">Subida</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.upCourseTime / 1000 + '"' +
         '                                                            type="text" id="upCourseTime_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="2" required/><span style="float: left; margin-left: 10px" class="lang-down">Descida</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.downCourseTime / 1000 + '"' +
+        '                                                             maxlength="5" required/><span style="float: left; margin-left: 10px" class="lang-down">Descida</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.downCourseTime / 1000 + '"' +
         '                                                            type="text" id="downCourseTime_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="2" required/><span style="float: left;margin-right: 5px" class="lang-seconds">segundos</span>' +
+        '                                                             maxlength="5" required/><span style="float: left;margin-right: 5px" class="lang-seconds">segundos</span>' +
         '                                </td>' +
         '                            </tr>' +
         '                            <tr>' +
@@ -766,7 +766,7 @@ function buildSwitch(obj) {
         '                                    class="lang-auto-state">Estádo automático</span></span></td>' +
         '                                <td class="col-xs-8"><span style="float: left" class="lang-in">em</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"' +
         '                                                            type="text" id="autoStateDelay_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="4" required/><span style="float: left; margin-left: 5px;" class="lang-seconds">segundos</span> ' +
+        '                                                             maxlength="8" required/><span style="float: left; margin-left: 5px;" class="lang-seconds">segundos</span> ' +
         '                                <select class="form-control select-device" style="float: left; width: 100px; margin-left: 5px;" id="autoStateValue_' + obj.id + '">' +
         '                                    <option class="lang-choose" value="">Escolha</option>' +
         '                                </select>' +
