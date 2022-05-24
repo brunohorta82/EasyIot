@@ -8,7 +8,6 @@
 #include "Switches.h"
 #include "Sensors.h"
 #include "ArduinoJson.h"
-#include <SPIFFSEditor.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncTCP.h>
 #include <FS.h>
