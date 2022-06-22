@@ -302,7 +302,7 @@ void SwitchT::configPins()
 void SwitchT::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  double configFirmware = (double)firmware;
+//   double configFirmware = (double)firmware;
   file.read((uint8_t *)id, sizeof(id));
   file.read((uint8_t *)name, sizeof(name));
   file.read((uint8_t *)family, sizeof(family));
