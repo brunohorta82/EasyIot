@@ -32,20 +32,20 @@ extern "C"
 TasmotaSerial *tms_obj_list[16];
 
 #ifdef TM_SERIAL_USE_IRAM
-void ICACHE_RAM_ATTR tms_isr_0()
+void IRAM_ATTR tms_isr_0()
 {
     tms_obj_list[0]->rxRead();
 };
-void ICACHE_RAM_ATTR tms_isr_1() { tms_obj_list[1]->rxRead(); };
-void ICACHE_RAM_ATTR tms_isr_2() { tms_obj_list[2]->rxRead(); };
-void ICACHE_RAM_ATTR tms_isr_3() { tms_obj_list[3]->rxRead(); };
-void ICACHE_RAM_ATTR tms_isr_4() { tms_obj_list[4]->rxRead(); };
-void ICACHE_RAM_ATTR tms_isr_5() { tms_obj_list[5]->rxRead(); };
+void IRAM_ATTR tms_isr_1() { tms_obj_list[1]->rxRead(); };
+void IRAM_ATTR tms_isr_2() { tms_obj_list[2]->rxRead(); };
+void IRAM_ATTR tms_isr_3() { tms_obj_list[3]->rxRead(); };
+void IRAM_ATTR tms_isr_4() { tms_obj_list[4]->rxRead(); };
+void IRAM_ATTR tms_isr_5() { tms_obj_list[5]->rxRead(); };
 // Pin 6 to 11 can not be used
-void ICACHE_RAM_ATTR tms_isr_12() { tms_obj_list[12]->rxRead(); };
-void ICACHE_RAM_ATTR tms_isr_13() { tms_obj_list[13]->rxRead(); };
-void ICACHE_RAM_ATTR tms_isr_14() { tms_obj_list[14]->rxRead(); };
-void ICACHE_RAM_ATTR tms_isr_15() { tms_obj_list[15]->rxRead(); };
+void IRAM_ATTR tms_isr_12() { tms_obj_list[12]->rxRead(); };
+void IRAM_ATTR tms_isr_13() { tms_obj_list[13]->rxRead(); };
+void IRAM_ATTR tms_isr_14() { tms_obj_list[14]->rxRead(); };
+void IRAM_ATTR tms_isr_15() { tms_obj_list[15]->rxRead(); };
 #else
 void tms_isr_0()
 {

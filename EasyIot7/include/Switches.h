@@ -25,44 +25,44 @@ enum SwitchControlType
 struct SwitchT
 {
     double firmware = 0.0;
-    char id[32] = {0}; //Generated from name without spaces and no special characters
+    char id[32] = {0}; // Generated from name without spaces and no special characters
     char name[24] = {0};
-    char family[10] = {0};    //switch, light, cover, lock
+    char family[10] = {0};    // switch, light, cover, lock
     SwitchMode mode = SWITCH; // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
     SwitchControlType typeControl = NONE;
 
-    //INTEGRATIONS
+    // INTEGRATIONS
     bool cloudIOSupport = true;
     bool haSupport = false;
     bool knxSupport = false;
     bool mqttSupport = false;
 
-    //UTILS
+    // UTILS
     bool childLock = false;
 
-    //GPIOS INPUT
+    // GPIOS INPUT
     unsigned int primaryGpio = constantsConfig::noGPIO;
     unsigned int secondaryGpio = constantsConfig::noGPIO;
     unsigned int primaryStateGpio = constantsConfig::noGPIO;
     unsigned int secondaryStateGpio = constantsConfig::noGPIO;
-    bool pullup = true; //USE INTERNAL RESISTOR
+    bool pullup = true; // USE INTERNAL RESISTOR
 
-    //GPIOS OUTPUT
+    // GPIOS OUTPUT
     unsigned int primaryGpioControl = constantsConfig::noGPIO;
     unsigned int secondaryGpioControl = constantsConfig::noGPIO;
     unsigned int thirdGpioControl = constantsConfig::noGPIO;
     bool inverted = false;
 
-    //AUTOMATIONS
+    // AUTOMATIONS
     unsigned long autoStateDelay = 0;
     char autoStateValue[10] = {0};
 
-    //MQTT
+    // MQTT
     char mqttCommandTopic[128] = {0};
     char mqttStateTopic[128] = {0};
     bool mqttRetain = false;
 
-    //CONTROL VARIABLES
+    // CONTROL VARIABLES
     int lastPercentage = 0;
     bool lastPrimaryGpioState = true;
     bool lastSecondaryGpioState = true;
@@ -74,29 +74,29 @@ struct SwitchT
     bool isCover = false;
     unsigned long lastChangeState = 0;
 
-    //CLOUDIO
+    // CLOUDIO
     char mqttCloudCommandTopic[128] = {0};
     char mqttCloudStateTopic[128] = {0};
 
-    //VIRTUAL COVER CONTROLLER
+    // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
     unsigned long upCourseTime = 25 * 1000;
     unsigned long downCourseTime = 25 * 1000;
     float calibrationRatio = 0.1;
     char shutterState[21] = {0};
 
-    //KNX
+    // KNX
     uint8_t knxLevelOne = 0;
     uint8_t knxLevelTwo = 0;
     uint8_t knxLevelThree = 0;
     uint8_t knxIdRegister = 0;
     uint8_t knxIdAssign = 0;
     bool knxNotifyGroup = true;
-    //METHODS
+    // METHODS
     void load(File &file);
     void save(File &file) const;
     void updateFromJson(JsonObject doc);
-    const char *changeState(const char *state, const char *origin);
+    const String changeState(const char *state, const char *origin);
     const char *rotateState();
     void toJson(JsonVariant &root) const;
     const String getCurrentState() const;
@@ -112,7 +112,7 @@ struct Switches
     const char *rotate(const char *id);
     void save(File &file) const;
     void save();
-    const char *stateSwitchById(const char *id, const char *state);
+    const String stateSwitchById(const char *id, const char *state);
     Switches &remove(const char *id);
     Switches &updateFromJson(const String &id, JsonObject &doc);
     void toJson(JsonVariant &root);

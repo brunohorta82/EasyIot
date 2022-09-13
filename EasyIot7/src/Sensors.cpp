@@ -120,9 +120,12 @@ void Sensors::load(File &file)
     }
     break;
     case PZEM_004T_V03:
+    {
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
-      item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
+      SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
+      item.pzemv03 = new PZEM004Tv30(softwareSerial);
       configPIN(item.tertiaryGpio, INPUT);
+    }
 #if WITH_DISPLAY
       setupDisplay();
 #endif
@@ -393,10 +396,14 @@ void SensorT::updateFromJson(JsonObject doc)
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_004T_V03:
+  {
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
-    pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
+    SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
+    pzemv03 = new PZEM004Tv30(softwareSerial);
+
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
-    break;
+  }
+  break;
   case PZEM_017:
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
     pzemModbus = new Modbus(primaryGpio, secondaryGpio);

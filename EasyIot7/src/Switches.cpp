@@ -69,7 +69,7 @@ void SwitchT::updateFromJson(JsonObject doc)
 
   configPins();
 
-  //UPDATE JSON TO RESPONSE
+  // UPDATE JSON TO RESPONSE
   doc["id"] = id;
   doc["stateControl"] = STATES_POLL[statePoolIdx];
   if (!doc["mqttCommandTopic"].isNull())
@@ -156,12 +156,12 @@ void SwitchT::save(File &file) const
   file.write((uint8_t *)autoStateValue, sizeof(autoStateValue));
   file.write((uint8_t *)&childLock, sizeof(childLock));
 
-  //MQTT
+  // MQTT
   file.write((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
   file.write((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.write((uint8_t *)&mqttRetain, sizeof(mqttRetain));
 
-  //CONTROL VARIABLES
+  // CONTROL VARIABLES
   file.write((uint8_t *)&lastPercentage, sizeof(lastPercentage));
 
   file.write((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
@@ -219,21 +219,21 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
     if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
       writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH);
-      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH); //TURN ON . OPEN REQUEST
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH); // TURN ON . OPEN REQUEST
     }
     break;
   case ShuttersOperation::DOWN:
     if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
       writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH);
-      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . CLOSE REQUEST
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); // TURN OFF . CLOSE REQUEST
     }
 
     break;
   case ShuttersOperation::HALT:
     if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
-      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); //TURN OFF . STOP
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); // TURN OFF . STOP
     }
     break;
   }
@@ -302,7 +302,6 @@ void SwitchT::configPins()
 void SwitchT::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
-  double configFirmware = (double)firmware;
   file.read((uint8_t *)id, sizeof(id));
   file.read((uint8_t *)name, sizeof(name));
   file.read((uint8_t *)family, sizeof(family));
@@ -317,12 +316,12 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&autoStateDelay, sizeof(autoStateDelay));
   file.read((uint8_t *)autoStateValue, sizeof(autoStateValue));
   file.read((uint8_t *)&childLock, sizeof(childLock));
-  //MQTT
+  // MQTT
   file.read((uint8_t *)mqttCommandTopic, sizeof(mqttCommandTopic));
   file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
 
-  //CONTROL VARIABLES
+  // CONTROL VARIABLES
   file.read((uint8_t *)&lastPercentage, sizeof(lastPercentage));
 
   file.read((uint8_t *)&lastPrimaryGpioState, sizeof(lastPrimaryGpioState));
@@ -438,7 +437,7 @@ void Switches::load(File &file)
   for (auto &item : items)
   {
     item.load(file);
-    //KNX
+    // KNX
     bool globalKnxLevelThreeAssign = false;
     if (item.knxSupport && item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
     {
@@ -455,9 +454,8 @@ void Switches::load(File &file)
 
 Switches &Switches::remove(const char *id)
 {
-  auto match = std::find_if(items.begin(), items.end(), [id](const SwitchT &item) {
-    return strcmp(id, item.id) == 0;
-  });
+  auto match = std::find_if(items.begin(), items.end(), [id](const SwitchT &item)
+                            { return strcmp(id, item.id) == 0; });
 
   if (match == items.end())
   {
@@ -665,14 +663,14 @@ void knkGroupNotifyState(const SwitchT &sw, const char *state)
 void timedOn(unsigned int gpio, bool inverted, unsigned onTime)
 {
   configPIN(gpio, OUTPUT);
-  writeToPIN(gpio, inverted ? LOW : HIGH); //TURN ON
+  writeToPIN(gpio, inverted ? LOW : HIGH); // TURN ON
   unsigned long pressOn = millis();
   while (pressOn + 1000 > millis())
   {
   }
-  writeToPIN(gpio, inverted ? HIGH : LOW); //TURN OFF
+  writeToPIN(gpio, inverted ? HIGH : LOW); // TURN OFF
 }
-const char *SwitchT::changeState(const char *state, const char *origin)
+const String SwitchT::changeState(const char *state, const char *origin)
 {
 #ifdef DEBUG
   Log.notice("%s Name:      %s" CR, tags::switches, name);
@@ -780,7 +778,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
         configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
+        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
       }
     }
     else if (statePoolIdx == constanstsSwitch::offIdx)
@@ -788,7 +786,7 @@ const char *SwitchT::changeState(const char *state, const char *origin)
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
         configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); //TURN OFF
+        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); // TURN OFF
       }
     }
     else if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
@@ -796,16 +794,16 @@ const char *SwitchT::changeState(const char *state, const char *origin)
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
         configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); //TURN ON
+        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
       }
     }
     notifyState(dirty);
   }
 
-  return getCurrentState().c_str();
+  return getCurrentState();
 }
 
-const char *Switches::stateSwitchById(const char *id, const char *state)
+const String Switches::stateSwitchById(const char *id, const char *state)
 {
   for (auto &sw : getAtualSwitchesConfig().items)
   {
@@ -933,11 +931,11 @@ void loop(Switches &switches)
       if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
       {
         if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
-        { //PUSHED
+        { // PUSHED
           sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::firtStopIdx : constanstsSwitch::openIdx].c_str(), "DUAL_PUSH");
         }
         if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
-        { //PUSHED
+        { // PUSHED
           sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::closeIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::closeIdx].c_str(), "DUAL_PUSH");
         }
       }
