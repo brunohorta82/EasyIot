@@ -170,7 +170,7 @@ void addToHaDiscovery(const SensorT &s)
     object["name"] = String(s.name) + " Energy";
     object["unit_of_measurement"] = "kWh";
     object["device_class"] = "energy";
-    object["state_class"] = "total";
+    object["state_class"] = "measurement";
     object["value_template"] = "{{value_json.energy}}";
     objectStr = "";
     serializeJson(object, objectStr);
@@ -205,7 +205,7 @@ void addToHaDiscovery(const SensorT &s)
     object["unique_id"] = "E" + String(s.secondaryGpio);
     object["unit_of_measurement"] = "kWh";
     object["device_class"] = "energy";
-    object["state_class"] = "total";
+    object["state_class"] = "measurement";
     object["value_template"] = "{{value_json.energy}}";
     objectStr = "";
     serializeJson(object, objectStr);

@@ -199,7 +199,7 @@ void connectoToCloudIO()
 {
   reconectCount++;
   cloudIOReconnectTimer.detach();
-  if (WiFi.status() != WL_CONNECTED || reconectCount > 20)
+  if (WiFi.status() != WL_CONNECTED || reconectCount > 3)
     return;
 
   String payload = "";

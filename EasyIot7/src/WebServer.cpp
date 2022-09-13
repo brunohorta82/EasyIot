@@ -464,6 +464,19 @@ void loadAPI()
     response->setLength();
     request->send(response); });
 
+  server.on("/reset-pzem", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+#if WEB_SECURE_ON
+    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+   
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    getAtualSensorsConfig().resetAll();
+    response->setLength();
+    request->send(response); });
+
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))

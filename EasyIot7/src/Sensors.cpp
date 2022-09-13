@@ -66,6 +66,10 @@ struct Sensors &getAtualSensorsConfig()
   static Sensors sensors;
   return sensors;
 }
+void Sensors::resetAll()
+{
+  resetSensors(getAtualSensorsConfig());
+}
 void Sensors::load(File &file)
 {
   auto n_items = items.size();
@@ -439,6 +443,22 @@ void publishReadings(String &readings, SensorT &sensor)
     publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
   if (sensor.emoncmsSupport)
     publishOnEmoncms(sensor, readings);
+}
+
+void resetSensors(Sensors &sensors)
+{
+  for (auto &ss : sensors.items)
+  {
+    if (ss.pzemv03 != NULL)
+    {
+      ss.pzemv03->resetEnergy();
+      Log.notice("%s {\"pzemv03\": %d}" CR, tags::sensors, ss.id);
+    }
+    else
+    {
+      Log.notice("%s {\"pzemv03\": null}" CR, tags::sensors);
+    }
+  }
 }
 bool initRealTimeSensors = true;
 void loop(Sensors &sensors)
