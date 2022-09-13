@@ -14,14 +14,14 @@ int reconectCount = 0;
 
 void disconnectToClounIOMqtt()
 {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.error("%s Disconnect to MQTT..." CR, tags::cloudIO);
 #endif
   mqttClient.disconnect();
 }
 void connectToClounIOMqtt()
 {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.error("%s Connecting to MQTT..." CR, tags::cloudIO);
 #endif
   mqttClient.connect();
@@ -41,7 +41,7 @@ void subscribeOnMqttCloudIO(const char *topic)
 {
   if (!mqttCloudIOConnected())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.warning("%s Required Mqtt connection" CR, tags::cloudIO);
 #endif
     return;
@@ -50,7 +50,7 @@ void subscribeOnMqttCloudIO(const char *topic)
 }
 void onMqttConnect(bool sessionPresent)
 {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
   String topicAction;
@@ -113,7 +113,7 @@ void onMqttConnect(bool sessionPresent)
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.warning("%s Disconnected from MQTT." CR, tags::cloudIO);
 #endif
   if (WiFi.isConnected())
@@ -136,7 +136,7 @@ void onMqttUnsubscribe(uint16_t packetId)
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
   char msg[100];
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
   strlcpy(msg, payload, len + 1);
@@ -181,7 +181,7 @@ bool tryCloudConnection()
 {
   if (strlen(getAtualConfig().cloudIOUserName) > 0 && strlen(getAtualConfig().cloudIOUserPassword) > 0)
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s Ready to try..." CR, tags::cloudIO);
 #endif
     setupCloudIO();
@@ -238,7 +238,7 @@ void connectoToCloudIO()
   serializeJson(doc, payload);
   http.begin(client, "http://cloudio.bhonofre.pt/devices");
   http.addHeader("Content-Type", "application/json");
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.error("%s [HTTP] POST %d" CR, tags::cloudIO, reconectCount);
 #endif
   // start connection and send HTTP header and body
@@ -248,7 +248,7 @@ void connectoToCloudIO()
   if (httpCode > 0)
   {
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s [HTTP] POST... code: %d" CR, tags::cloudIO, httpCode);
 #endif
     // file found at server
@@ -268,12 +268,12 @@ void connectoToCloudIO()
       topicAvailable.concat(getAtualConfig().chipId);
       topicAvailable.concat("/available");
       strlcpy(getAtualConfig().availableCloudIO, topicAvailable.c_str(), sizeof(getAtualConfig().availableCloudIO));
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, _user, _pw);
 #endif
       if (!error && _user && _pw)
       {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.error("%s SETUP MQTT CLOUD" CR, tags::cloudIO);
 #endif
         if (mqttClient.connected())
@@ -285,18 +285,18 @@ void connectoToCloudIO()
       }
       else
       {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.error("%s NO USER FOUND" CR, tags::cloudIO);
 #endif
       }
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.error("%s [HTTP] POST... Result: %s" CR, tags::cloudIO, payload.c_str());
 #endif
     }
     else
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.error("%s [HTTP] POST... failed, error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
       cloudIOReconnectTimer.once(10, cloudIoKeepAlive);
@@ -304,7 +304,7 @@ void connectoToCloudIO()
   }
   else
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s [HTTP] POST... error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
     cloudIOReconnectTimer.once(10, cloudIoKeepAlive);

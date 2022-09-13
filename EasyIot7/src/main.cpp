@@ -24,7 +24,7 @@ void checkInternalRoutines()
   }
   if (restartRequested())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
 
     Log.notice("%s Rebooting...", tags::system);
 #endif
@@ -32,7 +32,7 @@ void checkInternalRoutines()
   }
   if (loadDefaultsRequested())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Loading defaults...", tags::system);
 #endif
     LittleFS.format();
@@ -40,7 +40,7 @@ void checkInternalRoutines()
   }
   if (autoUpdateRequested())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
 #endif
     WiFiClient client;
@@ -48,17 +48,17 @@ void checkInternalRoutines()
     switch (ret)
     {
     case HTTP_UPDATE_FAILED:
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
 #endif
       break;
     case HTTP_UPDATE_NO_UPDATES:
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.notice("HTTP_UPDATE_NO_UPDATES");
 #endif
       break;
     case HTTP_UPDATE_OK:
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.notice("HTTP_UPDATE_OK");
 #endif
       break;
@@ -67,7 +67,7 @@ void checkInternalRoutines()
 
   if (reloadWifiRequested())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Loading wifi configuration...", tags::system);
 #endif
     reloadWiFiConfig();
@@ -84,7 +84,7 @@ void setup()
     LittleFS.format();
     ESP.restart();
   }
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
@@ -107,8 +107,8 @@ void loop()
   if (!autoUpdateRequested())
   {
     loop(getAtualSwitchesConfig());
-    loop(getAtualSensorsConfig());
-    // loopTime();
+   loop(getAtualSensorsConfig());
+    loopTime();
   }
   knx.loop();
 }

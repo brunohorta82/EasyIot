@@ -12,7 +12,7 @@ const char *TZ_INFO = "WET-0WEST-1,M3.5.0/01:00:00,M10.5.0/02:00:00";
 tm timeinfo;
 time_t now;
 unsigned long lastNTPtime = 0ul;
-//CONTROL FLAGS
+// CONTROL FLAGS
 static bool g_reboot = false;
 static bool g_loadDefaults = false;
 static bool g_autoUpdate = false;
@@ -215,7 +215,7 @@ void Config::save()
 {
   if (!LittleFS.begin())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s File storage can't start" CR, tags::config);
 #endif
     return;
@@ -224,7 +224,7 @@ void Config::save()
   this->save(file);
   file.close();
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s Config stored." CR, tags::config);
 #endif
 }
@@ -323,7 +323,7 @@ void Config::load(File &file)
   file.read((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
   if (firmware < VERSION)
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Migrate Firmware from %F to %F" CR, tags::config, firmware, VERSION);
 #endif
     firmware = VERSION;
@@ -335,7 +335,7 @@ void load(Config &config)
   setenv("TZ", TZ_INFO, 1);
   if (!LittleFS.begin())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s File storage can't start" CR, tags::config);
 #endif
     // We can't return here, or else the application will continue, thinking
@@ -344,10 +344,10 @@ void load(Config &config)
     // triggering the next if, where it'll load defaults.
     // If we do not initialize defaults, app will crash at MDNS refresh
     // when it attempts to create a service using Config::* variables.
-    //return;
+    // return;
     if (!LittleFS.format())
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.error("%s Unable to format Filesystem, please ensure you built firmware with filesystem support." CR, tags::config);
 #endif
     }
@@ -355,7 +355,7 @@ void load(Config &config)
 
   if (!LittleFS.exists(configFilenames::config))
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Default config loaded." CR, tags::config);
 #endif
     strlcpy(config.nodeId, String(ESP.getChipId()).c_str(), sizeof(config.nodeId));
@@ -377,7 +377,7 @@ void load(Config &config)
     config.knxMember = 1;
     config.firmware = VERSION;
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Config %s loaded." CR, tags::config, String(config.firmware).c_str());
 #endif
   }
@@ -386,7 +386,7 @@ void load(Config &config)
   config.load(file);
   file.close();
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
 }

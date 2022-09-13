@@ -82,7 +82,7 @@ void Sensors::load(File &file)
     switch (item.type)
     {
     case UNDEFINED:
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.errorln("%s Invalid type", tags::sensors);
 #endif
       continue;
@@ -126,7 +126,7 @@ void Sensors::load(File &file)
     case PZEM_004T_V03:
     {
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
-      SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
+      static SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
       item.pzemv03 = new PZEM004Tv30(softwareSerial);
       configPIN(item.tertiaryGpio, INPUT);
     }
@@ -201,7 +201,7 @@ void Sensors::save()
 {
   if (!LittleFS.begin())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s File storage can't start" CR, tags::sensors);
 #endif
     return;
@@ -210,7 +210,7 @@ void Sensors::save()
   File file = LittleFS.open(configFilenames::sensors, "w+");
   if (!file)
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s Failed to create file" CR, tags::sensors);
 #endif
     return;
@@ -218,7 +218,7 @@ void Sensors::save()
   this->save(file);
   file.close();
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s Config stored." CR, tags::sensors);
 #endif
 }
@@ -227,7 +227,7 @@ void load(Sensors &sensors)
 
   if (!LittleFS.exists(configFilenames::sensors))
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Default config loaded." CR, tags::sensors);
 #endif
     loadSensorsDefaults();
@@ -238,7 +238,7 @@ void load(Sensors &sensors)
   sensors.load(file);
   file.close();
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s Stored values was loaded." CR, tags::sensors);
 #endif
 }
@@ -325,7 +325,7 @@ void initSensorsHaDiscovery(const Sensors &sensors)
 void SensorT::updateFromJson(JsonObject doc)
 {
   removeFromHaDiscovery(*this);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s Update Environment" CR, tags::sensors);
 #endif
   type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
@@ -352,7 +352,7 @@ void SensorT::updateFromJson(JsonObject doc)
   switch (type)
   {
   case UNDEFINED:
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s Invalid type" CR, tags::sensors);
 #endif
     return;
@@ -402,7 +402,7 @@ void SensorT::updateFromJson(JsonObject doc)
   case PZEM_004T_V03:
   {
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
-    SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
+    static SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
     pzemv03 = new PZEM004Tv30(softwareSerial);
 
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
@@ -483,7 +483,7 @@ void loop(Sensors &sensors)
         String analogReadAsString = String(ldrRaw);
         auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
         publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s {\"illuminance\": %d }" CR, tags::sensors, ldrRaw);
 #endif
       }
@@ -502,7 +502,7 @@ void loop(Sensors &sensors)
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + (binaryStateAsString) + "}");
         publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
       }
@@ -518,7 +518,7 @@ void loop(Sensors &sensors)
         String binaryStateAsString = String(binaryState);
         auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
         publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
       }
@@ -539,7 +539,7 @@ void loop(Sensors &sensors)
           String humidityAsString = String(ss.humidity);
           auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
           publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
           Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
 #endif
         }
@@ -565,7 +565,7 @@ void loop(Sensors &sensors)
           String readings = "";
           serializeJson(doc, readings);
           publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
           Log.notice("%s %s " CR, tags::sensors, readings.c_str());
 #endif
         }
@@ -595,7 +595,7 @@ void loop(Sensors &sensors)
 
         if (v < 0.0)
         {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
           Log.notice("%s PZEM ERROR" CR, tags::sensors);
 #endif
         }
@@ -606,7 +606,7 @@ void loop(Sensors &sensors)
           printOnDisplay(v, i, p, c);
 #endif
           publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
           Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
 #endif
         }
@@ -615,6 +615,27 @@ void loop(Sensors &sensors)
     case PZEM_004T_V03:
       if (ss.lastRead + ss.delayRead < millis())
       {
+        time_t rawtime;
+        struct tm *timeinfo;
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        char buffer[80];
+        strftime(buffer, 80, "%Y%m%d", timeinfo);
+        File file = LittleFS.open("/lastday.log", "r");
+        String lastDate = "";
+        if (file.available())
+        {
+          lastDate = file.readString();
+          file.close();
+        }
+        if (lastDate.compareTo(String(buffer)) != 0)
+        {
+          ss.pzemv03->resetEnergy();
+          file = LittleFS.open("/lastday.log", "w");
+          file.print(buffer);
+          file.close();
+        }
+
         ss.lastRead = millis();
         float v = ss.pzemv03->voltage();
         float i = ss.pzemv03->current();
@@ -632,7 +653,7 @@ void loop(Sensors &sensors)
 
         if (isnan(v))
         {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
           Log.notice("%s PZEM ERROR" CR, tags::sensors);
 #endif
         }
@@ -643,7 +664,7 @@ void loop(Sensors &sensors)
           printOnDisplay(v, i, p, c);
 #endif
           publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
           Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
         }
@@ -667,7 +688,7 @@ void loop(Sensors &sensors)
           uint8_t error = ss.pzemModbus->ReceiveBuffer(buffer, 8);
           if (error)
           {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
             Log.notice("%s PZEM ERROR" CR, tags::sensors);
 #endif
           }
@@ -682,7 +703,7 @@ void loop(Sensors &sensors)
             printOnDisplay(v, i, p, c);
 #endif
             publishReadings(readings, ss);
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
             Log.notice("%s %s" CR, tags::sensors, readings.c_str());
 #endif
           }

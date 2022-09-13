@@ -157,89 +157,8 @@ var WORDS_EN = {
     "apikey": "API Key"
 
 };
-var WORDS_PT = {
-    "gate":"Portão",
-    "pin-state-a":"Pino Estado A",
-    "pin-state-b":"Pino Estado B",
-    "pin-out-3": "Pino saída c",
-    "update-from-server": "NOVA ATUALIZAÇÃO",
-    "node": "NÓ",
-    "up": "Subida",
-    "down": "Descida",
-    "group": "Grupo",
-    "integrations": "INTEGRAÇÕES",
-    "sensors": "Sensores",
-    "integrate": "Integrar",
-    "released": "Libertar",
-    "reading-interval": "Leituras a cada",
-    "update": "ATUALIZAR",
-    "features": "FUNÇÕES",
-    "current-version": "Versão atual",
-    "new-file": "Escolher o ficheiro da nova versão",
-    "install-new-version": "Atualizar automáticamente para a versão ",
-    "install-file-version": "Instalar versão do ficheiro",
-    "version": "Versão",
-    "save": "Guardar",
-    "choose": "escolher",
-    "auto-state": "Estádo automático",
-    "clean-fields": "Limpar todos os campos",
-    "username": "Utilizador",
-    "password": "Palavra Passe",
-    "yes": "Sim",
-    "no": "Não",
-    "disconnected": "desligado",
-    "dconnected": "ligado",
-    "netmask": "Máscara de Rede",
-    "system": "Sistema",
-    "name": "Nome",
-    "in": "em",
-    "seconds": "segundos",
-    "restart": "Reiniciar",
-    "reset-factory": "Carregar Configuração de Fábrica",
-    "switches": "Interruptores",
-    "remove": "Remover",
-    "new": "Criar Novo",
-    "family": "Familia",
-    "switch": "Interruptor",
-    "light": "Luz",
-    "cover": "Estore",
-    "garage": "Garagem",
-    "normal": "Normal",
-    "push": "Pressão",
-    "dual-push": "Duplo Pressão",
-    "dual-normal": "Duplo Normal",
-    "mode": "Modo",
-    "relay-mqtt": "Relé / MQTT",
-    "mqtt": "MQTT",
-    "control": "Saída",
-    "pin-in-a": "Pino Entrada a",
-    "pin-in-b": "Pino Entrada b",
-    "pin-in-c": "Pino Entrada c",
-    "pin-out-1": "Pino Saída a",
-    "pin-out-2": "Pino Saída b",
-    "none": "Não atribuido",
-    "retain-message": "Reter Mensagens",
-    "command": "Comando",
-    "state": "Estado",
-    "on": "Ligado",
-    "off": "Desligado",
-    "open": "Aberto",
-    "close": "Fechado",
-    "stop": "Parar",
-    "time": "Tempo",
-    "17": "A0",
-    "line": "Linha",
-    "member": "Membro",
-    "address": "Endereço",
-    "prefix": "Prefixo",
-    "apikey": "Chave da API"
-};
-
 function loadsLanguage(lang) {
-    if (lang === null) {
-        window.navigator.language.startsWith("en") ? lang = "EN" : lang = "PT";
-    }
-    localStorage.setItem('lang', lang);
+    localStorage.setItem('lang', "EN");
     $('span[class^="lang"]').each(function () {
         var langVar = (this.className).replace('lang-', '');
         var text = window['WORDS_' + lang][langVar];
@@ -1103,7 +1022,7 @@ function systemStatus() {
         }, error: function () {
             $('#wifi-signal').text("0%");
         },
-        timeout: 1000
+        timeout: 2000
     });
 }
 

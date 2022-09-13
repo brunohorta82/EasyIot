@@ -45,7 +45,7 @@ void infoWifi()
   if (WiFi.isConnected())
   {
     connectedOn = millis();
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s MODE STA -------------------------------------" CR, tags::wifi);
     Log.notice("%s SSID  %s  " CR, tags::wifi, WiFi.SSID().c_str());
     Log.notice("%s CH    %d   " CR, tags::wifi, WiFi.channel());
@@ -62,7 +62,7 @@ void infoWifi()
 
   if (WiFi.getMode() & WIFI_AP)
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s MODE AP --------------------------------------" CR, tags::wifi);
     Log.notice("%s SSID %s " CR, tags::wifi, jw.getAPSSID().c_str());
     Log.notice("%s IP  %s  " CR, tags::wifi, WiFi.softAPIP().toString().c_str());
@@ -82,13 +82,13 @@ void scanNewWifiNetworks()
   unsigned char result = WiFi.scanNetworks();
   if (result == WIFI_SCAN_FAILED)
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Scan Failed" CR, tags::wifi);
 #endif
   }
   else if (result == 0)
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s No networks found " CR, tags::wifi);
 #endif
   }
@@ -108,7 +108,7 @@ void scanNewWifiNetworks()
       WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
       object.add(ssid_scan);
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.notice("%s Network found %s" CR, tags::wifi, ssid_scan.c_str());
 #endif
     }
@@ -186,7 +186,7 @@ void refreshMDNS(const char *lastName)
   }
   else
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s MDNS Error" CR, tags::wifi);
 #endif
   }

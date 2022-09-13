@@ -348,7 +348,7 @@ void loadAPI()
       [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
       {
     if(!index){
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
 #endif
       Update.runAsync(true);
@@ -363,7 +363,7 @@ void loadAPI()
     }
     if(final){
       if(Update.end(true)){
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s Update Success: %d" CR, tags::system, index+len);
 #endif
         requestRestart();
@@ -461,19 +461,6 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["stateControl"] = getAtualSwitchesConfig().rotate(request->arg("id").c_str());
-    response->setLength();
-    request->send(response); });
-
-  server.on("/reset-pzem", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-   
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonVariant &root = response->getRoot();
-    getAtualSensorsConfig().resetAll();
     response->setLength();
     request->send(response); });
 

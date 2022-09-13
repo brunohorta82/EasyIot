@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "LittleFS.h"
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
 

@@ -15,13 +15,13 @@ void processMqttAction(const char *topic, const char *payload)
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Message received" CR, tags::mqtt);
 #endif
     char *payload_as_string = (char *)malloc(length + 1);
     memcpy(payload_as_string, (char *)payload, length);
     payload_as_string[length] = 0;
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
     Log.notice("%s Payload: " CR, tags::mqtt, payload_as_string);
 #endif
@@ -72,12 +72,12 @@ boolean reconnect()
 
     if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
         return false;
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 #endif
     if (mqttClient.connect(getAtualConfig().chipId, String(getAtualConfig().mqttUsername).c_str(), String(getAtualConfig().mqttPassword).c_str(), getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, true))
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 #endif
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
@@ -101,7 +101,7 @@ void setupMQTT()
     {
         return;
     }
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Setup" CR, tags::mqtt);
 #endif
     if (mqttConnected())
@@ -124,7 +124,7 @@ void loopMqtt()
         long now = millis();
         if (now - lastReconnectAttempt > 8000)
         {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
             Log.notice("%s Disconnected" CR, tags::mqtt);
 #endif
             lastReconnectAttempt = now;
@@ -144,14 +144,14 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
 {
     if (strlen(getAtualConfig().mqttIpDns) == 0)
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.warning("%s Setup required to publish messages" CR, tags::mqtt);
 #endif
         return;
     }
     if (!mqttConnected())
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.warning("%s Connection Required" CR, tags::mqtt);
 #endif
         return;
@@ -161,7 +161,7 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
     {
         retries++;
     }
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     if (retries < 3)
     {
 
@@ -183,14 +183,14 @@ void subscribeOnMqtt(const char *topic)
 {
     if (strlen(getAtualConfig().mqttIpDns) == 0)
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.warning("%s Setup required to subscrive messages" CR, tags::mqtt);
 #endif
         return;
     }
     if (!mqttConnected())
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.warning("%s Required Mqtt connection" CR, tags::mqtt);
 #endif
         return;
@@ -201,7 +201,7 @@ void unsubscribeOnMqtt(const char *topic)
 {
     if (mqttConnected())
     {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s Unsubscribe on topic %s " CR, tags::mqtt, topic);
 #endif
         mqttClient.unsubscribe(topic);

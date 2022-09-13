@@ -294,7 +294,7 @@ void SwitchT::configPins()
     debouncerSecondary->attach(secondaryGpio, secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
     debouncerSecondary->interval(5);
   }
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s lastPrimaryGpioState %d" CR, tags::switches, lastPrimaryGpioState);
   Log.notice("%s lastSecondaryGpioState %d" CR, tags::switches, lastSecondaryGpioState);
 #endif
@@ -353,7 +353,7 @@ void Switches::save()
 {
   if (!LittleFS.begin())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s File storage can't start" CR, tags::switches);
 #endif
     return;
@@ -536,7 +536,7 @@ void load(Switches &switches)
 
   if (!LittleFS.exists(configFilenames::switches))
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Default config loaded." CR, tags::switches);
 #endif
     loadSwitchDefaults();
@@ -546,7 +546,7 @@ void load(Switches &switches)
   switches.load(file);
   file.close();
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s Stored values was loaded." CR, tags::switches);
 #endif
 }
@@ -623,7 +623,7 @@ const char *Switches::rotate(const char *id)
 const void SwitchT::notifyState(bool dirty)
 {
   const String currentStateToSend = getCurrentState();
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
 #endif
   if (mqttSupport)
@@ -647,7 +647,7 @@ const char *SwitchT::rotateState()
   int idx = findPoolIdx("", statePoolIdx, family);
   if (idx < 0)
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.error("%s Error on rotate" CR, tags::switches);
 #endif
     return "ERROR";
@@ -672,7 +672,7 @@ void timedOn(unsigned int gpio, bool inverted, unsigned onTime)
 }
 const String SwitchT::changeState(const char *state, const char *origin)
 {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::switches, name);
   Log.notice("%s State:     %s" CR, tags::switches, state);
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
@@ -822,7 +822,7 @@ void loop(Switches &switches)
 {
   if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
   {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
     Log.notice("%s AUTO SAVE" CR, tags::switches);
 #endif
     getAtualSwitchesConfig().save();
@@ -853,11 +853,11 @@ void loop(Switches &switches)
     case SWITCH:
       if (sw.primaryGpio != constantsConfig::noGPIO && sw.lastPrimaryGpioState != primaryGpioEvent)
       {
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s 1 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches, sw.lastPrimaryGpioState, primaryGpioEvent);
 #endif
         sw.rotateState();
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
         Log.notice("%s 2 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches, sw.lastPrimaryGpioState, primaryGpioEvent);
 #endif
       }
@@ -948,7 +948,7 @@ void loop(Switches &switches)
     if (stateTimeout(sw))
     {
 
-#ifdef DEBUG
+#ifdef DEBUG_ONOFRE
       Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, STATES_POLL[sw.statePoolIdx].c_str());
 #endif
       sw.changeState(STATES_POLL[findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.family)].c_str(), "AUTO_TIMEOUT");
