@@ -659,7 +659,7 @@ void loop(Sensors &sensors)
         }
         else
         {
-          auto readings = String("{\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+          auto readings = String("{\"lastreset\":" + String(buffer) + ",\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
 #if WITH_DISPLAY
           printOnDisplay(v, i, p, c);
 #endif
