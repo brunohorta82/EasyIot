@@ -100,7 +100,6 @@ void addToHaDiscovery(const SensorT &s)
     object["value_template"] = "{{value_json.temperature}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-
     delay(100);
     objectStr = "";
     object["unique_id"] = String(s.id) + "H";
@@ -109,7 +108,6 @@ void addToHaDiscovery(const SensorT &s)
     object["value_template"] = "{{value_json.humidity}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
-
     break;
   case DS18B20:
     for (int i = 0; i < s.oneWireSensorsCount; i++)
@@ -154,8 +152,9 @@ void addToHaDiscovery(const SensorT &s)
   case PZEM_004T:
     object["name"] = String(s.name) + " Power";
     object["unit_of_measurement"] = "W";
+    object["device_class"] = "energy";
+    object["state_class"] = "measurement";
     object["unique_id"] = "P" + String(s.secondaryGpio) + chip;
-    object["device_class"] = "power";
     object["value_template"] = "{{value_json.power}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PW" + String(s.id) + chip + "/config").c_str(), objectStr.c_str(), false);
@@ -178,7 +177,6 @@ void addToHaDiscovery(const SensorT &s)
     delay(200);
     object["name"] = String(s.name) + " Energy";
     object["unit_of_measurement"] = "kWh";
-    object["device_class"] = "energy";
     object["unique_id"] = "E" + String(s.secondaryGpio) + chip;
     object["state_class"] = "total_increasing";
     object["value_template"] = "{{value_json.energy}}";
@@ -191,6 +189,7 @@ void addToHaDiscovery(const SensorT &s)
     object["unique_id"] = "P" + String(s.secondaryGpio) + chip;
     object["unit_of_measurement"] = "W";
     object["device_class"] = "energy";
+    object["state_class"] = "measurement";
     object["value_template"] = "{{value_json.power}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PW" + String(s.secondaryGpio) + chip + "/config").c_str(), objectStr.c_str(), false);
@@ -229,15 +228,13 @@ void addToHaDiscovery(const SensorT &s)
     object["name"] = String(s.name) + " Energy";
     object["unique_id"] = "E" + String(s.secondaryGpio) + chip;
     object["unit_of_measurement"] = "kWh";
-    object["device_class"] = "energy";
-    object["state_class"] = "total";
+    object["state_class"] = "total_increasing";
     object["value_template"] = "{{value_json.energy}}";
     objectStr = "";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/EN" + String(s.secondaryGpio) + chip + "/config").c_str(), objectStr.c_str(), false);
     delay(200);
     break;
-
   default:
     break;
   }
