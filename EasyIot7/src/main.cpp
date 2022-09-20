@@ -108,8 +108,8 @@ void loop()
   loopMqtt();
   if (!autoUpdateRequested())
   {
-    // loop(getAtualSwitchesConfig());
-    // loop(getAtualSensorsConfig());
+    loop(getAtualSwitchesConfig());
+    loop(getAtualSensorsConfig());
     loopTime();
   }
   // TDOD knx.loop();
