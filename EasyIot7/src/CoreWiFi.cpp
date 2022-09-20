@@ -23,7 +23,6 @@ void reloadWiFiConfig()
   jw.setHostname(getAtualConfig().nodeId);
   jw.cleanNetworks();
   jw.setSoftAP(getApName().c_str(), getAtualConfig().apSecret);
-  jw.addNetwork("IOTBH", "IOT2017@");
   if (getAtualConfig().staticIp)
   {
     jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret, getAtualConfig().wifiIp, getAtualConfig().wifiGw, getAtualConfig().wifiMask, getAtualConfig().wifiGw, true);
