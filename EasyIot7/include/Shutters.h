@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "Switches.h"
 #include "ShuttersOperation.hpp"
-
+#include <vector>
 #include "Shutters/StoredState.hpp"
 
 // #define DEBUG_ONOFRE
@@ -20,26 +20,26 @@ class Shutters;
 
 namespace ShuttersInternal
 {
-const uint16_t SAFETY_DELAY = 1 * 1000;
-const uint8_t LEVELS = 100;
+  const uint16_t SAFETY_DELAY = 1 * 1000;
+  const uint8_t LEVELS = 100;
 
-enum State : uint8_t
-{
-  STATE_IDLE,        // not moving
-  STATE_RESETTING,   // when state not known, goes to 0
-  STATE_TARGETING,   // when going to target
-  STATE_NORMALIZING, // when target changed, goes to next known level
-  STATE_CALIBRATING  // when 0 or 100, to ensure actually at the end
-};
-enum Direction : bool
-{
-  DIRECTION_DOWN,
-  DIRECTION_UP
-};
+  enum State : uint8_t
+  {
+    STATE_IDLE,        // not moving
+    STATE_RESETTING,   // when state not known, goes to 0
+    STATE_TARGETING,   // when going to target
+    STATE_NORMALIZING, // when target changed, goes to next known level
+    STATE_CALIBRATING  // when 0 or 100, to ensure actually at the end
+  };
+  enum Direction : bool
+  {
+    DIRECTION_DOWN,
+    DIRECTION_UP
+  };
 
-typedef void (*OperationHandler)(::Shutters *s, ::ShuttersOperation operation);
-typedef void (*WriteStateHandler)(::Shutters *s, const char *state, uint8_t length);
-typedef void (*LevelReachedCallback)(::Shutters *s, uint8_t level);
+  typedef void (*OperationHandler)(::Shutters *s, ::ShuttersOperation operation);
+  typedef void (*WriteStateHandler)(::Shutters *s, const char *state, uint8_t length);
+  typedef void (*LevelReachedCallback)(::Shutters *s, uint8_t level);
 } // namespace ShuttersInternal
 
 class Shutters

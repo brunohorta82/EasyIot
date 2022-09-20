@@ -5,7 +5,7 @@
 #include "WebServer.h"
 #include "Config.h"
 #include "Mqtt.h"
-#include "WiFi.h"
+#include "CoreWiFi.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include <PZEM004T.h>
@@ -98,7 +98,7 @@ void Sensors::load(File &file)
     case REED_SWITCH_NC:
     case REED_SWITCH_NO:
       strlcpy(item.deviceClass, "ALARM", sizeof(item.deviceClass));
-      configPIN(item.primaryGpio, item.primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+      configPIN(item.primaryGpio, INPUT_PULLUP);
       break;
     case DHT_11:
     case DHT_21:
@@ -126,8 +126,14 @@ void Sensors::load(File &file)
     case PZEM_004T_V03:
     {
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+
+#if defined(ESP8266)
       static SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
       item.pzemv03 = new PZEM004Tv30(softwareSerial);
+#endif
+#if defined(ESP32)
+      item.pzemv03 = new PZEM004Tv30(Serial2, item.primaryGpio, item.secondaryGpio);
+#endif
       configPIN(item.tertiaryGpio, INPUT);
     }
 #if WITH_DISPLAY
@@ -371,13 +377,13 @@ void SensorT::updateFromJson(JsonObject doc)
     break;
   case REED_SWITCH_NC:
     strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
-    configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    configPIN(primaryGpio, INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":1}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NO:
     strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
-    configPIN(primaryGpio, primaryGpio == 16 ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    configPIN(primaryGpio, INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":0}", sizeof(mqttPayload));
     break;
@@ -402,9 +408,14 @@ void SensorT::updateFromJson(JsonObject doc)
   case PZEM_004T_V03:
   {
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
+#if defined(ESP8266)
     static SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
     pzemv03 = new PZEM004Tv30(softwareSerial);
+#endif
+#if defined(ESP32)
 
+    pzemv03 = new PZEM004Tv30(Serial2, primaryGpio, secondaryGpio);
+#endif
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
   }
   break;
@@ -630,10 +641,13 @@ void loop(Sensors &sensors)
         }
         if (lastDate.compareTo(String(buffer)) != 0)
         {
-          ss.pzemv03->resetEnergy();
-          file = LittleFS.open("/lastday.log", "w");
-          file.print(buffer);
-          file.close();
+          if (ss.pzemv03->resetEnergy())
+          {
+            file = LittleFS.open("/lastday.log", "w");
+            file.print(buffer);
+            file.close();
+            continue;
+          }
         }
 
         ss.lastRead = millis();

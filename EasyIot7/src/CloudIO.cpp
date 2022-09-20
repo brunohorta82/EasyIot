@@ -1,12 +1,17 @@
 #include "CloudIO.h"
 #include "Config.h"
-#include <ESP8266WiFi.h>
+#include "WiFi.h"
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
 #include "constants.h"
 #include "Switches.h"
 #include "Sensors.h"
+#ifdef ESP8266
 #include <ESP8266HTTPClient.h>
+#endif
+#ifdef ESP32
+#include <HTTPClient.h>
+#endif
 AsyncMqttClient mqttClient;
 Ticker mqttReconnectTimer;
 Ticker cloudIOReconnectTimer;

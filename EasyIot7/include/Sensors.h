@@ -5,7 +5,7 @@
 #include "FS.h"
 #include "constants.h"
 #include <ArduinoJson.h>
-
+#include <vector>
 class PZEM004T;
 class PZEM004Tv30;
 class DHT_nonblocking;

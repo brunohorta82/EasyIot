@@ -76,4 +76,5 @@ bool readPIN(uint8_t pin);
 void generateId(String &id, const String &name, int familyCode, size_t maxSize);
 void loopTime();
 long getTime();
+String getChipId();
 #endif

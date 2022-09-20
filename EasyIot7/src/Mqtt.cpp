@@ -2,9 +2,8 @@
 #include "Config.h"
 #include <PubSubClient.h>
 #include "Switches.h"
-#include "WiFi.h"
+#include "CoreWiFi.h"
 #include "constants.h"
-#include "ESP8266WiFi.h"
 #include "Discovery.h"
 
 static WiFiClient espClient;
@@ -51,7 +50,7 @@ String getBaseTopic()
         topic.concat(getAtualConfig().mqttUsername);
     }
     topic.concat("/");
-    topic.concat(ESP.getChipId());
+    topic.concat(getChipId());
     return topic;
 }
 String getAvailableTopic()
@@ -81,9 +80,9 @@ boolean reconnect()
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 #endif
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
-        publishOnMqtt(getConfigStatusTopic().c_str(), "{\"firmware\":7.0}", true); //TODO generate simple config status
+        publishOnMqtt(getConfigStatusTopic().c_str(), "{\"firmware\":7.0}", true); // TODO generate simple config status
         subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
-        //Init Switches Subscritions and publish de current state
+        // Init Switches Subscritions and publish de current state
         refreshMDNS(getAtualConfig().nodeId);
         for (auto &sw : getAtualSwitchesConfig().items)
         {

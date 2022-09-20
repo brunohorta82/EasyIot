@@ -1,9 +1,10 @@
 #include "Config.h"
 #include "constants.h"
-#include "WiFi.h"
-#include "ESP8266WiFi.h"
+#include "CoreWiFi.h"
 #include "Mqtt.h"
+#ifdef ESP8266
 #include <esp-knx-ip.h>
+#endif
 #include "WebServer.h"
 #include "Switches.h"
 #include "Sensors.h"
@@ -135,6 +136,15 @@ bool autoUpdateRequested()
 
 void configPIN(uint8_t pin, uint8_t mode)
 {
+#ifdef ESP8266
+  if (pin == 16)
+  {
+    if (mode == INPUT_PULLUP)
+    {
+      mode = INPUT_PULLDOWN_16
+    }
+  }
+#endif
   if (pin == constantsConfig::noGPIO)
   {
     return;
@@ -319,7 +329,7 @@ void Config::load(File &file)
   file.read((uint8_t *)&knxArea, sizeof(knxArea));
   file.read((uint8_t *)&knxLine, sizeof(knxLine));
   file.read((uint8_t *)&knxMember, sizeof(knxMember));
-  strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
+  strlcpy(chipId, getChipId().c_str(), sizeof(chipId));
   file.read((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
   if (firmware < VERSION)
   {
@@ -358,7 +368,7 @@ void load(Config &config)
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Default config loaded." CR, tags::config);
 #endif
-    strlcpy(config.nodeId, String(ESP.getChipId()).c_str(), sizeof(config.nodeId));
+    strlcpy(config.nodeId, getChipId().c_str(), sizeof(config.nodeId));
     config.mqttPort = constantsMqtt::defaultPort;
     config.staticIp = false;
     strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
@@ -390,14 +400,28 @@ void load(Config &config)
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
 }
-
+String getChipId()
+{
+#ifdef ESP8266
+  return String(ESP.getChipId());
+#endif
+#ifdef ESP32
+  uint32_t chipId = 0;
+  for (int i = 0; i < 17; i = i + 8)
+  {
+    chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+  }
+  return String(chipId);
+#endif
+}
 Config &Config::updateFromJson(JsonObject &root)
 {
   char lastNodeId[32];
   strlcpy(lastNodeId, getAtualConfig().nodeId, sizeof(lastNodeId));
   bool reloadWifi = staticIp != root["staticIp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
-  String n_name = root["nodeId"] | String(ESP.getChipId());
+  String chipIdStr = getChipId();
+  String n_name = root["nodeId"] | chipIdStr;
   normalize(n_name);
   strlcpy(nodeId, n_name.c_str(), sizeof(nodeId));
   strlcpy(mqttIpDns, root["mqttIpDns"] | "", sizeof(mqttIpDns));
@@ -411,7 +435,7 @@ Config &Config::updateFromJson(JsonObject &root)
   knxLine = static_cast<uint8_t>(root["knxLine"] | 0);
   knxMember = static_cast<uint8_t>(root["knxMember"] | 0);
   emoncmsServerStr.replace("https", "http");
-  knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
+  // TODOknx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   while (emoncmsServerStr.endsWith("/"))
   {
 

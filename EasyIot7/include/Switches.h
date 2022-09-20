@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "Arduino.h"
 #include "ArduinoJson.h"
+#include <vector>
 #include "FS.h"
 static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadOpen, constanstsSwitch::payloadClose};
 class Bounce;

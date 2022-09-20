@@ -1,11 +1,9 @@
-#include "WiFi.h"
+#include "CoreWiFi.h"
 #include "constants.h"
 #include <JustWifi.h>
 #include "Config.h"
 #include "WebServer.h"
 #include "Mqtt.h"
-#include <ESP8266mDNS.h>
-#include <esp-knx-ip.h>
 #include "CloudIO.h"
 int retryCount = 0;
 unsigned long connectedOn = 0ul;
@@ -17,7 +15,7 @@ String getApName()
 }
 bool wifiConnected()
 {
-  return jw.connected();
+  return jw.connectable();
 }
 void reloadWiFiConfig()
 {
@@ -55,7 +53,7 @@ void infoWifi()
     Log.notice("%s GW    %s " CR, tags::wifi, WiFi.gatewayIP().toString().c_str());
     Log.notice("%s MASK  %s " CR, tags::wifi, WiFi.subnetMask().toString().c_str());
     Log.notice("%s DNS   %s " CR, tags::wifi, WiFi.dnsIP().toString().c_str());
-    Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
+    // TODO  Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
     Log.notice("----------------------------------------------" CR);
 #endif
   }
@@ -105,7 +103,7 @@ void scanNewWifiNetworks()
       uint8_t *BSSID_scan;
       int32_t chan_scan;
       bool hidden_scan;
-      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
+      // TODO WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
       object.add(ssid_scan);
 
 #ifdef DEBUG_ONOFRE
@@ -159,7 +157,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
       getAtualConfig().save();
     }
 
-    knx.start(nullptr);
+    // tODO knx.start(nullptr);
     infoWifi();
     connectoToCloudIO();
     setupWebserverAsync();
@@ -174,22 +172,22 @@ void infoCallback(justwifi_messages_t code, char *parameter)
 
 void refreshMDNS(const char *lastName)
 {
-  MDNS.removeService(lastName, "bhonofre", "tcp");
-  MDNS.close();
-  if (MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10))
-  {
-    MDNS.addService("bhonofre", "tcp", 80);
-    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(ESP.getChipId()));
-    MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
-    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
-    MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
-  }
-  else
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s MDNS Error" CR, tags::wifi);
-#endif
-  }
+  // TODOMDNS.removeService(lastName, "bhonofre", "tcp");
+  // TODO MDNS.close();
+  /* if (MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10))
+   {
+     MDNS.addService("bhonofre", "tcp", 80);
+     MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(ESP.getChipId()));
+     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
+     MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
+     MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
+   }
+   else
+   {
+ #ifdef DEBUG_ONOFRE
+     Log.error("%s MDNS Error" CR, tags::wifi);
+ #endif
+   }*/
 }
 void mdnsCallback(justwifi_messages_t code, char *parameter)
 {
@@ -201,7 +199,7 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
 }
 void setupWiFi()
 {
-  WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+  // TODO WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
@@ -224,6 +222,6 @@ void loopWiFi()
     dissableAP();
   }
   jw.loop();
-  MDNS.update();
+  // TODO MDNS.update();
   webserverServicesLoop();
 }

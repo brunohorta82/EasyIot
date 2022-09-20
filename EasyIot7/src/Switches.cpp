@@ -5,7 +5,9 @@
 #include "Config.h"
 #include "Mqtt.h"
 #include "WebRequests.h"
+#ifdef ESP8266
 #include <esp-knx-ip.h>
+#endif
 #include <Bounce2.h>
 #include "CloudIO.h"
 #include <Shutters.h>
@@ -284,14 +286,14 @@ void SwitchT::configPins()
   if (primaryGpio != constantsConfig::noGPIO)
   {
     debouncerPrimary = new Bounce();
-    debouncerPrimary->attach(primaryGpio, primaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    debouncerPrimary->attach(primaryGpio, INPUT_PULLUP);
     debouncerPrimary->interval(5);
   }
 
   if (secondaryGpio != constantsConfig::noGPIO)
   {
     debouncerSecondary = new Bounce();
-    debouncerSecondary->attach(secondaryGpio, secondaryGpio == 16u ? INPUT_PULLDOWN_16 : INPUT_PULLUP);
+    debouncerSecondary->attach(secondaryGpio, INPUT_PULLUP);
     debouncerSecondary->interval(5);
   }
 #ifdef DEBUG_ONOFRE
@@ -365,7 +367,7 @@ void Switches::save()
   file.close();
 }
 
-void switchesCallback(message_t const &msg, void *arg)
+/*TODO void switchesCallback(message_t const &msg, void *arg)
 {
   auto s = static_cast<SwitchT *>(arg);
   switch (msg.ct)
@@ -426,10 +428,10 @@ void allwitchesCallback(message_t const &msg, void *arg)
   }
   };
 }
-
+*/
 void Switches::load(File &file)
 {
-  knx.start(nullptr);
+  // TODO  knx.start(nullptr);
   auto n_items = items.size();
   file.read((uint8_t *)&n_items, sizeof(n_items));
   items.clear();
@@ -443,11 +445,11 @@ void Switches::load(File &file)
     {
       if (!globalKnxLevelThreeAssign)
       {
-        knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+        // TODO  knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
         globalKnxLevelThreeAssign = true;
       }
-      item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
-      item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+      // TODO  item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
+      // TODO  item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
     }
   }
 }
@@ -639,7 +641,7 @@ const void SwitchT::notifyState(bool dirty)
     getAtualSwitchesConfig().lastChange = millis();
   if (knxNotifyGroup && knxSupport)
   {
-    knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+    // TODO knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
   }
 }
 const char *SwitchT::rotateState()

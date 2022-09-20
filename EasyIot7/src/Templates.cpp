@@ -7,7 +7,7 @@
 #include "Config.h"
 void loadDefaultConfig()
 {
-    strlcpy(getAtualConfig().nodeId, String(ESP.getChipId()).c_str(), sizeof(getAtualConfig().nodeId));
+    strlcpy(getAtualConfig().nodeId, getChipId().c_str(), sizeof(getAtualConfig().nodeId));
     strlcpy(getAtualConfig().chipId, getAtualConfig().nodeId, sizeof(getAtualConfig().chipId));
     getAtualConfig().mqttPort = constantsMqtt::defaultPort;
     getAtualConfig().staticIp = false;

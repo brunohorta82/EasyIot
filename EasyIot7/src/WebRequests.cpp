@@ -1,12 +1,13 @@
 #include "WebRequests.h"
 #include "Config.h"
 #include "constants.h"
-#include "ESP8266WiFi.h"
-#include <ESP8266HTTPClient.h>
+#include "CoreWiFi.h"
+
 #include "Sensors.h"
 #include "Switches.h"
 #include "ArduinoJson.h"
-
+#include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 void publishOnEmoncms(SensorT &sensor, String &readings)
 {
     if (!sensor.emoncmsSupport)

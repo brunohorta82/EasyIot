@@ -9,12 +9,11 @@
 #include "Sensors.h"
 #include "ArduinoJson.h"
 #include <ESPAsyncWebServer.h>
-#include <ESPAsyncTCP.h>
 #include <FS.h>
 #include "Mqtt.h"
 #include "CloudIO.h"
 #include <Config.h>
-#include "WiFi.h"
+#include "CoreWiFi.h"
 #include <Ticker.h>
 #define REALM "onofre"
 extern "C" uint32_t _FS_start;
@@ -124,7 +123,7 @@ public:
           rssiQ += quality;
           item.replace("{v}", WiFi.SSID(indices[i]));
           item.replace("{r}", rssiQ);
-          if (WiFi.encryptionType(indices[i]) != ENC_TYPE_NONE)
+          if (WiFi.encryptionType(indices[i]) != WIFI_AUTH_OPEN)
           {
             item.replace("{i}", "l");
           }
@@ -331,46 +330,46 @@ void loadAPI()
     response->setLength();
     request->send(response);
     requestAutoUpdate(); });
-  server.on(
-      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
-      {
-#if WEB_SECURE_ON
-      if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword,REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    bool error = Update.hasError();
-    if(error){
-      requestRestart();
-      }
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Update</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update successfully, will be redirected automatically in 20 seconds. Please Wait...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update failed, it may be necessary to manually reset the device and try again.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
-    response->addHeader("Connection", "close");
-    request->send(response); },
-      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-      {
-    if(!index){
-#ifdef DEBUG_ONOFRE
-      Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
-#endif
-      Update.runAsync(true);
-      if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
-        Update.printError(Serial);
-      }
-    }
-    if(!Update.hasError()){
-      if(Update.write(data, len) != len){
-        Update.printError(Serial);
-      }
-    }
-    if(final){
-      if(Update.end(true)){
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s Update Success: %d" CR, tags::system, index+len);
-#endif
-        requestRestart();
-      } else {
+  /* server.on(
+       "/update", HTTP_POST, [](AsyncWebServerRequest *request)
+       {
+ #if WEB_SECURE_ON
+       if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword,REALM))
+       return request->requestAuthentication(REALM);
+ #endif
+     bool error = Update.hasError();
+     if(error){
+       requestRestart();
+       }
+     AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Update</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update successfully, will be redirected automatically in 20 seconds. Please Wait...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update failed, it may be necessary to manually reset the device and try again.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
+     response->addHeader("Connection", "close");
+     request->send(response); },
+       [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+       {
+     if(!index){
+ #ifdef DEBUG_ONOFRE
+       Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
+ #endif
+       Update.runAsync(true);
+       if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
+         Update.printError(Serial);
+       }
+     }
+     if(!Update.hasError()){
+       if(Update.write(data, len) != len){
+         Update.printError(Serial);
+       }
+     }
+     if(final){
+       if(Update.end(true)){
+ #ifdef DEBUG_ONOFRE
+         Log.notice("%s Update Success: %d" CR, tags::system, index+len);
+ #endif
          requestRestart();
-      }
-    } });
+       } else {
+          requestRestart();
+       }
+     } });*/
 
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request)
             {

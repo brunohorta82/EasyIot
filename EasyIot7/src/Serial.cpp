@@ -22,7 +22,9 @@
 // must use some from the Espressif SDK as well
 extern "C"
 {
+#ifdef ESP8266
 #include "gpio.h"
+#endif
 }
 
 #include <Serial.h>
