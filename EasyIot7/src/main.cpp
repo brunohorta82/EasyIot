@@ -95,7 +95,7 @@ void setup()
   load(getAtualSwitchesConfig());
   load(getAtualSensorsConfig());
   setupWiFi();
-  // TODOsetupMQTT();
+  setupMQTT();
   // TODOknx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   setupWebserverAsync();
 }
@@ -105,11 +105,11 @@ void loop()
   checkInternalRoutines();
   webserverServicesLoop();
   loopWiFi();
-  // TODO  loopMqtt();
+  loopMqtt();
   if (!autoUpdateRequested())
   {
-    loop(getAtualSwitchesConfig());
-    loop(getAtualSensorsConfig());
+    // loop(getAtualSwitchesConfig());
+    // loop(getAtualSensorsConfig());
     loopTime();
   }
   // TDOD knx.loop();

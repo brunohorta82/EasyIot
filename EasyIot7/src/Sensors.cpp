@@ -15,7 +15,6 @@
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
 #include <Bounce2.h>
-#include <Modbus.h>
 #include "Templates.h"
 #define BUS_SDA 2  //-1 if you don't use display
 #define BUS_SCL 13 //-1 if you don't use display
@@ -114,7 +113,12 @@ void Sensors::load(File &file)
     case PZEM_004T:
     {
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+#if defined(ESP8266)
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
+#endif
+#if defined(ESP32)
+      item.pzem = new PZEM004T(&Serial2, item.primaryGpio, item.secondaryGpio);
+#endif
       IPAddress ip(192, 168, 1, item.secondaryGpio);
       item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
@@ -142,8 +146,8 @@ void Sensors::load(File &file)
       break;
     case PZEM_017:
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
-      item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
-      item.pzemModbus->Begin(9600, 2);
+      // TODO item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
+      // TODO item.pzemModbus->Begin(9600, 2);
 #if WITH_DISPLAY
       setupDisplay();
 #endif
@@ -402,7 +406,12 @@ void SensorT::updateFromJson(JsonObject doc)
     break;
   case PZEM_004T:
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
+#ifdef ESP8266
     pzem = new PZEM004T(primaryGpio, secondaryGpio);
+#endif
+#ifdef ESP32
+    pzem = new PZEM004T(&Serial2, primaryGpio, secondaryGpio);
+#endif
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_004T_V03:
@@ -421,8 +430,8 @@ void SensorT::updateFromJson(JsonObject doc)
   break;
   case PZEM_017:
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
-    pzemModbus = new Modbus(primaryGpio, secondaryGpio);
-    pzemModbus->Begin(9600, 2);
+    // TODO pzemModbus = new Modbus(primaryGpio, secondaryGpio);
+    //  TODO pzemModbus->Begin(9600, 2);
     break;
   }
   reloadMqttTopics();
@@ -685,7 +694,7 @@ void loop(Sensors &sensors)
       }
       break;
     case PZEM_017:
-      if (ss.lastRead + ss.delayRead < millis())
+      /* TODO if (ss.lastRead + ss.delayRead < millis())
       {
 
         ss.lastRead = millis();
@@ -734,6 +743,7 @@ void loop(Sensors &sensors)
           send_retry--;
         }
       }
+      */
       break;
     }
   }

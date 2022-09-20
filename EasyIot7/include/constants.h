@@ -32,9 +32,9 @@ namespace tags
 } // namespace tags
 namespace configFilenames
 {
-    constexpr const char *config = "config.bin";
-    constexpr const char *sensors = "sensors.bin";
-    constexpr const char *switches = "switches.bin";
+    constexpr const char *config = "/config.bin";
+    constexpr const char *sensors = "/sensors.bin";
+    constexpr const char *switches = "/switches.bin";
 
 } // namespace configFilenames
 namespace constantsConfig

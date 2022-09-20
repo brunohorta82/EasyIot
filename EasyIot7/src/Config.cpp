@@ -348,13 +348,6 @@ void load(Config &config)
 #ifdef DEBUG_ONOFRE
     Log.error("%s File storage can't start" CR, tags::config);
 #endif
-    // We can't return here, or else the application will continue, thinking
-    // it can access Config::* when in fact it wasn't initialized yet.
-    // We inform the user about the error, but, we do not return
-    // triggering the next if, where it'll load defaults.
-    // If we do not initialize defaults, app will crash at MDNS refresh
-    // when it attempts to create a service using Config::* variables.
-    // return;
     if (!LittleFS.format())
     {
 #ifdef DEBUG_ONOFRE
@@ -435,7 +428,7 @@ Config &Config::updateFromJson(JsonObject &root)
   knxLine = static_cast<uint8_t>(root["knxLine"] | 0);
   knxMember = static_cast<uint8_t>(root["knxMember"] | 0);
   emoncmsServerStr.replace("https", "http");
-  // TODOknx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
+  // TODO knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   while (emoncmsServerStr.endsWith("/"))
   {
 
