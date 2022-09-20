@@ -9,7 +9,6 @@
 #elif defined(ESP8266)
 #include "ESP8266WiFi.h"
 #include <ESP8266mDNS.h>
-#include <esp-knx-ip.h>
 #include <ESPAsyncTCP.h>
 #include <ESP8266HTTPClient.h>
 #endif

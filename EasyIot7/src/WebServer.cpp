@@ -123,7 +123,14 @@ public:
           rssiQ += quality;
           item.replace("{v}", WiFi.SSID(indices[i]));
           item.replace("{r}", rssiQ);
-          if (WiFi.encryptionType(indices[i]) != WIFI_AUTH_OPEN)
+
+#ifdef ESP32
+          uint8_t encType = WIFI_AUTH_OPEN;
+#endif
+#ifdef ESP8266
+          uint8_t encType = ENC_TYPE_NONE;
+#endif
+          if (WiFi.encryptionType(indices[i]) != encType)
           {
             item.replace("{i}", "l");
           }

@@ -141,7 +141,7 @@ void configPIN(uint8_t pin, uint8_t mode)
   {
     if (mode == INPUT_PULLUP)
     {
-      mode = INPUT_PULLDOWN_16
+      mode = INPUT_PULLDOWN_16;
     }
   }
 #endif

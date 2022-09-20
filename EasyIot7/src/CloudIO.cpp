@@ -1,6 +1,6 @@
 #include "CloudIO.h"
 #include "Config.h"
-#include "WiFi.h"
+#include "CoreWiFi.h"
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
 #include "constants.h"
@@ -217,8 +217,8 @@ void connectoToCloudIO()
   device["currentVersion"] = String(VERSION, 3);
   device["nodeId"] = getAtualConfig().nodeId;
   device["wifi"] = getAtualConfig().wifiSSID;
-  const char *firmwareMode = {FEATURES_TEMPLATE};
-  device["firmwareMode"] = firmwareMode;
+
+  device["firmwareMode"] = constantsConfig::firmwareMode;
   device["macAddr"] = WiFi.macAddress();
   JsonArray feactures = device.createNestedArray("features");
   for (auto &sw : getAtualSwitchesConfig().items)
