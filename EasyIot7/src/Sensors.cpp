@@ -452,15 +452,16 @@ void SensorT::reloadMqttTopics()
 
 void publishReadings(String &readings, SensorT &sensor)
 {
+
   strlcpy(sensor.lastReading, readings.c_str(), sizeof(sensor.lastReading));
   String id = String(sensor.id);
   sendToServerEvents(id, readings.c_str());
-  if (!wifiConnected())
-    return;
   if (sensor.cloudIOSupport)
     notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str(), readings.length());
   if (sensor.mqttSupport)
+  {
     publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
+  }
   if (sensor.emoncmsSupport)
     publishOnEmoncms(sensor, readings);
 }
