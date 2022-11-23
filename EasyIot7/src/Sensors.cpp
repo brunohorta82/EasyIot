@@ -132,8 +132,8 @@ void Sensors::load(File &file)
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
 
 #if defined(ESP8266)
-      static SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
-      item.pzemv03 = new PZEM004Tv30(softwareSerial);
+      // static SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
+      item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
 #endif
 #if defined(ESP32)
       item.pzemv03 = new PZEM004Tv30(Serial2, item.primaryGpio, item.secondaryGpio);
@@ -418,8 +418,9 @@ void SensorT::updateFromJson(JsonObject doc)
   {
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
 #if defined(ESP8266)
-    static SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
-    pzemv03 = new PZEM004Tv30(softwareSerial);
+    // static SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
+    pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
+    ;
 #endif
 #if defined(ESP32)
 
