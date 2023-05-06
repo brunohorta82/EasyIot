@@ -1,5 +1,5 @@
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.187.58"
 };
 var source = null;
 function removeFromSelect(select, value) {
@@ -341,7 +341,7 @@ function applySwitchFamily(id) {
 }
 
 function fillGpioSelect(id) {
-    var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15", "16"];
+    var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15", "16","37","38"];
     addToSelect(id, "lang-none", 99);
     for (let gpio of gpios) {
         addToSelect(id, "lang-" + gpio, gpio);
