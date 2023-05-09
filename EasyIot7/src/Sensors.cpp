@@ -340,7 +340,7 @@ void SensorT::updateFromJson(JsonObject doc)
 #endif
   type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
   String idStr;
-  strlcpy(name, doc.getMember("name").as<String>().c_str(), sizeof(name));
+  strlcpy(name, doc["name"], sizeof(name));
   generateId(idStr, name, static_cast<int>(type), sizeof(id));
   strlcpy(id, idStr.c_str(), sizeof(id));
   String classDevice = doc["deviceClass"] | String(constantsSensor::powerMeterClass);
