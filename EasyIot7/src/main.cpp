@@ -78,14 +78,7 @@ void checkInternalRoutines()
 
 void setup()
 {
-  pinMode(1, INPUT);
-  pinMode(3, INPUT);
   LittleFS.begin();
-  if (digitalRead(1) && !digitalRead(3))
-  {
-    LittleFS.format();
-    ESP.restart();
-  }
 #ifdef DEBUG_ONOFRE
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
@@ -96,7 +89,9 @@ void setup()
   load(getAtualSensorsConfig());
   setupWiFi();
   setupMQTT();
-  // TODOknx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
+#ifdef ESP8266
+  knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
+#endif
   setupWebserverAsync();
 }
 
@@ -112,5 +107,7 @@ void loop()
     loop(getAtualSensorsConfig());
     loopTime();
   }
-  // TDOD knx.loop();
+#ifdef ESP8266
+  knx.loop();
+#endif
 }

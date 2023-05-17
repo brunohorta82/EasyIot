@@ -220,22 +220,42 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
   case ShuttersOperation::UP:
     if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
+#ifdef ESP32
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW);
+      delay(1);
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH);
+#else
       writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH);
       writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH); // TURN ON . OPEN REQUEST
+#endif
     }
     break;
   case ShuttersOperation::DOWN:
     if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
+
+#ifdef ESP32
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH);
+      delay(1);
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW);
+#else
       writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? LOW : HIGH);
       writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); // TURN OFF . CLOSE REQUEST
+#endif
     }
 
     break;
   case ShuttersOperation::HALT:
     if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
-      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW); // TURN OFF . STOP
+
+#ifdef ESP32
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW);
+      delay(1);
+      writeToPIN(s->getSwitchT()->secondaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW);
+#else
+      writeToPIN(s->getSwitchT()->primaryGpioControl, s->getSwitchT()->inverted ? HIGH : LOW);   // TURN OFF . STOP
+#endif
     }
     break;
   }

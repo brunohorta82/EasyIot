@@ -171,22 +171,30 @@ void infoCallback(justwifi_messages_t code, char *parameter)
 
 void refreshMDNS(const char *lastName)
 {
-  // TODOMDNS.removeService(lastName, "bhonofre", "tcp");
-  // TODO MDNS.close();
-  /* if (MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10))
-   {
-     MDNS.addService("bhonofre", "tcp", 80);
-     MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(ESP.getChipId()));
-     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
-     MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
-     MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
-   }
-   else
-   {
- #ifdef DEBUG_ONOFRE
-     Log.error("%s MDNS Error" CR, tags::wifi);
- #endif
-   }*/
+  bool success = false;
+#ifdef ESP32
+  success = MDNS.begin(String(getAtualConfig().nodeId).c_str());
+#endif
+#ifdef ESP8266
+  MDNS.removeService(lastName, "bhonofre", "tcp");
+  MDNS.close();
+  success = MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10);
+#endif
+
+  if (success)
+  {
+    MDNS.addService("bhonofre", "tcp", 80);
+    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(getAtualConfig().nodeId));
+    MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
+    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
+    MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
+  }
+  else
+  {
+#ifdef DEBUG_ONOFRE
+    Log.error("%s MDNS Error" CR, tags::wifi);
+#endif
+  }
 }
 void mdnsCallback(justwifi_messages_t code, char *parameter)
 {
