@@ -168,9 +168,5 @@ void loadSwitchDefaults()
     two.secondaryGpioControl = constantsConfig::noGPIO;
     getAtualSwitchesConfig().items.push_back(two);
 #endif
-    one.primaryGpio = 13u;
-    two.primaryGpio = 14u;
-    one.primaryGpioControl = 7u;
-    two.primaryGpioControl = 8u;
 }
 #endif
