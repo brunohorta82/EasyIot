@@ -229,6 +229,8 @@ void loopWiFi()
     dissableAP();
   }
   jw.loop();
-  // TODO MDNS.update();
+#ifdef ESP8266
+  MDNS.update();
+#endif
   webserverServicesLoop();
 }
