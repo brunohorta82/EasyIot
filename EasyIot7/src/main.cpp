@@ -46,16 +46,30 @@ void checkInternalRoutines()
   }
   if (autoUpdateRequested())
   {
+    char updateURL[120];
+#ifdef ESP32
+    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=%s&mcu=esp32", constantsConfig::firmwareMode);
+#endif
+#ifdef ESP8266
+    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=%s&mcu=esp8266", constantsConfig::firmwareMode);
+#endif
+    char lastVersionURL[120];
+#ifdef ESP32
+    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?firmwareMode=%s&mcu=esp32", constantsConfig::firmwareMode);
+#endif
+#ifdef ESP8266
+    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?firmwareMode=%s&mcu=esp8266", constantsConfig::firmwareMode);
+#endif
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
 #endif
     WiFiClient client;
     t_httpUpdate_return ret;
 #ifdef ESP8266
-    ret = ESPhttpUpdate.update(client, constantsConfig::updateURL, String(VERSION));
+    ret = ESPhttpUpdate.update(client, updateURL, String(VERSION));
 #endif
 #ifdef ESP32
-    ret = httpUpdate.update(client, constantsConfig::updateURL, String(VERSION));
+    ret = httpUpdate.update(client, updateURL, String(VERSION));
 #endif
     switch (ret)
     {
