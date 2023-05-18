@@ -1,4 +1,5 @@
 #include "WebServer.h"
+#include "Update.h"
 #include <DNSServer.h>
 #include "constants.h"
 #include "StaticSite.h"
@@ -337,27 +338,28 @@ void loadAPI()
     response->setLength();
     request->send(response);
     requestAutoUpdate(); });
-  /* server.on(
-       "/update", HTTP_POST, [](AsyncWebServerRequest *request)
-       {
- #if WEB_SECURE_ON
+  server.on(
+      "/update", HTTP_POST, [](AsyncWebServerRequest *request)
+      {
+#if WEB_SECURE_ON
        if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword,REALM))
        return request->requestAuthentication(REALM);
- #endif
+#endif
      bool error = Update.hasError();
-     if(error){
+     if(error)
        requestRestart();
-       }
      AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Update</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update successfully, will be redirected automatically in 20 seconds. Please Wait...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update failed, it may be necessary to manually reset the device and try again.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
      response->addHeader("Connection", "close");
      request->send(response); },
-       [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
-       {
+      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+      {
      if(!index){
- #ifdef DEBUG_ONOFRE
+#ifdef DEBUG_ONOFRE
        Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
- #endif
+#endif
+#ifdef ESP8266
        Update.runAsync(true);
+#endif
        if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
          Update.printError(Serial);
        }
@@ -369,14 +371,14 @@ void loadAPI()
      }
      if(final){
        if(Update.end(true)){
- #ifdef DEBUG_ONOFRE
+#ifdef DEBUG_ONOFRE
          Log.notice("%s Update Success: %d" CR, tags::system, index+len);
- #endif
+#endif
          requestRestart();
        } else {
           requestRestart();
        }
-     } });*/
+     } });
 
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request)
             {
