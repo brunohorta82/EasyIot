@@ -184,7 +184,7 @@ void refreshMDNS(const char *lastName)
   if (success)
   {
     MDNS.addService("bhonofre", "tcp", 80);
-    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(getAtualConfig().nodeId));
+    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(getAtualConfig().chipId));
     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
     MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
     MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
