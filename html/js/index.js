@@ -1,7 +1,8 @@
 const endpoint = {
-    baseUrl: "http://192.168.187.58"
+    baseUrl: "http://192.168.187.130"
 };
 var source = null;
+var gpios = [];
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
 }
@@ -147,7 +148,6 @@ var WORDS_EN = {
     "mqtt": "MQTT",
     "stop": "Stop",
     "time": "Time",
-    "17": "A0",
     "group": "Group",
     "pin-in-c": "Input Pin c",
     "line": "Line",
@@ -341,7 +341,7 @@ function applySwitchFamily(id) {
 }
 
 function fillGpioSelect(id) {
-    var gpios = ["17", "0", "1", "2", "3", "4", "5", "12", "13", "14", "15", "16","37","38"];
+
     addToSelect(id, "lang-none", 99);
     for (let gpio of gpios) {
         addToSelect(id, "lang-" + gpio, gpio);
