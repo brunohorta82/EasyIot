@@ -568,6 +568,7 @@ void loadAPI()
     request->send(response);
     requestCloudIOSync(); });
 }
+bool headerNotLoaded = true;
 void setupWebserverAsync()
 {
   WiFi.scanNetworks(true);
@@ -587,10 +588,12 @@ void setupWebserverAsync()
     {
       request->send(404);
     } });
-
+if(headerNotLoaded){
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
+  headerNotLoaded = false;
+}
   server.begin();
 }
 

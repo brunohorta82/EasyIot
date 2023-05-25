@@ -1,8 +1,9 @@
+let config;
+let source = null;
+let gpios = [];
 const endpoint = {
-    baseUrl: "http://192.168.187.130"
+    baseUrl: ""
 };
-var source = null;
-var gpios = [];
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
 }
@@ -70,16 +71,13 @@ function setOptionOnSelect(select, value) {
         sel.selectedIndex = $("#" + select + " option[value='" + value + "']").index();
     }
 }
-
 function show(id) {
     $('#' + id).removeClass("hide");
 }
-
 function hide(id) {
     $('#' + id).addClass("hide");
 }
 
-var config;
 var WORDS_EN = {
     "pin-state-a":"Pin State A",
     "gate":"Gate",
@@ -160,13 +158,13 @@ var WORDS_EN = {
 function loadsLanguage(lang) {
     localStorage.setItem('lang', "EN");
     $('span[class^="lang"]').each(function () {
-        var langVar = (this.className).replace('lang-', '');
-        var text = window['WORDS_' + lang][langVar];
+        let langVar = (this.className).replace('lang-', '');
+        let text = window['WORDS_' + lang][langVar];
         $(this).text(text);
     });
     $('option[class^="lang"]').each(function () {
-        var langVar = (this.className).replace('lang-', '');
-        var text = window['WORDS_' + lang][langVar];
+        let langVar = (this.className).replace('lang-', '');
+        let text = window['WORDS_' + lang][langVar];
         if (!text) {
             text = langVar;
         }
@@ -183,7 +181,7 @@ function showText(pt, en) {
 }
 
 function loadConfig() {
-    const targetUrl = endpoint.baseUrl + "/config";
+    var targetUrl = endpoint.baseUrl + "/config";
     $.ajax({
         url: targetUrl,
         contentType: "text/plain; charset=utf-8",
@@ -191,6 +189,21 @@ function loadConfig() {
         success: function (response) {
             config = response;
             fillConfig();
+        },
+        error: function () {
+            showMessage("Erro a carregar configuração", "Configuration load failed.")
+        }, complete: function () {
+
+        },
+        timeout: 2000
+    });
+     targetUrl = endpoint.baseUrl + "/pins";
+    $.ajax({
+        url: targetUrl,
+        contentType: "text/plain; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            gpios = response;
         },
         error: function () {
             showMessage("Erro a carregar configuração", "Configuration load failed.")
