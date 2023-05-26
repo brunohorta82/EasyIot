@@ -5,6 +5,7 @@
 #include "WebServer.h"
 #include "Mqtt.h"
 #include "CloudIO.h"
+#include <esp-knx-ip.h>
 int retryCount = 0;
 unsigned long connectedOn = 0ul;
 String getApName()
@@ -156,7 +157,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
       getAtualConfig().save();
     }
 
-    // tODO knx.start(nullptr);
+    knx.start();
     infoWifi();
     connectoToCloudIO();
     setupWebserverAsync();

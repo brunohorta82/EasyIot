@@ -5,9 +5,9 @@
 #include "Config.h"
 #include "Mqtt.h"
 #include "WebRequests.h"
-#ifdef ESP8266
+
 #include <esp-knx-ip.h>
-#endif
+
 #include <Bounce2.h>
 #include "CloudIO.h"
 #include <Shutters.h>
@@ -387,7 +387,7 @@ void Switches::save()
   file.close();
 }
 
-/*TODO void switchesCallback(message_t const &msg, void *arg)
+ void switchesCallback(message_t const &msg, void *arg)
 {
   auto s = static_cast<SwitchT *>(arg);
   switch (msg.ct)
@@ -410,7 +410,8 @@ void Switches::save()
 
   case KNX_CT_WRITE:
   {
-    int stateIdx = (int)msg.data[1];
+
+    int stateIdx = (int)msg.data[0];
     s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
     break;
   }
@@ -448,10 +449,10 @@ void allwitchesCallback(message_t const &msg, void *arg)
   }
   };
 }
-*/
+
 void Switches::load(File &file)
 {
-  // TODO  knx.start(nullptr);
+  knx.start();
   auto n_items = items.size();
   file.read((uint8_t *)&n_items, sizeof(n_items));
   items.clear();
@@ -465,11 +466,11 @@ void Switches::load(File &file)
     {
       if (!globalKnxLevelThreeAssign)
       {
-        // TODO  knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+          knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
         globalKnxLevelThreeAssign = true;
       }
-      // TODO  item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
-      // TODO  item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+       item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
+       item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
     }
   }
 }
@@ -661,7 +662,7 @@ const void SwitchT::notifyState(bool dirty)
     getAtualSwitchesConfig().lastChange = millis();
   if (knxNotifyGroup && knxSupport)
   {
-    // TODO knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+  knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
   }
 }
 const char *SwitchT::rotateState()

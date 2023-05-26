@@ -2,9 +2,9 @@
 #include "constants.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
-#ifdef ESP8266
+
 #include <esp-knx-ip.h>
-#endif
+
 #include "WebServer.h"
 #include "Switches.h"
 #include "Sensors.h"
@@ -428,7 +428,7 @@ Config &Config::updateFromJson(JsonObject &root)
   knxLine = static_cast<uint8_t>(root["knxLine"] | 0);
   knxMember = static_cast<uint8_t>(root["knxMember"] | 0);
   emoncmsServerStr.replace("https", "http");
-  // TODO knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
+  knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
   while (emoncmsServerStr.endsWith("/"))
   {
 

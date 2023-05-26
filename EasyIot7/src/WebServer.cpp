@@ -1,5 +1,7 @@
 #include "WebServer.h"
+#ifdef ESP32
 #include "Update.h"
+#endif
 #include <DNSServer.h>
 #include "constants.h"
 #include "StaticSite.h"

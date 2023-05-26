@@ -5,12 +5,14 @@
 #include "Mqtt.h"
 #include "Switches.h"
 #include "Sensors.h"
+#include <esp-knx-ip.h>
 #ifdef ESP8266
 #include <ESP8266httpUpdate.h>
 #include <ESP8266mDNS.h>
-#include <esp-knx-ip.h>
+
 #endif
 #ifdef ESP32
+ #include <WebServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 #endif
@@ -118,9 +120,8 @@ void setup()
   load(getAtualSensorsConfig());
   setupWiFi();
   setupMQTT();
-#ifdef ESP8266
   knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
-#endif
+
   setupWebserverAsync();
 }
 
@@ -136,7 +137,7 @@ void loop()
     loop(getAtualSensorsConfig());
     loopTime();
   }
-#ifdef ESP8266
+if(WiFi.status() == WL_CONNECTED)
   knx.loop();
-#endif
+
 }
