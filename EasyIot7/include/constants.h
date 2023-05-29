@@ -7,7 +7,7 @@ namespace constantsMqtt
     constexpr const char *homeAssistantAutoDiscoveryPrefix{"homeassistant"};
     constexpr const char *unavailablePayload{"offline"};
     constexpr const int defaultPort{1883};
-    constexpr const char *homeassistantOnlineTopic{"hass/status"};
+    constexpr const char *homeassistantOnlineTopic{"homeassistant/status"};
 } // namespace constantsMqtt
 namespace constantsSensor
 {
