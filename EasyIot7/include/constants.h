@@ -54,6 +54,9 @@ namespace constantsConfig
 #if BHPZEM_004T_V03_2_0
     constexpr const char *firmwareMode{"BHPZEM_004T_V03_2_0"};
 #endif
+#if BHPZEM_004T_V03
+    constexpr const char *firmwareMode{"BHPZEM_004T_V03"};
+#endif
 #if GATE
     constexpr const char *firmwareMode{"GATE"};
 #endif

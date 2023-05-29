@@ -80,7 +80,7 @@ boolean reconnect()
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 #endif
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
-        publishOnMqtt(getConfigStatusTopic().c_str(), "{\"firmware\":7.0}", true); // TODO generate simple config status
+        publishOnMqtt(getConfigStatusTopic().c_str(), String("{\"firmware\":" + String(VERSION) + "}").c_str(), true);
         subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
         // Init Switches Subscritions and publish de current state
         refreshMDNS(getAtualConfig().nodeId);
