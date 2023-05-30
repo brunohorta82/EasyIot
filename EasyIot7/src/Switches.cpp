@@ -387,7 +387,7 @@ void Switches::save()
   file.close();
 }
 
- void switchesCallback(message_t const &msg, void *arg)
+void switchesCallback(message_t const &msg, void *arg)
 {
   auto s = static_cast<SwitchT *>(arg);
   switch (msg.ct)
@@ -410,8 +410,12 @@ void Switches::save()
 
   case KNX_CT_WRITE:
   {
-
+#ifdef ESP32
     int stateIdx = (int)msg.data[0];
+#endif
+#ifdef ESP8266
+    int stateIdx = (int)msg.data[1];
+#endif
     s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
     break;
   }
@@ -466,11 +470,11 @@ void Switches::load(File &file)
     {
       if (!globalKnxLevelThreeAssign)
       {
-          knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+        knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
         globalKnxLevelThreeAssign = true;
       }
-       item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
-       item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+      item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
+      item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
     }
   }
 }
@@ -662,7 +666,7 @@ const void SwitchT::notifyState(bool dirty)
     getAtualSwitchesConfig().lastChange = millis();
   if (knxNotifyGroup && knxSupport)
   {
-  knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+    knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
   }
 }
 const char *SwitchT::rotateState()
