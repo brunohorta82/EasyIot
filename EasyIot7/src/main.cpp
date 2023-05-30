@@ -12,7 +12,7 @@
 
 #endif
 #ifdef ESP32
- #include <WebServer.h>
+#include <WebServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 #endif
@@ -121,7 +121,6 @@ void setup()
   setupWiFi();
   setupMQTT();
   knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
-
   setupWebserverAsync();
 }
 
@@ -137,7 +136,6 @@ void loop()
     loop(getAtualSensorsConfig());
     loopTime();
   }
-if(WiFi.status() == WL_CONNECTED)
-  knx.loop();
-
+  if (WiFi.status() == WL_CONNECTED)
+    knx.loop();
 }

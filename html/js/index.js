@@ -188,6 +188,7 @@ function loadConfig() {
         dataType: "json",
         success: function (response) {
             config = response;
+            gpios = config.pins;
             fillConfig();
         },
         error: function () {
@@ -197,21 +198,7 @@ function loadConfig() {
         },
         timeout: 2000
     });
-     targetUrl = endpoint.baseUrl + "/pins";
-    $.ajax({
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            gpios = response;
-        },
-        error: function () {
-            showMessage("Erro a carregar configuração", "Configuration load failed.")
-        }, complete: function () {
 
-        },
-        timeout: 2000
-    });
 }
 
 function loadDevice(func, e, next) {
