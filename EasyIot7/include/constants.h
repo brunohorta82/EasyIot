@@ -1,5 +1,4 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#pragma once
 namespace constantsMqtt
 {
     constexpr const char *mqttCloudURL{"mqtt.bhonofre.pt"};
@@ -48,23 +47,15 @@ namespace constantsConfig
 #if COVER
     constexpr const char *firmwareMode{"COVER"};
 #endif
-#if COVER_V3
-    constexpr const char *firmwareMode{"COVER_V3"};
-#endif
-#if BHPZEM_004T_V03_2_0
-    constexpr const char *firmwareMode{"BHPZEM_004T_V03_2_0"};
-#endif
-#if BHPZEM_004T_V03
-    constexpr const char *firmwareMode{"BHPZEM_004T_V03"};
+#if BHPZEM
+    constexpr const char *firmwareMode{"BHPZEM"};
 #endif
 #if GATE
     constexpr const char *firmwareMode{"GATE"};
 #endif
-
     constexpr const char *newID{"NEW"};
     constexpr unsigned int noGPIO{99u};
     constexpr unsigned long storeConfigDelay{5000ul};
-
     constexpr const char *apSecret{"bhonofre"}; // AP PASSWORD
     constexpr const char *apiUser{"admin"};     // API USER
     constexpr const char *apiPassword{"xpto"};  // API PASSWORD
@@ -73,7 +64,6 @@ namespace constantsConfig
 namespace constanstsCloudIO
 {
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
-
     constexpr int mqttPort{1883};
 } // namespace constanstsCloudIO
 
@@ -106,4 +96,3 @@ namespace constanstsSwitch
     constexpr const int switchEndIdx{1};
 
 } // namespace constanstsSwitch
-#endif

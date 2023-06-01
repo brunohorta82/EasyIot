@@ -27,8 +27,12 @@ void loadDefaultConfig()
 }
 void loadSensorsDefaults()
 {
-#if defined BHPZEM_004T || BHPZEM_004T_2_0 || BHPZEM_004T_V03 || BHPZEM_004T_V03_2_0 || BHPZEM_017
+#ifdef NO_FEATURES
+    return;
+#endif
+#if defined BHPZEM
     SensorT pzem;
+    pzem.firmware = VERSION;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
     String idStr;
     generateId(idStr, pzem.name, 2, sizeof(pzem.id));
@@ -37,24 +41,9 @@ void loadSensorsDefaults()
     pzem.primaryGpio = constantsConfig::noGPIO;
     pzem.secondaryGpio = constantsConfig::noGPIO;
     pzem.tertiaryGpio = constantsConfig::noGPIO;
-#if defined BHPZEM_004T_2_0 || BHPZEM_004T
-    pzem.type = PZEM_004T;
-#endif
-#if defined BHPZEM_017
-    pzem.type = PZEM_017;
-#endif
-#if defined BHPZEM_004T_V03 || BHPZEM_004T_V03_2_0
     pzem.type = PZEM_004T_V03;
-#endif
-
-#if defined BHPZEM_004T || BHPZEM_004T_V03
-    pzem.primaryGpio = 4;
-    pzem.secondaryGpio = 5;
-#endif
-#if defined BHPZEM_004T_2_0 || BHPZEM_004T_V03_2_0 || BHPZEM_017
     pzem.primaryGpio = 3;
     pzem.secondaryGpio = 1;
-#endif
     pzem.tertiaryGpio = constantsConfig::noGPIO;
     pzem.mqttRetain = true;
     pzem.haSupport = true;
@@ -72,55 +61,11 @@ void loadSensorsDefaults()
 }
 void loadSwitchDefaults()
 {
-#if defined SINGLE_SWITCH || DUAL_LIGHT || COVER || GATE || COVER_V3
+#ifdef NO_FEATURES
+    return;
+#endif
     SwitchT one;
     one.firmware = VERSION;
-    one.lastPrimaryGpioState = false;
-    one.lastSecondaryGpioState = false;
-#if defined DUAL_LIGHT || SINGLE_SWITCH
-    one.mode = SWITCH;
-    strlcpy(one.name, "Interruptor1", sizeof(one.name));
-#endif
-#if defined COVER || COVER_V3
-    strlcpy(one.name, "Estore", sizeof(one.name));
-    strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
-    one.mode = DUAL_SWITCH;
-    one.secondaryGpio = 13u;
-#endif
-#if defined COVER
-    one.secondaryGpioControl = 5u;
-#endif
-#if defined COVER_V3
-    one.secondaryGpioControl = 4u;
-#endif
-#if defined GATE
-    one.mode = GATE_SWITCH;
-    strlcpy(one.name, "Portão", sizeof(one.name));
-    strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
-    one.primaryGpio = constantsConfig::noGPIO;
-    one.primaryStateGpio = 13;
-    one.autoStateDelay = 0;
-#endif
-    String idStr;
-    generateId(idStr, one.name, 1, sizeof(one.id));
-    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
-#if defined DUAL_LIGHT
-    strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
-#endif
-#if defined SINGLE_SWITCH
-    strlcpy(one.family, constanstsSwitch::familySwitch, sizeof(one.family));
-#endif
-
-#if defined DUAL_LIGHT || SINGLE_SWITCH || COVER || COVER_V3
-    one.primaryGpio = 12u;
-    one.autoStateDelay = 0ul;
-    strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
-#endif
-#if defined DUAL_LIGHT || SINGLE_SWITCH || GATE
-    one.secondaryGpio = constantsConfig::noGPIO;
-    one.secondaryGpioControl = constantsConfig::noGPIO;
-#endif
-
     one.typeControl = SwitchControlType::GPIO_OUTPUT;
     one.knxSupport = false;
     one.haSupport = false;
@@ -129,21 +74,55 @@ void loadSwitchDefaults()
     one.pullup = true;
     one.mqttRetain = false;
     one.inverted = false;
+    one.primaryGpioControl = 4u;
+    one.secondaryGpioControl = 5u;
+    one.lastPrimaryGpioState = false;
+    one.lastSecondaryGpioState = false;
+
+#if defined DUAL_LIGHT
+    one.mode = SWITCH;
+    strlcpy(one.name, "Interruptor1", sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
+#endif
+
+#if defined COVER
+    one.mode = DUAL_SWITCH;
+    strlcpy(one.name, "Estore", sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
+#endif
+
+#if defined GATE
+    one.mode = GATE_SWITCH;
+    strlcpy(one.name, "Portão", sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
+    one.primaryGpio = constantsConfig::noGPIO;
+    one.primaryStateGpio = 13;
+    one.autoStateDelay = 0;
+#endif
+
+#if defined DUAL_LIGHT || COVER
+    one.primaryGpio = 12u;
+    one.secondaryGpio = 13u;
+    one.autoStateDelay = 0ul;
+    strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
+#endif
+
+#if defined DUAL_LIGHT || GATE
+    one.secondaryGpio = constantsConfig::noGPIO;
+    one.secondaryGpioControl = constantsConfig::noGPIO;
+#endif
+    String idStr;
+    generateId(idStr, one.name, 1, sizeof(one.id));
+    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
     one.reloadMqttTopics();
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
-#if defined DUAL_LIGHT || SINGLE_SWITCH || COVER || GATE
-    one.primaryGpioControl = 4u;
-#endif
-#if defined COVER_V3
-    one.primaryGpioControl = 5u;
-#endif
     getAtualSwitchesConfig().items.push_back(one);
-#endif
+
 #if defined DUAL_LIGHT
     SwitchT two;
+    two.firmware = VERSION;
     two.lastPrimaryGpioState = false;
     two.lastSecondaryGpioState = false;
-    two.firmware = VERSION;
     strlcpy(two.name, "Interruptor2", sizeof(two.name));
     String idStr2;
     generateId(idStr2, two.name, 1, sizeof(two.id));

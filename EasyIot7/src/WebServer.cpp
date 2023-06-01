@@ -421,27 +421,6 @@ void loadAPI()
     response->setLength();
     request->send(response); });
 
-  server.on("/pins", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncJsonResponse *response = new AsyncJsonResponse(true, switchesSize);
-    JsonVariant &root = response->getRoot();
-#ifdef ESP8266
-    std::vector<int> pinsRef = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
-#endif
-#ifdef ESP32
-   std::vector<int>  pinsRef= {4,5,7,8,19,20,21,22,25,26,27,32,33,34,35,36,37,38};
-#endif
-   for(auto p : pinsRef){
-   root.add(p);
-   }
-    response->addHeader("Cache-Control", "max-age=600");
-    response->setLength();
-    request->send(response); });
-
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json)
                                                     {
 #if WEB_SECURE_ON
