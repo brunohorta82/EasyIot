@@ -89,6 +89,7 @@ void loadSwitchDefaults()
     one.mode = DUAL_SWITCH;
     strlcpy(one.name, "Estore", sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
+    one.secondaryGpio = 13u;
 #endif
 
 #if defined GATE
@@ -101,8 +102,13 @@ void loadSwitchDefaults()
 #endif
 
 #if defined DUAL_LIGHT || COVER
+#ifdef ESP8266
     one.primaryGpio = 12u;
-    one.secondaryGpio = 13u;
+#endif
+#ifdef ESP32
+    one.primaryGpio = 14u;
+#endif
+
     one.autoStateDelay = 0ul;
     strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
 #endif
