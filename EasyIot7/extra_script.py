@@ -2,12 +2,13 @@ Import("env")
 if env.IsIntegrationDump():
     Return()
 
-print("Enter template name name:")
+print("ONOFRE TEMPLATES:")
 print("NO_FEATURES")
 print("DUAL_LIGHT")
 print("COVER")
 print("BHPZEM")
 print("GATE")
+print("Please Enter template name name:")
 model = input()
 env.Append(
     CPPDEFINES=[model],
