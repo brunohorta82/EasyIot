@@ -406,49 +406,18 @@ void switchesCallback(message_t const &msg, void *arg)
   case KNX_CT_MEM_WRITE:
   case KNX_CT_READ:
   case KNX_CT_RESTART:
+    Serial.println("KNX CALBACK");
+    Serial.println(msg.ct);
     break;
 
   case KNX_CT_WRITE:
   {
-#ifdef ESP32
-    int stateIdx = (int)msg.data[0];
-#endif
-#ifdef ESP8266
-    int stateIdx = (int)msg.data[1];
-#endif
+
+    Serial.println(msg.data_len);
+    Serial.println(msg.data[0]);
+    Serial.println(msg.data[1]);
+    uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
     s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-    break;
-  }
-  };
-}
-
-void allwitchesCallback(message_t const &msg, void *arg)
-{
-  switch (msg.ct)
-  {
-  case KNX_CT_ADC_ANSWER:
-  case KNX_CT_ADC_READ:
-  case KNX_CT_ANSWER:
-  case KNX_CT_ESCAPE:
-  case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
-  case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
-  case KNX_CT_INDIVIDUAL_ADDR_WRITE:
-  case KNX_CT_MASK_VERSION_READ:
-  case KNX_CT_MASK_VERSION_RESPONSE:
-  case KNX_CT_MEM_ANSWER:
-  case KNX_CT_MEM_READ:
-  case KNX_CT_MEM_WRITE:
-  case KNX_CT_READ:
-  case KNX_CT_RESTART:
-    break;
-
-  case KNX_CT_WRITE:
-  {
-    int stateIdx = (int)msg.data[0];
-    for (auto &sw : getAtualSwitchesConfig().items)
-    {
-      sw.changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-    }
     break;
   }
   };
@@ -456,7 +425,6 @@ void allwitchesCallback(message_t const &msg, void *arg)
 
 void Switches::load(File &file)
 {
-  knx.start();
   auto n_items = items.size();
   file.read((uint8_t *)&n_items, sizeof(n_items));
   items.clear();
@@ -464,15 +432,8 @@ void Switches::load(File &file)
   for (auto &item : items)
   {
     item.load(file);
-    // KNX
-    bool globalKnxLevelThreeAssign = false;
     if (item.knxSupport && item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
     {
-      if (!globalKnxLevelThreeAssign)
-      {
-        knx.callback_assign(knx.callback_register("ALL SWITCHES", allwitchesCallback), knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
-        globalKnxLevelThreeAssign = true;
-      }
       item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
       item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
     }
@@ -664,8 +625,10 @@ const void SwitchT::notifyState(bool dirty)
   sendToServerEvents(id, currentStateToSend.c_str());
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
-  if (knxNotifyGroup && knxSupport)
+  if (knxSupport)
   {
+    knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+    delay(5);
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
   }
 }
@@ -707,8 +670,8 @@ const String SwitchT::changeState(const char *state, const char *origin)
 #endif
   bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
+  bool isFromKnx = strcmp("KNX", origin) == 0;
   bool isGate = SwitchMode::GATE_SWITCH == mode;
-  knxNotifyGroup = strcmp(origin, "KNX") != 0;
   if (isCover)
   {
     if (typeControl == SwitchControlType::GPIO_OUTPUT)
@@ -747,7 +710,8 @@ const String SwitchT::changeState(const char *state, const char *origin)
       {
         statePoolIdx = constanstsSwitch::closeIdx;
       }
-      notifyState(dirty);
+      if (!isFromKnx)
+        notifyState(dirty);
     }
   }
   else if (isGate)
@@ -824,7 +788,8 @@ const String SwitchT::changeState(const char *state, const char *origin)
         writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
       }
     }
-    notifyState(dirty);
+    if (!isFromKnx)
+      notifyState(dirty);
   }
 
   return getCurrentState();

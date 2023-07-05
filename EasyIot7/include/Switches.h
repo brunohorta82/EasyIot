@@ -92,7 +92,6 @@ struct SwitchT
     uint8_t knxLevelThree = 0;
     uint8_t knxIdRegister = 0;
     uint8_t knxIdAssign = 0;
-    bool knxNotifyGroup = true;
     // METHODS
     void load(File &file);
     void save(File &file) const;

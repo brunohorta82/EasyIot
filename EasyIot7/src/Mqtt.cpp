@@ -24,7 +24,7 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
     Log.notice("%s Payload: " CR, tags::mqtt, payload_as_string);
 #endif
-    if (strcmp(topic, constantsMqtt::homeassistantOnlineTopic) == 0 && strcmp(payload_as_string, constantsMqtt::availablePayload) == 0)
+    if ((strcmp(topic, String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str()) == 0 || strcmp(topic, String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str()) == 0) && strcmp(payload_as_string, constantsMqtt::availablePayload) == 0)
     {
         initHaDiscovery(getAtualSwitchesConfig());
         initHaDiscovery(getAtualSensorsConfig());
@@ -80,8 +80,9 @@ boolean reconnect()
         Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
 #endif
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
-        publishOnMqtt(getConfigStatusTopic().c_str(), String("{\"firmware\":" + String(VERSION,3) + "}").c_str(), true);
-        subscribeOnMqtt(constantsMqtt::homeassistantOnlineTopic);
+        publishOnMqtt(getConfigStatusTopic().c_str(), String("{\"firmware\":" + String(VERSION, 3) + "}").c_str(), true);
+        subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
+        subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
         // Init Switches Subscritions and publish de current state
         refreshMDNS(getAtualConfig().nodeId);
         for (auto &sw : getAtualSwitchesConfig().items)

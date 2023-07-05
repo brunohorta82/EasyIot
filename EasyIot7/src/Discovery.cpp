@@ -224,7 +224,7 @@ void addToHaDiscovery(const SensorT &s)
     object["value_template"] = "{{value_json.frequency}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/FR" + String(s.secondaryGpio) + chip + "/config").c_str(), objectStr.c_str(), false);
+    (String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/FR" + String(s.secondaryGpio) + chip + "/config").c_str(), objectStr.c_str(), false);
     object["name"] = String(s.name) + " Energy";
     object["unique_id"] = "E" + String(s.secondaryGpio) + chip;
     object["unit_of_measurement"] = "kWh";

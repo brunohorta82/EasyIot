@@ -3,10 +3,10 @@ namespace constantsMqtt
 {
     constexpr const char *mqttCloudURL{"mqtt.bhonofre.pt"};
     constexpr const char *availablePayload{"online"};
+    constexpr const char *homeAssistantAutoDiscoveryPrefixLegacy{"hass"};
     constexpr const char *homeAssistantAutoDiscoveryPrefix{"homeassistant"};
     constexpr const char *unavailablePayload{"offline"};
     constexpr const int defaultPort{1883};
-    constexpr const char *homeassistantOnlineTopic{"homeassistant/status"};
 } // namespace constantsMqtt
 namespace constantsSensor
 {
