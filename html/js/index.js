@@ -1,6 +1,5 @@
 let config;
 let source = null;
-let gpios = [];
 const endpoint = {
     baseUrl: ""
 };
@@ -146,7 +145,6 @@ var WORDS_EN = {
     "address": "Address",
     "prefix": "Prefix",
     "apikey": "API Key"
-
 };
 function loadsLanguage(lang) {
     localStorage.setItem('lang', "EN");
@@ -178,7 +176,6 @@ function loadConfig() {
         dataType: "json",
         success: function (response) {
             config = response;
-            gpios = config.pins;
             fillConfig();
         },
         error: function () {
@@ -323,9 +320,8 @@ function applySwitchFamily(id) {
     loadsLanguage(localStorage.getItem('lang'));
 }
 function fillGpioSelect(id) {
-
     addToSelect(id, "lang-none", 99);
-    for (let gpio of gpios) {
+    for (let gpio of config.pins) {
         addToSelect(id, "lang-" + gpio, gpio);
     }
 }
@@ -812,7 +808,6 @@ function saveSwitch(id) {
         "mqttRetain": false,
         "haSupport": document.getElementById('haSupport_' + id).checked,
         "cloudIOSupport": document.getElementById('cloudIOSupport_' + id).checked,
-        "knxSupport": document.getElementById('knxSupport_' + id).checked,
         "mqttSupport": document.getElementById('mqttSupport_' + id).checked,
         "inverted": false,
         "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),
