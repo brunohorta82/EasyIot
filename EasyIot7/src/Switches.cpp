@@ -55,7 +55,7 @@ void SwitchT::updateFromJson(JsonObject doc)
   knxLevelOne = doc["knxLevelOne"] | 0;
   knxLevelTwo = doc["knxLevelTwo"] | 0;
   knxLevelThree = doc["knxLevelThree"] | 0;
-  knxSupport = knxLevelOne > 0 && knxLevelTwo > 0 && knxLevelThree > 0;
+  knxSupport = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree >= 0;
   primaryStateGpio = doc["primaryStateGpio"] | constantsConfig::noGPIO;
   secondaryStateGpio = doc["secondaryStateGpio"] | constantsConfig::noGPIO;
   thirdGpioControl = doc["thirdGpioControl"] | constantsConfig::noGPIO;
@@ -364,7 +364,7 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&primaryStateGpio, sizeof(primaryStateGpio));
   file.read((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
   file.read((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
-  knxSupport = knxLevelOne > 0 && knxLevelTwo > 0 && knxLevelThree > 0;
+  knxSupport = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree >= 0;
   firmware = VERSION;
   configPins();
   bool isGate = SwitchMode::GATE_SWITCH == mode;
@@ -429,10 +429,15 @@ void Switches::load(File &file)
     item.load(file);
     if (item.knxSupport)
     {
+      knx.callback_unassign(item.knxIdAssign);
+      knx.callback_deregister(item.knxIdRegister);
       item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
       item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, 0, 0));
     }
   }
+  knx.reload();
 }
 
 Switches &Switches::remove(const char *id)
@@ -478,6 +483,16 @@ void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
   removeFromHaDiscovery(sw);
   if (sw.haSupport)
     addToHaDiscovery(sw);
+  for (auto &item : switches.items)
+  {
+    if (item.knxSupport)
+    {
+      item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
+      item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, 0, 0));
+    }
+  }
 }
 Switches &Switches::updateFromJson(const String &id, JsonObject &doc)
 {
@@ -603,8 +618,12 @@ const char *Switches::rotate(const char *id)
   }
   return "ERROR";
 }
-const void SwitchT::notifyState(bool dirty, bool knxSource)
+const void SwitchT::notifyState(bool dirty, const char *origin)
 {
+  if (strcmp("INTERNAL", origin) == 0)
+  {
+    return;
+  }
   const String currentStateToSend = getCurrentState();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
@@ -620,11 +639,23 @@ const void SwitchT::notifyState(bool dirty, bool knxSource)
   sendToServerEvents(id, currentStateToSend.c_str());
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
-  if (!knxSource && knxSupport)
+  if (strcmp("KNX", origin) != 0 && knxSupport)
   {
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
     delay(5);
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+  }
+  bool knxGroup = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree == 0;
+  if (knxGroup)
+  {
+    for (auto &sw : getAtualSwitchesConfig().items)
+    {
+
+      if (strcmp(sw.id, id) != 0)
+      {
+        sw.changeState(currentStateToSend.c_str(), "INTERNAL");
+      }
+    }
   }
 }
 const char *SwitchT::rotateState()
@@ -705,7 +736,7 @@ const String SwitchT::changeState(const char *state, const char *origin)
       {
         statePoolIdx = constanstsSwitch::closeIdx;
       }
-      notifyState(dirty, isFromKnx);
+      notifyState(dirty, origin);
     }
   }
   else if (isGate)
@@ -783,7 +814,7 @@ const String SwitchT::changeState(const char *state, const char *origin)
       }
     }
 
-    notifyState(dirty, isFromKnx);
+    notifyState(dirty, origin);
   }
 
   return getCurrentState();
@@ -873,7 +904,7 @@ void loop(Switches &switches)
           {
             sw.statePoolIdx = constanstsSwitch::openIdx;
           }
-          sw.notifyState(true, false);
+          sw.notifyState(true, "LOOP");
         }
       }
       if (sw.secondaryStateGpio != constantsConfig::noGPIO)
@@ -890,7 +921,7 @@ void loop(Switches &switches)
           {
             sw.statePoolIdx = constanstsSwitch::closeIdx;
           }
-          sw.notifyState(true, false);
+          sw.notifyState(true, "LOOP");
         }
       }
     }

@@ -101,7 +101,7 @@ struct SwitchT
     void toJson(JsonVariant &root) const;
     const String getCurrentState() const;
     void configPins();
-    const void notifyState(bool dirty, bool knxSource);
+    const void notifyState(bool dirty, const char *origin);
     void reloadMqttTopics();
 };
 struct Switches

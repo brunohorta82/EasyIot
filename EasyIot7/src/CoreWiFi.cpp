@@ -53,7 +53,7 @@ void infoWifi()
     Log.notice("%s GW    %s " CR, tags::wifi, WiFi.gatewayIP().toString().c_str());
     Log.notice("%s MASK  %s " CR, tags::wifi, WiFi.subnetMask().toString().c_str());
     Log.notice("%s DNS   %s " CR, tags::wifi, WiFi.dnsIP().toString().c_str());
-    Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
+    // TODO  Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
     Log.notice("----------------------------------------------" CR);
 #endif
   }
@@ -207,6 +207,7 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
 }
 void setupWiFi()
 {
+  // TODO WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   WiFi.setSleep(false);
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);

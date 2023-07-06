@@ -1,5 +1,5 @@
 #include <Arduino.h>
- 
+
 #include "Config.h"
 #include "WebServer.h"
 #include "CoreWiFi.h"
@@ -129,13 +129,13 @@ void loop()
   checkInternalRoutines();
   webserverServicesLoop();
   loopWiFi();
-  /* loopMqtt();
-   if (!autoUpdateRequested())
-   {
-     loop(getAtualSwitchesConfig());
-     loop(getAtualSensorsConfig());
-     loopTime();
-   }*/
+  loopMqtt();
+  if (!autoUpdateRequested())
+  {
+    loop(getAtualSwitchesConfig());
+    loop(getAtualSensorsConfig());
+    loopTime();
+  }
   if (WiFi.status() == WL_CONNECTED)
     knx.loop();
 }
