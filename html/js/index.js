@@ -38,16 +38,11 @@ function buildSwitchTemplate() {
         "pullup": false,
         "mqttRetain": false,
         "inverted": false,
-        "mqttCommandTopic": "../set",
-        "mqttStateTopic": "../state",
-        "mqttPositionCommandTopic": "../setposition",
-        "mqttPositionStateTopic": "../position",
         "primaryGpioControl": 99,
         "secondaryGpioControl": 99,
     };
     buildSwitch(device);
 }
-
 function buildSensorTemplate() {
     if ($('#bss_NEW').length > 0) return
     let device = {
@@ -64,7 +59,6 @@ function buildSensorTemplate() {
     };
     buildSensor(device);
 }
-
 function setOptionOnSelect(select, value) {
     let sel = document.getElementById(select);
     if (sel) {
@@ -77,7 +71,6 @@ function show(id) {
 function hide(id) {
     $('#' + id).addClass("hide");
 }
-
 var WORDS_EN = {
     "pin-state-a":"Pin State A",
     "gate":"Gate",
@@ -171,15 +164,12 @@ function loadsLanguage(lang) {
         $(this).text(text);
     });
 }
-
 function showMessage(pt, en) {
     localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
 }
-
 function showText(pt, en) {
     return localStorage.getItem('lang').toString() === "PT" ? pt : en;
 }
-
 function loadConfig() {
     var targetUrl = endpoint.baseUrl + "/config";
     $.ajax({
@@ -198,9 +188,7 @@ function loadConfig() {
         },
         timeout: 2000
     });
-
 }
-
 function loadDevice(func, e, next) {
     const targetUrl = endpoint.baseUrl + "/" + e;
     $.ajax({
@@ -219,7 +207,6 @@ function loadDevice(func, e, next) {
         timeout: 2000
     });
 }
-
 function fillConfig() {
     if (!config) return;
     $(".bh-model").text(config.hardware);
@@ -252,7 +239,6 @@ function fillConfig() {
     $('#ff').prop('disabled', false);
 
 }
-
 function toggleActive(menu) {
     $('.sidebar-menu').find('li').removeClass('active');
     $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
@@ -270,7 +256,6 @@ function toggleActive(menu) {
         loadsLanguage(localStorage.getItem('lang'));
     });
 }
-
 function fillSwitches(payload) {
     if (!payload) return;
     $('#switch_config').empty();
@@ -278,7 +263,6 @@ function fillSwitches(payload) {
         buildSwitch(obj);
     }
 }
-
 function fillSensors(payload) {
     if (!payload) return;
     $('#sensors_config').empty();
@@ -289,11 +273,13 @@ function fillSensors(payload) {
         }, false);
     }
 }
-
 function applySwitchFamily(id) {
     hide("timeBetweenStatesRow_" + id);
     hide("secondaryGpioControlRow_" + id);
     hide("secondaryGpioRow_" + id);
+    hide("primaryStateGpioRow_" + id);
+    hide("secondaryStateGpioRow_" + id);
+    hide("thirdGpioControlRow_" + id);
     hide("btn_on_" + id);
     hide("btn_close_" + id);
     hide("btn_stop_" + id);
@@ -308,24 +294,22 @@ function applySwitchFamily(id) {
     removeFromSelect('autoStateValue_' + id, "STOP");
     removeFromSelect('autoStateValue_' + id, "ON");
     removeFromSelect('autoStateValue_' + id, "OFF");
-    if ($('#family_' + id).val() == "cover") {
+    if ($('#family_' + id).val() === "cover") {
         show("btn_close_" + id);
         show("btn_stop_" + id);
         show("btn_open_" + id);
         addToSelect('mode_' + id, "lang-push", 2);
         addToSelect('mode_' + id, "lang-dual-normal", 4);
         addToSelect('mode_' + id, "lang-dual-push", 5);
-        addToSelect('mode_' + id, "lang-gate", 6);
         show("secondaryGpioControlRow_" + id);
         show("secondaryGpioRow_" + id);
         show("timeBetweenStatesRow_" + id);
         addToSelect('autoStateValue_' + id, "lang-open", "OPEN");
         addToSelect('autoStateValue_' + id, "lang-close", "CLOSE");
         addToSelect('autoStateValue_' + id, "lang-stop", "STOP");
-    } else if ($('#family_' + id).val() == "garage") {
+    } else if ($('#family_' + id).val() === "garage") {
         show("btn_on_" + id);
         addToSelect('mode_' + id, "lang-push", 2);
-        addToSelect('mode_' + id, "lang-gate", 6);
         addToSelect('autoStateValue_' + id, "lang-released", "RELEASED");
     }  else {
         show("btn_on_" + id);
@@ -337,9 +321,7 @@ function applySwitchFamily(id) {
     applySwitchMode(id);
     applyTypeControl(id);
     loadsLanguage(localStorage.getItem('lang'));
-
 }
-
 function fillGpioSelect(id) {
 
     addToSelect(id, "lang-none", 99);
@@ -347,7 +329,6 @@ function fillGpioSelect(id) {
         addToSelect(id, "lang-" + gpio, gpio);
     }
 }
-
 function applySwitchMode(id) {
     if ($('#family_' + id).val() == "cover") {
         if (($('#mode_' + id).val() == 2)) {
@@ -362,21 +343,13 @@ function applySwitchMode(id) {
     }
     loadsLanguage(localStorage.getItem('lang'));
 }
-
-function ifdef(value, defaultValue) {
-    if (value) return value;
-    return defaultValue;
-}
-
 function applyTypeControl(id) {
     hide("secondaryGpioControlRow_" + id);
     hide("primaryGpioControlRow_" + id);
     if ($('#typeControl_' + id).val() == 1) {
         show("primaryGpioControlRow_" + id);
         if ($('#family_' + id).val() == "cover") {
-            if ($('#mode_' + id).val() != 2) {
                 show("secondaryGpioControlRow_" + id);
-            }
         }
     } else {
         setOptionOnSelect('primaryGpioControl_' + id, 99);
@@ -389,7 +362,6 @@ function applyTypeControl(id) {
     }
 
 }
-
 function applySensorRequiredGpio(id) {
     if ($('#s_type_' + id).val() != "70" && $('#s_type_' + id).val() != "71") {
         hide("s_secondaryGpioRow_" + id);
@@ -402,7 +374,6 @@ function applySensorRequiredGpio(id) {
     }
 
 }
-
 function buildSensor(obj) {
     let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     let checkedHaSupport = obj.haSupport ? "checked" : "";
@@ -515,13 +486,11 @@ function buildSensor(obj) {
     applySensorRequiredGpio(obj.id);
     loadsLanguage(localStorage.getItem('lang'));
 }
-
 function updateSensorReadings(id, name, value) {
     if ($('#value_' + id).length > 0) {
         $("#value_" + id).text(value);
     }
 }
-
 function buildSwitch(obj) {
     let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "OFF";
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
@@ -529,7 +498,6 @@ function buildSwitch(obj) {
     let checkedMqttSupport = obj.mqttSupport ? "checked" : "";
     let checkedHaSupport = obj.haSupport ? "checked" : "";
     let checkedCloudIOSupport = obj.cloudIOSupport ? "checked" : "";
-    let checkedKnxSupport = obj.knxSupport ? "checked" : "";
     source.addEventListener(obj.id, function (e) {
         let state = (e.data === "OFF" || e.data === "ON") ? "on" : e.data.toLowerCase();
         $("#btn_" + state + "_" + obj.id).removeClass("ON");
@@ -649,11 +617,11 @@ function buildSwitch(obj) {
         '                            </tr>' +
         '                            <tr>' +
         '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>' +
-        '                                <td> <span style="word-break: break-word" >%u/%c' + obj.family +'/' + obj.id + '/set </span></td>' +
+        '                                <td> <span style="word-break: break-word" >'+config.mqttUsername+'/'+config.chipId+'/' + obj.family +'/' + obj.id + '/set </span></td>' +
         '                            </tr>' +
         '                            <tr>' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word">%u/%c' + obj.family +'/' + obj.id + '/status</span></td>' +
+        '                                <td><span  style="word-break: break-word">'+config.mqttUsername+'/'+config.chipId+'/' + obj.family +'/' + obj.id + '/status</span></td>' +
         '                            </tr>' +
         '                            <tr>' +
         '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' +
@@ -694,7 +662,6 @@ function buildSwitch(obj) {
         '                            <tr>' +
         '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
         '                                <td style="display: inline-flex">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >KNX</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedKnxSupport + ' type="checkbox" id="knxSupport_' + obj.id + '" value="' + obj.knxSupport + '">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="haSupport_' + obj.id + '" value="' + obj.haSupport + '">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >MQTT</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedMqttSupport + ' type="checkbox" id="mqttSupport_' + obj.id + '" value="' + obj.mqttSupport + '">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >CloudIO</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedCloudIOSupport + ' type="checkbox" id="cloudIOSupport_' + obj.id + '" value="' + obj.cloudIOSupport + '">' +
@@ -743,7 +710,6 @@ function buildSwitch(obj) {
 
     loadsLanguage(localStorage.getItem('lang'));
 }
-
 function stateSwitch(id, state) {
     let toggleState = state;
     if ((toggleState === "ON" || toggleState === "OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
@@ -766,7 +732,6 @@ function stateSwitch(id, state) {
         timeout: 2000
     });
 }
-
 function rotateState(id) {
     const targetUrl = endpoint.baseUrl + "/rotate-state-switch?id=" + id;
     $.ajax({
@@ -785,7 +750,6 @@ function rotateState(id) {
         timeout: 2000
     });
 }
-
 function saveSensor(id) {
     let device = {
         "id": id,
@@ -825,7 +789,6 @@ function saveSensor(id) {
         timeout: 2000
     });
 }
-
 function saveSwitch(id) {
     let device = {
         "id": id,
@@ -875,8 +838,6 @@ function saveSwitch(id) {
         timeout: 2000
     });
 }
-
-
 function storeConfig() {
     const targetUrl = endpoint.baseUrl + "/save-config";
     $.ajax({
@@ -896,12 +857,10 @@ function storeConfig() {
         timeout: 2000
     });
 }
-
 function saveNode() {
     config.nodeId = $('#nodeId').val().trim();
     storeConfig();
 }
-
 function saveWifi() {
     config.wifiSSID = $('#ssid').val().trim();
     config.wifiSecret = $('#wifi_secret').val().trim();
@@ -912,28 +871,18 @@ function saveWifi() {
     config.apSecret = $('#apSecret').val().trim();
     storeConfig();
 }
-
 function saveMqtt() {
     config.mqttIpDns = $('#mqtt_ip').val().trim();
     config.mqttUsername = $('#mqtt_username').val().trim();
     config.mqttPassword = $('#mqtt_password').val().trim();
     storeConfig();
 }
-
-function saveKnx() {
-    config.knxArea = parseInt($('#knxArea').val().trim());
-    config.knxLine = parseInt($('#knxLine').val().trim());
-    config.knxMember = parseInt($('#knxMember').val().trim());
-    storeConfig();
-}
-
 function saveEmoncms() {
     config.emoncmsServer = $('#emoncmsServer').val().trim();
     config.emoncmsPath = $('#emoncmsPath').val().trim();
     config.emoncmsApikey = $('#emoncmsApikey').val().trim();
     storeConfig();
 }
-
 function removeSwitch(id) {
     const targetUrl = endpoint.baseUrl + "/remove-switch?id=" + id;
     $.ajax({
@@ -950,7 +899,6 @@ function removeSwitch(id) {
         timeout: 2000
     });
 }
-
 function removeSensor(id) {
     const targetUrl = endpoint.baseUrl + "/remove-sensor?id=" + id;
     $.ajax({
@@ -967,8 +915,6 @@ function removeSensor(id) {
         timeout: 2000
     });
 }
-
-
 function reboot() {
     $.ajax({
         url: endpoint.baseUrl + "/reboot",
@@ -982,7 +928,6 @@ function reboot() {
         timeout: 2000
     });
 }
-
 function loadDefaults() {
     $.ajax({
         url: endpoint.baseUrl + "/load-defaults",
@@ -996,7 +941,6 @@ function loadDefaults() {
         timeout: 1000
     });
 }
-
 function systemStatus() {
     $.ajax({
         url: endpoint.baseUrl + "/system-status",
@@ -1025,7 +969,6 @@ function systemStatus() {
         timeout: 2000
     });
 }
-
 $(document).ready(function () {
     let lang = localStorage.getItem('lang');
     if (lang) {

@@ -40,7 +40,7 @@ void SwitchT::updateFromJson(JsonObject doc)
   autoStateDelay = doc["autoStateDelay"] | 0ul;
   strlcpy(autoStateValue, doc["autoStateValue"] | "", sizeof(autoStateValue));
   typeControl = static_cast<SwitchControlType>(doc["typeControl"] | static_cast<int>(SwitchControlType::NONE));
-  knxSupport = doc["knxSupport"] | false;
+
   haSupport = doc["haSupport"] | false;
   mqttSupport = doc["mqttSupport"] | false;
   cloudIOSupport = doc["cloudIOSupport"] | true;
@@ -55,7 +55,7 @@ void SwitchT::updateFromJson(JsonObject doc)
   knxLevelOne = doc["knxLevelOne"] | 0;
   knxLevelTwo = doc["knxLevelTwo"] | 0;
   knxLevelThree = doc["knxLevelThree"] | 0;
-
+  knxSupport = knxLevelOne > 0 && knxLevelTwo > 0 && knxLevelThree > 0;
   primaryStateGpio = doc["primaryStateGpio"] | constantsConfig::noGPIO;
   secondaryStateGpio = doc["secondaryStateGpio"] | constantsConfig::noGPIO;
   thirdGpioControl = doc["thirdGpioControl"] | constantsConfig::noGPIO;
@@ -364,6 +364,7 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&primaryStateGpio, sizeof(primaryStateGpio));
   file.read((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
   file.read((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
+  knxSupport = knxLevelOne > 0 && knxLevelTwo > 0 && knxLevelThree > 0;
   firmware = VERSION;
   configPins();
   bool isGate = SwitchMode::GATE_SWITCH == mode;
@@ -406,16 +407,10 @@ void switchesCallback(message_t const &msg, void *arg)
   case KNX_CT_MEM_WRITE:
   case KNX_CT_READ:
   case KNX_CT_RESTART:
-    Serial.println("KNX CALBACK");
-    Serial.println(msg.ct);
     break;
 
   case KNX_CT_WRITE:
   {
-
-    Serial.println(msg.data_len);
-    Serial.println(msg.data[0]);
-    Serial.println(msg.data[1]);
     uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
     s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
     break;
@@ -432,7 +427,7 @@ void Switches::load(File &file)
   for (auto &item : items)
   {
     item.load(file);
-    if (item.knxSupport && item.knxLevelOne > 0 && item.knxLevelTwo > 0 && item.knxLevelThree > 0)
+    if (item.knxSupport)
     {
       item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
       item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
@@ -608,7 +603,7 @@ const char *Switches::rotate(const char *id)
   }
   return "ERROR";
 }
-const void SwitchT::notifyState(bool dirty)
+const void SwitchT::notifyState(bool dirty, bool knxSource)
 {
   const String currentStateToSend = getCurrentState();
 #ifdef DEBUG_ONOFRE
@@ -625,7 +620,7 @@ const void SwitchT::notifyState(bool dirty)
   sendToServerEvents(id, currentStateToSend.c_str());
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
-  if (knxSupport)
+  if (!knxSource && knxSupport)
   {
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
     delay(5);
@@ -710,8 +705,7 @@ const String SwitchT::changeState(const char *state, const char *origin)
       {
         statePoolIdx = constanstsSwitch::closeIdx;
       }
-      if (!isFromKnx)
-        notifyState(dirty);
+      notifyState(dirty, isFromKnx);
     }
   }
   else if (isGate)
@@ -788,8 +782,8 @@ const String SwitchT::changeState(const char *state, const char *origin)
         writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
       }
     }
-    if (!isFromKnx)
-      notifyState(dirty);
+
+    notifyState(dirty, isFromKnx);
   }
 
   return getCurrentState();
@@ -879,7 +873,7 @@ void loop(Switches &switches)
           {
             sw.statePoolIdx = constanstsSwitch::openIdx;
           }
-          sw.notifyState(true);
+          sw.notifyState(true, false);
         }
       }
       if (sw.secondaryStateGpio != constantsConfig::noGPIO)
@@ -896,7 +890,7 @@ void loop(Switches &switches)
           {
             sw.statePoolIdx = constanstsSwitch::closeIdx;
           }
-          sw.notifyState(true);
+          sw.notifyState(true, false);
         }
       }
     }

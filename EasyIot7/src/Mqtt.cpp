@@ -83,7 +83,6 @@ boolean reconnect()
         publishOnMqtt(getConfigStatusTopic().c_str(), String("{\"firmware\":" + String(VERSION, 3) + "}").c_str(), true);
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
-        // Init Switches Subscritions and publish de current state
         refreshMDNS(getAtualConfig().nodeId);
         for (auto &sw : getAtualSwitchesConfig().items)
         {
