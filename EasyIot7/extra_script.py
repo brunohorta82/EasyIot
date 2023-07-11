@@ -3,7 +3,7 @@ if env.IsIntegrationDump():
     Return()
 
 print("ONOFRE TEMPLATES:")
-print("NO_FEATURES")
+print("GENERIC")
 print("DUAL_LIGHT")
 print("COVER")
 print("BHPZEM")

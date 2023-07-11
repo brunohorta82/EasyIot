@@ -120,7 +120,7 @@ var WORDS_EN = {
     "dual-push": "Dual Push",
     "dual-normal": "Dual Generic",
     "mode": "Mode",
-    "relay-mqtt": "Relay / MQTT",
+    "relay": "Relay",
     "control": "Output",
     "pin-in-a": "Input Pin a",
     "pin-in-b": "Input Pin b",
@@ -563,8 +563,8 @@ function buildSwitch(obj) {
         '                                <td><span class="label-device "><span' +
         '                                    class="lang-control">Controla</span></span></td>' +
         '                                <td><select onchange="applyTypeControl(\'' + obj.id + '\');" class="form-control select-device" id="typeControl_' + obj.id + '">' +
-        '                                    <option class="lang-relay-mqtt" value="1">Relé / MQTT</option>' +
-        '                                    <option class="lang-mqtt" value="2">MQTT</option>' +
+        '                                    <option class="lang-relay" value="1">Relé</option>' +
+        '                                    <option value="2">Virtual</option>' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr style="  border-top: 1px solid #88bf9c;">' +
@@ -617,7 +617,7 @@ function buildSwitch(obj) {
         '                            </tr>' +
         '                            <tr>' +
         '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word">'+config.mqttUsername+'/'+config.chipId+'/' + obj.family +'/' + obj.id + '/status</span></td>' +
+        '                                <td><span  style="word-break: break-word">'+config.mqttUsername+'/'+config.chipId+'/' + obj.family +'/' + obj.id + '/state</span></td>' +
         '                            </tr>' +
         '                            <tr>' +
         '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' +
