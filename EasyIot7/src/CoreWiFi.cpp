@@ -53,7 +53,7 @@ void infoWifi()
     Log.notice("%s GW    %s " CR, tags::wifi, WiFi.gatewayIP().toString().c_str());
     Log.notice("%s MASK  %s " CR, tags::wifi, WiFi.subnetMask().toString().c_str());
     Log.notice("%s DNS   %s " CR, tags::wifi, WiFi.dnsIP().toString().c_str());
-    // TODO  Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
+    Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.getHostname());
     Log.notice("----------------------------------------------" CR);
 #endif
   }
@@ -103,9 +103,16 @@ void scanNewWifiNetworks()
       uint8_t *BSSID_scan;
       int32_t chan_scan;
       bool hidden_scan;
-      // TODO WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
+#ifdef ESP32
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
+#endif
+#ifdef ESP32
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
+#endif
+#ifdef ESP8266
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
+#endif
       object.add(ssid_scan);
-
 #ifdef DEBUG_ONOFRE
       Log.notice("%s Network found %s" CR, tags::wifi, ssid_scan.c_str());
 #endif
@@ -207,7 +214,6 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
 }
 void setupWiFi()
 {
-  // TODO WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   WiFi.setSleep(false);
   jw.setHostname(getAtualConfig().nodeId);
   jw.subscribe(infoCallback);

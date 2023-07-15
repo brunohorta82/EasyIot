@@ -1,4 +1,12 @@
 #pragma once
+enum Template
+{
+    NO_TEMPLATE,
+    DUAL_LIGHT,
+    COVER,
+    GATE,
+    PZEM
+};
 namespace constantsMqtt
 {
     constexpr const char *mqttCloudURL{"mqtt.bhonofre.pt"};
@@ -38,21 +46,7 @@ namespace configFilenames
 } // namespace configFilenames
 namespace constantsConfig
 {
-#if GENERIC
-    constexpr const char *firmwareMode{"GENERIC"};
-#endif
-#if DUAL_LIGHT
-    constexpr const char *firmwareMode{"DUAL_LIGHT"};
-#endif
-#if COVER
-    constexpr const char *firmwareMode{"COVER"};
-#endif
-#if BHPZEM
-    constexpr const char *firmwareMode{"BHPZEM"};
-#endif
-#if GATE
-    constexpr const char *firmwareMode{"GATE"};
-#endif
+    constexpr const char *firmwareMode{"NO_FEATURES"};
     constexpr const char *newID{"NEW"};
     constexpr unsigned int noGPIO{99u};
     constexpr unsigned long storeConfigDelay{5000ul};
