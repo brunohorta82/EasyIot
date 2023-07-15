@@ -11,7 +11,6 @@
 #include <Bounce2.h>
 #include "CloudIO.h"
 #include <Shutters.h>
-#include "Templates.h"
 
 struct Switches &getAtualSwitchesConfig()
 {
@@ -535,10 +534,9 @@ void load(Switches &switches)
   if (!LittleFS.exists(configFilenames::switches))
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Default config loaded." CR, tags::switches);
+    Log.notice("%s No Switches config found!." CR, tags::switches);
 #endif
-    loadSwitchDefaults();
-    getAtualSwitchesConfig().save();
+    return;
   }
   File file = LittleFS.open(configFilenames::switches, "r+");
   switches.load(file);

@@ -10,7 +10,6 @@
 #ifdef ESP8266
 #include <ESP8266httpUpdate.h>
 #include <ESP8266mDNS.h>
-
 #endif
 #ifdef ESP32
 #include <WebServer.h>

@@ -15,7 +15,6 @@
 #include <dht_nonblocking.h>
 #include "WebRequests.h"
 #include <Bounce2.h>
-#include "Templates.h"
 #define BUS_SDA 2  //-1 if you don't use display
 #define BUS_SCL 13 //-1 if you don't use display
 #if WITH_DISPLAY
@@ -238,10 +237,9 @@ void load(Sensors &sensors)
   if (!LittleFS.exists(configFilenames::sensors))
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Default config loaded." CR, tags::sensors);
+    Log.notice("%s No Sensors config found." CR, tags::sensors);
 #endif
-    loadSensorsDefaults();
-    getAtualSensorsConfig().save();
+    return;
   }
 
   File file = LittleFS.open(configFilenames::sensors, "r");
