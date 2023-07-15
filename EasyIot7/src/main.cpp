@@ -114,7 +114,6 @@ void setup()
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
-
   load(getAtualConfig());
   load(getAtualSwitchesConfig());
   load(getAtualSensorsConfig());
