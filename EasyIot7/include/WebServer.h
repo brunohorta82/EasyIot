@@ -6,7 +6,7 @@ const char HTTP_STYLE[] PROGMEM = "<style>.st{font-size:12px;text-align:center;}
 const char HTTP_SCRIPT[] PROGMEM = "<script>function c(l){document.getElementById('s').value=l.innerText||l.textContent;document.getElementById('p').focus();}</script>";
 const char HTTP_HEADER_END[] PROGMEM = "</head><body><div class=\"t\"><span>OnOfre</span></div><h3 class='box-title'>Configuração da ligação Wi-Fi</h3><div class=\"i\">";
 const char HTTP_ITEM[] PROGMEM = "<div class=\"it\"><a href='#p' onclick='c(this)'>{v}</a>&nbsp;<span class='{i}'>{r}%</span></div>";
-const char HTTP_FORM_START[] PROGMEM = "<form method='get' action='/'> <div> <input maxlength='32' id='s' name='s' placeholder='nome da tua rede Wi-Fi'/> <a href='/?sc'>pesquisar</a> </div><input id='p' name='p' maxlength='24' type='password' placeholder='palavra passe'/> <input maxlength='32' id='i' name='i' placeholder='nome do dispositivo'/><button type='submit'>Guardar</button></form>";
+const char HTTP_FORM_START[] PROGMEM = "<form method='get' action='/'> <div> <input maxlength='32' id='s' name='s'  placeholder='nome da tua rede Wi-Fi'/> <a href='/?sc'>pesquisar</a> </div><input id='p' name='p' maxlength='24' type='password' placeholder='palavra passe'/> <input maxlength='32' id='i' name='i' value='{n}' placeholder='nome do dispositivo'/><button type='submit'>Guardar</button></form>";
 const char HTTP_SAVED[] PROGMEM = "<div class=\"st\">Configuração guardada<br />Verifica na tua Aplicação Móvel ou no teu Browser se já consegues aceder ao teu OnOfre <br/>Se não funcionar tenta novamente o processo de configuração.<br/><br/>Utiliza o endereço {o} para aceder no Browser</a></div>";
 const char HTTP_END[] PROGMEM = "</div></body></html>";
 void setupWebserverAsync();

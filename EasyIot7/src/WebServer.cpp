@@ -19,6 +19,7 @@
 #include <Config.h>
 #include "CoreWiFi.h"
 #include <Ticker.h>
+#include "Config.h"
 #define REALM "onofre"
 extern "C" uint32_t _FS_start;
 extern "C" uint32_t _FS_end;
@@ -156,7 +157,9 @@ public:
     }
     if (!store)
     {
-      response->print(FPSTR(HTTP_FORM_START));
+      String form = FPSTR(HTTP_FORM_START);
+      form.replace("{n}", getAtualConfig().nodeId);
+      response->print(form);
       response->print(FPSTR(HTTP_END));
       request->send(response);
     }

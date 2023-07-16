@@ -10,7 +10,7 @@
 struct Config
 {
   double firmware = VERSION;
-  char nodeId[32];
+  char nodeId[32] = {};
   char mqttIpDns[40];
   char cloudIOUserName[40];
   char cloudIOUserPassword[64];
