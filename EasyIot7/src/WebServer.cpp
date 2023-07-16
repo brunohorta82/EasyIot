@@ -143,7 +143,6 @@ public:
           {
             item.replace("{i}", "");
           }
-          // DEBUG_WM(item);
           scan += item;
         }
         WiFi.scanDelete();
@@ -159,6 +158,8 @@ public:
     {
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", getAtualConfig().nodeId);
+      int tt = 0; // TODO GET FROM CONFIG
+      form.replace("option value='" + String(tt) + "'", "option value='" + String(tt) + "' selected");
       response->print(form);
       response->print(FPSTR(HTTP_END));
       request->send(response);
