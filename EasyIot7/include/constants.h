@@ -39,7 +39,7 @@ namespace configFilenames
 namespace constantsConfig
 {
 #if GENERIC
-    constexpr const char *firmwareMode{"GENERIC"};
+    constexpr const char *firmwareMode{"NO_FEATURES"};
 #endif
 #if DUAL_LIGHT
     constexpr const char *firmwareMode{"DUAL_LIGHT"};
