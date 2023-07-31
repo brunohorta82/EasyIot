@@ -202,11 +202,17 @@ WiFiClient client;
 HTTPClient http;
 void connectoToCloudIO()
 {
-  reconectCount++;
+
   cloudIOReconnectTimer.detach();
   if (WiFi.status() != WL_CONNECTED || reconectCount > 3)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.error("%s [HTTP] reconectCount %d" CR, tags::cloudIO, reconectCount);
+#endif
     return;
+  }
 
+  reconectCount++;
   String payload = "";
   size_t s = getAtualSwitchesConfig().items.size();
   size_t ss = getAtualSensorsConfig().items.size();
@@ -257,6 +263,11 @@ void connectoToCloudIO()
     Log.error("%s [HTTP] POST... code: %d" CR, tags::cloudIO, httpCode);
 #endif
     // file found at server
+    if (httpCode == HTTP_CODE_NO_CONTENT)
+    {
+      reconectCount = 0;
+      return;
+    }
     if (httpCode == HTTP_CODE_OK)
     {
       const String &payload = http.getString();
