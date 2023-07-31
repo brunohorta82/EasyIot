@@ -386,6 +386,10 @@ void Switches::save()
     return;
   this->save(file);
   file.close();
+#ifdef DEBUG_ONOFRE
+  Log.error("%s Request CloudIO Sync" CR, tags::switches);
+#endif
+  requestCloudIOSync();
 }
 
 void switchesCallback(message_t const &msg, void *arg)
