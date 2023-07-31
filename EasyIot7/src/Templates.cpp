@@ -67,15 +67,14 @@ void load(enum Template _template)
         one.secondaryGpio = 13u;
     }
 
-    if (_template == Template::GATE)
-    {
-        one.mode = GATE_SWITCH;
-        strlcpy(one.name, "Portão", sizeof(one.name));
-        strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
-        one.primaryGpio = constantsConfig::noGPIO;
-        one.primaryStateGpio = 13;
-        one.autoStateDelay = 0;
-    }
+#if defined GATE
+    one.mode = SwitchMode::PUSH;
+    strlcpy(one.name, "Garagem", sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
+    one.primaryGpio = constantsConfig::noGPIO;
+    one.primaryStateGpio = 13;
+    one.autoStateDelay = 0;
+#endif
 
     if (_template == Template::DUAL_LIGHT || Template::COVER)
     {

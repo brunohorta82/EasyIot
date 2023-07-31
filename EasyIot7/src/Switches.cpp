@@ -366,7 +366,7 @@ void SwitchT::load(File &file)
   knxSupport = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree >= 0;
   firmware = VERSION;
   configPins();
-  bool isGate = SwitchMode::GATE_SWITCH == mode;
+  bool isGate = strncmp(family, constanstsSwitch::familyGate, sizeof(constanstsSwitch::familyGate)) == 0;
   if (!isGate)
     changeState(getCurrentState().c_str(), "LOAD");
 }
@@ -676,10 +676,11 @@ void knkGroupNotifyState(const SwitchT &sw, const char *state)
 }
 void timedOn(unsigned int gpio, bool inverted, unsigned onTime)
 {
+  Serial.println("PORTAO4");
   configPIN(gpio, OUTPUT);
   writeToPIN(gpio, inverted ? LOW : HIGH); // TURN ON
   unsigned long pressOn = millis();
-  while (pressOn + 1000 > millis())
+  while (pressOn + onTime > millis())
   {
   }
   writeToPIN(gpio, inverted ? HIGH : LOW); // TURN OFF
@@ -691,11 +692,12 @@ const String SwitchT::changeState(const char *state, const char *origin)
   Log.notice("%s State:     %s" CR, tags::switches, state);
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
   Log.notice("%s From : %s" CR, tags::switches, origin);
+  Log.notice("%s Family : %s" CR, tags::switches, family);
 #endif
   bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
   bool isFromKnx = strcmp("KNX", origin) == 0;
-  bool isGate = SwitchMode::GATE_SWITCH == mode;
+  bool isGate = strncmp(family, constanstsSwitch::familyGate, sizeof(constanstsSwitch::familyGate)) == 0;
   if (isCover)
   {
     if (typeControl == SwitchControlType::GPIO_OUTPUT)
@@ -741,13 +743,14 @@ const String SwitchT::changeState(const char *state, const char *origin)
   {
     statePoolIdx = findPoolIdx(state, statePoolIdx, family);
     if (statePoolIdx < 0)
+    {
       return "ERROR";
-
+    }
     if (typeControl == SwitchControlType::GPIO_OUTPUT)
     {
       if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl == constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
+        if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx || statePoolIdx == constanstsSwitch::firtStopIdx || statePoolIdx == constanstsSwitch::secondStopIdx)
         {
           timedOn(primaryGpioControl, inverted, 1000);
         }
