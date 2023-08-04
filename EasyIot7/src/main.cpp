@@ -17,7 +17,6 @@
 #include <HTTPUpdate.h>
 #endif
 #include "constants.h"
-#include "WebRequests.h"
 #include "CloudIO.h"
 
 void checkInternalRoutines()
@@ -50,17 +49,17 @@ void checkInternalRoutines()
   {
     char updateURL[120];
 #ifdef ESP32
-    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=%s&mcu=esp32", constantsConfig::firmwareMode);
+    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?mcu=esp32");
 #endif
 #ifdef ESP8266
-    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?firmwareMode=%s&mcu=esp8266", constantsConfig::firmwareMode);
+    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?mcu=esp8266");
 #endif
     char lastVersionURL[120];
 #ifdef ESP32
-    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?firmwareMode=%s&mcu=esp32", constantsConfig::firmwareMode);
+    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?mcu=esp32");
 #endif
 #ifdef ESP8266
-    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?firmwareMode=%s&mcu=esp8266", constantsConfig::firmwareMode);
+    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?mcu=esp8266");
 #endif
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
@@ -132,7 +131,6 @@ void loop()
   {
     loop(getAtualSwitchesConfig());
     loop(getAtualSensorsConfig());
-    loopTime();
   }
   if (WiFi.status() == WL_CONNECTED)
     knx.loop();

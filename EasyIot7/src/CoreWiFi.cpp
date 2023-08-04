@@ -161,7 +161,6 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     {
       strlcpy(getAtualConfig().wifiSSID, WiFi.SSID().c_str(), sizeof(getAtualConfig().wifiSSID));
       strlcpy(getAtualConfig().wifiSecret, WiFi.psk().c_str(), sizeof(getAtualConfig().wifiSecret));
-      getAtualConfig().save();
     }
 
     knx.start();
@@ -195,7 +194,12 @@ void refreshMDNS(const char *lastName)
     MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(getAtualConfig().chipId));
     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
     MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
-    MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
+#ifdef ESP32
+    MDNS.addServiceTxt("bhonofre", "tcp", "mcu", "ESP32");
+#endif
+#ifdef ESP8266
+    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", "ESP8266");
+#endif
   }
   else
   {
