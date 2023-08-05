@@ -858,7 +858,9 @@ void loop(Switches &switches)
       sw.shutter->loop();
     if (sw.isCover && sw.shutter->isCalibration())
     {
+#ifdef DEBUG_ONOFRE
       Log.notice("%s CALIBRATION" CR, tags::switches);
+#endif
       continue;
     }
     if (sw.childLock)
