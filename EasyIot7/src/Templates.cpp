@@ -86,7 +86,7 @@ void loadSwitchDefaults()
 #endif
 
 #if defined COVER
-    one.mode = DUAL_SWITCH;
+    one.mode = DUAL_PUSH;
     strlcpy(one.name, "Estore", sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
     one.secondaryGpio = 13u;

@@ -97,7 +97,8 @@ public:
   Shutters &stop();
   Shutters &loop();
   bool isIdle();
-  uint8_t getCurrentLevel();
+  bool isCalibration();
+      uint8_t getCurrentLevel();
   Shutters &reset();
   SwitchT *getSwitchT();
   bool isReset();

@@ -853,8 +853,14 @@ void loop(Switches &switches)
   }
   for (auto &sw : switches.items)
   {
+
     if (sw.isCover)
       sw.shutter->loop();
+    if (sw.isCover && sw.shutter->isCalibration())
+    {
+      Log.notice("%s CALIBRATION" CR, tags::switches);
+      continue;
+    }
     if (sw.childLock)
       continue;
     bool primaryGpioEvent = true;
