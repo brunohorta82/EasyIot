@@ -145,8 +145,90 @@ var WORDS_EN = {
     "address": "Address",
     "prefix": "Prefix",
     "apikey": "API Key"
+	
+var WORDS_RO = {
+    "gate":"Poarta",
+    "pin-state-a":"Pin State A",
+    "pin-state-b":"Pin State B",
+    "pin-out-3": "Pin State C",
+    "update-from-server": "ACTUALIZARE NOUA",
+    "node": "Modul",
+    "up": "Sus",
+    "down": "Jos",
+    "group": "Grup",
+    "integrations": "INTEGRARE",
+    "sensors": "Senzori",
+    "integrate": "Integrare",
+    "released": "Release",
+    "reading-interval": "Interval de Citire",
+    "update": "ATUALIZARE",
+    "features": "FUNCTII",
+    "current-version": "Versiunea curenta",
+    "new-file": "Alegeti noul fisier",
+    "install-new-version": "Actualizati automat la versiune",
+    "install-file-version": "Instalati versiunea fisierului",
+    "version": "Versiune",
+    "save": "Salvati",
+    "choose": "Alege",
+    "auto-state": "Stare automata",
+    "clean-fields": "Stergeti toate campurile",
+    "username": "Nume de utilizator",
+    "password": "Parola",
+    "yes": "Da",
+    "no": "Nu",
+    "disconnected": "deconectat",
+    "dconnected": "conectat",
+    "netmask": "Netmask",
+    "system": "Sistem",
+    "name": "Nume",
+    "in": "in",
+    "seconds": "secunde",
+    "restart": "Repornire",
+    "reset-factory": "Incarcare setare de fabrica",
+    "switches": "Intrerupator",
+    "remove": "Sterge",
+    "new": "Creaza nou",
+    "family": "Familie",
+    "switch": "Intrerupator",
+    "light": "Lumina",
+    "cover": "Jaluzea",
+    "garage": "Garaj",
+    "normal": "Generic",
+    "push": "Push",
+    "dual-push": "Dual Push",
+    "dual-normal": "Dual Generic",
+    "mode": "Mod",
+    "relay-mqtt": "Relu / MQTT",
+    "mqtt": "MQTT",
+    "control": "Output",
+    "pin-in-a": "Pinul de intrare a",
+    "pin-in-b": "Pinul de intrare b",
+    "pin-in-c": "Pinul de intrare c",
+    "pin-out-1": "Pinul de iesire a",
+    "pin-out-2": "Pinul de iesire b",
+    "none": "Nedesemnata",
+    "retain-message": "Retain Messages",
+    "command": "Command",
+    "state": "Stare",
+    "on": "Pornit",
+    "off": "Deconectat",
+
+    "open": "Deschis",
+    "close": "Inchis",
+    "stop": "Stop",
+    "time": "Timp",
+    "17": "A0",
+    "line": "Linia",
+    "member": "Membru",
+    "address": "Address",
+    "prefix": "Prefix",
+    "apikey": "API Key"
 };
+
 function loadsLanguage(lang) {
+    if (lang === null) {
+        window.navigator.language.startsWith("en") ? lang = "EN" : lang = "RO";
+    }	 
     localStorage.setItem('lang', "EN");
     $('span[class^="lang"]').each(function () {
         let langVar = (this.className).replace('lang-', '');
@@ -162,11 +244,13 @@ function loadsLanguage(lang) {
         $(this).text(text);
     });
 }
-function showMessage(pt, en) {
+function showMessage(pt, en, ro) {
     localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
+	localStorage.getItem('lang').toString() === "RO" ? alert(ro) : alert(en);
 }
-function showText(pt, en) {
+function showText(pt, en, ro) {
     return localStorage.getItem('lang').toString() === "PT" ? pt : en;
+	return localStorage.getItem('lang').toString() === "RO)" ? ro : en;
 }
 function loadConfig() {
     var targetUrl = endpoint.baseUrl + "/config";
@@ -179,7 +263,7 @@ function loadConfig() {
             fillConfig();
         },
         error: function () {
-            showMessage("Erro a carregar configuração", "Configuration load failed.")
+            showMessage("Erro a carregar configuração", "Configuration load failed.","Eroare la incarcarea configuratiei.")
         }, complete: function () {
 
         },
@@ -199,7 +283,7 @@ function loadDevice(func, e, next) {
             }
         },
         error: function () {
-            showMessage("Erro a carregar configuração de funcionalidades.", "Features Configuration load failed.")
+            showMessage("Erro a carregar configuração de funcionalidades.", "Features Configuration load failed.", "Eroare la incarcarea configuratiei functiilor.")
         },
         timeout: 2000
     });
