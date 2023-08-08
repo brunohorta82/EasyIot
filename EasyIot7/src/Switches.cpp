@@ -363,8 +363,8 @@ void SwitchT::load(File &file)
   knxSupport = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree >= 0;
   firmware = VERSION;
   configPins();
-  bool isGate = strncmp(family, constanstsSwitch::familyGate, sizeof(constanstsSwitch::familyGate)) == 0;
-  if (!isGate)
+  bool isLight = strncmp(family, constanstsSwitch::familyLight, sizeof(constanstsSwitch::familyLight)) == 0;
+  if (isLight)
     changeState(getCurrentState().c_str(), "LOAD");
 }
 
@@ -848,6 +848,7 @@ void loop(Switches &switches)
   }
   for (auto &sw : switches.items)
   {
+
     if (sw.isCover)
       sw.shutter->loop();
     if (sw.childLock)

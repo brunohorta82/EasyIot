@@ -348,7 +348,10 @@ bool Shutters::isIdle()
 {
   return _state == STATE_IDLE;
 }
-
+bool Shutters::isCalibration()
+{
+  return _state == STATE_CALIBRATING;
+}
 uint8_t Shutters::getCurrentLevel()
 {
   return _currentLevel;

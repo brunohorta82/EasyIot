@@ -59,13 +59,12 @@ void load(enum Template _template)
         strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
     }
 
-    if (_template == Template::COVER)
-    {
-        one.mode = DUAL_SWITCH;
-        strlcpy(one.name, "Estore", sizeof(one.name));
-        strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
-        one.secondaryGpio = 13u;
-    }
+#if defined COVER
+    one.mode = DUAL_PUSH;
+    strlcpy(one.name, "Estore", sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
+    one.secondaryGpio = 13u;
+#endif
 
 #if defined GATE
     one.mode = SwitchMode::PUSH;
