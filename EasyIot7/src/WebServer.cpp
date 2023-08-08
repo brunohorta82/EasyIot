@@ -20,6 +20,7 @@
 #include "CoreWiFi.h"
 #include <Ticker.h>
 #include "Config.h"
+#include "Templates.h"
 #define REALM "onofre"
 extern "C" uint32_t _FS_start;
 extern "C" uint32_t _FS_end;
@@ -66,12 +67,13 @@ public:
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
+    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0 && request->arg("t").length() > 0)
     {
       String n_name = String(request->arg("i"));
       normalize(n_name);
       strlcpy(getAtualConfig().nodeId, n_name.c_str(), sizeof(getAtualConfig().nodeId));
       strlcpy(getAtualConfig().wifiSSID, request->arg("s").c_str(), sizeof(getAtualConfig().wifiSSID));
+      load((Template)request->arg("t").toInt());
       if (request->hasArg("p"))
       {
         Serial.println(request->arg("p"));
@@ -158,15 +160,12 @@ public:
     {
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", getAtualConfig().nodeId);
-      int tt = 0; // TODO GET FROM CONFIG
-      form.replace("option value='" + String(tt) + "'", "option value='" + String(tt) + "' selected");
       response->print(form);
       response->print(FPSTR(HTTP_END));
       request->send(response);
     }
     if (store)
     {
-      getAtualConfig().save();
       configStore.once(1, requestRestart);
     }
   }
@@ -317,7 +316,6 @@ void loadAPI()
     root["mode"] = (int)WiFi.getMode();
     root["mqtt"] = mqttConnected();
     root["cloudIO"] = cloudIOConnected();
-    root["connectedOn"] = getAtualConfig().connectedOn;
     root["currentTime"] = getTime();
     response->setLength();
     request->send(response); });

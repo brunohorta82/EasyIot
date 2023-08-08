@@ -223,8 +223,6 @@ void connectoToCloudIO()
   device["currentVersion"] = String(VERSION, 3);
   device["nodeId"] = getAtualConfig().nodeId;
   device["wifi"] = getAtualConfig().wifiSSID;
-
-  device["firmwareMode"] = constantsConfig::firmwareMode;
   device["macAddr"] = WiFi.macAddress();
   JsonArray feactures = device.createNestedArray("features");
   for (auto &sw : getAtualSwitchesConfig().items)
@@ -236,6 +234,7 @@ void connectoToCloudIO()
     sdoc["shutterPercentage"] = sw.lastPercentage;
     sdoc["stateControl"] = sw.getCurrentState();
     sdoc["cloudIOSupport"] = sw.cloudIOSupport;
+    sdoc["knk"] = String(sw.knxLevelOne) + ".";
   }
   for (const auto &ss : getAtualSensorsConfig().items)
   {

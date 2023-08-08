@@ -13,10 +13,9 @@
 #include "CloudIO.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
-#include "WebRequests.h"
 #include <Bounce2.h>
-#define BUS_SDA 2  //-1 if you don't use display
-#define BUS_SCL 13 //-1 if you don't use display
+#define BUS_SDA -1 //-1 if you don't use display
+#define BUS_SCL -1 //-1 if you don't use display
 #if WITH_DISPLAY
 #include <Adafruit_SSD1306.h>
 
@@ -461,8 +460,6 @@ void publishReadings(String &readings, SensorT &sensor)
   {
     publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
   }
-  if (sensor.emoncmsSupport)
-    publishOnEmoncms(sensor, readings);
 }
 
 void resetSensors(Sensors &sensors)

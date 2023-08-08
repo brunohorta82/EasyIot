@@ -27,23 +27,13 @@ struct Config
   char apSecret[64];
   char apName[30];
   char chipId[24];
+  char availableCloudIO[120];
+  char mqttCloudRemoteActionsTopic[128];
   char apiUser[32];
   char apiPassword[64];
-  char emoncmsServer[80];
-  char emoncmsPath[20];
-  char emoncmsApikey[80];
-  char emoncmsFingerprint[100];
-  char availableCloudIO[120];
-
-  uint8_t knxArea = 0;
-  uint8_t knxLine = 0;
-  uint8_t knxMember = 0;
-  long connectedOn = -1;
-  char mqttCloudRemoteActionsTopic[128];
-  void save();
   void toJson(JsonVariant &root);
   Config &updateFromJson(JsonObject &root);
-  void save(File &file) const;
+  void save();
   void load(File &file);
 };
 
@@ -73,7 +63,7 @@ void configPIN(uint8_t pin, uint8_t mode);
 void writeToPIN(uint8_t pin, uint8_t val);
 bool readPIN(uint8_t pin);
 void generateId(String &id, const String &name, int familyCode, size_t maxSize);
-void loopTime();
 long getTime();
 String getChipId();
+
 #endif
