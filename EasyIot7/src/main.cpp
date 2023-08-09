@@ -1,12 +1,11 @@
 #include <Arduino.h>
-
 #include "Config.h"
+#include "CloudIO.h"
 #include "WebServer.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
 #include "Switches.h"
 #include "Sensors.h"
-#include <esp-knx-ip.h>
 #ifdef ESP8266
 #include <ESP8266httpUpdate.h>
 #include <ESP8266mDNS.h>
@@ -16,61 +15,52 @@
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 #endif
-#include "constants.h"
-#include "CloudIO.h"
-
+#include <esp-knx-ip.h>
+Config config;
 void checkInternalRoutines()
 {
-  if (cloudIOSync())
+  if (config.isCloudIOSyncRequested())
   {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s CloudIO requested.", tags::system);
+#endif
     connectoToCloudIO();
   }
-  if (wifiScanRequested())
+
+  if (config.isWifiScanRequested())
   {
     scanNewWifiNetworks();
   }
-  if (restartRequested())
+
+  if (config.isRestartRequested())
   {
 #ifdef DEBUG_ONOFRE
-
-    Log.notice("%s Rebooting...", tags::system);
+    Log.notice("%s Restart requested.", tags::system);
 #endif
     ESP.restart();
   }
-  if (loadDefaultsRequested())
+
+  if (config.isLoadDefaultsRequested())
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Loading defaults...", tags::system);
+    Log.notice("%s Load Defaults requested.", tags::system);
 #endif
     LittleFS.format();
-    requestRestart();
+    config.requestRestart();
   }
-  if (autoUpdateRequested())
+
+  if (config.isAutoUpdateRequested())
   {
-    char updateURL[120];
-#ifdef ESP32
-    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?mcu=esp32");
-#endif
-#ifdef ESP8266
-    sprintf(updateURL, "http://update.bhonofre.pt/firmware/latest-binary?mcu=esp8266");
-#endif
-    char lastVersionURL[120];
-#ifdef ESP32
-    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?mcu=esp32");
-#endif
-#ifdef ESP8266
-    sprintf(lastVersionURL, "http://update.bhonofre.pt/firmware/latest-version?mcu=esp8266");
-#endif
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
 #endif
     WiFiClient client;
     t_httpUpdate_return ret;
 #ifdef ESP8266
-    ret = ESPhttpUpdate.update(client, updateURL, String(VERSION));
+    ret = ESPhttpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
 #endif
 #ifdef ESP32
-    ret = httpUpdate.update(client, updateURL, String(VERSION));
+    ret = httpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
 #endif
     switch (ret)
     {
@@ -97,7 +87,7 @@ void checkInternalRoutines()
     }
   }
 
-  if (reloadWifiRequested())
+  if (config.isReloadWifiRequested())
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Loading wifi configuration...", tags::system);
@@ -108,14 +98,16 @@ void checkInternalRoutines()
 
 void setup()
 {
-  LittleFS.begin();
+
 #ifdef DEBUG_ONOFRE
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
-  load(getAtualConfig());
-  load(getAtualSwitchesConfig());
-  load(getAtualSensorsConfig());
+  configTime(0, 0, NTP_SERVER);
+  setenv("TZ", TZ_INFO, 1);
+  LittleFS.begin();
+  config.load();
+
   setupWiFi();
   setupMQTT();
   setupWebserverAsync();
@@ -127,10 +119,8 @@ void loop()
   webserverServicesLoop();
   loopWiFi();
   loopMqtt();
-  if (!autoUpdateRequested())
+  if (!config.isAutoUpdateRequested())
   {
-    loop(getAtualSwitchesConfig());
-    loop(getAtualSensorsConfig());
   }
   if (WiFi.status() == WL_CONNECTED)
     knx.loop();

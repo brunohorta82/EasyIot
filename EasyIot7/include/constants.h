@@ -1,4 +1,5 @@
 #pragma once
+
 enum Template
 {
     NO_TEMPLATE,
@@ -39,9 +40,9 @@ namespace tags
 } // namespace tags
 namespace configFilenames
 {
-    constexpr const char *config = "/config.bin";
-    constexpr const char *sensors = "/sensors.bin";
-    constexpr const char *switches = "/switches.bin";
+    constexpr const char *config = "/config.json";
+    constexpr const char *sensors = "/sensors.json";
+    constexpr const char *switches = "/switches.json";
 
 } // namespace configFilenames
 namespace constantsConfig

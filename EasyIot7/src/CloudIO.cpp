@@ -12,9 +12,12 @@
 #ifdef ESP32
 #include <HTTPClient.h>
 #endif
+extern Config config;
 AsyncMqttClient mqttClient;
 Ticker mqttReconnectTimer;
 Ticker cloudIOReconnectTimer;
+String topicAvailable;
+String topicAction;
 int reconectCount = 0;
 
 void disconnectToClounIOMqtt()
@@ -58,22 +61,21 @@ void onMqttConnect(bool sessionPresent)
 #ifdef DEBUG_ONOFRE
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
-  String topicAction;
+
   topicAction.reserve(200);
-  topicAction.concat(getAtualConfig().cloudIOUserName);
+  topicAction.concat(config.cloudIOUserName);
   topicAction.concat("/");
-  topicAction.concat(getAtualConfig().chipId);
+  topicAction.concat(getChipId());
   topicAction.concat("/remote-action");
-  strlcpy(getAtualConfig().mqttCloudRemoteActionsTopic, topicAction.c_str(), sizeof(getAtualConfig().mqttCloudRemoteActionsTopic));
-  subscribeOnMqttCloudIO(getAtualConfig().mqttCloudRemoteActionsTopic);
+  subscribeOnMqttCloudIO(topicAction.c_str());
   for (auto &sw : getAtualSwitchesConfig().items)
   {
 
     String topic;
     topic.reserve(200);
-    topic.concat(getAtualConfig().cloudIOUserName);
+    topic.concat(config.cloudIOUserName);
     topic.concat("/");
-    topic.concat(getAtualConfig().chipId);
+    topic.concat(getChipId());
     topic.concat("/");
     topic.concat(sw.family);
     topic.concat("/");
@@ -97,14 +99,14 @@ void onMqttConnect(bool sessionPresent)
       mqttClient.publish(sw.mqttCloudStateTopic, 0, true, sw.getCurrentState().c_str());
     }
   }
-  mqttClient.publish(getAtualConfig().availableCloudIO, 0, true, "1\0");
+  mqttClient.publish(topicAvailable.c_str(), 0, true, "1\0");
   for (auto &ss : getAtualSensorsConfig().items)
   {
     String topic;
     topic.reserve(200);
-    topic.concat(getAtualConfig().cloudIOUserName);
+    topic.concat(config.cloudIOUserName);
     topic.concat("/");
-    topic.concat(getAtualConfig().chipId);
+    topic.concat(getChipId());
     topic.concat("/");
     topic.concat(ss.deviceClass);
     topic.concat("/");
@@ -145,15 +147,15 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
   strlcpy(msg, payload, len + 1);
-  if (strcmp(topic, getAtualConfig().mqttCloudRemoteActionsTopic) == 0)
+  if (strcmp(topic, topicAction.c_str()) == 0)
   {
     if (strcmp(msg, "REBOOT") == 0)
     {
-      requestRestart();
+      config.requestRestart();
     }
     if (strcmp(msg, "UPDATE") == 0)
     {
-      requestAutoUpdate();
+      config.requestAutoUpdate();
     }
   }
   else
@@ -176,15 +178,15 @@ void setupCloudIO()
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setCleanSession(true);
-  mqttClient.setWill(getAtualConfig().availableCloudIO, 0, true, "0\0");
+  mqttClient.setWill(topicAvailable.c_str(), 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
-  mqttClient.setClientId(getAtualConfig().chipId);
-  mqttClient.setCredentials(getAtualConfig().cloudIOUserName, getAtualConfig().cloudIOUserPassword);
+  mqttClient.setClientId(getChipId().c_str());
+  mqttClient.setCredentials(config.cloudIOUserName, config.cloudIOUserPassword);
   connectToClounIOMqtt();
 }
 bool tryCloudConnection()
 {
-  if (strlen(getAtualConfig().cloudIOUserName) > 0 && strlen(getAtualConfig().cloudIOUserPassword) > 0)
+  if (strlen(config.cloudIOUserName) > 0 && strlen(config.cloudIOUserPassword) > 0)
   {
 #ifdef DEBUG_ONOFRE
     Log.error("%s Ready to try..." CR, tags::cloudIO);
@@ -196,7 +198,7 @@ bool tryCloudConnection()
 
 void cloudIoKeepAlive()
 {
-  requestCloudIOSync();
+  config.requestCloudIOSync();
 }
 WiFiClient client;
 HTTPClient http;
@@ -219,10 +221,10 @@ void connectoToCloudIO()
   const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
-  device["chipId"] = getAtualConfig().chipId;
+  device["chipId"] = getChipId();
   device["currentVersion"] = String(VERSION, 3);
-  device["nodeId"] = getAtualConfig().nodeId;
-  device["wifi"] = getAtualConfig().wifiSSID;
+  device["nodeId"] = config.nodeId;
+  device["wifi"] = config.wifiSSID;
   device["macAddr"] = WiFi.macAddress();
   JsonArray feactures = device.createNestedArray("features");
   for (auto &sw : getAtualSwitchesConfig().items)
@@ -274,15 +276,13 @@ void connectoToCloudIO()
       DeserializationError error = deserializeJson(doc, payload);
       const char *_user = doc["username"];
       const char *_pw = doc["password"];
-      strlcpy(getAtualConfig().cloudIOUserName, doc["username"] | "", sizeof(getAtualConfig().cloudIOUserName));
-      strlcpy(getAtualConfig().cloudIOUserPassword, doc["password"] | "", sizeof(getAtualConfig().cloudIOUserPassword));
-      String topicAvailable;
-      topicAvailable.reserve(sizeof(getAtualConfig().availableCloudIO));
-      topicAvailable.concat(getAtualConfig().cloudIOUserName);
+      strlcpy(config.cloudIOUserName, doc["username"] | "", sizeof(config.cloudIOUserName));
+      strlcpy(config.cloudIOUserPassword, doc["password"] | "", sizeof(config.cloudIOUserPassword));
+
+      topicAvailable.concat(config.cloudIOUserName);
       topicAvailable.concat("/");
-      topicAvailable.concat(getAtualConfig().chipId);
+      topicAvailable.concat(getChipId());
       topicAvailable.concat("/available");
-      strlcpy(getAtualConfig().availableCloudIO, topicAvailable.c_str(), sizeof(getAtualConfig().availableCloudIO));
 #ifdef DEBUG_ONOFRE
       Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, _user, _pw);
 #endif

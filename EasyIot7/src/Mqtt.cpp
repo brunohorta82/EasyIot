@@ -5,7 +5,7 @@
 #include "CoreWiFi.h"
 #include "constants.h"
 #include "Discovery.h"
-
+extern Config config;
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
 void processMqttAction(const char *topic, const char *payload)
@@ -41,13 +41,13 @@ String getBaseTopic()
 {
     String topic;
 
-    if (strlen(getAtualConfig().mqttUsername) == 0)
+    if (strlen(config.mqttUsername) == 0)
     {
         topic.concat("bhonofre");
     }
     else
     {
-        topic.concat(getAtualConfig().mqttUsername);
+        topic.concat(config.mqttUsername);
     }
     topic.concat("/");
     topic.concat(getChipId());
@@ -69,21 +69,21 @@ String getConfigStatusTopic()
 boolean reconnect()
 {
 
-    if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
+    if (WiFi.status() != WL_CONNECTED || strlen(config.mqttIpDns) == 0)
         return false;
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
+    Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, config.mqttIpDns);
 #endif
-    if (mqttClient.connect(getAtualConfig().chipId, String(getAtualConfig().mqttUsername).c_str(), String(getAtualConfig().mqttPassword).c_str(), getAtualConfig().mqttAvailableTopic, 0, true, constantsMqtt::unavailablePayload, true))
+    if (mqttClient.connect(getChipId().c_str(), String(config.mqttUsername).c_str(), String(config.mqttPassword).c_str(), getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
     {
 #ifdef DEBUG_ONOFRE
-        Log.notice("%s Connected to %s" CR, tags::mqtt, getAtualConfig().mqttIpDns);
+        Log.notice("%s Connected to %s" CR, tags::mqtt, config.mqttIpDns);
 #endif
         publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
         publishOnMqtt(getConfigStatusTopic().c_str(), String("{\"firmware\":" + String(VERSION, 3) + "}").c_str(), true);
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
-        refreshMDNS(getAtualConfig().nodeId);
+        refreshMDNS(config.nodeId);
         for (auto &sw : getAtualSwitchesConfig().items)
         {
             subscribeOnMqtt(sw.mqttCommandTopic);
@@ -96,7 +96,7 @@ boolean reconnect()
 
 void setupMQTT()
 {
-    if (strlen(getAtualConfig().mqttIpDns) == 0)
+    if (strlen(config.mqttIpDns) == 0)
     {
         return;
     }
@@ -106,16 +106,16 @@ void setupMQTT()
     if (mqttConnected())
     {
         mqttClient.disconnect();
-        refreshMDNS(getAtualConfig().nodeId);
+        refreshMDNS(config.nodeId);
     }
 
-    mqttClient.setServer(getAtualConfig().mqttIpDns, getAtualConfig().mqttPort);
+    mqttClient.setServer(config.mqttIpDns, config.mqttPort);
     mqttClient.setCallback(callbackMqtt);
 }
 
 void loopMqtt()
 {
-    if (WiFi.status() != WL_CONNECTED || strlen(getAtualConfig().mqttIpDns) == 0)
+    if (WiFi.status() != WL_CONNECTED || strlen(config.mqttIpDns) == 0)
         return;
     static unsigned long lastReconnectAttempt = millis();
     if (!mqttConnected())
@@ -141,7 +141,7 @@ void loopMqtt()
 
 void publishOnMqtt(const char *topic, const char *payload, bool retain)
 {
-    if (strlen(getAtualConfig().mqttIpDns) == 0)
+    if (strlen(config.mqttIpDns) == 0)
     {
 #ifdef DEBUG_ONOFRE
         Log.warning("%s Setup required to publish messages" CR, tags::mqtt);
@@ -180,7 +180,7 @@ bool mqttConnected()
 }
 void subscribeOnMqtt(const char *topic)
 {
-    if (strlen(getAtualConfig().mqttIpDns) == 0)
+    if (strlen(config.mqttIpDns) == 0)
     {
 #ifdef DEBUG_ONOFRE
         Log.warning("%s Setup required to subscrive messages" CR, tags::mqtt);

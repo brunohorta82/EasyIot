@@ -1,69 +1,63 @@
-#ifndef CONFIG_H
-#define CONFIG_H
-#include <Arduino.h>
+#pragma once
+#include "Utils.hpp"
 #include <ArduinoJson.h>
 #include "LittleFS.h"
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
 
-struct Config
+class Config
 {
-  double firmware = VERSION;
+public:
   char nodeId[32] = {};
+  // MQTT
   char mqttIpDns[40];
+  int mqttPort = 1883;
+  char mqttUsername[32];
+  char mqttPassword[64];
+  // CLOUDIO
   char cloudIOUserName[40];
   char cloudIOUserPassword[64];
-  char mqttUsername[32];
-  int mqttPort = 1883;
-  char mqttPassword[64];
-  char mqttAvailableTopic[128];
+  // WIFI
   char wifiSSID[32];
   char wifiSecret[64];
   bool staticIp = false;
   char wifiIp[24];
   char wifiMask[24];
   char wifiGw[24];
-  char apSecret[64];
-  char apName[30];
-  char chipId[24];
-  char availableCloudIO[120];
-  char mqttCloudRemoteActionsTopic[128];
+  // ACCESS POINT AND PANNEL ADMIN
+  char accessPointPassword[64];
   char apiUser[32];
   char apiPassword[64];
-  void toJson(JsonVariant &root);
-  Config &updateFromJson(JsonObject &root);
+
+  void json(JsonVariant &root);
+  Config &update(JsonObject &root);
   void save();
-  void load(File &file);
+  void init();
+  void load();
+  void requestCloudIOSync();
+  bool isCloudIOSyncRequested();
+
+  void requestWifiScan();
+  bool isWifiScanRequested();
+
+  void requestRestart();
+  bool isRestartRequested();
+
+  void requestAutoUpdate();
+  bool isAutoUpdateRequested();
+
+  void requestLoadDefaults();
+  bool isLoadDefaultsRequested();
+
+  void requestReloadWifi();
+  bool isReloadWifiRequested();
+
+private:
+  bool reboot = false;
+  bool loadDefaults = false;
+  bool autoUpdate = false;
+  bool wifiReload = false;
+  bool cloudIOSync = false;
+  bool wifiScan = false;
 };
-
-struct Config &getAtualConfig();
-void load(Config &config);
-void requestCloudIOSync();
-bool cloudIOSync();
-
-void requestWifiScan();
-bool wifiScanRequested();
-
-void requestRestart();
-bool restartRequested();
-
-void requestAutoUpdate();
-bool autoUpdateRequested();
-
-void requestLoadDefaults();
-bool loadDefaultsRequested();
-
-bool reloadWifiRequested();
-
-void normalize(String &inputStr);
-boolean isValidNumber(const char *str);
-
-void configPIN(uint8_t pin, uint8_t mode);
-void writeToPIN(uint8_t pin, uint8_t val);
-bool readPIN(uint8_t pin);
-void generateId(String &id, const String &name, int familyCode, size_t maxSize);
-long getTime();
-String getChipId();
-
-#endif

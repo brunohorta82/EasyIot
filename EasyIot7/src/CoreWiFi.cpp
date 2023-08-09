@@ -8,11 +8,12 @@
 #include <esp-knx-ip.h>
 int retryCount = 0;
 unsigned long connectedOn = 0ul;
+extern Config config;
 String getApName()
 {
   String version = String(VERSION, 3);
   version.replace(".", "x");
-  return "OnOfre-" + String(getAtualConfig().chipId) + "-" + version;
+  return "OnOfre-" + getChipId() + "-" + version;
 }
 bool wifiConnected()
 {
@@ -21,20 +22,20 @@ bool wifiConnected()
 void reloadWiFiConfig()
 {
   jw.disconnect();
-  jw.setHostname(getAtualConfig().nodeId);
+  jw.setHostname(config.nodeId);
   jw.cleanNetworks();
-  jw.setSoftAP(getApName().c_str(), getAtualConfig().apSecret);
-  if (getAtualConfig().staticIp)
+  jw.setSoftAP(getApName().c_str(), config.accessPointPassword);
+  if (config.staticIp)
   {
-    jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret, getAtualConfig().wifiIp, getAtualConfig().wifiGw, getAtualConfig().wifiMask, getAtualConfig().wifiGw, true);
+    jw.addNetwork(config.wifiSSID, config.wifiSecret, config.wifiIp, config.wifiGw, config.wifiMask, config.wifiGw, true);
   }
-  else if (strlen(getAtualConfig().wifiSecret) > 0)
+  else if (strlen(config.wifiSecret) > 0)
   {
-    jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret);
+    jw.addNetwork(config.wifiSSID, config.wifiSecret);
   }
   else
   {
-    jw.addNetwork(getAtualConfig().wifiSSID);
+    jw.addNetwork(config.wifiSSID);
   }
 }
 void infoWifi()
@@ -67,7 +68,7 @@ void infoWifi()
     Log.notice("%s MAC  %s " CR, tags::wifi, WiFi.softAPmacAddress().c_str());
     Log.notice("----------------------------------------------" CR);
 #endif
-    refreshMDNS(getAtualConfig().nodeId);
+    refreshMDNS(config.nodeId);
   }
 }
 void enableScan()
@@ -157,10 +158,10 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
 
   case MESSAGE_CONNECTED:
-    if (strlen(getAtualConfig().wifiSSID) == 0)
+    if (strlen(config.wifiSSID) == 0)
     {
-      strlcpy(getAtualConfig().wifiSSID, WiFi.SSID().c_str(), sizeof(getAtualConfig().wifiSSID));
-      strlcpy(getAtualConfig().wifiSecret, WiFi.psk().c_str(), sizeof(getAtualConfig().wifiSecret));
+      strlcpy(config.wifiSSID, WiFi.SSID().c_str(), sizeof(config.wifiSSID));
+      strlcpy(config.wifiSecret, WiFi.psk().c_str(), sizeof(config.wifiSecret));
     }
 
     knx.start();
@@ -180,20 +181,20 @@ void refreshMDNS(const char *lastName)
 {
   bool success = false;
 #ifdef ESP32
-  success = MDNS.begin(String(getAtualConfig().nodeId).c_str());
+  success = MDNS.begin(String(config.nodeId).c_str());
 #endif
 #ifdef ESP8266
   MDNS.removeService(lastName, "bhonofre", "tcp");
   MDNS.close();
-  success = MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10);
+  success = MDNS.begin(String(config.nodeId), INADDR_ANY, 10);
 #endif
 
   if (success)
   {
     MDNS.addService("bhonofre", "tcp", 80);
-    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(getAtualConfig().chipId));
+    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", getChipId());
     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
-    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
+    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(config.wifiSSID));
 #ifdef ESP32
     MDNS.addServiceTxt("bhonofre", "tcp", "mcu", "ESP32");
 #endif
@@ -213,21 +214,21 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
 
   if (code == MESSAGE_CONNECTED)
   {
-    refreshMDNS(getAtualConfig().nodeId);
+    refreshMDNS(config.nodeId);
   }
 }
 void setupWiFi()
 {
   WiFi.setSleep(false);
-  jw.setHostname(getAtualConfig().nodeId);
+  jw.setHostname(config.nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
 
 #if JUSTWIFI_ENABLE_SMARTCONFIG
-  if (strlen(getAtualConfig().wifiSSID) == 0)
+  if (strlen(config.wifiSSID) == 0)
     jw.startSmartConfig();
 #endif
-  jw.setSoftAP(getApName().c_str(), getAtualConfig().apSecret);
+  jw.setSoftAP(getApName().c_str(), config.accessPointPassword);
   jw.enableAP(false);
   jw.enableAPFallback(true);
   jw.enableSTA(true);

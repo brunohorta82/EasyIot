@@ -8,7 +8,7 @@
 #include <Bounce2.h>
 #include "CloudIO.h"
 #include <Shutters.h>
-
+extern Config config;
 struct Switches &getAtualSwitchesConfig()
 {
   static Switches switches;
@@ -385,7 +385,7 @@ void Switches::save()
 #ifdef DEBUG_ONOFRE
   Log.error("%s Request CloudIO Sync" CR, tags::switches);
 #endif
-  requestCloudIOSync();
+  config.requestCloudIOSync();
 }
 
 void switchesCallback(message_t const &msg, void *arg)
