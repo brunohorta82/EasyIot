@@ -130,22 +130,14 @@ void Sensors::load(File &file)
       strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
 
 #if defined(ESP8266)
-      // static SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
-      item.pzemv03 = new PZEM004Tv30(item.primaryGpio, item.secondaryGpio);
+      SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
+      item.pzemv03 = new PZEM004Tv30(softwareSerial);
 #endif
 #if defined(ESP32)
       item.pzemv03 = new PZEM004Tv30(Serial2, item.primaryGpio, item.secondaryGpio);
 #endif
       configPIN(item.tertiaryGpio, INPUT);
     }
-#if WITH_DISPLAY
-      setupDisplay();
-#endif
-      break;
-    case PZEM_017:
-      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
-      // TODO item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
-      // TODO item.pzemModbus->Begin(9600, 2);
 #if WITH_DISPLAY
       setupDisplay();
 #endif
@@ -415,9 +407,8 @@ void SensorT::updateFromJson(JsonObject doc)
   {
     strlcpy(deviceClass, "POWER", sizeof(deviceClass));
 #if defined(ESP8266)
-    // static SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
-    pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
-    ;
+    SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
+    pzemv03 = new PZEM004Tv30(softwareSerial);
 #endif
 #if defined(ESP32)
 
@@ -426,11 +417,6 @@ void SensorT::updateFromJson(JsonObject doc)
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
   }
   break;
-  case PZEM_017:
-    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
-    // TODO pzemModbus = new Modbus(primaryGpio, secondaryGpio);
-    //  TODO pzemModbus->Begin(9600, 2);
-    break;
   }
   reloadMqttTopics();
   doc["id"] = id;
@@ -689,58 +675,6 @@ void loop(Sensors &sensors)
 #endif
         }
       }
-      break;
-    case PZEM_017:
-      /* TODO if (ss.lastRead + ss.delayRead < millis())
-      {
-
-        ss.lastRead = millis();
-        float v = -1;
-        float i = -1;
-        float p = -1;
-        float c = -1;
-        static uint8_t send_retry = 0;
-        bool data_ready = ss.pzemModbus->ReceiveReady();
-        if (data_ready)
-        {
-
-          uint8_t buffer[22];
-          uint8_t error = ss.pzemModbus->ReceiveBuffer(buffer, 8);
-          if (error)
-          {
-#ifdef DEBUG_ONOFRE
-            Log.notice("%s PZEM ERROR" CR, tags::sensors);
-#endif
-          }
-          else
-          {
-            v = (float)((buffer[3] << 8) + buffer[4]) / 100.0;
-            i = (float)((buffer[5] << 8) + buffer[6]) / 100.0;
-            p = (float)((buffer[9] << 24) + (buffer[10] << 16) + (buffer[7] << 8) + buffer[8]) / 10.0;
-            c = (float)((buffer[13] << 24) + (buffer[14] << 16) + (buffer[11] << 8) + buffer[12]);
-            auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
-#if WITH_DISPLAY
-            printOnDisplay(v, i, p, c);
-#endif
-            publishReadings(readings, ss);
-#ifdef DEBUG_ONOFRE
-            Log.notice("%s %s" CR, tags::sensors, readings.c_str());
-#endif
-          }
-        }
-
-        if (0 == send_retry || data_ready)
-        {
-          send_retry = 5;
-          ss.pzemModbus->Send(0x01, 0x04, 0, 8);
-        }
-        else
-        {
-
-          send_retry--;
-        }
-      }
-      */
       break;
     }
   }

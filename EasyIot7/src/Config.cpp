@@ -6,17 +6,15 @@
 #include "Switches.h"
 #include "Sensors.h"
 
-void Config::init()
+Config &Config::init()
 {
-
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Default config loaded." CR, tags::config);
-#endif
 
   strlcpy(nodeId, getChipId().c_str(), sizeof(nodeId));
   mqttPort = constantsMqtt::defaultPort;
   staticIp = false;
   strlcpy(accessPointPassword, constantsConfig::apSecret, sizeof(accessPointPassword));
+  strlcpy(apiUser, constantsConfig::apiUser, sizeof(apiUser));
+  strlcpy(apiPassword, constantsConfig::apiPassword, sizeof(apiPassword));
 
 #ifdef WIFI_SSID
   strlcpy(wifiSSID, WIFI_SSID, sizeof(wifiSSID));
@@ -24,35 +22,101 @@ void Config::init()
 #ifdef WIFI_SECRET
   strlcpy(wifiSecret, WIFI_SECRET, sizeof(wifiSecret));
 #endif
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Default config loaded." CR, tags::config);
+#endif
+  return save();
 }
 
-void Config::load()
+Config &Config::load()
 {
-
-  if (!LittleFS.begin())
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s File storage can't start" CR, tags::config);
-#endif
-    if (!LittleFS.format())
-    {
-#ifdef DEBUG_ONOFRE
-      Log.error("%s Unable to format Filesystem, please ensure you built firmware with filesystem support." CR, tags::config);
-#endif
-    }
-  }
 
   if (!LittleFS.exists(configFilenames::config))
   {
-    init();
+    return init();
   }
 
   File file = LittleFS.open(configFilenames::config, "r+");
-  // TODO LOAD JSON FILE
+  StaticJsonDocument<1024> doc;
+  DeserializationError error = deserializeJson(doc, file);
+#ifdef DEBUG_ONOFRE
+  if (error)
+    Log.notice("%s Failed to read file, using default configuration." CR, tags::config);
+#endif
+  strlcpy(nodeId,
+          doc["nodeId"] | getChipId().c_str(),
+          sizeof(nodeId));
+  // MQTT
+  strlcpy(mqttIpDns, doc["mqttIpDns"] | "", sizeof(mqttIpDns));
+  mqttPort = doc["mqttPort"] | 1883;
+  strlcpy(mqttUsername, doc["mqttUsername"] | "", sizeof(mqttUsername));
+  strlcpy(mqttPassword, doc["mqttPassword"] | "", sizeof(mqttPassword));
+  // CLOUDIO
+  strlcpy(cloudIOUsername, doc["cloudIOUsername"] | "", sizeof(cloudIOUsername));
+  strlcpy(cloudIOPassword, doc["cloudIOPassword"] | "", sizeof(cloudIOPassword));
+  // WIFI
+  strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
+  strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
+  staticIp = doc["staticIp"] | false;
+  strlcpy(wifiIp, doc["wifiIp"] | "", sizeof(wifiIp));
+  strlcpy(wifiMask, doc["wifiMask"] | "", sizeof(wifiMask));
+  strlcpy(wifiGw, doc["wifiGw"] | "", sizeof(wifiGw));
+  // ACCESS POINT AND PANNEL ADMIN
+  strlcpy(accessPointPassword, doc["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));
+  strlcpy(apiUser, doc["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
+  strlcpy(apiPassword, doc["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
   file.close();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
+  return *this;
+}
+Config &Config::save()
+{
+  File file = LittleFS.open(configFilenames::config, "w+");
+  StaticJsonDocument<1024> doc;
+  if (!String(nodeId).isEmpty())
+    doc["nodeId"] = nodeId;
+  // MQTT
+  if (!String(mqttIpDns).isEmpty())
+    doc["mqttIpDns"] = mqttIpDns;
+  doc["mqttPort"] = mqttPort;
+  if (!String(mqttUsername).isEmpty())
+    doc["mqttUsername"] = mqttUsername;
+  if (!String(mqttPassword).isEmpty())
+    doc["mqttPassword"] = mqttPassword;
+  // CLOUDIO
+  if (!String(cloudIOUsername).isEmpty())
+    doc["cloudIOUsername"] = cloudIOUsername;
+  if (!String(cloudIOPassword).isEmpty())
+    doc["cloudIOPassword"] = cloudIOPassword;
+  // WIFI
+  if (!String(wifiSSID).isEmpty())
+    doc["wifiSSID"] = wifiSSID;
+  if (!String(wifiSecret).isEmpty())
+    doc["wifiSecret"] = wifiSecret;
+  doc["staticIp"] = staticIp;
+  if (!String(wifiIp).isEmpty())
+    doc["wifiIp"] = wifiIp;
+  if (!String(wifiMask).isEmpty())
+    doc["wifiMask"] = wifiMask;
+  if (!String(wifiGw).isEmpty())
+    doc["wifiGw"] = wifiGw;
+  // ACCESS POINT AND PANNEL ADMIN
+  doc["accessPointPassword"] = accessPointPassword;
+  doc["apiUser"] = apiUser;
+  doc["apiPassword"] = apiPassword;
+  if (serializeJson(doc, file) == 0)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Fail to write File." CR, tags::config);
+#endif
+  }
+  file.close();
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Config stored." CR, tags::config);
+#endif
+  return *this;
 }
 
 Config &Config::update(JsonObject &root)

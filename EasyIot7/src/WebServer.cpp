@@ -168,7 +168,7 @@ public:
     }
     if (store)
     {
-      config.requestRestart();
+      config.save().requestRestart();
     }
   }
 };
@@ -590,8 +590,13 @@ void sendToServerEvents(const String &topic, const char *payload)
 
 void webserverServicesLoop()
 {
+#ifdef ESP32
   if (WiFi.getMode() == WIFI_MODE_APSTA || WiFi.getMode() == WIFI_MODE_AP)
-    dnsServer.processNextRequest();
-  else
-    dnsServer.stop();
+#endif
+#ifdef ESP8266
+    if (WiFi.getMode() == WIFI_AP_STA || WiFi.getMode() == WIFI_AP)
+#endif
+      dnsServer.processNextRequest();
+    else
+      dnsServer.stop();
 }

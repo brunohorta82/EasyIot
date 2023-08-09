@@ -16,8 +16,8 @@ public:
   char mqttUsername[32];
   char mqttPassword[64];
   // CLOUDIO
-  char cloudIOUserName[40];
-  char cloudIOUserPassword[64];
+  char cloudIOUsername[40];
+  char cloudIOPassword[64];
   // WIFI
   char wifiSSID[32];
   char wifiSecret[64];
@@ -32,9 +32,9 @@ public:
 
   void json(JsonVariant &root);
   Config &update(JsonObject &root);
-  void save();
-  void init();
-  void load();
+  Config &save();
+  Config &init();
+  Config &load();
   void requestCloudIOSync();
   bool isCloudIOSyncRequested();
 

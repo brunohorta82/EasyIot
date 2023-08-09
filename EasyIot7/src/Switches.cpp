@@ -363,8 +363,7 @@ void SwitchT::load(File &file)
   knxSupport = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree >= 0;
   firmware = VERSION;
   configPins();
-  bool isLight = strncmp(family, constanstsSwitch::familyLight, sizeof(constanstsSwitch::familyLight)) == 0;
-  if (isLight)
+  if (strcmp(family, constanstsSwitch::familyLight) == 0)
     changeState(getCurrentState().c_str(), "LOAD");
 }
 
@@ -697,8 +696,7 @@ const String SwitchT::changeState(const char *state, const char *origin)
 #endif
   bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
-  bool isFromKnx = strcmp("KNX", origin) == 0;
-  bool isGate = strncmp(family, constanstsSwitch::familyGate, sizeof(constanstsSwitch::familyGate)) == 0;
+  bool isGate = strcmp(family, constanstsSwitch::familyGate) == 0;
   if (isCover)
   {
     if (typeControl == SwitchControlType::GPIO_OUTPUT)

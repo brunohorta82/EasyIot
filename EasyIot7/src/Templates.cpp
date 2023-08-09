@@ -75,7 +75,7 @@ void load(enum Template _template)
     one.autoStateDelay = 0;
 #endif
 
-    if (_template == Template::DUAL_LIGHT || Template::COVER)
+    if (_template == Template::DUAL_LIGHT || _template == Template::COVER)
     {
 #ifdef ESP8266
         one.primaryGpio = 12u;
@@ -88,7 +88,7 @@ void load(enum Template _template)
         strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
     }
 
-    if (_template == Template::DUAL_LIGHT || Template::GATE)
+    if (_template == Template::DUAL_LIGHT || _template == Template::GATE)
     {
         one.secondaryGpio = constantsConfig::noGPIO;
         one.secondaryGpioControl = constantsConfig::noGPIO;

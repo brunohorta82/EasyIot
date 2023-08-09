@@ -63,7 +63,7 @@ void onMqttConnect(bool sessionPresent)
 #endif
 
   topicAction.reserve(200);
-  topicAction.concat(config.cloudIOUserName);
+  topicAction.concat(config.cloudIOUsername);
   topicAction.concat("/");
   topicAction.concat(getChipId());
   topicAction.concat("/remote-action");
@@ -73,7 +73,7 @@ void onMqttConnect(bool sessionPresent)
 
     String topic;
     topic.reserve(200);
-    topic.concat(config.cloudIOUserName);
+    topic.concat(config.cloudIOUsername);
     topic.concat("/");
     topic.concat(getChipId());
     topic.concat("/");
@@ -104,7 +104,7 @@ void onMqttConnect(bool sessionPresent)
   {
     String topic;
     topic.reserve(200);
-    topic.concat(config.cloudIOUserName);
+    topic.concat(config.cloudIOUsername);
     topic.concat("/");
     topic.concat(getChipId());
     topic.concat("/");
@@ -181,12 +181,12 @@ void setupCloudIO()
   mqttClient.setWill(topicAvailable.c_str(), 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(getChipId().c_str());
-  mqttClient.setCredentials(config.cloudIOUserName, config.cloudIOUserPassword);
+  mqttClient.setCredentials(config.cloudIOUsername, config.cloudIOPassword);
   connectToClounIOMqtt();
 }
 bool tryCloudConnection()
 {
-  if (strlen(config.cloudIOUserName) > 0 && strlen(config.cloudIOUserPassword) > 0)
+  if (strlen(config.cloudIOUsername) > 0 && strlen(config.cloudIOPassword) > 0)
   {
 #ifdef DEBUG_ONOFRE
     Log.error("%s Ready to try..." CR, tags::cloudIO);
@@ -276,10 +276,10 @@ void connectoToCloudIO()
       DeserializationError error = deserializeJson(doc, payload);
       const char *_user = doc["username"];
       const char *_pw = doc["password"];
-      strlcpy(config.cloudIOUserName, doc["username"] | "", sizeof(config.cloudIOUserName));
-      strlcpy(config.cloudIOUserPassword, doc["password"] | "", sizeof(config.cloudIOUserPassword));
+      strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
+      strlcpy(config.cloudIOPassword, doc["password"] | "", sizeof(config.cloudIOPassword));
 
-      topicAvailable.concat(config.cloudIOUserName);
+      topicAvailable.concat(config.cloudIOUsername);
       topicAvailable.concat("/");
       topicAvailable.concat(getChipId());
       topicAvailable.concat("/available");

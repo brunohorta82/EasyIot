@@ -95,7 +95,26 @@ void checkInternalRoutines()
     reloadWiFiConfig();
   }
 }
-
+void setTime()
+{
+  configTime(0, 0, NTP_SERVER);
+  setenv("TZ", TZ_INFO, 1);
+}
+void startFileSystem()
+{
+  if (!LittleFS.begin())
+  {
+#ifdef DEBUG_ONOFRE
+    Log.error("%s File storage can't start" CR, tags::config);
+#endif
+    if (!LittleFS.format())
+    {
+#ifdef DEBUG_ONOFRE
+      Log.error("%s Unable to format Filesystem, please ensure you built firmware with filesystem support." CR, tags::config);
+#endif
+    }
+  }
+}
 void setup()
 {
 
@@ -103,9 +122,8 @@ void setup()
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
-  configTime(0, 0, NTP_SERVER);
-  setenv("TZ", TZ_INFO, 1);
-  LittleFS.begin();
+  setTime();
+  startFileSystem();
   config.load();
 
   setupWiFi();

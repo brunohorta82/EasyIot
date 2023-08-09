@@ -1,0 +1,18 @@
+{
+    "nodeId": "11111111111111111111111111111111",
+    "mqttIpDns": "1111111111111111111111111111111111111111",
+    "mqttPort": 1883,
+    "mqttUsername": "DuvO2mGXaAalz3FGhOvlv0UMuK045VEP",
+    "mqttPassword": "00a6TajLkfZKyVY4XfBzYBSI73zslQHPvon6QHH3KngFMTI1e4pwroNQERZhyfho",
+    "cloudIOUserName": "AHSqxl4eFSk9EjN1abmXpO5ZRZo7VVTHlFN3838d",
+    "cloudIOUserPassword": "00a6TajLkfZKyVY4XfBzYBSI73zslQHPvon6QHH3KngFMTI1e4pwroNQERZhyfho",
+    "wifiSSID": "0VI1rWkAfM3qtlTwFwtpN5OUnjzaCDVf",
+    "wifiSecret": "00a6TajLkfZKyVY4XfBzYBSI73zslQHPvon6QHH3KngFMTI1e4pwroNQERZhyfho",
+    "staticIp": false,
+    "wifiIp": "KahFhAVY1CyhCLjs8o0SgoMU",
+    "wifiMask": "KahFhAVY1CyhCLjs8o0SgoMU",
+    "wifiGw": "KahFhAVY1CyhCLjs8o0SgoMU",
+    "accessPointPassword": "00a6TajLkfZKyVY4XfBzYBSI73zslQHPvon6QHH3KngFMTI1e4pwroNQERZhyfho",
+    "apiUser": "0VI1rWkAfM3qtlTwFwtpN5OUnjzaCDVf",
+    "apiPassword": "00a6TajLkfZKyVY4XfBzYBSI73zslQHPvon6QHH3KngFMTI1e4pwroNQERZhyfho"
+}
