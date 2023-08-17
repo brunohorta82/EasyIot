@@ -4,13 +4,13 @@
 #include "Switches.h"
 #include "CoreWiFi.h"
 #include "constants.h"
-#include "Discovery.h"
+#include "HomeAssistantMqttDiscovery.h"
 extern Config config;
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
 void processMqttAction(const char *topic, const char *payload)
 {
-    mqttSwitchControl(getAtualSwitchesConfig(), topic, payload);
+    mqttSwitchControl(topic, payload);
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
@@ -26,8 +26,7 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
 #endif
     if ((strcmp(topic, String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str()) == 0 || strcmp(topic, String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str()) == 0) && strcmp(payload_as_string, constantsMqtt::availablePayload) == 0)
     {
-        initHaDiscovery(getAtualSwitchesConfig());
-        initHaDiscovery(getAtualSensorsConfig());
+        initHomeAssistantDiscovery();
     }
     else
     {
@@ -84,10 +83,10 @@ boolean reconnect()
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
         refreshMDNS(config.nodeId);
-        for (auto &sw : getAtualSwitchesConfig().items)
+        for (auto &sw : config.switches)
         {
-            subscribeOnMqtt(sw.mqttCommandTopic);
-            publishOnMqtt(sw.mqttStateTopic, sw.getCurrentState().c_str(), sw.mqttRetain);
+            subscribeOnMqtt(sw.commandTopic());
+            publishOnMqtt(sw.stateTopic(), sw.getCurrentState().c_str(), false);
         }
     }
 

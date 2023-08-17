@@ -6,6 +6,7 @@
 #include "Mqtt.h"
 #include "Switches.h"
 #include "Sensors.h"
+#include "LittleFS.h"
 #ifdef ESP8266
 #include <ESP8266httpUpdate.h>
 #include <ESP8266mDNS.h>
@@ -139,6 +140,7 @@ void loop()
   loopMqtt();
   if (!config.isAutoUpdateRequested())
   {
+    config.loopSwitches();
   }
   if (WiFi.status() == WL_CONNECTED)
     knx.loop();

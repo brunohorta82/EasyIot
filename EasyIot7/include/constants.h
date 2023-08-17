@@ -5,7 +5,7 @@ enum Template
     NO_TEMPLATE,
     DUAL_LIGHT,
     COVER,
-    GATE,
+    GARAGE,
     PZEM
 };
 namespace constantsMqtt

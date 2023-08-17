@@ -5,7 +5,7 @@
 #include "WebServer.h"
 #include "Switches.h"
 #include "Sensors.h"
-
+#include "LittleFS.h"
 Config &Config::init()
 {
 
@@ -149,7 +149,7 @@ Config &Config::update(JsonObject &root)
   if (reloadMqtt)
   {
     setupMQTT();
-    reloadSwitches();
+    // TODO  reloadSwitches();
     reloadSensors();
   }
   refreshMDNS(lastNodeId);

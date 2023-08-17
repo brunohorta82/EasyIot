@@ -1,5 +1,4 @@
-#ifndef MQTT_H
-#define MQTT_H
+#pragma once
 #include <Arduino.h>
 
 void publishOnMqtt(const char *topic, const char *payload, bool retain);
@@ -10,5 +9,3 @@ void setupMQTT();
 void loopMqtt();
 void unsubscribeOnMqtt(const char *topic);
 bool mqttConnected();
-
-#endif

@@ -3,131 +3,125 @@
 #include "Switches.h"
 #include "Sensors.h"
 #include "Config.h"
-
-void load(enum Template _template)
+extern Config config;
+void preparePzem()
 {
-    if (_template == Template::NO_TEMPLATE)
-        return;
-    if (_template == Template::PZEM)
-    {
-        SensorT pzem;
-        pzem.firmware = VERSION;
-        strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
-        String idStr;
-        generateId(idStr, pzem.name, 2, sizeof(pzem.id));
-        strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
-        strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
-        pzem.primaryGpio = constantsConfig::noGPIO;
-        pzem.secondaryGpio = constantsConfig::noGPIO;
-        pzem.tertiaryGpio = constantsConfig::noGPIO;
-        pzem.type = PZEM_004T_V03;
-        pzem.primaryGpio = 3;
-        pzem.secondaryGpio = 1;
-        pzem.tertiaryGpio = constantsConfig::noGPIO;
-        pzem.mqttRetain = true;
-        pzem.haSupport = true;
-        pzem.emoncmsSupport = true;
-        pzem.cloudIOSupport = true;
-        pzem.delayRead = 5000;
-        strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
-        strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
-        strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
-        strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
-        pzem.reloadMqttTopics();
-        getAtualSensorsConfig().items.push_back(pzem);
-        return;
-    }
-    SwitchT one;
-    one.firmware = VERSION;
-    one.typeControl = SwitchControlType::GPIO_OUTPUT;
-    one.knxSupport = false;
-    one.haSupport = false;
-    one.mqttSupport = false;
-    one.cloudIOSupport = true;
-    one.pullup = true;
-    one.mqttRetain = false;
-    one.inverted = false;
-    one.primaryGpioControl = 4u;
-    one.secondaryGpioControl = 5u;
-    one.lastPrimaryGpioState = false;
-    one.lastSecondaryGpioState = false;
-
-    if (_template == Template::DUAL_LIGHT)
-    {
-        one.mode = SWITCH;
-        strlcpy(one.name, "Interruptor1", sizeof(one.name));
-        strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
-    }
-
-#if defined COVER
-    one.mode = DUAL_PUSH;
-    strlcpy(one.name, "Estore", sizeof(one.name));
-    strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
-    one.secondaryGpio = 13u;
+    SensorT pzem;
+    pzem.firmware = VERSION;
+    strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
+    String idStr;
+    generateId(idStr, pzem.name, 2, sizeof(pzem.id));
+    strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
+    strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
+    pzem.primaryGpio = constantsConfig::noGPIO;
+    pzem.secondaryGpio = constantsConfig::noGPIO;
+    pzem.tertiaryGpio = constantsConfig::noGPIO;
+    pzem.type = PZEM_004T_V03;
+    pzem.primaryGpio = 3;
+    pzem.secondaryGpio = 1;
+    pzem.tertiaryGpio = constantsConfig::noGPIO;
+    pzem.mqttRetain = true;
+    pzem.haSupport = true;
+    pzem.emoncmsSupport = true;
+    pzem.cloudIOSupport = true;
+    pzem.delayRead = 5000;
+    strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
+    strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
+    strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
+    strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
+    pzem.reloadMqttTopics();
+    getAtualSensorsConfig().items.push_back(pzem);
+    config.sensors.push_back(pzem);
+}
+void prepareLight(String name, unsigned int output, unsigned int input)
+{
+    SwitchT light;
+    light.family = LIGHT_GENERIC;
+    strlcpy(light.name, name.c_str(), sizeof(light.name));
+    light.typeControl = SwitchControlType::GPIO_OUTPUT;
+    light.outputs.push_back(output);
+    light.inputs.push_back(input);
+    config.switches.push_back(light);
+}
+void prepareCover()
+{
+    SwitchT cover;
+    cover.family = LIGHT_GENERIC;
+#ifdef CONFIG_LANG_PT
+    strlcpy(cover.name, "Estore", sizeof(cover.name));
+#elif CONFIG_LANG_EN
+    strlcpy(cover.name, "Cover", sizeof(cover.name));
+#elif CONFIG_LANG_RO
+    strlcpy(cover.name, "Cover"), sizeof(cover.name));
 #endif
-
-#if defined GATE
-    one.mode = SwitchMode::PUSH;
-    strlcpy(one.name, "Garagem", sizeof(one.name));
-    strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
-    one.primaryGpio = constantsConfig::noGPIO;
-    one.primaryStateGpio = 13;
-    one.autoStateDelay = 0;
-#endif
-
-    if (_template == Template::DUAL_LIGHT || _template == Template::COVER)
-    {
+    cover.typeControl = SwitchControlType::GPIO_OUTPUT;
+    cover.outputs = {4u, 5u};
 #ifdef ESP8266
-        one.primaryGpio = 12u;
+    cover.inputs = {12u, 13u};
 #endif
 #ifdef ESP32
-        one.primaryGpio = 14u;
+    cover.inputs = {13u, 14u};
 #endif
-
-        one.autoStateDelay = 0ul;
-        strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
-    }
-
-    if (_template == Template::DUAL_LIGHT || _template == Template::GATE)
+    config.switches.push_back(cover);
+}
+void prepareGarage()
+{
+    SwitchT garage;
+    garage.family = LIGHT_GENERIC;
+#ifdef CONFIG_LANG_PT
+    strlcpy(garage.name, "Garagem", sizeof(garage.name));
+#elif CONFIG_LANG_EN
+    strlcpy(garage.name, "Garage", sizeof(garage.name));
+#elif CONFIG_LANG_RO
+    strlcpy(garage.name, "Garage"), sizeof(garage.name));
+#endif
+    garage.typeControl = SwitchControlType::GPIO_OUTPUT;
+    garage.outputs = {4u, 5u};
+#ifdef ESP8266
+    garage.inputs = {12u, 13u};
+#endif
+#ifdef ESP32
+    garage.inputs = {13u, 14u};
+#endif
+    config.switches.push_back(garage);
+}
+void load(enum Template _template)
+{
+    switch (_template)
     {
-        one.secondaryGpio = constantsConfig::noGPIO;
-        one.secondaryGpioControl = constantsConfig::noGPIO;
-    }
-    String idStr;
-    generateId(idStr, one.name, 1, sizeof(one.id));
-    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
-    one.reloadMqttTopics();
-    one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
-    getAtualSwitchesConfig().items.push_back(one);
-
-    if (_template == Template::DUAL_LIGHT)
+    case Template::NO_TEMPLATE:
+        break;
+    case PZEM:
+        preparePzem();
+        break;
+    case Template::DUAL_LIGHT:
     {
-        SwitchT two;
-        two.firmware = VERSION;
-        two.lastPrimaryGpioState = false;
-        two.lastSecondaryGpioState = false;
-        strlcpy(two.name, "Interruptor2", sizeof(two.name));
-        String idStr2;
-        generateId(idStr2, two.name, 1, sizeof(two.id));
-        strlcpy(two.id, idStr2.c_str(), sizeof(two.id));
-        strlcpy(two.family, constanstsSwitch::familyLight, sizeof(two.family));
-        two.primaryGpio = 13u;
-        two.secondaryGpio = constantsConfig::noGPIO;
-        two.autoStateDelay = 0ul;
-        strlcpy(two.autoStateValue, "", sizeof(two.autoStateValue));
-        two.typeControl = SwitchControlType::GPIO_OUTPUT;
-        two.mode = SWITCH;
-        two.knxSupport = false;
-        two.haSupport = false;
-        two.mqttSupport = false;
-        two.cloudIOSupport = true;
-        two.pullup = true;
-        two.mqttRetain = false;
-        two.inverted = false;
-        two.reloadMqttTopics();
-        two.statePoolIdx = findPoolIdx("", two.statePoolIdx, two.family);
-        two.primaryGpioControl = 5u;
-        two.secondaryGpioControl = constantsConfig::noGPIO;
-        getAtualSwitchesConfig().items.push_back(two);
+#ifdef CONFIG_LANG_PT
+        String name1 = "Interruptor1";
+        String name2 = "Interruptor2";
+#elif CONFIG_LANG_EN
+        String name1 = "Switch1";
+        String name2 = "Switch2";
+#elif CONFIG_LANG_RO
+        String name1 = "Switch1";
+        String name2 = "Switch2";
+#endif
+#ifdef ESP8266
+        prepareLight(name1, 4u, 12u);
+#endif
+#ifdef ESP32
+        prepareLight(name1, 4u, 14u);
+#endif
+        prepareLight(name2, 5u, 13u);
+    }
+    case Template::COVER:
+        prepareCover();
+        break;
+    case Template::GARAGE:
+        prepareGarage();
+        break;
+    default:
+        return;
+        break;
     }
 }

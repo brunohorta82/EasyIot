@@ -78,9 +78,12 @@ struct SensorT
   void save(File &file) const;
   void updateFromJson(JsonObject doc);
   void reloadMqttTopics();
+  const char *commandTopic();
+  const char *stateTopic();
 };
-struct Sensors
+class Sensors
 {
+public:
   std::vector<SensorT> items;
   void load(File &file);
   void save(File &file) const;

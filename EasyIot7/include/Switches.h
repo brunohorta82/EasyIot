@@ -1,68 +1,70 @@
-#ifndef SWITCHES_H
-#define SWITCHES_H
-#include "constants.h"
+#pragma once
 #include "Arduino.h"
+#include "constants.h"
+#include <Bounce2.h>
 #include "ArduinoJson.h"
 #include <vector>
 #include "FS.h"
-static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadOpen, constanstsSwitch::payloadClose};
-class Bounce;
 class Shutters;
-
-enum SwitchMode
+enum SwitchState
 {
-    SWITCH = 1,
-    PUSH = 2,
-    DUAL_SWITCH = 4,
-    DUAL_PUSH = 5,
-    GATE_SWITCH = 6
+    OFF = 0,
+    ON = 1,
+    OPEN = 2,
+    CLOSE = 3,
+    STOP = 4,
+    PERCENTAGE = 5,
+};
+enum SwitchStateOrigin
+{
+    INTERNAL = 0,
+    GPIO_INPUT = 1,
+    KNX = 2,
+    MQTT = 3,
+    CLOUDIO = 4,
+    WEBPANEL = 5
+};
+
+enum SwitchFamily
+{
+    SWITCH_PUSH = 1,
+    SWITCH_GENERIC = 2,
+    COVER_PUSH = 3,
+    COVER_DUAL_PUSH = 4,
+    COVER_DUAL_GENERIC = 5,
+    LOCK_PUSH = 6,
+    LIGHT_PUSH = 7,
+    LIGHT_GENERIC = 8,
+    GARAGE_PUSH = 9
 };
 
 enum SwitchControlType
 {
     GPIO_OUTPUT = 1,
-    NONE = 2
+    VIRTUAL = 2
 };
 
-struct SwitchT
+class SwitchT
 {
-    double firmware = 0.0;
-    char id[32] = {0}; // Generated from name without spaces and no special characters
+public:
+    // CONFIG
+    char id[10] = {0};
     char name[24] = {0};
-    char family[10] = {0};    // switch, light, cover, lock
-    SwitchMode mode = SWITCH; // MODE_SWITCH, MODE_PUSH, MODE_DUAL_SWITCH, MODE_DUAL_PUSH
-    SwitchControlType typeControl = NONE;
-
+    SwitchFamily family = SWITCH_PUSH;
+    SwitchControlType typeControl = VIRTUAL;
     // INTEGRATIONS
     bool cloudIOSupport = true;
     bool haSupport = false;
-    bool knxSupport = false;
-    bool mqttSupport = false;
-
-    // UTILS
-    bool childLock = false;
-
+    // KNX
+    uint8_t knxAddress[3] = {0, 0, 0};
+    uint8_t knxIdRegister = 0;
+    uint8_t knxIdAssign = 0;
     // GPIOS INPUT
-    unsigned int primaryGpio = constantsConfig::noGPIO;
-    unsigned int secondaryGpio = constantsConfig::noGPIO;
-    unsigned int primaryStateGpio = constantsConfig::noGPIO;
-    unsigned int secondaryStateGpio = constantsConfig::noGPIO;
-    bool pullup = true; // USE INTERNAL RESISTOR
+    std::vector<unsigned int> inputs;
+    std::vector<Bounce> inputsBounced;
 
     // GPIOS OUTPUT
-    unsigned int primaryGpioControl = constantsConfig::noGPIO;
-    unsigned int secondaryGpioControl = constantsConfig::noGPIO;
-    unsigned int thirdGpioControl = constantsConfig::noGPIO;
-    bool inverted = false;
-
-    // AUTOMATIONS
-    unsigned long autoStateDelay = 0;
-    char autoStateValue[10] = {0};
-
-    // MQTT
-    char mqttCommandTopic[128] = {0};
-    char mqttStateTopic[128] = {0};
-    bool mqttRetain = false;
+    std::vector<unsigned int> outputs;
 
     // CONTROL VARIABLES
     int lastPercentage = 0;
@@ -70,15 +72,8 @@ struct SwitchT
     bool lastSecondaryGpioState = true;
     bool lastPrimaryStateGpioState = true;
     bool lastSecondaryStateGpioState = true;
-    Bounce *debouncerPrimary = nullptr;
-    Bounce *debouncerSecondary = nullptr;
-    int statePoolIdx = -1;
-    bool isCover = false;
-    unsigned long lastChangeState = 0;
 
-    // CLOUDIO
-    char mqttCloudCommandTopic[128] = {0};
-    char mqttCloudStateTopic[128] = {0};
+    unsigned long lastChangeState = 0;
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
@@ -87,43 +82,37 @@ struct SwitchT
     float calibrationRatio = 0.1;
     char shutterState[21] = {0};
 
-    // KNX
-    uint8_t knxLevelOne = 0;
-    uint8_t knxLevelTwo = 0;
-    uint8_t knxLevelThree = 0;
-    uint8_t knxIdRegister = 0;
-    uint8_t knxIdAssign = 0;
     // METHODS
-    void load(File &file);
-    void save(File &file) const;
-    void updateFromJson(JsonObject doc);
-    const String changeState(const char *state, const char *origin);
+    constexpr bool isCover()
+    {
+        return family == COVER_PUSH || family == COVER_DUAL_PUSH || family == COVER_DUAL_GENERIC;
+    };
+    constexpr bool isLight()
+    {
+        return family == LIGHT_PUSH || family == LIGHT_GENERIC;
+    };
+    constexpr bool isSwitch()
+    {
+        return family == SWITCH_PUSH || family == SWITCH_GENERIC;
+    };
+    constexpr bool isGarage()
+    {
+        return family == GARAGE_PUSH;
+    };
+    constexpr bool isKnxSupport()
+    {
+        return knxAddress[0] > 0 && knxAddress[1] >= 0 && knxAddress[2] >= 0;
+    };
+    const String changeState(SwitchStateOrigin origin, String state);
     const char *rotateState();
-    void toJson(JsonVariant &root) const;
-    const String getCurrentState() const;
-    void configPins();
+    const String getCurrentState();
+    void setup();
     const void notifyState(bool dirty, const char *origin);
     void reloadMqttTopics();
+    const char *commandTopic();
+    const char *commandTopicCloudIO();
+    const char *stateTopic();
 };
-struct Switches
-{
-    unsigned long lastChange = 0ul;
-    std::vector<SwitchT> items;
-    void load(File &file);
-    const char *rotate(const char *id);
-    void save(File &file) const;
-    void save();
-    const String stateSwitchById(const char *id, const char *state);
-    Switches &remove(const char *id);
-    Switches &updateFromJson(const String &id, JsonObject &doc);
-    void toJson(JsonVariant &root);
-};
-void stateSwitchByName(Switches &switches, const char *name, const char *state, const char *value);
-void loop(Switches &switches);
-void load(Switches &switches);
-void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
-void sendToServerEvents(const String &topic, const String &payload);
-struct Switches &getAtualSwitchesConfig();
-int findPoolIdx(const char *state, int currentIdx, const char *family);
-void reloadSwitches();
-#endif
+
+void stateSwitchByName(const char *name, const char *state, const char *value);
+void mqttSwitchControl(const char *topic, const char *payload);

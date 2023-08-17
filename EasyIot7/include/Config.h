@@ -1,7 +1,8 @@
 #pragma once
 #include "Utils.hpp"
 #include <ArduinoJson.h>
-#include "LittleFS.h"
+#include "Switches.h"
+#include "Sensors.h"
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
@@ -29,12 +30,16 @@ public:
   char accessPointPassword[64];
   char apiUser[32];
   char apiPassword[64];
-
+  std::vector<SwitchT> switches{};
+  std::vector<SensorT> sensors{};
   void json(JsonVariant &root);
   Config &update(JsonObject &root);
   Config &save();
   Config &init();
   Config &load();
+  Config &removeSwitch(const char *id);
+  void loopSwitches();
+  String controlSwitch(const char *id, SwitchStateOrigin origin, String state);
   void requestCloudIOSync();
   bool isCloudIOSyncRequested();
 

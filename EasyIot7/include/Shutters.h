@@ -1,5 +1,4 @@
-#ifndef Shutters_h
-#define Shutters_h
+#pragma once
 
 #include "Arduino.h"
 #include "Switches.h"
@@ -103,5 +102,3 @@ public:
   SwitchT *getSwitchT();
   bool isReset();
 };
-
-#endif

@@ -1,5 +1,5 @@
 #include "Sensors.h"
-#include "Discovery.h"
+#include "HomeAssistantMqttDiscovery.h"
 #include <ArduinoLog.h>
 #include "constants.h"
 #include "WebServer.h"
@@ -14,6 +14,7 @@
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include <Bounce2.h>
+#include "LittleFS.h"
 #define BUS_SDA -1 //-1 if you don't use display
 #define BUS_SCL -1 //-1 if you don't use display
 #if WITH_DISPLAY
@@ -242,13 +243,13 @@ void load(Sensors &sensors)
 #endif
 }
 
-void saveAndRefreshServices(Sensors &sensors, const SensorT &ss)
+void saveAndRefreshServices(Sensors &sensors, SensorT &ss)
 {
 
   sensors.save();
   if (ss.haSupport)
   {
-    addToHaDiscovery(ss);
+    addToHomeAssistant(ss);
   }
 }
 Sensors &Sensors::updateFromJson(const String &id, JsonObject doc)
@@ -300,7 +301,7 @@ Sensors &Sensors::remove(const char *id)
   {
     return *this;
   }
-  removeFromHaDiscovery(*match);
+  removeFromHomeAssistant(*match);
   items.erase(match);
   save();
   return *this;
@@ -313,17 +314,17 @@ void reloadSensors()
   }
   getAtualSensorsConfig().save();
 }
-void initSensorsHaDiscovery(const Sensors &sensors)
+void initSensorsHaDiscovery(Sensors &sensors)
 {
   for (auto &ss : sensors.items)
   {
-    addToHaDiscovery(ss);
+    addToHomeAssistant(ss);
     publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, ss.mqttRetain);
   }
 }
 void SensorT::updateFromJson(JsonObject doc)
 {
-  removeFromHaDiscovery(*this);
+  removeFromHomeAssistant(*this);
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Update Environment" CR, tags::sensors);
 #endif

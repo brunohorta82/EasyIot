@@ -1,33 +1,29 @@
 #include "Sensors.h"
 #include "Switches.h"
-#include "Discovery.h"
+#include "HomeAssistantMqttDiscovery.h"
 #include "constants.h"
 #include "Mqtt.h"
 #include "Config.h"
 extern Config config;
-void initHaDiscovery(const Switches &switches)
+void initHomeAssistantDiscovery()
 {
-  for (const auto &sw : switches.items)
+  for (auto &sw : config.switches)
   {
     if (!sw.haSupport)
       continue;
-    publishOnMqtt(sw.mqttStateTopic, sw.getCurrentState().c_str(), true);
-    addToHaDiscovery(sw);
+    publishOnMqtt(sw.stateTopic(), sw.getCurrentState().c_str(), true);
+    addToHomeAssistant(sw);
   }
-}
-
-void initHaDiscovery(const Sensors &sensors)
-{
-  for (const auto &ss : sensors.items)
+  for (auto &ss : config.sensors)
   {
     if (!ss.haSupport)
       continue;
-    publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, true);
-    addToHaDiscovery(ss);
+    // TODO    publishOnMqtt(ss.stateTopic(), ss.mqttPayload, true);
+    addToHomeAssistant(ss);
   }
 }
 
-void createHaSwitch(const SwitchT &sw)
+void createHaSwitch(SwitchT &sw)
 {
   if (!sw.haSupport)
     return;
@@ -37,13 +33,13 @@ void createHaSwitch(const SwitchT &sw)
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
   object["unique_id"] = sw.id;
-  object["cmd_t"] = sw.mqttCommandTopic;
+  object["cmd_t"] = sw.commandTopic();
 
   object["avty_t"] = getAvailableTopic();
   String family = String(sw.family);
-  if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
+  if (sw.isGarage())
   {
-    object["stat_t"] = sw.mqttStateTopic;
+    object["stat_t"] = sw.stateTopic();
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
     object["payload_stop"] = constanstsSwitch::payloadStop;
@@ -54,7 +50,7 @@ void createHaSwitch(const SwitchT &sw)
     family = "cover";
   }
 
-  if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
+  if (sw.isCover())
   {
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
@@ -62,12 +58,12 @@ void createHaSwitch(const SwitchT &sw)
     object["device_class"] = "shutter";
     object["position_open"] = 0;
     object["position_closed"] = 100;
-    object["position_topic"] = sw.mqttStateTopic;
-    object["set_position_topic"] = sw.mqttCommandTopic;
+    object["position_topic"] = sw.stateTopic();
+    object["set_position_topic"] = sw.commandTopic();
   }
-  if (strcmp(sw.family, constanstsSwitch::familyLight) == 0 || strcmp(sw.family, constanstsSwitch::familySwitch) == 0)
+  if (sw.isLight() || sw.isSwitch())
   {
-    object["stat_t"] = sw.mqttStateTopic;
+    object["stat_t"] = sw.stateTopic();
     object["payload_on"] = constanstsSwitch::payloadOn;
     object["payload_off"] = constanstsSwitch::payloadOff;
   }
@@ -75,7 +71,7 @@ void createHaSwitch(const SwitchT &sw)
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
 }
 
-void addToHaDiscovery(const SensorT &s)
+void addToHomeAssistant(SensorT &s)
 {
   if (!s.haSupport)
     return;
@@ -240,7 +236,7 @@ void addToHaDiscovery(const SensorT &s)
     break;
   }
 }
-void addToHaDiscovery(const SwitchT &sw)
+void addToHomeAssistant(SwitchT &sw)
 {
   if (!sw.haSupport)
     return;
@@ -266,13 +262,13 @@ void addToHaDiscovery(const SwitchT &sw)
 #endif
 }
 
-void removeFromHaDiscovery(const SwitchT &sw)
+void removeFromHomeAssistant(SwitchT &sw)
 {
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), "", false);
   delay(3);
 }
 
-void removeFromHaDiscovery(const SensorT &s)
+void removeFromHomeAssistant(SensorT &s)
 {
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/" + String(s.id) + "/config").c_str(), "", false);
   delay(3);

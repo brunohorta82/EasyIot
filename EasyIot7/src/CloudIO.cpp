@@ -68,9 +68,8 @@ void onMqttConnect(bool sessionPresent)
   topicAction.concat(getChipId());
   topicAction.concat("/remote-action");
   subscribeOnMqttCloudIO(topicAction.c_str());
-  for (auto &sw : getAtualSwitchesConfig().items)
+  for (auto &sw : config.switches)
   {
-
     String topic;
     topic.reserve(200);
     topic.concat(config.cloudIOUsername);
@@ -81,22 +80,19 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(sw.id);
     topic.concat("/set");
-
-    strlcpy(sw.mqttCloudCommandTopic, topic.c_str(), sizeof(sw.mqttCloudCommandTopic));
-    subscribeOnMqttCloudIO(sw.mqttCloudCommandTopic);
+    subscribeOnMqttCloudIO(topic.c_str());
 
     topic.replace("/set", "/status");
 
-    strlcpy(sw.mqttCloudStateTopic, topic.c_str(), sizeof(sw.mqttCloudStateTopic));
-    if (strcmp(sw.family, constanstsSwitch::familyCover) == 0)
+    if (sw.isCover())
     {
       char dump[4] = {0};
       int l = sprintf(dump, "%d", sw.lastPercentage);
-      notifyStateToCloudIO(sw.mqttCloudStateTopic, dump, l);
+      notifyStateToCloudIO(topic.c_str(), dump, l);
     }
     else
     {
-      mqttClient.publish(sw.mqttCloudStateTopic, 0, true, sw.getCurrentState().c_str());
+      mqttClient.publish(topic.c_str(), 0, true, sw.getCurrentState().c_str());
     }
   }
   mqttClient.publish(topicAvailable.c_str(), 0, true, "1\0");
@@ -160,7 +156,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   }
   else
   {
-    mqttSwitchControl(getAtualSwitchesConfig(), topic, msg);
+    mqttSwitchControl(topic, msg);
   }
 }
 
@@ -216,8 +212,8 @@ void connectoToCloudIO()
 
   reconectCount++;
   String payload = "";
-  size_t s = getAtualSwitchesConfig().items.size();
-  size_t ss = getAtualSensorsConfig().items.size();
+  size_t s = config.switches.size();
+  size_t ss = config.sensors.size();
   const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
@@ -227,7 +223,7 @@ void connectoToCloudIO()
   device["wifi"] = config.wifiSSID;
   device["macAddr"] = WiFi.macAddress();
   JsonArray feactures = device.createNestedArray("features");
-  for (auto &sw : getAtualSwitchesConfig().items)
+  for (auto &sw : config.switches)
   {
     JsonObject sdoc = feactures.createNestedObject();
     sdoc["id"] = sw.id;
@@ -236,7 +232,7 @@ void connectoToCloudIO()
     sdoc["shutterPercentage"] = sw.lastPercentage;
     sdoc["stateControl"] = sw.getCurrentState();
     sdoc["cloudIOSupport"] = sw.cloudIOSupport;
-    sdoc["knk"] = String(sw.knxLevelOne) + ".";
+    sdoc["knk"] = String(sw.knxAddress[0]) + "." + String(sw.knxAddress[1]) + "." + String(sw.knxAddress[2]);
   }
   for (const auto &ss : getAtualSensorsConfig().items)
   {

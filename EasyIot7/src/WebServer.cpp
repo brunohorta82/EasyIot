@@ -412,72 +412,6 @@ void loadAPI()
     request->send(response);
     config.requestCloudIOSync(); }));
 
-  server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncJsonResponse *response = new AsyncJsonResponse(true, switchesSize);
-    JsonVariant &root = response->getRoot();
-    getAtualSwitchesConfig().toJson(root);
-    response->setLength();
-    request->send(response); });
-
-  server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json)
-                                                    {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    if (!request->hasArg("id"))
-    {
-      request->send(errorResponse("Id missing"));
-      return;
-    }
-    AsyncJsonResponse *response = new AsyncJsonResponse(false, 1024U);
-    JsonVariant &root = response->getRoot();
-    JsonObject switchJson = json.as<JsonObject>();
-    getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson).toJson(root);
-    response->setLength();
-    request->send(response);
-    config.requestCloudIOSync(); }));
-
-  server.on("/remove-switch", HTTP_DELETE, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    if (!request->hasArg("id"))
-    {
-      request->send(errorResponse("Id missing"));
-      return;
-    }
-    AsyncJsonResponse *response = new AsyncJsonResponse(true, switchesSize);
-    JsonVariant &root = response->getRoot();
-    getAtualSwitchesConfig().remove(request->arg("id").c_str()).toJson(root);
-    response->setLength();
-    request->send(response);
-    config.requestCloudIOSync(); });
-
-  server.on("/rotate-state-switch", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    if (!request->hasArg("id"))
-    {
-      request->send(errorResponse("Id missing"));
-      return;
-    }
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonVariant &root = response->getRoot();
-    root["stateControl"] = getAtualSwitchesConfig().rotate(request->arg("id").c_str());
-    response->setLength();
-    request->send(response); });
-
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
@@ -492,7 +426,7 @@ void loadAPI()
       request->send(errorResponse("State missing"));
       return;
     }
-    const String stateResult = getAtualSwitchesConfig().stateSwitchById(request->arg("id").c_str(), request->arg("state").c_str());
+    const String stateResult = config.controlSwitch(request->arg("id").c_str(), WEBPANEL,request->arg("state"));
     if (strcmp("ERROR", stateResult.c_str()) == 0)
     {
       request->send(errorResponse("Invalid State"));
