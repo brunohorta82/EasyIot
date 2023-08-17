@@ -31,3 +31,4 @@ const char HTTP_END[] PROGMEM = "</div></body></html>";
 void setupWebserverAsync();
 void webserverServicesLoop();
 void sendToServerEvents(const String &topic, const char *payload);
+void performUpdate();
