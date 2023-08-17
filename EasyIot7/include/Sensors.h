@@ -36,7 +36,7 @@ struct SensorT
   SensorType type; // TYPE_PIR, TYPE_LDR, TYPE_DS18B20, TYPE_REED_SWITCH
   char deviceClass[32];
   // MQTT
-  char mqttStateTopic[128];
+  char readTopic[128];
   char mqttPayload[128];
   bool mqttRetain = true;
   bool emoncmsSupport = false;
@@ -77,7 +77,6 @@ struct SensorT
   void load(File &file);
   void save(File &file) const;
   void updateFromJson(JsonObject doc);
-  void reloadMqttTopics();
   const char *commandTopic();
   const char *stateTopic();
 };

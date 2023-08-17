@@ -11,11 +11,15 @@ class Config
 {
 public:
   char nodeId[32] = {};
+  char chipId[32] = {};
   // MQTT
   char mqttIpDns[40];
   int mqttPort = 1883;
   char mqttUsername[32];
   char mqttPassword[64];
+  char writeTopic[128];
+  char readTopic[128];
+  char healthTopic[128];
   // CLOUDIO
   char cloudIOUsername[40];
   char cloudIOPassword[64];
@@ -57,6 +61,7 @@ public:
 
   void requestReloadWifi();
   bool isReloadWifiRequested();
+  void generateId(String &id, const String &name, int familyCode, size_t maxSize);
 
 private:
   bool reboot = false;

@@ -11,7 +11,7 @@ void initHomeAssistantDiscovery()
   {
     if (!sw.haSupport)
       continue;
-    publishOnMqtt(sw.stateTopic(), sw.getCurrentState().c_str(), true);
+    publishOnMqtt(sw.readTopic, sw.getCurrentState().c_str(), true);
     addToHomeAssistant(sw);
   }
   for (auto &ss : config.sensors)
@@ -33,13 +33,13 @@ void createHaSwitch(SwitchT &sw)
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
   object["unique_id"] = sw.id;
-  object["cmd_t"] = sw.commandTopic();
+  object["cmd_t"] = sw.writeTopic;
 
   object["avty_t"] = getAvailableTopic();
   String family = String(sw.family);
   if (sw.isGarage())
   {
-    object["stat_t"] = sw.stateTopic();
+    object["stat_t"] = sw.readTopic;
     object["payload_open"] = constanstsSwitch::payloadOpen;
     object["payload_close"] = constanstsSwitch::payloadClose;
     object["payload_stop"] = constanstsSwitch::payloadStop;
@@ -58,12 +58,12 @@ void createHaSwitch(SwitchT &sw)
     object["device_class"] = "shutter";
     object["position_open"] = 0;
     object["position_closed"] = 100;
-    object["position_topic"] = sw.stateTopic();
-    object["set_position_topic"] = sw.commandTopic();
+    object["position_topic"] = sw.readTopic;
+    object["set_position_topic"] = sw.writeTopic;
   }
   if (sw.isLight() || sw.isSwitch())
   {
-    object["stat_t"] = sw.stateTopic();
+    object["stat_t"] = sw.readTopic;
     object["payload_on"] = constanstsSwitch::payloadOn;
     object["payload_off"] = constanstsSwitch::payloadOff;
   }
@@ -75,14 +75,14 @@ void addToHomeAssistant(SensorT &s)
 {
   if (!s.haSupport)
     return;
-  String chip = getChipId();
+  String chip = String(config.chipId);
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = s.name;
   object["unique_id"] = s.id;
-  object["stat_t"] = s.mqttStateTopic;
+  object["stat_t"] = s.readTopic;
 
   object["avty_t"] = getAvailableTopic();
 

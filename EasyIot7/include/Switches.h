@@ -59,6 +59,9 @@ public:
     uint8_t knxAddress[3] = {0, 0, 0};
     uint8_t knxIdRegister = 0;
     uint8_t knxIdAssign = 0;
+    // MQTT
+    char writeTopic[128]{};
+    char readTopic[128]{};
     // GPIOS INPUT
     std::vector<unsigned int> inputs;
     std::vector<Bounce> inputsBounced;
@@ -103,16 +106,16 @@ public:
     {
         return knxAddress[0] > 0 && knxAddress[1] >= 0 && knxAddress[2] >= 0;
     };
-    const String changeState(SwitchStateOrigin origin, String state);
+    constexpr bool isKnxGroup()
+    {
+        return knxAddress[0] > 0 && knxAddress[1] >= 0 && knxAddress[2] == 0;
+    };
+    SwitchT *changeState(SwitchStateOrigin origin, String state);
     const char *rotateState();
     const String getCurrentState();
     void setup();
     const void notifyState(bool dirty, const char *origin);
-    void reloadMqttTopics();
-    const char *commandTopic();
-    const char *commandTopicCloudIO();
-    const char *stateTopic();
 };
 
 void stateSwitchByName(const char *name, const char *state, const char *value);
-void mqttSwitchControl(const char *topic, const char *payload);
+void mqttSwitchControl(SwitchStateOrigin origin, const char *topic, const char *payload);

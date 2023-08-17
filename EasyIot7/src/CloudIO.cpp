@@ -16,8 +16,6 @@ extern Config config;
 AsyncMqttClient mqttClient;
 Ticker mqttReconnectTimer;
 Ticker cloudIOReconnectTimer;
-String topicAvailable;
-String topicAction;
 int reconectCount = 0;
 
 void disconnectToClounIOMqtt()
@@ -39,11 +37,11 @@ bool mqttCloudIOConnected()
 {
   return mqttClient.connected();
 }
-void notifyStateToCloudIO(const char *topic, const char *state, size_t length)
+void notifyStateToCloudIO(const char *topic, const char *state)
 {
   if (!mqttClient.connected())
     return;
-  mqttClient.publish(topic, 0, true, state, length);
+  mqttClient.publish(topic, 0, true, state);
 }
 void subscribeOnMqttCloudIO(const char *topic)
 {
@@ -62,54 +60,16 @@ void onMqttConnect(bool sessionPresent)
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
 
-  topicAction.reserve(200);
-  topicAction.concat(config.cloudIOUsername);
-  topicAction.concat("/");
-  topicAction.concat(getChipId());
-  topicAction.concat("/remote-action");
-  subscribeOnMqttCloudIO(topicAction.c_str());
+  subscribeOnMqttCloudIO(config.writeTopic);
   for (auto &sw : config.switches)
   {
-    String topic;
-    topic.reserve(200);
-    topic.concat(config.cloudIOUsername);
-    topic.concat("/");
-    topic.concat(getChipId());
-    topic.concat("/");
-    topic.concat(sw.family);
-    topic.concat("/");
-    topic.concat(sw.id);
-    topic.concat("/set");
-    subscribeOnMqttCloudIO(topic.c_str());
-
-    topic.replace("/set", "/status");
-
-    if (sw.isCover())
-    {
-      char dump[4] = {0};
-      int l = sprintf(dump, "%d", sw.lastPercentage);
-      notifyStateToCloudIO(topic.c_str(), dump, l);
-    }
-    else
-    {
-      mqttClient.publish(topic.c_str(), 0, true, sw.getCurrentState().c_str());
-    }
+    subscribeOnMqttCloudIO(sw.writeTopic);
+    notifyStateToCloudIO(sw.readTopic, sw.getCurrentState().c_str());
   }
-  mqttClient.publish(topicAvailable.c_str(), 0, true, "1\0");
-  for (auto &ss : getAtualSensorsConfig().items)
+  mqttClient.publish(config.healthTopic, 0, true, "1\0");
+  for (auto &ss : config.sensors)
   {
-    String topic;
-    topic.reserve(200);
-    topic.concat(config.cloudIOUsername);
-    topic.concat("/");
-    topic.concat(getChipId());
-    topic.concat("/");
-    topic.concat(ss.deviceClass);
-    topic.concat("/");
-    topic.concat(ss.id);
-    topic.concat("/status");
-    strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
-    mqttClient.publish(ss.mqttCloudStateTopic, 0, true, ss.lastReading);
+    notifyStateToCloudIO(ss.readTopic, ss.lastReading);
   }
 }
 
@@ -143,7 +103,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
 #endif
   strlcpy(msg, payload, len + 1);
-  if (strcmp(topic, topicAction.c_str()) == 0)
+  if (strcmp(topic, config.writeTopic) == 0)
   {
     if (strcmp(msg, "REBOOT") == 0)
     {
@@ -156,27 +116,21 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   }
   else
   {
-    mqttSwitchControl(topic, msg);
+    mqttSwitchControl(SwitchStateOrigin::CLOUDIO, topic, msg);
   }
-}
-
-void onMqttPublish(uint16_t packetId)
-{
 }
 
 void setupCloudIO()
 {
-
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onSubscribe(onMqttSubscribe);
   mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
-  mqttClient.onPublish(onMqttPublish);
   mqttClient.setCleanSession(true);
-  mqttClient.setWill(topicAvailable.c_str(), 0, true, "0\0");
+  mqttClient.setWill(config.healthTopic, 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
-  mqttClient.setClientId(getChipId().c_str());
+  mqttClient.setClientId(config.chipId);
   mqttClient.setCredentials(config.cloudIOUsername, config.cloudIOPassword);
   connectToClounIOMqtt();
 }
@@ -217,7 +171,7 @@ void connectoToCloudIO()
   const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
-  device["chipId"] = getChipId();
+  device["chipId"] = config.chipId;
   device["currentVersion"] = String(VERSION, 3);
   device["nodeId"] = config.nodeId;
   device["wifi"] = config.wifiSSID;
@@ -249,17 +203,13 @@ void connectoToCloudIO()
 #ifdef DEBUG_ONOFRE
   Log.error("%s [HTTP] POST %d" CR, tags::cloudIO, reconectCount);
 #endif
-  // start connection and send HTTP header and body
   int httpCode = http.POST(payload.c_str());
-
-  // httpCode will be negative on error
   if (httpCode > 0)
   {
 
 #ifdef DEBUG_ONOFRE
     Log.error("%s [HTTP] POST... code: %d" CR, tags::cloudIO, httpCode);
 #endif
-    // file found at server
     if (httpCode == HTTP_CODE_NO_CONTENT)
     {
       reconectCount = 0;
@@ -274,11 +224,6 @@ void connectoToCloudIO()
       const char *_pw = doc["password"];
       strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
       strlcpy(config.cloudIOPassword, doc["password"] | "", sizeof(config.cloudIOPassword));
-
-      topicAvailable.concat(config.cloudIOUsername);
-      topicAvailable.concat("/");
-      topicAvailable.concat(getChipId());
-      topicAvailable.concat("/available");
 #ifdef DEBUG_ONOFRE
       Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, _user, _pw);
 #endif

@@ -27,7 +27,7 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
 {
   for (byte i = 0; i < length; i++)
   {
-    // TODO  shutters->getSwitchT()->shutterState[i] = state[i];
+    shutters->getSwitchT()->shutterState[i] = state[i];
   }
 
   // TODO getAtualSwitchesConfig().save();
@@ -152,52 +152,19 @@ void switchesCallback(message_t const &msg, void *arg)
   }
   };
 }
-void mqttSwitchControl(const char *topic, const char *payload)
+void mqttSwitchControl(SwitchStateOrigin origin, const char *topic, const char *payload)
 {
   for (auto &sw : config.switches)
   {
-    // TODO if (strcmp(sw.commandTopic(), topic) == 0 || strcmp(sw.commandTopicCloudIO(), topic) == 0)
-    //  {
-    //  sw.changeState(SwitchStateOrigin::MQTT, String(payload));
-    //}
+    if (strcmp(sw.writeTopic, topic) == 0)
+    {
+      sw.changeState(origin, String(payload));
+    }
   }
-}
-const char *SwitchT::commandTopic()
-{
-  String mqttTopic;
-  mqttTopic.concat(getBaseTopic());
-  mqttTopic.concat("/");
-  mqttTopic.concat(family);
-  mqttTopic.concat("/");
-  mqttTopic.concat(id);
-  mqttTopic.concat("/set");
-  return mqttTopic.c_str();
-}
-const char *SwitchT::commandTopicCloudIO()
-{
-  String mqttTopic;
-  mqttTopic.concat(getBaseTopic());
-  mqttTopic.concat("/");
-  mqttTopic.concat(family);
-  mqttTopic.concat("/");
-  mqttTopic.concat(id);
-  mqttTopic.concat("/set");
-  return mqttTopic.c_str();
-}
-const char *SwitchT::stateTopic()
-{
-  String mqttTopic;
-  mqttTopic.concat(getBaseTopic());
-  mqttTopic.concat("/");
-  mqttTopic.concat(family);
-  mqttTopic.concat("/");
-  mqttTopic.concat(id);
-  mqttTopic.concat("/state");
-  return mqttTopic.c_str();
 }
 void SwitchT::setup()
 {
-  /* if (isCover())
+  if (isCover())
   {
     shutter = new Shutters(this);
     char storedShuttersState[shutter->getStateLength()];
@@ -209,8 +176,7 @@ void SwitchT::setup()
         .onLevelReached(onShuttersLevelReached)
         .begin();
   }
-  * /
-      for (auto output : outputs)
+  for (auto output : outputs)
   {
     configPIN(output, OUTPUT);
   }
@@ -232,48 +198,42 @@ void SwitchT::setup()
   }
 }
 
-
-
-
-
 const void SwitchT::notifyState(bool dirty, const char *origin)
 {
   if (strcmp("INTERNAL", origin) == 0)
   {
     return;
   }
-  /* const String currentStateToSend = getCurrentState();
-  #ifdef DEBUG_ONOFRE
-    Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
-  #endif
-    if (mqttConnected)
+  const String currentStateToSend = getCurrentState();
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
+#endif
+  if (mqttConnected)
+  {
+    publishOnMqtt(readTopic, currentStateToSend.c_str(), true);
+  }
+  if (cloudIOSupport)
+  {
+    notifyStateToCloudIO(readTopic, currentStateToSend.c_str(), currentStateToSend.length());
+  }
+  sendToServerEvents(id, currentStateToSend.c_str());
+  if (strcmp("KNX", origin) != 0 && isKnxSupport())
+  {
+    // TODO knx.write_1byte_int(knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[1]), statePoolIdx);
+  }
+  if (isKnxGroup())
+  {
+    for (auto &sw : config.switches)
     {
-      publishOnMqtt(mqttStateTopic, currentStateToSend.c_str(), true);
-    }
-    if (cloudIOSupport)
-    {
-      notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend.c_str(), currentStateToSend.length());
-    }
-    sendToServerEvents(id, currentStateToSend.c_str());
-    if (strcmp("KNX", origin) != 0 && isKnxSupport())
-    {
-      knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
-    }
-    bool knxGroup = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree == 0;
-    if (knxGroup)
-    {
-      for (auto &sw : config.switches)
+
+      if (strcmp(sw.id, id) != 0)
       {
-
-        if (strcmp(sw.id, id) != 0)
-        {
-          sw.changeState(currentStateToSend.c_str(), "INTERNAL");
-        }
+        sw.changeState(SwitchStateOrigin::INTERNAL, currentStateToSend.c_str());
       }
-    }*/
+    }
+  }
 }
-
-const String SwitchT::changeState(SwitchStateOrigin origin, String state)
+SwitchT *SwitchT::changeState(SwitchStateOrigin origin, String state)
 {
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::switches, name);
@@ -281,34 +241,26 @@ const String SwitchT::changeState(SwitchStateOrigin origin, String state)
   Log.notice("%s From : %d" CR, tags::switches, origin);
   Log.notice("%s Family : %d" CR, tags::switches, family);
 #endif
-  /* if (isCover())
-   {
-     switch (state)
-     {
-     case SwitchState::OPEN:
-       shutter->setLevel(0);
-       break;
-     case SwitchState::CLOSE:
-       shutter->setLevel(100);
-       break;
-     case SwitchState::STOP:
-       shutter->stop();
-       break;
-       shutter->setLevel(max(0, min(100, percentage)));
-     }
-   }
-   else if (isGarage())
-   {
-     writeToPIN(outputs[0], HIGH);
-     delay(1000);
-     writeToPIN(outputs[0], LOW);
-   }
-   else if (isLight() || isSwitch())
-   {
-     writeToPIN(outputs[0], state ? HIGH : LOW);
-   }*/
-  // TODO STATE STRING
-  return "TODO";
+  if (isCover())
+  {
+    int level = state.toInt();
+    if (level > 100)
+      shutter->stop();
+    else
+      shutter->setLevel(max(0, min(100, level)));
+  }
+  else if (isGarage())
+  {
+    writeToPIN(outputs[0], HIGH);
+    delay(1000);
+    writeToPIN(outputs[0], LOW);
+  }
+  else if (isLight() || isSwitch())
+  {
+    writeToPIN(outputs[0], state.toInt() ? HIGH : LOW);
+  }
+
+  return this;
 }
 
 void Config::loopSwitches()
@@ -317,7 +269,7 @@ void Config::loopSwitches()
   {
     if (sw.isCover())
     {
-      // sw.shutter->loop();
+      sw.shutter->loop();
     }
 
     for (auto bounce : sw.inputsBounced)

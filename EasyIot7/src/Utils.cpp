@@ -71,28 +71,6 @@ void normalize(String &inputStr)
     inputStr.replace("@", "o");
     inputStr.replace("|", "");
 }
-String getChipId()
-{
-#ifdef ESP8266
-    return String(ESP.getChipId());
-#endif
-#ifdef ESP32
-    uint32_t chipId = 0;
-    for (int i = 0; i < 17; i = i + 8)
-    {
-        chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
-    }
-    return String(chipId);
-#endif
-}
-void generateId(String &id, const String &name, int familyCode, size_t maxSize)
-{
-    id.reserve(maxSize);
-    id.concat(getChipId());
-    id.concat(name);
-    id.concat(familyCode);
-    normalize(id);
-}
 
 boolean isValidNumber(const char *str)
 {

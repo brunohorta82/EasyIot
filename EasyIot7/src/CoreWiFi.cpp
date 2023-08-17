@@ -13,7 +13,7 @@ String getApName()
 {
   String version = String(VERSION, 3);
   version.replace(".", "x");
-  return "OnOfre-" + getChipId() + "-" + version;
+  return "OnOfre-" + String(config.chipId) + "-" + version;
 }
 bool wifiConnected()
 {
@@ -192,7 +192,7 @@ void refreshMDNS(const char *lastName)
   if (success)
   {
     MDNS.addService("bhonofre", "tcp", 80);
-    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", getChipId());
+    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(config.chipId));
     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
     MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(config.wifiSSID));
 #ifdef ESP32

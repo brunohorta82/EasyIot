@@ -10,7 +10,7 @@ void preparePzem()
     pzem.firmware = VERSION;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
     String idStr;
-    generateId(idStr, pzem.name, 2, sizeof(pzem.id));
+    config.generateId(idStr, pzem.name, 2, sizeof(pzem.id));
     strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
     strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
     pzem.primaryGpio = constantsConfig::noGPIO;
@@ -29,7 +29,6 @@ void preparePzem()
     strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
     strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
-    pzem.reloadMqttTopics();
     getAtualSensorsConfig().items.push_back(pzem);
     config.sensors.push_back(pzem);
 }

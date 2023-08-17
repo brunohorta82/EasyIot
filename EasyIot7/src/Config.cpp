@@ -8,8 +8,18 @@
 #include "LittleFS.h"
 Config &Config::init()
 {
-
-  strlcpy(nodeId, getChipId().c_str(), sizeof(nodeId));
+#ifdef ESP8266
+  strlcpy(chipId, ESP.getChipId().c_str(), sizeof(chipId))
+#endif
+#ifdef ESP32
+      uint32_t chipIdHex = 0;
+  for (int i = 0; i < 17; i = i + 8)
+  {
+    chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+  }
+  strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
+#endif
+  strlcpy(nodeId, chipId, sizeof(nodeId));
   mqttPort = constantsMqtt::defaultPort;
   staticIp = false;
   strlcpy(accessPointPassword, constantsConfig::apSecret, sizeof(accessPointPassword));
@@ -43,17 +53,29 @@ Config &Config::load()
   if (error)
     Log.notice("%s Failed to read file, using default configuration." CR, tags::config);
 #endif
+#ifdef ESP8266
+  strlcpy(chipId, ESP.getChipId().c_str(), sizeof(chipId))
+#endif
+#ifdef ESP32
+      uint32_t chipIdHex = 0;
+  for (int i = 0; i < 17; i = i + 8)
+  {
+    chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+  }
+  strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
+#endif
   strlcpy(nodeId,
-          doc["nodeId"] | getChipId().c_str(),
+          doc["nodeId"] | chipId,
           sizeof(nodeId));
+  // CLOUDIO
+  strlcpy(cloudIOUsername, doc["cloudIOUsername"] | "", sizeof(cloudIOUsername));
+  strlcpy(cloudIOPassword, doc["cloudIOPassword"] | "", sizeof(cloudIOPassword));
   // MQTT
   strlcpy(mqttIpDns, doc["mqttIpDns"] | "", sizeof(mqttIpDns));
   mqttPort = doc["mqttPort"] | 1883;
   strlcpy(mqttUsername, doc["mqttUsername"] | "", sizeof(mqttUsername));
   strlcpy(mqttPassword, doc["mqttPassword"] | "", sizeof(mqttPassword));
-  // CLOUDIO
-  strlcpy(cloudIOUsername, doc["cloudIOUsername"] | "", sizeof(cloudIOUsername));
-  strlcpy(cloudIOPassword, doc["cloudIOPassword"] | "", sizeof(cloudIOPassword));
+
   // WIFI
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
@@ -127,7 +149,7 @@ Config &Config::update(JsonObject &root)
   bool reloadWifi = staticIp != root["staticIp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
 
-  String n_name = root["nodeId"] | getChipId();
+  String n_name = root["nodeId"] | chipId;
   normalize(n_name);
   strlcpy(nodeId, n_name.c_str(), sizeof(nodeId));
   strlcpy(mqttIpDns, root["mqttIpDns"] | "", sizeof(mqttIpDns));
@@ -159,7 +181,7 @@ Config &Config::update(JsonObject &root)
 void Config::json(JsonVariant &root)
 {
   root["nodeId"] = nodeId;
-  root["chipId"] = getChipId();
+  root["chipId"] = chipId;
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
@@ -272,4 +294,13 @@ bool Config::isLoadDefaultsRequested()
     return true;
   }
   return false;
+}
+
+void Config::generateId(String &id, const String &name, int familyCode, size_t maxSize)
+{
+  id.reserve(maxSize);
+  id.concat(chipId);
+  id.concat(name);
+  id.concat(familyCode);
+  normalize(id);
 }

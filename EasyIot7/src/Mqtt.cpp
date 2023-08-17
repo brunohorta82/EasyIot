@@ -10,7 +10,7 @@ static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
 void processMqttAction(const char *topic, const char *payload)
 {
-    mqttSwitchControl(topic, payload);
+    mqttSwitchControl(SwitchStateOrigin::MQTT, topic, payload);
 }
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
@@ -49,7 +49,7 @@ String getBaseTopic()
         topic.concat(config.mqttUsername);
     }
     topic.concat("/");
-    topic.concat(getChipId());
+    topic.concat(config.chipId);
     return topic;
 }
 String getAvailableTopic()
@@ -73,7 +73,7 @@ boolean reconnect()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, config.mqttIpDns);
 #endif
-    if (mqttClient.connect(getChipId().c_str(), String(config.mqttUsername).c_str(), String(config.mqttPassword).c_str(), getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
+    if (mqttClient.connect(config.chipId, String(config.mqttUsername).c_str(), String(config.mqttPassword).c_str(), getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
     {
 #ifdef DEBUG_ONOFRE
         Log.notice("%s Connected to %s" CR, tags::mqtt, config.mqttIpDns);
@@ -85,8 +85,8 @@ boolean reconnect()
         refreshMDNS(config.nodeId);
         for (auto &sw : config.switches)
         {
-            subscribeOnMqtt(sw.commandTopic());
-            publishOnMqtt(sw.stateTopic(), sw.getCurrentState().c_str(), false);
+            subscribeOnMqtt(sw.writeTopic);
+            publishOnMqtt(sw.readTopic, sw.getCurrentState().c_str(), false);
         }
     }
 

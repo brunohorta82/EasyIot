@@ -26,7 +26,7 @@ bool displayOn = true;
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, DISPLAY_BTN);
 #define OLED_RESET 16 // Reset pin # (or -1 if sharing Arduino reset pin)
-
+extern Config config;
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
 {
   display.clearDisplay();
@@ -163,7 +163,6 @@ void SensorT::load(File &file)
   file.read((uint8_t *)family, sizeof(family));
   file.read((uint8_t *)&type, sizeof(type));
   file.read((uint8_t *)deviceClass, sizeof(deviceClass));
-  file.read((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
   file.read((uint8_t *)&haSupport, sizeof(haSupport));
   file.read((uint8_t *)&emoncmsSupport, sizeof(emoncmsSupport));
@@ -185,7 +184,6 @@ void SensorT::save(File &file) const
   file.write((uint8_t *)family, sizeof(family));
   file.write((uint8_t *)&type, sizeof(type));
   file.write((uint8_t *)deviceClass, sizeof(deviceClass));
-  file.write((uint8_t *)mqttStateTopic, sizeof(mqttStateTopic));
   file.write((uint8_t *)&mqttRetain, sizeof(mqttRetain));
   file.write((uint8_t *)&haSupport, sizeof(haSupport));
   file.write((uint8_t *)&emoncmsSupport, sizeof(emoncmsSupport));
@@ -282,7 +280,6 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["primaryGpio"] = ss.primaryGpio;
     sdoc["secondaryGpio"] = ss.secondaryGpio;
     sdoc["tertiaryGpio"] = ss.tertiaryGpio;
-    sdoc["mqttStateTopic"] = ss.mqttStateTopic;
     sdoc["pullup"] = ss.pullup;
     sdoc["delayRead"] = ss.delayRead;
     sdoc["lastBinaryState"] = ss.lastBinaryState;
@@ -308,10 +305,6 @@ Sensors &Sensors::remove(const char *id)
 }
 void reloadSensors()
 {
-  for (auto &ss : getAtualSensorsConfig().items)
-  {
-    ss.reloadMqttTopics();
-  }
   getAtualSensorsConfig().save();
 }
 void initSensorsHaDiscovery(Sensors &sensors)
@@ -319,7 +312,7 @@ void initSensorsHaDiscovery(Sensors &sensors)
   for (auto &ss : sensors.items)
   {
     addToHomeAssistant(ss);
-    publishOnMqtt(ss.mqttStateTopic, ss.mqttPayload, ss.mqttRetain);
+    publishOnMqtt(ss.readTopic, ss.mqttPayload, ss.mqttRetain);
   }
 }
 void SensorT::updateFromJson(JsonObject doc)
@@ -331,7 +324,7 @@ void SensorT::updateFromJson(JsonObject doc)
   type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
   String idStr;
   strlcpy(name, doc["name"], sizeof(name));
-  generateId(idStr, name, static_cast<int>(type), sizeof(id));
+  config.generateId(idStr, name, static_cast<int>(type), sizeof(id));
   strlcpy(id, idStr.c_str(), sizeof(id));
   String classDevice = doc["deviceClass"] | String(constantsSensor::powerMeterClass);
   strlcpy(deviceClass, classDevice.c_str(), sizeof(deviceClass));
@@ -419,20 +412,7 @@ void SensorT::updateFromJson(JsonObject doc)
   }
   break;
   }
-  reloadMqttTopics();
   doc["id"] = id;
-}
-void SensorT::reloadMqttTopics()
-{
-  String mqttTopic;
-  mqttTopic.reserve(sizeof(mqttStateTopic));
-  mqttTopic.concat(getBaseTopic());
-  mqttTopic.concat("/");
-  mqttTopic.concat(family);
-  mqttTopic.concat("/");
-  mqttTopic.concat(id);
-  mqttTopic.concat("/state");
-  strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
 }
 
 void publishReadings(String &readings, SensorT &sensor)
@@ -445,7 +425,7 @@ void publishReadings(String &readings, SensorT &sensor)
     notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str(), readings.length());
   if (sensor.mqttSupport)
   {
-    publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
+    publishOnMqtt(sensor.readTopic, readings.c_str(), sensor.mqttRetain);
   }
 }
 
