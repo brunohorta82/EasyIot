@@ -1,7 +1,8 @@
 let config;
+var newConfig={};
 let source = null;
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.122.134"
 };
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
@@ -70,9 +71,12 @@ function show(id) {
 function hide(id) {
     $('#' + id).addClass("hide");
 }
+var WORDS_PT={}
+var WORDS_RO={}
 var WORDS_EN = {
     "pin-state-a":"Pin State A",
     "gate":"Gate",
+    "security":"Security",
     "pin-state-b":"Pin State B",
     "pin-out-3": "Output Pin C",
     "update-from-server": "NEW UPGRADE",
@@ -89,7 +93,7 @@ var WORDS_EN = {
     "install-new-version": "Auto Upgrade to version",
     "install-file-version": "Install file version",
     "version": "Version",
-    "save": "Save",
+    "save": "Save All",
     "clean-fields": "Clear all Fields",
     "username": "Username",
     "password": "Password",
@@ -146,8 +150,13 @@ var WORDS_EN = {
     "prefix": "Prefix",
     "apikey": "API Key"
 };
-function loadsLanguage(lang) {
-    localStorage.setItem('lang', "EN");
+function loadsLanguage() {
+    let lang = "PT";
+    if (/^en\b/.test(navigator.language)) {
+        lang = "EN";
+    }else  if (/^ro\b/.test(navigator.language)) {
+        lang = "RO";
+    }
     $('span[class^="lang"]').each(function () {
         let langVar = (this.className).replace('lang-', '');
         let text = window['WORDS_' + lang][langVar];
@@ -163,10 +172,10 @@ function loadsLanguage(lang) {
     });
 }
 function showMessage(pt, en) {
-    localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
+   // localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
 }
 function showText(pt, en) {
-    return localStorage.getItem('lang').toString() === "PT" ? pt : en;
+  //  return localStorage.getItem('lang').toString() === "PT" ? pt : en;
 }
 function loadConfig() {
     var targetUrl = endpoint.baseUrl + "/config";
@@ -204,48 +213,17 @@ function loadDevice(func, e, next) {
         timeout: 2000
     });
 }
-function fillConfig() {
-    if (!config) return;
-    $(".bh-model").text(config.hardware);
-    $(".bh-onofre-item").removeClass("hide");
-    $("#version_lbl").text(config.firmware);
-    $("#lbl-chip").text(config.chipId);
-    $("#lbl-mac").text(config.mac);
-    $('input[name="nodeId"]').val(config.nodeId);
-    $(document).prop('title', 'BH OnOfre ' + config.nodeId);
-    $('input[name="mqttIpDns"]').val(config.mqttIpDns);
-    $('#mqtt_lbl').text(config.mqttIpDns);
-    $('input[name="mqttUsername"]').val(config.mqttUsername);
-    $('input[name="mqttPassword"]').val(config.mqttPassword);
-    $('input[name="wifiSSID"]').val(config.wifiSSID);
-    $('input[name="wifiSecret"]').val(config.wifiSecret);
-    $('input[name="knxArea"]').val(config.knxArea);
-    $('input[name="knxMember"]').val(config.knxMember);
-    $('input[name="knxLine"]').val(config.knxLine);
-    let staticIp = document.getElementById("staticIp");
-    if (staticIp) {
-        staticIp.checked = !config.staticIp;
-    }
-    $('input[name="wifiIp"]').val(config.wifiIp);
-    $('input[name="wifiMask"]').val(config.wifiMask);
-    $('input[name="wifiGw"]').val(config.wifiGw);
-    $('input[name="apSecret"]').val(config.apSecret);
-    $('input[name="emoncmsServer"]').val(config.emoncmsServer);
-    $('input[name="emoncmsPath"]').val(config.emoncmsPath);
-    $('input[name="emoncmsApikey"]').val(config.emoncmsApikey);
-    $('#ff').prop('disabled', false);
 
-}
 function toggleActive(menu) {
     $('.sidebar-menu').find('li').removeClass('active');
     $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
     $(".content").load(menu + ".html", function () {
         if (menu === "devices") {
-            loadDevice(fillSwitches, "switches", function () {
-                loadDevice(fillSensors, "sensors", function () {
-                });
+        //    loadDevice(fillSwitches, "switches", function () {
+          //      loadDevice(fillSensors, "sensors", function () {
+            //    });
 
-            });
+            //});
         } else {
             systemStatus();
             fillConfig();
@@ -728,24 +706,7 @@ function stateSwitch(id, state) {
         timeout: 2000
     });
 }
-function rotateState(id) {
-    const targetUrl = endpoint.baseUrl + "/rotate-state-switch?id=" + id;
-    $.ajax({
-        type: "GET",
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
 
-        },
-        error: function () {
-
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
-}
 function saveSensor(id) {
     let device = {
         "id": id,
@@ -840,7 +801,7 @@ function storeConfig() {
         url: targetUrl,
         dataType: "json",
         contentType: "application/json",
-        data: JSON.stringify(config),
+        data: JSON.stringify(newConfig),
         success: function (response) {
             config = response;
             fillConfig();
@@ -852,64 +813,61 @@ function storeConfig() {
         timeout: 2000
     });
 }
+function getValue(id, f){
+    let v =  document.getElementById(id);
+    return v ? v.value : f;
+}
+function fillConfig() {
+    if (!config) return;
+    $(".bh-model").text(config.hardware);
+    $(".bh-onofre-item").removeClass("hide");
+    $("#version_lbl").text(config.firmware);
+    $("#lbl-chip").text("ID: "+config.chipId);
+    $("#lbl-mac").text("MAC: "+config.mac);
+    $('input[name="nodeId"]').val(config.nodeId);
+    $(document).prop('title', 'BH OnOfre ' + config.nodeId);
+    $('input[name="mqttIpDns"]').val(config.mqttIpDns);
+    $('#mqtt_lbl').text(config.mqttIpDns);
+    $('input[name="mqttUsername"]').val(config.mqttUsername);
+    $('input[name="mqttPassword"]').val(config.mqttPassword);
+    $('input[name="wifiSSID"]').val(config.wifiSSID);
+    $('input[name="wifiSecret"]').val(config.wifiSecret);
+    $('input[name="knxArea"]').val(config.knxArea);
+    $('input[name="knxMember"]').val(config.knxMember);
+    $('input[name="knxLine"]').val(config.knxLine);
+    let staticIp = document.getElementById("staticIp");
+    if (staticIp) {
+        staticIp.checked = !config.staticIp;
+    }
+    $('input[name="wifiIp"]').val(config.wifiIp);
+    $('input[name="wifiMask"]').val(config.wifiMask);
+    $('input[name="wifiGw"]').val(config.wifiGw);
+    $('input[name="accessPointPassword"]').val(config.accessPointPassword);
+    $('input[name="apiPassword"]').val(config.apiPassword);
+    $('input[name="apiUser"]').val(config.apiUser);
+    $('input[name="emoncmsServer"]').val(config.emoncmsServer);
+    $('input[name="emoncmsPath"]').val(config.emoncmsPath);
+    $('input[name="emoncmsApikey"]').val(config.emoncmsApikey);
+    $('#ff').prop('disabled', false);
+}
 function saveNode() {
-    config.nodeId = $('#nodeId').val().trim();
-    storeConfig();
+    let mqttIpDns=  document.getElementById("mqtt_ip");
+    newConfig.nodeId =getValue("nodeId", config.nodeId).trim();
+    newConfig.mqttIpDns = getValue("mqtt_ip", config.mqttIpDns).trim();
+    newConfig.mqttUsername =getValue("mqtt_username", config.mqttUsername).trim();
+    newConfig.mqttPassword = getValue("mqtt_password", config.mqttPassword).trim();
+    newConfig.wifiSSID =getValue("ssid", config.wifiSSID).trim();
+    newConfig.wifiSecret = getValue("wifi_secret", config.wifiSecret).trim();
+    newConfig.wifiIp =getValue("wifiIp", config.wifiIp).trim();
+    newConfig.wifiMask =getValue("wifiMask", config.wifiMask).trim();
+    newConfig.wifiGw =getValue("wifiGw", config.wifiGw).trim();
+    newConfig.dhcp =getValue("dhcp", config.dhcp) === "true";
+    newConfig.accessPointPassword =getValue("accessPointPassword", config.accessPointPassword).trim();
+    newConfig.apiPassword =getValue("apiPassword", config.apiPassword).trim();
+    newConfig.apiUser =getValue("apiUser", config.apiUser).trim();
+   storeConfig();
 }
-function saveWifi() {
-    config.wifiSSID = $('#ssid').val().trim();
-    config.wifiSecret = $('#wifi_secret').val().trim();
-    config.wifiIp = $('#wifiIp').val().trim();
-    config.wifiMask = $('#wifiMask').val().trim();
-    config.wifiGw = $('#wifiGw').val().trim();
-    config.staticIp = !document.getElementById("staticIp").checked;
-    config.apSecret = $('#apSecret').val().trim();
-    storeConfig();
-}
-function saveMqtt() {
-    config.mqttIpDns = $('#mqtt_ip').val().trim();
-    config.mqttUsername = $('#mqtt_username').val().trim();
-    config.mqttPassword = $('#mqtt_password').val().trim();
-    storeConfig();
-}
-function saveEmoncms() {
-    config.emoncmsServer = $('#emoncmsServer').val().trim();
-    config.emoncmsPath = $('#emoncmsPath').val().trim();
-    config.emoncmsApikey = $('#emoncmsApikey').val().trim();
-    storeConfig();
-}
-function removeSwitch(id) {
-    const targetUrl = endpoint.baseUrl + "/remove-switch?id=" + id;
-    $.ajax({
-        url: targetUrl,
-        type: 'DELETE',
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            fillSwitches(response);
-        },
-        error: function () {
-            showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")
-        },
-        timeout: 2000
-    });
-}
-function removeSensor(id) {
-    const targetUrl = endpoint.baseUrl + "/remove-sensor?id=" + id;
-    $.ajax({
-        url: targetUrl,
-        type: 'DELETE',
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            fillSensors(response);
-        },
-        error: function () {
-            showMessage("Não foi possivel remvover a funcionalidade, por favor tenta novamente", "Unable to remove this feature, please try again.")
-        },
-        timeout: 2000
-    });
-}
+
 function reboot() {
     $.ajax({
         url: endpoint.baseUrl + "/reboot",
@@ -965,12 +923,7 @@ function systemStatus() {
     });
 }
 $(document).ready(function () {
-    let lang = localStorage.getItem('lang');
-    if (lang) {
-        loadsLanguage(lang);
-    } else {
-        window.navigator.language.startsWith("en") ? loadsLanguage("EN") : loadsLanguage("PT");
-    }
+    loadsLanguage();
     loadConfig();
     $('#node_id').on('keypress', function (e) {
         if (e.which === 32)
@@ -983,7 +936,6 @@ $(document).ready(function () {
     });
     systemStatus();
     toggleActive("node");
-    setInterval(systemStatus, 15000);
     if (!!window.EventSource) {
         source = new EventSource(endpoint.baseUrl + '/events');
     }

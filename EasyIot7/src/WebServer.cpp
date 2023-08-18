@@ -239,17 +239,6 @@ void loadUI()
 
     request->send(response); });
 
-  server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=600");
-    request->send(response); });
-
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
@@ -257,17 +246,6 @@ void loadUI()
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=600");
-    request->send(response); });
-
-  server.on("/wifi.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", wifi_html, sizeof(wifi_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
     request->send(response); });

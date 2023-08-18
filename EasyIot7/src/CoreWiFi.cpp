@@ -25,7 +25,7 @@ void reloadWiFiConfig()
   jw.setHostname(config.nodeId);
   jw.cleanNetworks();
   jw.setSoftAP(getApName().c_str(), config.accessPointPassword);
-  if (config.staticIp)
+  if (!config.dhcp)
   {
     jw.addNetwork(config.wifiSSID, config.wifiSecret, config.wifiIp, config.wifiGw, config.wifiMask, config.wifiGw, true);
   }

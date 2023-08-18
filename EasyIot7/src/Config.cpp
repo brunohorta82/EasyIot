@@ -21,7 +21,7 @@ Config &Config::init()
 #endif
   strlcpy(nodeId, chipId, sizeof(nodeId));
   mqttPort = constantsMqtt::defaultPort;
-  staticIp = false;
+  dhcp = true;
   strlcpy(accessPointPassword, constantsConfig::apSecret, sizeof(accessPointPassword));
   strlcpy(apiUser, constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(apiPassword, constantsConfig::apiPassword, sizeof(apiPassword));
@@ -79,7 +79,7 @@ Config &Config::load()
   // WIFI
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
-  staticIp = doc["staticIp"] | false;
+  dhcp = doc["dhcp"] | false;
   strlcpy(wifiIp, doc["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, doc["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, doc["wifiGw"] | "", sizeof(wifiGw));
@@ -117,7 +117,7 @@ Config &Config::save()
     doc["wifiSSID"] = wifiSSID;
   if (!String(wifiSecret).isEmpty())
     doc["wifiSecret"] = wifiSecret;
-  doc["staticIp"] = staticIp;
+  doc["dhcp"] = dhcp;
   if (!String(wifiIp).isEmpty())
     doc["wifiIp"] = wifiIp;
   if (!String(wifiMask).isEmpty())
@@ -146,7 +146,7 @@ Config &Config::update(JsonObject &root)
   char lastNodeId[32];
   strlcpy(lastNodeId, nodeId, sizeof(lastNodeId));
 
-  bool reloadWifi = staticIp != root["staticIp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
+  bool reloadWifi = dhcp != root["dhcp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
 
   String n_name = root["nodeId"] | chipId;
@@ -161,20 +161,21 @@ Config &Config::update(JsonObject &root)
   strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
-  staticIp = root["staticIp"];
-  String ap = root["apSecret"] | String(constantsConfig::apSecret);
-  strlcpy(accessPointPassword, ap.c_str(), sizeof(accessPointPassword));
+  dhcp = root["dhcp"];
+  strlcpy(apiPassword, root["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
+  strlcpy(apiUser, root["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
+  strlcpy(accessPointPassword, root["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));
   if (reloadWifi)
   {
-    // requestReloadWifi();
+    requestReloadWifi();
   }
   if (reloadMqtt)
   {
-    //   setupMQTT();
+    setupMQTT();
     // TODO  reloadSwitches();
     // reloadSensors();
   }
-  // refreshMDNS(lastNodeId);
+  refreshMDNS(lastNodeId);
   return this->save();
 }
 
@@ -186,13 +187,16 @@ void Config::json(JsonVariant &root)
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
   root["mqttPassword"] = mqttPassword;
+  root["accessPointPassword"] = accessPointPassword;
+  root["apiUser"] = apiUser;
+  root["apiPassword"] = apiPassword;
   root["mqttConnected"] = mqttConnected();
   root["wifiSSID"] = wifiSSID;
   root["wifiSecret"] = wifiSecret;
   root["wifiIp"] = WiFi.localIP().toString();
-  root["wifiMask"] = wifiMask;
-  root["wifiGw"] = wifiGw;
-  root["staticIp"] = staticIp;
+  root["wifiMask"] = WiFi.subnetMask().toString();
+  root["wifiGw"] = WiFi.gatewayIP().toString();
+  root["dhcp"] = dhcp;
   root["firmware"] = String(VERSION);
   root["mac"] = WiFi.macAddress();
   root["wifiStatus"] = WiFi.isConnected();
