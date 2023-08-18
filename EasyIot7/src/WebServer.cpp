@@ -1,7 +1,9 @@
 #include "WebServer.h"
 #include <DNSServer.h>
 #include "constants.h"
-#include "StaticSite.h"
+#include "DevicesHtml.h"
+#include "NodeHtml.h"
+#include "IndexHtml.h"
 #include "StaticCss.h"
 #include "StaticJs.h"
 #include "AsyncJson.h"
