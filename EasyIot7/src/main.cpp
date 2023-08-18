@@ -10,6 +10,7 @@
 #include <esp-knx-ip.h>
 
 Config config;
+
 void checkInternalRoutines()
 {
   if (config.isCloudIOSyncRequested())
@@ -77,6 +78,7 @@ void startFileSystem()
     }
   }
 }
+
 void setup()
 {
 

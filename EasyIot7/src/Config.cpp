@@ -166,16 +166,16 @@ Config &Config::update(JsonObject &root)
   strlcpy(accessPointPassword, ap.c_str(), sizeof(accessPointPassword));
   if (reloadWifi)
   {
-    requestReloadWifi();
+    // requestReloadWifi();
   }
   if (reloadMqtt)
   {
-    setupMQTT();
+    //   setupMQTT();
     // TODO  reloadSwitches();
-    reloadSensors();
+    // reloadSensors();
   }
-  refreshMDNS(lastNodeId);
-  return *this;
+  // refreshMDNS(lastNodeId);
+  return this->save();
 }
 
 void Config::json(JsonVariant &root)
@@ -193,7 +193,7 @@ void Config::json(JsonVariant &root)
   root["wifiMask"] = wifiMask;
   root["wifiGw"] = wifiGw;
   root["staticIp"] = staticIp;
-  root["firmware"] = VERSION;
+  root["firmware"] = String(VERSION);
   root["mac"] = WiFi.macAddress();
   root["wifiStatus"] = WiFi.isConnected();
   root["signal"] = WiFi.RSSI();

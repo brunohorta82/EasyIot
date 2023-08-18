@@ -36,6 +36,8 @@ public:
   char apiPassword[64];
   std::vector<SwitchT> switches{};
   std::vector<SensorT> sensors{};
+  int i2cSDA = -1;
+  int i2cSCL = -1;
   void json(JsonVariant &root);
   Config &update(JsonObject &root);
   Config &save();

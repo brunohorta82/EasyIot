@@ -15,11 +15,7 @@
 #include <dht_nonblocking.h>
 #include <Bounce2.h>
 #include "LittleFS.h"
-#define BUS_SDA -1 //-1 if you don't use display
-#define BUS_SCL -1 //-1 if you don't use display
-#if WITH_DISPLAY
 #include <Adafruit_SSD1306.h>
-
 #define DISPLAY_BTN 16
 bool displayOn = true;
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -29,7 +25,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, DISPLAY_BTN);
 extern Config config;
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
 {
-  display.clearDisplay();
+  if (config.i2cSDA < 0 || config.i2cSCL < 0)
+    display.clearDisplay();
   display.setTextSize(1);              // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setCursor(5, 0);
@@ -46,9 +43,12 @@ void printOnDisplay(float _voltage, float _amperage, float _power, float _energy
 
 void setupDisplay()
 {
-  Wire.begin(BUS_SDA, BUS_SCL);
+  if (config.i2cSDA < 0 || config.i2cSCL < 0)
+    return;
+  Wire.begin(config.i2cSDA, config.i2cSCL);
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
   {
+    return;
   }
   display.clearDisplay();
   display.setTextSize(1);
@@ -58,7 +58,7 @@ void setupDisplay()
 
   display.display();
 }
-#endif
+
 struct Sensors &getAtualSensorsConfig()
 {
   static Sensors sensors;
@@ -121,9 +121,8 @@ void Sensors::load(File &file)
       IPAddress ip(192, 168, 1, item.secondaryGpio);
       item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
-#if WITH_DISPLAY
+
       setupDisplay();
-#endif
     }
     break;
     case PZEM_004T_V03:
@@ -157,7 +156,6 @@ void Sensors::save(File &file) const
 }
 void SensorT::load(File &file)
 {
-  file.read((uint8_t *)&firmware, sizeof(firmware));
   file.read((uint8_t *)id, sizeof(id));
   file.read((uint8_t *)name, sizeof(name));
   file.read((uint8_t *)family, sizeof(family));
@@ -173,12 +171,9 @@ void SensorT::load(File &file)
   file.read((uint8_t *)&delayRead, sizeof(delayRead));
   file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
   file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
-  firmware = VERSION;
 }
 void SensorT::save(File &file) const
 {
-
-  file.write((uint8_t *)&firmware, sizeof(firmware));
   file.write((uint8_t *)id, sizeof(id));
   file.write((uint8_t *)name, sizeof(name));
   file.write((uint8_t *)family, sizeof(family));

@@ -7,7 +7,6 @@ extern Config config;
 void preparePzem()
 {
     SensorT pzem;
-    pzem.firmware = VERSION;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
     String idStr;
     config.generateId(idStr, pzem.name, 2, sizeof(pzem.id));
@@ -25,9 +24,6 @@ void preparePzem()
     pzem.emoncmsSupport = true;
     pzem.cloudIOSupport = true;
     pzem.delayRead = 5000;
-    strlcpy(pzem.payloadOn, "ON", sizeof(pzem.payloadOn));
-    strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
-    strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
     getAtualSensorsConfig().items.push_back(pzem);
     config.sensors.push_back(pzem);

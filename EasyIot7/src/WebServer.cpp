@@ -1,7 +1,4 @@
 #include "WebServer.h"
-#ifdef ESP32
-#include "Update.h"
-#endif
 #include <DNSServer.h>
 #include "constants.h"
 #include "StaticSite.h"
@@ -21,58 +18,58 @@
 #include <Ticker.h>
 #include "Config.h"
 #include "Templates.h"
-#ifdef ESP8266
-#include <ESP8266httpUpdate.h>
-#include <ESP8266mDNS.h>
-#endif
 #ifdef ESP32
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
+#include "Update.h"
 #endif
-#define REALM "onofre"
-extern "C" uint32_t _FS_start;
-extern "C" uint32_t _FS_end;
+#ifdef ESP8266
+#include <ESP8266httpUpdate.h>
+#include <ESP8266mDNS.h>
+#endif
+
 DNSServer dnsServer;
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
 unsigned long switchesSize = 6874;
 extern Config config;
-void performUpdate(){
-  #ifdef DEBUG_ONOFRE
-    Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
+void performUpdate()
+{
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
 #endif
-    WiFiClient client;
-    t_httpUpdate_return ret;
+  WiFiClient client;
+  t_httpUpdate_return ret;
 #ifdef ESP8266
-    ret = ESPhttpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
+  ret = ESPhttpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
 #endif
 #ifdef ESP32
-    ret = httpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
+  ret = httpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
 #endif
-    switch (ret)
-    {
-    case HTTP_UPDATE_FAILED:
+  switch (ret)
+  {
+  case HTTP_UPDATE_FAILED:
 #ifdef DEBUG_ONOFRE
 #ifdef ESP8266
-      Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+    Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
 #endif
 #ifdef ESP32
-      Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+    Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
 #endif
 #endif
-      break;
-    case HTTP_UPDATE_NO_UPDATES:
+    break;
+  case HTTP_UPDATE_NO_UPDATES:
 #ifdef DEBUG_ONOFRE
-      Log.notice("HTTP_UPDATE_NO_UPDATES");
+    Log.notice("HTTP_UPDATE_NO_UPDATES");
 #endif
-      break;
-    case HTTP_UPDATE_OK:
+    break;
+  case HTTP_UPDATE_OK:
 #ifdef DEBUG_ONOFRE
-      Log.notice("HTTP_UPDATE_OK");
+    Log.notice("HTTP_UPDATE_OK");
 #endif
-      break;
-    }
+    break;
+  }
 }
 
 int getRSSIasQuality(int RSSI)
