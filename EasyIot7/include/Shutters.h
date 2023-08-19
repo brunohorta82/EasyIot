@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Arduino.h"
-#include "Switches.h"
+#include "Actuatores.h"
 #include "ShuttersOperation.hpp"
 #include <vector>
 #include "Shutters/StoredState.hpp"
@@ -44,7 +44,7 @@ namespace ShuttersInternal
 class Shutters
 {
 private:
-  SwitchT *switchT;
+  ActuatorT *actuator;
   uint32_t _upCourseTime;
   uint32_t _downCourseTime;
   float _calibrationRatio;
@@ -80,7 +80,7 @@ private:
   void _notifyLevel();
 
 public:
-  Shutters(SwitchT *s);
+  Shutters(ActuatorT *s);
   uint32_t getUpCourseTime();
   uint32_t getDownCourseTime();
   Shutters &setOperationHandler(ShuttersInternal::OperationHandler handler);
@@ -99,6 +99,6 @@ public:
   bool isCalibration();
   uint8_t getCurrentLevel();
   Shutters &reset();
-  SwitchT *getSwitchT();
+  ActuatorT *getActuatorT();
   bool isReset();
 };

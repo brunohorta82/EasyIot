@@ -8,7 +8,7 @@
 #include "IndexJs.h"
 #include "StaticJs.h"
 #include "AsyncJson.h"
-#include "Switches.h"
+#include "Actuatores.h"
 #include "Sensors.h"
 #include <vector>
 #include "ArduinoJson.h"

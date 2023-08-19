@@ -3,7 +3,7 @@
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
 #include "WebServer.h"
-#include "Switches.h"
+#include "Actuatores.h"
 #include "Sensors.h"
 #include "LittleFS.h"
 Config &Config::init()
@@ -87,6 +87,13 @@ Config &Config::load()
   strlcpy(accessPointPassword, doc["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));
   strlcpy(apiUser, doc["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(apiPassword, doc["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
+  JsonArray devices = doc["devices"];
+  for (auto d : devices)
+  {
+    ActuatorT a;
+    strlcpy(a.name, d["name"] | "", sizeof(a.name));
+    actuatores.push_back(a);
+  }
   file.close();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
@@ -128,6 +135,13 @@ Config &Config::save()
   doc["accessPointPassword"] = accessPointPassword;
   doc["apiUser"] = apiUser;
   doc["apiPassword"] = apiPassword;
+  JsonArray devices = doc.createNestedArray("devices");
+  for (auto s : actuatores)
+  {
+    JsonObject a = devices.createNestedObject();
+    a["type"] = "ACTUATOR";
+    a["name"] = s.name;
+  }
   if (serializeJson(doc, file) == 0)
   {
 #ifdef DEBUG_ONOFRE
@@ -201,6 +215,12 @@ void Config::json(JsonVariant &root)
   root["mac"] = WiFi.macAddress();
   root["wifiStatus"] = WiFi.isConnected();
   root["signal"] = WiFi.RSSI();
+  JsonArray devices = root.createNestedArray("devices");
+  for (auto s : actuatores)
+  {
+    JsonObject a = devices.createNestedObject();
+    a["name"] = s.name;
+  }
   JsonVariant pins = root.createNestedArray("pins");
 #ifdef ESP8266
   std::vector<int> pinsRef = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};

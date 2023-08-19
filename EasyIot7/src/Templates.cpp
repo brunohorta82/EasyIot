@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "Templates.h"
-#include "Switches.h"
+#include "Actuatores.h"
 #include "Sensors.h"
 #include "Config.h"
 extern Config config;
@@ -30,17 +30,17 @@ void preparePzem()
 }
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
-    SwitchT light;
+    ActuatorT light;
     light.family = LIGHT_GENERIC;
     strlcpy(light.name, name.c_str(), sizeof(light.name));
     light.typeControl = SwitchControlType::GPIO_OUTPUT;
     light.outputs.push_back(output);
     light.inputs.push_back(input);
-    config.switches.push_back(light);
+    config.actuatores.push_back(light);
 }
 void prepareCover()
 {
-    SwitchT cover;
+    ActuatorT cover;
     cover.family = LIGHT_GENERIC;
 #ifdef CONFIG_LANG_PT
     strlcpy(cover.name, "Estore", sizeof(cover.name));
@@ -57,11 +57,11 @@ void prepareCover()
 #ifdef ESP32
     cover.inputs = {13u, 14u};
 #endif
-    config.switches.push_back(cover);
+    config.actuatores.push_back(cover);
 }
 void prepareGarage()
 {
-    SwitchT garage;
+    ActuatorT garage;
     garage.family = LIGHT_GENERIC;
 #ifdef CONFIG_LANG_PT
     strlcpy(garage.name, "Garagem", sizeof(garage.name));
@@ -78,7 +78,7 @@ void prepareGarage()
 #ifdef ESP32
     garage.inputs = {13u, 14u};
 #endif
-    config.switches.push_back(garage);
+    config.actuatores.push_back(garage);
 }
 void load(enum Template _template)
 {

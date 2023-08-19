@@ -1,7 +1,7 @@
 #pragma once
 #include "Utils.hpp"
 #include <ArduinoJson.h>
-#include "Switches.h"
+#include "Actuatores.h"
 #include "Sensors.h"
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
@@ -34,7 +34,7 @@ public:
   char accessPointPassword[64];
   char apiUser[32];
   char apiPassword[64];
-  std::vector<SwitchT> switches{};
+  std::vector<ActuatorT> actuatores{};
   std::vector<SensorT> sensors{};
   int i2cSDA = -1;
   int i2cSCL = -1;

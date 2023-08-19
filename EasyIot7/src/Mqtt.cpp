@@ -1,7 +1,7 @@
 #include "Mqtt.h"
 #include "Config.h"
 #include <PubSubClient.h>
-#include "Switches.h"
+#include "Actuatores.h"
 #include "CoreWiFi.h"
 #include "constants.h"
 #include "HomeAssistantMqttDiscovery.h"
@@ -83,7 +83,7 @@ boolean reconnect()
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
         refreshMDNS(config.nodeId);
-        for (auto &sw : config.switches)
+        for (auto &sw : config.actuatores)
         {
             subscribeOnMqtt(sw.writeTopic);
             publishOnMqtt(sw.readTopic, sw.getCurrentState().c_str(), false);

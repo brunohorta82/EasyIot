@@ -4,7 +4,7 @@
 #include "WebServer.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
-#include "Switches.h"
+#include "Actuatores.h"
 #include "Sensors.h"
 #include "LittleFS.h"
 #include <esp-knx-ip.h>

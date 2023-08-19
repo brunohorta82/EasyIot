@@ -32,7 +32,7 @@ namespace tags
     constexpr const char *wifi{"[WIFI]"};
     constexpr const char *discovery{"[DISCOVERY]"};
     constexpr const char *sensors{"[SENSORS]"};
-    constexpr const char *switches{"[SWITCHES]"};
+    constexpr const char *actuatores{"[ACTUATORES]"};
     constexpr const char *alexa{"[ALEXA]"};
     constexpr const char *webserver{"[WEBSERVER]"};
     constexpr const char *emoncms{"[EMONCMS]"};
@@ -41,9 +41,6 @@ namespace tags
 namespace configFilenames
 {
     constexpr const char *config = "/config.json";
-    constexpr const char *sensors = "/sensors.json";
-    constexpr const char *switches = "/switches.json";
-
 } // namespace configFilenames
 namespace constantsConfig
 {

@@ -1,5 +1,5 @@
 #include "Sensors.h"
-#include "Switches.h"
+#include "Actuatores.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include "constants.h"
 #include "Mqtt.h"
@@ -7,7 +7,7 @@
 extern Config config;
 void initHomeAssistantDiscovery()
 {
-  for (auto &sw : config.switches)
+  for (auto &sw : config.actuatores)
   {
     if (!sw.haSupport)
       continue;
@@ -23,7 +23,7 @@ void initHomeAssistantDiscovery()
   }
 }
 
-void createHaSwitch(SwitchT &sw)
+void createHaSwitch(ActuatorT &sw)
 {
   if (!sw.haSupport)
     return;
@@ -236,7 +236,7 @@ void addToHomeAssistant(SensorT &s)
     break;
   }
 }
-void addToHomeAssistant(SwitchT &sw)
+void addToHomeAssistant(ActuatorT &sw)
 {
   if (!sw.haSupport)
     return;
@@ -262,7 +262,7 @@ void addToHomeAssistant(SwitchT &sw)
 #endif
 }
 
-void removeFromHomeAssistant(SwitchT &sw)
+void removeFromHomeAssistant(ActuatorT &sw)
 {
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), "", false);
   delay(3);

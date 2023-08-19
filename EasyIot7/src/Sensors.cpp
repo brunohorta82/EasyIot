@@ -193,47 +193,9 @@ void SensorT::save(File &file) const
 
 void Sensors::save()
 {
-  if (!LittleFS.begin())
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s File storage can't start" CR, tags::sensors);
-#endif
-    return;
-  }
-
-  File file = LittleFS.open(configFilenames::sensors, "w+");
-  if (!file)
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s Failed to create file" CR, tags::sensors);
-#endif
-    return;
-  }
-  this->save(file);
-  file.close();
-
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Config stored." CR, tags::sensors);
-#endif
 }
 void load(Sensors &sensors)
 {
-
-  if (!LittleFS.exists(configFilenames::sensors))
-  {
-#ifdef DEBUG_ONOFRE
-    Log.notice("%s No Sensors config found." CR, tags::sensors);
-#endif
-    return;
-  }
-
-  File file = LittleFS.open(configFilenames::sensors, "r");
-  sensors.load(file);
-  file.close();
-
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Stored values was loaded." CR, tags::sensors);
-#endif
 }
 
 void saveAndRefreshServices(Sensors &sensors, SensorT &ss)

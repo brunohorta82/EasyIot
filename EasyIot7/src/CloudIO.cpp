@@ -4,7 +4,7 @@
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
 #include "constants.h"
-#include "Switches.h"
+#include "Actuatores.h"
 #include "Sensors.h"
 #ifdef ESP8266
 #include <ESP8266HTTPClient.h>
@@ -61,7 +61,7 @@ void onMqttConnect(bool sessionPresent)
 #endif
 
   subscribeOnMqttCloudIO(config.writeTopic);
-  for (auto &sw : config.switches)
+  for (auto &sw : config.actuatores)
   {
     subscribeOnMqttCloudIO(sw.writeTopic);
     notifyStateToCloudIO(sw.readTopic, sw.getCurrentState().c_str());
@@ -166,9 +166,9 @@ void connectoToCloudIO()
 
   reconectCount++;
   String payload = "";
-  size_t s = config.switches.size();
+  size_t s = config.actuatores.size();
   size_t ss = config.sensors.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
+  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(ActuatorT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
   JsonObject device = doc.to<JsonObject>();
   device["chipId"] = config.chipId;
@@ -177,7 +177,7 @@ void connectoToCloudIO()
   device["wifi"] = config.wifiSSID;
   device["macAddr"] = WiFi.macAddress();
   JsonArray feactures = device.createNestedArray("features");
-  for (auto &sw : config.switches)
+  for (auto &sw : config.actuatores)
   {
     JsonObject sdoc = feactures.createNestedObject();
     sdoc["id"] = sw.id;

@@ -1,16 +1,16 @@
 #include "Shutters.h"
-#include "Switches.h"
+#include "Actuatores.h"
 
 using namespace ShuttersInternal;
 
-Shutters::Shutters(SwitchT *s)
+Shutters::Shutters(ActuatorT *s)
     : _upCourseTime(0), _downCourseTime(0), _calibrationRatio(0.1), _state(STATE_IDLE), _stateTime(0), _direction(DIRECTION_UP), _storedState(), _currentLevel(LEVEL_NONE), _targetLevel(LEVEL_NONE), _safetyDelay(false), _safetyDelayTime(0), _reset(true), _operationHandler(nullptr), _writeStateHandler(nullptr), _levelReachedCallback(nullptr)
 {
-  switchT = s;
+  actuator = s;
 }
-SwitchT *Shutters::getSwitchT()
+ActuatorT *Shutters::getActuatorT()
 {
-  return switchT;
+  return actuator;
 }
 void Shutters::_up()
 {

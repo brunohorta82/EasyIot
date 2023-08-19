@@ -1,4 +1,4 @@
-#include "Switches.h"
+#include "Actuatores.h"
 #include <Shutters.h>
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
@@ -13,7 +13,7 @@ String Config::controlSwitch(const char *id, SwitchStateOrigin origin, String st
 {
   return "DONE";
 }
-const String SwitchT::getCurrentState()
+const String ActuatorT::getCurrentState()
 {
   if (isCover())
   {
@@ -27,31 +27,31 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
 {
   for (byte i = 0; i < length; i++)
   {
-    shutters->getSwitchT()->shutterState[i] = state[i];
+    shutters->getActuatorT()->shutterState[i] = state[i];
   }
 
   // TODO getAtualSwitchesConfig().save();
   if (mqttConnected())
   {
-    // TODO publishOnMqtt(shutters->getSwitchT()->stateTopic(), shutters->getSwitchT()->getCurrentState().c_str(), false);
+    // TODO publishOnMqtt(shutters->getActuatorT()->stateTopic(), shutters->getActuatorT()->getCurrentState().c_str(), false);
   }
-  /* if (shutters->getSwitchT()->cloudIOSupport)
+  /* if (shutters->getActuatorT()->cloudIOSupport)
    {
-     if (shutters->getSwitchT()->getCurrentState().equalsIgnoreCase(constanstsSwitch::payloadStop))
+     if (shutters->getActuatorT()->getCurrentState().equalsIgnoreCase(constanstsSwitch::payloadStop))
      {
-       // TODO  notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), strlen(shutters->getSwitchT()->getCurrentState().c_str()));
+       // TODO  notifyStateToCloudIO(shutters->getActuatorT()->mqttCloudStateTopic, shutters->getActuatorT()->getCurrentState().c_str(), strlen(shutters->getActuatorT()->getCurrentState().c_str()));
      }
      else
      {
        char dump[4] = {0};
-       int l = sprintf(dump, "%d", shutters->getSwitchT()->lastPercentage);
-       // TODO notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, dump, l);
+       int l = sprintf(dump, "%d", shutters->getActuatorT()->lastPercentage);
+       // TODO notifyStateToCloudIO(shutters->getActuatorT()->mqttCloudStateTopic, dump, l);
      }
    }*/
 }
 void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 {
-  /*  if (s->getSwitchT()->outputs.size() != 2)
+  /*  if (s->getActuatorT()->outputs.size() != 2)
     {
   #ifdef DEBUG_ONOFRE
       Log.error("%s No outputs configured" CR, tags::switches);
@@ -61,38 +61,38 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
     switch (operation)
     {
     case ShuttersOperation::UP:
-      if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
+      if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
       {
   #ifdef ESP32
-        writeToPIN(s->getSwitchT()->outputs[0], LOW);
+        writeToPIN(s->getActuatorT()->outputs[0], LOW);
         delay(1);
-        writeToPIN(s->getSwitchT()->outputs[1], HIGH);
+        writeToPIN(s->getActuatorT()->outputs[1], HIGH);
   #else
-        writeToPIN(s->getSwitchT()->outputs[0], HIGH);
+        writeToPIN(s->getActuatorT()->outputs[0], HIGH);
         delay(1);
-        writeToPIN(s->getSwitchT()->outputs[1], HIGH);
+        writeToPIN(s->getActuatorT()->outputs[1], HIGH);
   #endif
       }
       break;
     case ShuttersOperation::DOWN:
-      if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
+      if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
       {
-        writeToPIN(s->getSwitchT()->outputs[0], HIGH);
+        writeToPIN(s->getActuatorT()->outputs[0], HIGH);
         delay(1);
-        writeToPIN(s->getSwitchT()->outputs[1], LOW);
+        writeToPIN(s->getActuatorT()->outputs[1], LOW);
       }
 
       break;
     case ShuttersOperation::HALT:
-      if (s->getSwitchT()->typeControl == SwitchControlType::GPIO_OUTPUT)
+      if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
       {
 
   #ifdef ESP32
-        writeToPIN(s->getSwitchT()->outputs[0], LOW);
+        writeToPIN(s->getActuatorT()->outputs[0], LOW);
         delay(1);
-        writeToPIN(s->getSwitchT()->outputs[1], LOW);
+        writeToPIN(s->getActuatorT()->outputs[1], LOW);
   #else
-        writeToPIN(s->getSwitchT()->outputs[0], LOW);
+        writeToPIN(s->getActuatorT()->outputs[0], LOW);
   #endif
       }
       break;
@@ -109,23 +109,23 @@ void readLastShutterState(char *dest, byte length, char *value)
 
 void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
-  /* shutters->getSwitchT()->lastPercentage = level;
+  /* shutters->getActuatorT()->lastPercentage = level;
 
    char dump[4] = {0};
    int l = sprintf(dump, "%d", level);
    if (mqttConnected)
    {
-     publishOnMqtt(shutters->getSwitchT()->stateTopic(), dump, false);
+     publishOnMqtt(shutters->getActuatorT()->stateTopic(), dump, false);
    }
-   if (shutters->getSwitchT()->cloudIOSupport)
+   if (shutters->getActuatorT()->cloudIOSupport)
    {
-     // TODO   notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, dump, l);
+     // TODO   notifyStateToCloudIO(shutters->getActuatorT()->mqttCloudStateTopic, dump, l);
    }*/
 }
 
 void switchesCallback(message_t const &msg, void *arg)
 {
-  auto s = static_cast<SwitchT *>(arg);
+  auto s = static_cast<ActuatorT *>(arg);
   switch (msg.ct)
   {
   case KNX_CT_ADC_ANSWER:
@@ -154,7 +154,7 @@ void switchesCallback(message_t const &msg, void *arg)
 }
 void mqttSwitchControl(SwitchStateOrigin origin, const char *topic, const char *payload)
 {
-  for (auto &sw : config.switches)
+  for (auto &sw : config.actuatores)
   {
     if (strcmp(sw.writeTopic, topic) == 0)
     {
@@ -162,13 +162,13 @@ void mqttSwitchControl(SwitchStateOrigin origin, const char *topic, const char *
     }
   }
 }
-void SwitchT::setup()
+void ActuatorT::setup()
 {
   if (isCover())
   {
     shutter = new Shutters(this);
     char storedShuttersState[shutter->getStateLength()];
-    readLastShutterState(storedShuttersState, shutter->getStateLength(), shutter->getSwitchT()->shutterState);
+    readLastShutterState(storedShuttersState, shutter->getStateLength(), shutter->getActuatorT()->shutterState);
     shutter->setOperationHandler(shuttersOperationHandler)
         .setWriteStateHandler(shuttersWriteStateHandler)
         .restoreState(storedShuttersState)
@@ -198,7 +198,7 @@ void SwitchT::setup()
   }
 }
 
-const void SwitchT::notifyState(bool dirty, const char *origin)
+const void ActuatorT::notifyState(bool dirty, const char *origin)
 {
   if (strcmp("INTERNAL", origin) == 0)
   {
@@ -206,7 +206,7 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
   }
   const String currentStateToSend = getCurrentState();
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
+  Log.notice("%s %s current state: %s" CR, tags::actuatores, name, currentStateToSend.c_str());
 #endif
   if (mqttConnected)
   {
@@ -223,7 +223,7 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
   }
   if (isKnxGroup())
   {
-    for (auto &sw : config.switches)
+    for (auto &sw : config.actuatores)
     {
 
       if (strcmp(sw.id, id) != 0)
@@ -233,13 +233,13 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
     }
   }
 }
-SwitchT *SwitchT::changeState(SwitchStateOrigin origin, String state)
+ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, String state)
 {
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s Name:      %s" CR, tags::switches, name);
-  Log.notice("%s State:     %s" CR, tags::switches, state);
-  Log.notice("%s From : %d" CR, tags::switches, origin);
-  Log.notice("%s Family : %d" CR, tags::switches, family);
+  Log.notice("%s Name:      %s" CR, tags::actuatores, name);
+  Log.notice("%s State:     %s" CR, tags::actuatores, state);
+  Log.notice("%s From : %d" CR, tags::actuatores, origin);
+  Log.notice("%s Family : %d" CR, tags::actuatores, family);
 #endif
   if (isCover())
   {
@@ -265,7 +265,7 @@ SwitchT *SwitchT::changeState(SwitchStateOrigin origin, String state)
 
 void Config::loopSwitches()
 {
-  for (auto &sw : config.switches)
+  for (auto &sw : config.actuatores)
   {
     if (sw.isCover())
     {
