@@ -288,7 +288,7 @@ void loadUI()
     request->send(response); });
 
   // CSS
-  server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/css/styles.css", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
