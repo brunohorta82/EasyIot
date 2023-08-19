@@ -2,7 +2,7 @@ let config;
 var newConfig={};
 let source = null;
 const endpoint = {
-    baseUrl: "http://192.168.187.135"
+    baseUrl: ""
 };
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();

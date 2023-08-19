@@ -6,7 +6,10 @@ body {
     color: #333;
     background-color: #1b1b1b !important
 }
-
+.stats-panel{
+    display: flex;
+    padding: 10px
+}
 .onofre-footer {
     background: #222;
     padding: 15px;
@@ -254,7 +257,13 @@ a {
     background-color: #d9534f;
     border-color: #d43f3a
 }
-
+.btl-save-all{
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    margin: 16px;
+}
 .main-header .navbar, .main-header li.user-header {
     background-color: #86bd9a
 }
