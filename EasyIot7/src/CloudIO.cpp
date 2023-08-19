@@ -215,6 +215,11 @@ void connectoToCloudIO()
       reconectCount = 0;
       return;
     }
+    if (httpCode == HTTP_CODE_BAD_REQUEST)
+    {
+      reconectCount = 0;
+      return;
+    }
     if (httpCode == HTTP_CODE_OK)
     {
       const String &payload = http.getString();
