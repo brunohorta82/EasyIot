@@ -87,8 +87,8 @@ Config &Config::load()
   strlcpy(accessPointPassword, doc["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));
   strlcpy(apiUser, doc["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(apiPassword, doc["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
-  JsonArray devices = doc["devices"];
-  for (auto d : devices)
+  JsonArray features = doc["features"];
+  for (auto d : features)
   {
     ActuatorT a;
     strlcpy(a.name, d["name"] | "", sizeof(a.name));
@@ -135,10 +135,10 @@ Config &Config::save()
   doc["accessPointPassword"] = accessPointPassword;
   doc["apiUser"] = apiUser;
   doc["apiPassword"] = apiPassword;
-  JsonArray devices = doc.createNestedArray("devices");
+  JsonArray features = doc.createNestedArray("features");
   for (auto s : actuatores)
   {
-    JsonObject a = devices.createNestedObject();
+    JsonObject a = features.createNestedObject();
     a["type"] = "ACTUATOR";
     a["name"] = s.name;
   }
@@ -215,10 +215,10 @@ void Config::json(JsonVariant &root)
   root["mac"] = WiFi.macAddress();
   root["wifiStatus"] = WiFi.isConnected();
   root["signal"] = WiFi.RSSI();
-  JsonArray devices = root.createNestedArray("devices");
+  JsonArray features = root.createNestedArray("features");
   for (auto s : actuatores)
   {
-    JsonObject a = devices.createNestedObject();
+    JsonObject a = features.createNestedObject();
     a["name"] = s.name;
   }
   JsonVariant pins = root.createNestedArray("pins");
