@@ -187,10 +187,10 @@ void Config::json(JsonVariant &root)
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
   root["mqttPassword"] = mqttPassword;
+  root["mqttConnected"] = mqttConnected();
   root["accessPointPassword"] = accessPointPassword;
   root["apiUser"] = apiUser;
   root["apiPassword"] = apiPassword;
-  root["mqttConnected"] = mqttConnected();
   root["wifiSSID"] = wifiSSID;
   root["wifiSecret"] = wifiSecret;
   root["wifiIp"] = WiFi.localIP().toString();
