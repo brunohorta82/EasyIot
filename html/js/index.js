@@ -2,7 +2,7 @@ let config;
 var newConfig={};
 let source = null;
 const endpoint = {
-    baseUrl: ""
+    baseUrl: "http://192.168.187.135"
 };
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
@@ -215,7 +215,7 @@ function loadDevice(func, e, next) {
 }
 
 function toggleActive(menu) {
-    $('.sidebar-menu').find('li').removeClass('active');
+    $('.onofre-menu').find('li').removeClass('active');
     $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
     $(".content").load(menu + ".html", function () {
         if (menu === "devices") {
@@ -357,7 +357,7 @@ function buildSensor(obj) {
     $('#sensors_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
-        '                        <div class="pull-right"><span id="value_' + obj.id + '"></span>' +
+        '                        <div><span id="value_' + obj.id + '"></span>' +
         '                        </div>' +
         '                    </div>' +
         '                </div>' +
@@ -482,7 +482,7 @@ function buildSwitch(obj) {
     $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
-        '                        <div class="pull-right">' +
+        '                        <div>' +
         '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + ' btn btn-primary btn-control">' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
         '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>' +

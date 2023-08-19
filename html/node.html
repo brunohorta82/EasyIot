@@ -1,9 +1,9 @@
 <div class="box box-primary">
-    <div class="box-header with-border"><h3 class="box-title "><span class="lang-node">NÓ</span></h3></div>
+    <div class="box-header "><h3 class="box-title "><span class="lang-node">NÓ</span></h3></div>
     <form>
         <fieldset id="ff" disabled>
             <div class="box-body">
-                <div class="row">
+                <div>
                     <div class="col-md-6 col-xs-12">
                         <div class="form-group"><label for="nodeId"><span class="lang-name">Nome</span></label> <input
                             class="form-control" maxlength="30" type="text" name="nodeId" id="nodeId"
@@ -13,10 +13,10 @@
                     </div>
                 </div>
             </div>
-            <div class="box-header with-border"><h3 class="box-title"><span class="lang-security">Segurança</span></h3>
+            <div class="box-header "><h3 class="box-title"><span class="lang-security">Segurança</span></h3>
             </div>
             <div class="box-body">
-                <div class="row">
+                <div>
                     <div class="col-md-4 col-xs-12">
                         <div class="form-group"><label for="accessPointPassword"><span class="lang-password">Palavra Passe</span>
                             AP</label> <input autocomplete="off" class="form-control" type="password"
@@ -41,11 +41,11 @@
                     </div>
                 </div>
             </div>
-            <div class="box-header with-border"><h3 class="box-title">WI-FI </h3></div>
-            <div id="wifi_log_box" class="hidden box-header with-border"><h6 class="box-title"><span
+            <div class="box-header "><h3 class="box-title">WI-FI </h3></div>
+            <div id="wifi_log_box" class="box-header "><h6 class="box-title"><span
                 id="wifi_log_lbl"></span></h6></div>
             <div class="box-body">
-                <div class="row">
+                <div>
                     <div class="col-md-4 col-xs-12">
                         <div class="form-group"><label for="ssid">SSID</label> <input class="form-control"
                                                                                       maxlength="23" autocomplete="off"
@@ -71,7 +71,7 @@
                 </div>
             </div>
             <div class="box-body">
-                <div class="row">
+                <div>
                     <div class="col-md-4 col-xs-12">
                         <div class="form-group"><label for="ssid">IP</label> <input class="form-control" type="text"
                                                                                     name="wifiIp" id="wifiIp"
@@ -98,9 +98,9 @@
                     </div>
                 </div>
             </div>
-            <div class="box-header with-border"><h3 class="box-title">MQTT </h3></div>
+            <div class="box-header "><h3 class="box-title">MQTT </h3></div>
             <div class="box-body">
-                <div class="row">
+                <div>
                     <div class="col-md-4 col-xs-12">
                         <div class="form-group"><label for="mqtt_ip">Broker IP / DNS</label> <input class="form-control"
                                                                                                     name="mqttIpDns"
@@ -130,11 +130,11 @@
     </form>
 </div>
 <div class="box box-primary">
-    <div class="box-header with-border"><h3 class="box-title"><span class="lang-update">ATUALIZAR </span></h3></div>
+    <div class="box-header "><h3 class="box-title"><span class="lang-update">ATUALIZAR </span></h3></div>
     <form role="form" method="POST" action="/update" enctype="multipart/form-data">
         <fieldset>
             <div class="box-body">
-                <div class="row">
+                <div>
                     <div class="col-xs-12">
                         <div class="form-group"><label for="firmwareInputFile"><span class="lang-new-file">Escolher o ficheiro da nova versão</span></label>
                             <input id="firmwareInputFile" name="update" type="file"/></div>
@@ -149,7 +149,7 @@
     </form>
 </div>
 <div class="box box-primary">
-    <div class="box-header with-border">
+    <div class="box-header ">
         <form>
             <button type="button" onclick="loadDefaults()" class="btn btn-warning"><span class="lang-reset-factory">Carregar Configuração de Fábrica</span>
             </button>
