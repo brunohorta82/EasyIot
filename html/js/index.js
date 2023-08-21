@@ -1,14 +1,14 @@
-let baseUrl= "http://192.168.187.135"
+let baseUrl = "http://192.168.187.135"
 let config;
-var newConfig={};
+var newConfig = {};
 let source = null;
-var WORDS_PT={}
-var WORDS_RO={}
+var WORDS_PT = {}
+var WORDS_RO = {}
 var WORDS_EN = {
-    "pin-state-a":"Pin State A",
-    "gate":"Gate",
-    "security":"Security",
-    "pin-state-b":"Pin State B",
+    "pin-state-a": "Pin State A",
+    "gate": "Gate",
+    "security": "Security",
+    "pin-state-b": "Pin State B",
     "pin-out-3": "Output Pin C",
     "update-from-server": "NEW UPGRADE",
     "node": "NODE",
@@ -81,12 +81,12 @@ var WORDS_EN = {
     "prefix": "Prefix",
     "apikey": "API Key"
 };
+
 function loadsLanguage() {
     let lang = "PT";
-    console.log(navigator.language);
     if (/^en/.test(navigator.language)) {
         lang = "EN";
-    }else  if (/^ro/.test(navigator.language)) {
+    } else if (/^ro/.test(navigator.language)) {
         lang = "RO";
     }
     $('span[class^="lang"]').each(function () {
@@ -103,12 +103,15 @@ function loadsLanguage() {
         $(this).text(text);
     });
 }
+
 function showMessage(pt, en) {
-   // localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
+    // localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
 }
+
 function showText(pt, en) {
-  //  return localStorage.getItem('lang').toString() === "PT" ? pt : en;
+    //  return localStorage.getItem('lang').toString() === "PT" ? pt : en;
 }
+
 function loadConfig() {
     var targetUrl = baseUrl + "/config";
     $.ajax({
@@ -127,6 +130,7 @@ function loadConfig() {
         timeout: 2000
     });
 }
+
 function loadDevice(func, e, next) {
     const targetUrl = baseUrl + "/" + e;
     $.ajax({
@@ -166,21 +170,22 @@ function fillGpioSelect(id) {
         addToSelect(id, "lang-" + gpio, gpio);
     }
 }
+
 function saveConfig() {
-    let mqttIpDns=  document.getElementById("mqtt_ip");
-    newConfig.nodeId =getValue("nodeId", config.nodeId).trim();
+    let mqttIpDns = document.getElementById("mqtt_ip");
+    newConfig.nodeId = getValue("nodeId", config.nodeId).trim();
     newConfig.mqttIpDns = getValue("mqtt_ip", config.mqttIpDns).trim();
-    newConfig.mqttUsername =getValue("mqtt_username", config.mqttUsername).trim();
+    newConfig.mqttUsername = getValue("mqtt_username", config.mqttUsername).trim();
     newConfig.mqttPassword = getValue("mqtt_password", config.mqttPassword).trim();
-    newConfig.wifiSSID =getValue("ssid", config.wifiSSID).trim();
+    newConfig.wifiSSID = getValue("ssid", config.wifiSSID).trim();
     newConfig.wifiSecret = getValue("wifi_secret", config.wifiSecret).trim();
-    newConfig.wifiIp =getValue("wifiIp", config.wifiIp).trim();
-    newConfig.wifiMask =getValue("wifiMask", config.wifiMask).trim();
-    newConfig.wifiGw =getValue("wifiGw", config.wifiGw).trim();
-    newConfig.dhcp =getValue("dhcp", config.dhcp) === "true";
-    newConfig.accessPointPassword =getValue("accessPointPassword", config.accessPointPassword).trim();
-    newConfig.apiPassword =getValue("apiPassword", config.apiPassword).trim();
-    newConfig.apiUser =getValue("apiUser", config.apiUser).trim();
+    newConfig.wifiIp = getValue("wifiIp", config.wifiIp).trim();
+    newConfig.wifiMask = getValue("wifiMask", config.wifiMask).trim();
+    newConfig.wifiGw = getValue("wifiGw", config.wifiGw).trim();
+    newConfig.dhcp = getValue("dhcp", config.dhcp) === "true";
+    newConfig.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
+    newConfig.apiPassword = getValue("apiPassword", config.apiPassword).trim();
+    newConfig.apiUser = getValue("apiUser", config.apiUser).trim();
 
     const targetUrl = baseUrl + "/save-config";
     $.ajax({
@@ -200,20 +205,43 @@ function saveConfig() {
         timeout: 2000
     });
 }
-function getValue(id, f){
-    let v =  document.getElementById(id);
+
+function getValue(id, f) {
+    let v = document.getElementById(id);
     return v ? v.value : f;
 }
-function fillDevices(){
 
+function toggleSwitch(arg) {
+    console.log(arg.id)
+    console.log(arg.checked)
+    arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList = {};
+    arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList.add(arg.checked  ? "feature-icon-on" : "feature-icon-off");
 }
+
+function fillDevices() {
+    var state = [0, 1, 1, 0, 0, 0];
+    let myArr = ["Kitchen", "Living Room", "Garage", "Outside", "Laundry", "Main Room"];
+    let id = [1, 2, 3, 4, 5, 6];
+    let temp, item, a, i;
+    temp = document.getElementsByTagName("template")[0];
+    item = temp.content.querySelector("div");
+    for (i = 0; i < myArr.length; i++) {
+        a = document.importNode(item, true);
+        a.getElementsByClassName("feature-name").item(0).textContent = myArr[i];
+        a.getElementsByTagName("svg").item(0).classList.add(state[i] === 1 ? "feature-icon-on" : "feature-icon-off");
+        a.getElementsByTagName("input").item(0).checked = state[i] === 1;
+        a.getElementsByTagName("input").item(0).id = id[i];
+        document.getElementById("devices_config").appendChild(a);
+    }
+}
+
 function fillConfig() {
     if (!config) return;
     $(".bh-model").text(config.hardware);
     $(".bh-onofre-item").removeClass("hide");
     $("#version_lbl").text(config.firmware);
-    $("#lbl-chip").text("ID: "+config.chipId);
-    $("#lbl-mac").text("MAC: "+config.mac);
+    $("#lbl-chip").text("ID: " + config.chipId);
+    $("#lbl-mac").text("MAC: " + config.mac);
     $('input[name="nodeId"]').val(config.nodeId);
     $(document).prop('title', 'BH OnOfre ' + config.nodeId);
     $('input[name="mqttIpDns"]').val(config.mqttIpDns);
@@ -250,6 +278,7 @@ function fillConfig() {
     $('#ff').prop('disabled', false);
 
 }
+
 function reboot() {
     $.ajax({
         url: baseUrl + "/reboot",
@@ -263,6 +292,7 @@ function reboot() {
         timeout: 2000
     });
 }
+
 function loadDefaults() {
     $.ajax({
         url: baseUrl + "/load-defaults",
@@ -278,6 +308,7 @@ function loadDefaults() {
 }
 
 $(document).ready(function () {
+
     loadsLanguage();
     loadConfig();
     $('#node_id').on('keypress', function (e) {

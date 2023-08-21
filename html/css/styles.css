@@ -12,8 +12,9 @@ body {
 }
 .features{
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 .feature-icon-off {
     fill: #fff;
@@ -46,14 +47,6 @@ body {
     padding: 12px;
     margin: 10px;
 }
-
-
-
-.controls {
-    position: relative;
-    float: left;
-}
-
 .vertical-center {
     margin: 0;
     position: absolute;
