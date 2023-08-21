@@ -140,7 +140,15 @@ Config &Config::save()
   {
     JsonObject a = features.createNestedObject();
     a["type"] = "ACTUATOR";
+    a["id"] = s.id;
     a["name"] = s.name;
+    a["family"] = s.family;
+    a["cloudIOSupport"] = s.cloudIOSupport;
+    a["haSupport"] = s.haSupport;
+    char knxAddress[10];
+    sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
+    a["knxAddress"] = knxAddress;
+    a["state"] = s.state;
   }
   if (serializeJson(doc, file) == 0)
   {
@@ -201,26 +209,36 @@ void Config::json(JsonVariant &root)
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
   root["mqttPassword"] = mqttPassword;
-  root["mqttConnected"] = mqttConnected();
   root["accessPointPassword"] = accessPointPassword;
   root["apiUser"] = apiUser;
   root["apiPassword"] = apiPassword;
   root["wifiSSID"] = wifiSSID;
   root["wifiSecret"] = wifiSecret;
-  root["wifiIp"] = WiFi.localIP().toString();
-  root["wifiMask"] = WiFi.subnetMask().toString();
-  root["wifiGw"] = WiFi.gatewayIP().toString();
   root["dhcp"] = dhcp;
-  root["firmware"] = String(VERSION);
-  root["mac"] = WiFi.macAddress();
-  root["wifiStatus"] = WiFi.isConnected();
-  root["signal"] = WiFi.RSSI();
   JsonArray features = root.createNestedArray("features");
   for (auto s : actuatores)
   {
     JsonObject a = features.createNestedObject();
+    a["type"] = "ACTUATOR";
+    a["id"] = s.id;
     a["name"] = s.name;
+    a["family"] = s.family;
+    a["cloudIOSupport"] = s.cloudIOSupport;
+    a["haSupport"] = s.haSupport;
+    char knxAddress[10];
+    sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
+    a["knxAddress"] = knxAddress;
+    a["state"] = s.state;
   }
+  // DYNAMIC VALUES
+  root["mqttConnected"] = mqttConnected();
+  root["wifiIp"] = WiFi.localIP().toString();
+  root["wifiMask"] = WiFi.subnetMask().toString();
+  root["wifiGw"] = WiFi.gatewayIP().toString();
+  root["firmware"] = String(VERSION);
+  root["mac"] = WiFi.macAddress();
+  root["wifiStatus"] = WiFi.isConnected();
+  root["signal"] = WiFi.RSSI();
   JsonVariant pins = root.createNestedArray("pins");
 #ifdef ESP8266
   std::vector<int> pinsRef = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
