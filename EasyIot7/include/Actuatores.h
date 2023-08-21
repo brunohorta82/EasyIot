@@ -70,13 +70,13 @@ public:
     std::vector<unsigned int> outputs;
 
     // CONTROL VARIABLES
+    unsigned int lastState = 0;
+    unsigned int state = 0;
     int lastPercentage = 0;
     bool lastPrimaryGpioState = true;
     bool lastSecondaryGpioState = true;
     bool lastPrimaryStateGpioState = true;
     bool lastSecondaryStateGpioState = true;
-
-    unsigned long lastChangeState = 0;
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
