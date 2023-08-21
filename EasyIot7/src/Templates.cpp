@@ -8,9 +8,7 @@ void preparePzem()
 {
     SensorT pzem;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
-    String idStr;
-    config.generateId(idStr, pzem.name, 2, sizeof(pzem.id));
-    strlcpy(pzem.id, idStr.c_str(), sizeof(pzem.id));
+    pzem.id = config.nextId();
     strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
     pzem.primaryGpio = constantsConfig::noGPIO;
     pzem.secondaryGpio = constantsConfig::noGPIO;
@@ -31,6 +29,7 @@ void preparePzem()
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
     ActuatorT light;
+    light.id = config.nextId();
     light.family = LIGHT_GENERIC;
     strlcpy(light.name, name.c_str(), sizeof(light.name));
     light.typeControl = SwitchControlType::GPIO_OUTPUT;
@@ -41,6 +40,7 @@ void prepareLight(String name, unsigned int output, unsigned int input)
 void prepareCover()
 {
     ActuatorT cover;
+    cover.id = config.nextId();
     cover.family = LIGHT_GENERIC;
 #ifdef CONFIG_LANG_PT
     strlcpy(cover.name, "Estore", sizeof(cover.name));
@@ -62,6 +62,7 @@ void prepareCover()
 void prepareGarage()
 {
     ActuatorT garage;
+    garage.id = config.nextId();
     garage.family = LIGHT_GENERIC;
 #ifdef CONFIG_LANG_PT
     strlcpy(garage.name, "Garagem", sizeof(garage.name));
@@ -109,6 +110,7 @@ void load(enum Template _template)
 #endif
         prepareLight(name2, 5u, 13u);
     }
+    break;
     case Template::COVER:
         prepareCover();
         break;

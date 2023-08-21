@@ -219,19 +219,33 @@ function toggleSwitch(arg) {
 }
 
 function fillDevices() {
-    var state = [0, 1, 1, 0, 0, 0];
-    let myArr = ["Kitchen", "Living Room", "Garage", "Outside", "Laundry", "Main Room"];
-    let id = [1, 2, 3, 4, 5, 6];
-    let temp, item, a, i;
+    let temp, item, a;
     temp = document.getElementsByTagName("template")[0];
     item = temp.content.querySelector("div");
-    for (i = 0; i < myArr.length; i++) {
+    var modal = document.getElementById("myModal");
+    for (const f of config.features) {
         a = document.importNode(item, true);
-        a.getElementsByClassName("feature-name").item(0).textContent = myArr[i];
-        a.getElementsByTagName("svg").item(0).classList.add(state[i] === 1 ? "feature-icon-on" : "feature-icon-off");
-        a.getElementsByTagName("input").item(0).checked = state[i] === 1;
-        a.getElementsByTagName("input").item(0).id = id[i];
+        a.getElementsByClassName("feature-name").item(0).textContent = f.name;
+        a.getElementsByTagName("svg").item(0).classList.add(f.state === 1 ? "feature-icon-on" : "feature-icon-off");
+        a.getElementsByTagName("input").item(0).checked = f.state === 1;
+        a.getElementsByTagName("input").item(0).id = f.id;
         document.getElementById("devices_config").appendChild(a);
+        a.getElementsByClassName("feature-name").item(0).onclick = function() {
+            modal.style.display = "block";
+            modal.getElementsByClassName("f-name").item(0).textContent = f.name;
+            modal.getElementsByClassName("f-name").item(1).value = f.name;
+
+        }
+    }
+    const span = document.getElementsByClassName("close")[0];
+    span.onclick = function() {
+        modal.style.display = "none";
+
+    }
+    window.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
     }
 }
 

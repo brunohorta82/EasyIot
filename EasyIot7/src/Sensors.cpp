@@ -209,15 +209,7 @@ void saveAndRefreshServices(Sensors &sensors, SensorT &ss)
 }
 Sensors &Sensors::updateFromJson(const String &id, JsonObject doc)
 {
-  for (auto &ss : items)
-  {
-    if (strcmp(id.c_str(), ss.id) == 0)
-    {
-      ss.updateFromJson(doc);
-      saveAndRefreshServices(*this, ss);
-      return *this;
-    }
-  }
+
   SensorT newSs;
   newSs.updateFromJson(doc);
   items.push_back(newSs);
@@ -246,10 +238,10 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["emoncmsSupport"] = ss.emoncmsSupport;
   }
 }
-Sensors &Sensors::remove(const char *id)
+Sensors &Sensors::remove(int id)
 {
   auto match = std::find_if(items.begin(), items.end(), [id](const SensorT &item)
-                            { return strcmp(id, item.id) == 0; });
+                            { return id == item.id; });
 
   if (match == items.end())
   {
@@ -281,8 +273,7 @@ void SensorT::updateFromJson(JsonObject doc)
   type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
   String idStr;
   strlcpy(name, doc["name"], sizeof(name));
-  config.generateId(idStr, name, static_cast<int>(type), sizeof(id));
-  strlcpy(id, idStr.c_str(), sizeof(id));
+  id = config.nextId();
   String classDevice = doc["deviceClass"] | String(constantsSensor::powerMeterClass);
   strlcpy(deviceClass, classDevice.c_str(), sizeof(deviceClass));
   dht = NULL;

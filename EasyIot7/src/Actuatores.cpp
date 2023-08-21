@@ -216,7 +216,7 @@ const void ActuatorT::notifyState(bool dirty, const char *origin)
   {
     notifyStateToCloudIO(readTopic, currentStateToSend.c_str(), currentStateToSend.length());
   }
-  sendToServerEvents(id, currentStateToSend.c_str());
+  sendToServerEvents(String(id), currentStateToSend.c_str());
   if (strcmp("KNX", origin) != 0 && isKnxSupport())
   {
     // TODO knx.write_1byte_int(knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[1]), statePoolIdx);
@@ -226,7 +226,7 @@ const void ActuatorT::notifyState(bool dirty, const char *origin)
     for (auto &sw : config.actuatores)
     {
 
-      if (strcmp(sw.id, id) != 0)
+      if (sw.id == id)
       {
         sw.changeState(SwitchStateOrigin::INTERNAL, currentStateToSend.c_str());
       }

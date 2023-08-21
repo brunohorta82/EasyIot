@@ -62,6 +62,7 @@ Config &Config::load()
   {
     chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
+  idSequence = doc["idSequence"];
   strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
 #endif
   strlcpy(nodeId,
@@ -91,6 +92,7 @@ Config &Config::load()
   for (auto d : features)
   {
     ActuatorT a;
+    a.id = d["id"];
     strlcpy(a.name, d["name"] | "", sizeof(a.name));
     actuatores.push_back(a);
   }
@@ -104,6 +106,7 @@ Config &Config::save()
 {
   File file = LittleFS.open(configFilenames::config, "w+");
   StaticJsonDocument<1024> doc;
+  doc["idSequence"] = idSequence;
   if (!String(nodeId).isEmpty())
     doc["nodeId"] = nodeId;
   // MQTT
@@ -204,6 +207,7 @@ Config &Config::update(JsonObject &root)
 void Config::json(JsonVariant &root)
 {
   root["nodeId"] = nodeId;
+  root["idSequence"] = idSequence;
   root["chipId"] = chipId;
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
@@ -215,21 +219,6 @@ void Config::json(JsonVariant &root)
   root["wifiSSID"] = wifiSSID;
   root["wifiSecret"] = wifiSecret;
   root["dhcp"] = dhcp;
-  JsonArray features = root.createNestedArray("features");
-  for (auto s : actuatores)
-  {
-    JsonObject a = features.createNestedObject();
-    a["type"] = "ACTUATOR";
-    a["id"] = s.id;
-    a["name"] = s.name;
-    a["family"] = s.family;
-    a["cloudIOSupport"] = s.cloudIOSupport;
-    a["haSupport"] = s.haSupport;
-    char knxAddress[10];
-    sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
-    a["knxAddress"] = knxAddress;
-    a["state"] = s.state;
-  }
   // DYNAMIC VALUES
   root["mqttConnected"] = mqttConnected();
   root["wifiIp"] = WiFi.localIP().toString();
@@ -249,6 +238,21 @@ void Config::json(JsonVariant &root)
   for (auto p : pinsRef)
   {
     pins.add(p);
+  }
+  JsonArray features = root.createNestedArray("features");
+  for (auto s : actuatores)
+  {
+    JsonObject a = features.createNestedObject();
+    a["type"] = "ACTUATOR";
+    a["id"] = s.id;
+    a["name"] = s.name;
+    a["family"] = s.family;
+    a["cloudIOSupport"] = s.cloudIOSupport;
+    a["haSupport"] = s.haSupport;
+    char knxAddress[10];
+    sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
+    a["knxAddress"] = knxAddress;
+    a["state"] = s.state;
   }
 }
 
@@ -338,11 +342,9 @@ bool Config::isLoadDefaultsRequested()
   return false;
 }
 
-void Config::generateId(String &id, const String &name, int familyCode, size_t maxSize)
+int Config::nextId()
 {
-  id.reserve(maxSize);
-  id.concat(chipId);
-  id.concat(name);
-  id.concat(familyCode);
-  normalize(id);
+  idSequence++;
+  this->save();
+  return idSequence;
 }

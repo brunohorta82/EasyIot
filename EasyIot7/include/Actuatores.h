@@ -48,7 +48,7 @@ class ActuatorT
 {
 public:
     // CONFIG
-    char id[10] = {0};
+    int id = 0;
     char name[24] = {0};
     SwitchFamily family = SWITCH_PUSH;
     SwitchControlType typeControl = VIRTUAL;

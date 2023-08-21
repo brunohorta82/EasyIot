@@ -12,6 +12,7 @@ class Config
 public:
   char nodeId[32] = {};
   char chipId[32] = {};
+  int idSequence = 0;
   // MQTT
   char mqttIpDns[40];
   int mqttPort = 1883;
@@ -44,6 +45,7 @@ public:
   Config &init();
   Config &load();
   Config &removeSwitch(const char *id);
+  int nextId();
   void loopSwitches();
   String controlSwitch(const char *id, SwitchStateOrigin origin, String state);
   void requestCloudIOSync();
@@ -63,7 +65,6 @@ public:
 
   void requestReloadWifi();
   bool isReloadWifiRequested();
-  void generateId(String &id, const String &name, int familyCode, size_t maxSize);
 
 private:
   bool reboot = false;

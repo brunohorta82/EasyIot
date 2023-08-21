@@ -506,7 +506,7 @@ void loadAPI()
     }
     AsyncJsonResponse *response = new AsyncJsonResponse(true);
     JsonVariant &root = response->getRoot();
-    getAtualSensorsConfig().remove(request->arg("id").c_str()).toJson(root);
+    getAtualSensorsConfig().remove(request->arg("id").toInt()).toJson(root);
     response->setLength();
     request->send(response);
     config.requestCloudIOSync(); });

@@ -29,7 +29,7 @@ enum SensorType
 
 struct SensorT
 {
-  char id[32]; // Generated from name without spaces and no special characters
+  int id; // Generated from name without spaces and no special characters
   char name[24];
   char family[16]; // sensor, binary_sensor
   SensorType type; // TYPE_PIR, TYPE_LDR, TYPE_DS18B20, TYPE_REED_SWITCH
@@ -87,7 +87,7 @@ public:
   void save(File &file) const;
   void save();
   void resetAll();
-  Sensors &remove(const char *id);
+  Sensors &remove(int id);
   Sensors &updateFromJson(const String &id, JsonObject doc);
   void toJson(JsonVariant &root);
 };
