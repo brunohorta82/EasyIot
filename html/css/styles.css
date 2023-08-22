@@ -5,7 +5,17 @@ body {
     color: #cccccc;
     background: #222;
 }
-
+.online{
+    background-color: forestgreen !important;
+}
+.led{
+    height: 12px;
+    width: 12px;
+    border: 1px;
+    background-color: red;
+    border-radius: 10px;
+    margin-top: 5px;
+}
 .onofre-menu {
     background-color: #86bd9a
 }
@@ -68,7 +78,10 @@ body {
 
 .stats-panel {
     display: flex;
-    padding: 10px
+    padding: 10px;
+    width: 100%;
+    gap: 10px;
+    flex-direction: row;
 }
 
 .onofre-footer {

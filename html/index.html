@@ -11,8 +11,8 @@
     <header class="main-header">
         <nav class="navbar navbar-static-top" role="navigation">
             <ul class="onofre-menu" data-widget="tree">
-                <li class=""><a href="#" class="menu-item" data-menu="node"> <span class="lang-node">NÓ</span></a></li>
-                <li><a href="#" class="menu-item" data-menu="devices"> <span class="lang-features">FUNÇÕES</span></a>
+                <li class=""><a href="#" id="node-btn" class="menu-item"> <span class="lang-node">NÓ</span></a></li>
+                <li><a href="#" id="features-btn" > <span class="lang-features">FUNÇÕES</span></a>
                 </li>
             </ul>
             <button  type="button"
@@ -20,14 +20,8 @@
         </nav>
     </header>
     <div class="stats-panel">
-        <div class="pull-left" style="color: white; height: 10px;">
-            <div style="padding: 5px;"><span style="color:#88bf9c;">Wi-Fi: </span> <span id="ssid_lbl"></span> <span
-                id="wifi-signal">0%</span></div>
-        </div>
-        <div class="pull-left" style="color: white; height: 10px;">
-            <div style="padding: 5px;"><span style="color:#88bf9c;">MQTT: </span> <span id="mqtt_lbl"></span> <div
-                class="online-led"></div></div>
-        </div>
+           <label><span style="color:#88bf9c;">Wi-Fi </span><span id="ssid_lbl"></span> <span id="wifi-signal">0%</span></label>
+        <span style="color:#88bf9c;">| MQTT </span> <span id="mqtt_lbl">192.168.12.32</span> <div id="mqtt_state" class="led"></div>
     </div>
     <div >
         <section class="content container-fluid dashboard-container"></section>

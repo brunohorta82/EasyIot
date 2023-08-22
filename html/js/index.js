@@ -1,48 +1,39 @@
-let baseUrl = "http://192.168.187.134"
+let baseUrl = "http://192.168.187.131"
 let config;
 var newConfig = {};
 let source = null;
-var WORDS_PT = {}
+var WORDS_PT = {
+    "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
+    "config_save_ok": "Configuração Guardada",
+    "device_reboot_ok": "O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.",
+    "device_reboot_error": "Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
+    "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
+    "defaults_error": "Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
+}
 var WORDS_RO = {
-    "gate": "Poarta",
-    "pin-state-a": "Pin State A",
-    "pin-state-b": "Pin State B",
-    "pin-out-3": "Pin State C",
-    "update-from-server": "ACTUALIZARE NOUA",
+    "config_save_error": "Unable to save current configuration, please try again.",
+    "config_save_ok": "Config Stored",
+    "device_reboot_ok": "The device is restarting, will be available in 10 seconds.",
+    "device_reboot_error": "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
+    "defaults_ok": "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.",
+    "defaults_error": "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
     "node": "Modul",
-    "up": "Sus",
-    "down": "Jos",
-    "group": "Grup",
     "integrations": "INTEGRARE",
-    "sensors": "Senzori",
-    "integrate": "Integrare",
-    "released": "Release",
-    "reading-interval": "Interval de Citire",
-    "update": "ATUALIZARE",
     "features": "FUNCTII",
     "current-version": "Versiunea curenta",
-    "new-file": "Alegeti noul fisier",
+    "new-file": "Firmware Update",
     "install-new-version": "Actualizati automat la versiune",
     "install-file-version": "Instalati versiunea fisierului",
     "version": "Versiune",
     "save": "Salvati",
     "choose": "Alege",
-    "auto-state": "Stare automata",
-    "clean-fields": "Stergeti toate campurile",
     "username": "Nume de utilizator",
     "password": "Parola",
     "yes": "Da",
     "no": "Nu",
-    "disconnected": "deconectat",
-    "dconnected": "conectat",
     "netmask": "Netmask",
-    "system": "Sistem",
     "name": "Nume",
-    "in": "in",
-    "seconds": "secunde",
-    "restart": "Repornire",
     "reset-factory": "Incarcare setare de fabrica",
-    "switches": "Intrerupator",
     "remove": "Sterge",
     "new": "Creaza nou",
     "family": "Familie",
@@ -55,48 +46,20 @@ var WORDS_RO = {
     "dual-push": "Dual Push",
     "dual-normal": "Dual Generic",
     "mode": "Mod",
-    "relay-mqtt": "Relu / MQTT",
-    "mqtt": "MQTT",
-    "control": "Output",
-    "pin-in-a": "Pinul de intrare a",
-    "pin-in-b": "Pinul de intrare b",
-    "pin-in-c": "Pinul de intrare c",
-    "pin-out-1": "Pinul de iesire a",
-    "pin-out-2": "Pinul de iesire b",
-    "none": "Nedesemnata",
-    "retain-message": "Retain Messages",
-    "command": "Command",
-    "state": "Stare",
-    "on": "Pornit",
-    "off": "Deconectat",
-    "open": "Deschis",
-    "close": "Inchis",
-    "stop": "Stop",
-    "time": "Timp",
-    "17": "A0",
-    "line": "Linia",
-    "member": "Membru",
-    "address": "Address",
-    "prefix": "Prefix",
-    "apikey": "API Key"
+    "none": "Nedesemnata"
 }
 var WORDS_EN = {
-    "pin-state-a": "Pin State A",
-    "gate": "Gate",
+    "config_save_error": "Unable to save current configuration, please try again.",
+    "config_save_ok": "Config Stored",
+    "device_reboot_ok": "The device is restarting, will be available in 10 seconds.",
+    "device_reboot_error": "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
+    "defaults_ok": "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.",
+    "defaults_error": "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
     "security": "Security",
-    "pin-state-b": "Pin State B",
-    "pin-out-3": "Output Pin C",
-    "update-from-server": "NEW UPGRADE",
     "node": "NODE",
-    "up": "Up",
-    "down": "Down",
-    "reading-interval": "Readings every",
-    "sensors": "Sensors",
-    "integrations": "INTEGRATIONS",
-    "update": "UPDATE",
     "features": "FEATURES",
     "current-version": "Current version",
-    "new-file": "Choose new version file",
+    "new-file": "Firmware Update",
     "install-new-version": "Auto Upgrade to version",
     "install-file-version": "Install file version",
     "version": "Version",
@@ -116,46 +79,11 @@ var WORDS_EN = {
     "switches": "Switches",
     "remove": "Remove",
     "new": "New",
-    "family": "Family",
-    "switch": "Switch",
-    "light": "Light",
-    "cover": "Cover",
-    "garage": "Garage",
-    "released": "Released",
-    "disconnected": "disconnected",
-    "dconnected": "connected",
-    "integrate": "Integrate",
-    "normal": "Generic",
-    "choose": "select",
     "push": "Push",
     "dual-push": "Dual Push",
     "dual-normal": "Dual Generic",
     "mode": "Mode",
-    "relay": "Relay",
-    "control": "Output",
-    "pin-in-a": "Input Pin a",
-    "pin-in-b": "Input Pin b",
-    "pin-out-1": "Output Pin a",
-    "pin-out-2": "Output Pin b",
     "none": "None",
-    "retain-message": "Retain Messages",
-    "command": "Command",
-    "state": "State",
-    "on": "On",
-    "auto-state": "Auto State",
-    "off": "Off",
-    "open": "Open",
-    "close": "Closed",
-    "mqtt": "MQTT",
-    "stop": "Stop",
-    "time": "Time",
-    "group": "Group",
-    "pin-in-c": "Input Pin c",
-    "line": "Line",
-    "member": "Member",
-    "address": "Address",
-    "prefix": "Prefix",
-    "apikey": "API Key"
 };
 
 function stringToHTML(text) {
@@ -165,26 +93,31 @@ function stringToHTML(text) {
 }
 
 function toggleActive(menu) {
-    //  $('.onofre-menu').find('li').removeClass('active');
-    //$('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
-    /*   document.getElementsByClassName("content").item(0)load(menu + ".html", function () {
-           if (menu === "devices") {
-              // fillDevices();
-           } else {
-               fillConfig();
-           }
-        //   loadsLanguage(localStorage.getItem('lang'));
-       });*/
     fetch(menu + ".html").then(function (response) {
         if (response.ok) {
             return response.text();
         }
         throw response;
     }).then(function (text) {
-        let dialog = document.getElementsByClassName("content").item(0);
+        let section = document.getElementsByClassName("content").item(0);
+        for (const sectionElement of section.childNodes) {
+            section.removeChild(sectionElement);
+        }
         let html = stringToHTML(text);
-        dialog.append(html);
-        fillConfig();
+        section.append(html);
+        if (menu === "devices") {
+            fillDevices();
+        } else {
+            fillConfig();
+        }
+    }).then(()=>{
+        const langSet = detectLang();
+        document.querySelectorAll("span[class^='lang-']").forEach((l) => {
+            console.log(l.className.replace("lang-", ""));
+            const t = langSet[l.className.replace("lang-", "")];
+            if (t)
+                l.textContent = t;
+        });
     });
 
 }
@@ -197,13 +130,16 @@ function fillConfig() {
     if (!config) return;
     document.title = 'BH OnOfre ' + config.nodeId;
     let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
+    findById("wifi-signal").textContent = percentage + "%";
     findById("version_lbl").textContent = config.firmware;
     findById("lbl-chip").textContent = "ID: " + config.chipId;
     findById("lbl-mac").textContent = "MAC: " + config.mac;
     findById("ssid_lbl").textContent = config.wifiSSID;
     findById("mqtt_lbl").textContent = config.mqttIpDns;
     if (config.mqttConnected) {
-        //TODO ICON
+        findById("mqtt_state").classList.add("online")
+    } else {
+        findById("mqtt_state").classList.remove("online")
     }
     findById("dhcp").checked = config.dhcp;
     findById("ff").removeAttribute('disabled');
@@ -220,19 +156,6 @@ function fillConfig() {
     findById("apiPassword").value = config.apiPassword;
     findById("apiUser").value = config.apiUser;
     findById("wifiIp").value = config.wifiIp;
-
-    /*
-
-
-    $('#wifi-signal').text(percentage + "%");
-    $('#mqtt_lbl').text(config.mqttIpDns);
-    if (config.mqttConnected) {
-        $('#mqtt-state').text(showText("ligado", "connected"));
-    } else {
-        $('#mqtt-state').text(showText("desligado", "disconnected"));
-    }
-
-*/
 }
 
 async function loadConfig() {
@@ -241,65 +164,14 @@ async function loadConfig() {
     fillConfig();
 }
 
-/*
-function loadsLanguage() {
+function detectLang() {
     let lang = "PT";
     if (/^en/.test(navigator.language)) {
         lang = "EN";
     } else if (/^ro/.test(navigator.language)) {
         lang = "RO";
     }
-    $('span[class^="lang"]').each(function () {
-        let langVar = (this.className).replace('lang-', '');
-        let text = window['WORDS_' + lang][langVar];
-        $(this).text(text);
-    });
-    $('option[class^="lang"]').each(function () {
-        let langVar = (this.className).replace('lang-', '');
-        let text = window['WORDS_' + lang][langVar];
-        if (!text) {
-            text = langVar;
-        }
-        $(this).text(text);
-    });
-}
-
-function showMessage(pt, en) {
-    // localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
-}
-
-function showText(pt, en) {
-    //  return localStorage.getItem('lang').toString() === "PT" ? pt : en;
-}
-
-
-function loadDevice(func, e, next) {
-    const targetUrl = baseUrl + "/" + e;
-    $.ajax({
-        url: targetUrl,
-        contentType: "application/json",
-        dataType: "json",
-        success: function (response) {
-            func(response);
-            if (next) {
-                next();
-            }
-        },
-        error: function () {
-            showMessage("Erro a carregar configuração de funcionalidades.", "Features Configuration load failed.")
-        },
-        timeout: 2000
-    });
-}
-
-
-
-
-function fillGpioSelect(id) {
-    addToSelect(id, "lang-none", 99);
-    for (let gpio of config.pins) {
-        addToSelect(id, "lang-" + gpio, gpio);
-    }
+    return window['WORDS_' + lang];
 }
 
 function saveConfig() {
@@ -318,23 +190,17 @@ function saveConfig() {
     newConfig.apiPassword = getValue("apiPassword", config.apiPassword).trim();
     newConfig.apiUser = getValue("apiUser", config.apiUser).trim();
 
-    const targetUrl = baseUrl + "/save-config";
-    $.ajax({
-        type: "POST",
-        url: targetUrl,
-        dataType: "json",
-        contentType: "application/json",
-        data: JSON.stringify(newConfig),
-        success: function (response) {
-            config = response;
-            fillConfig();
-            showMessage("Configuração Guardada", "Config Stored")
-        },
-        error: function () {
-            showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
-        },
-        timeout: 2000
-    });
+    fetch(baseUrl + "/save-config", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: JSON.stringify(newConfig)
+    }).then(response => response.json()).then(json => config = json).then(() => {
+        showMessage("config_save_ok");
+        fillConfig();
+    }).catch(() =>
+        showMessage("config_save_error")
+    );
+
 }
 
 function getValue(id, f) {
@@ -343,10 +209,8 @@ function getValue(id, f) {
 }
 
 function toggleSwitch(arg) {
-    console.log(arg.id)
-    console.log(arg.checked)
     arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList = {};
-    arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList.add(arg.checked  ? "feature-icon-on" : "feature-icon-off");
+    arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList.add(arg.checked ? "feature-icon-on" : "feature-icon-off");
 }
 
 function fillDevices() {
@@ -361,7 +225,7 @@ function fillDevices() {
         a.getElementsByTagName("input").item(0).checked = f.state === 1;
         a.getElementsByTagName("input").item(0).id = f.id;
         document.getElementById("devices_config").appendChild(a);
-        a.getElementsByClassName("feature-name").item(0).onclick = function() {
+        a.getElementsByClassName("feature-name").item(0).onclick = function () {
             modal.style.display = "block";
             modal.getElementsByClassName("f-name").item(0).textContent = f.name;
             modal.getElementsByClassName("f-name").item(1).value = f.name;
@@ -369,49 +233,53 @@ function fillDevices() {
         }
     }
     const span = document.getElementsByClassName("close")[0];
-    span.onclick = function() {
+    span.onclick = function () {
         modal.style.display = "none";
 
     }
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         if (event.target === modal) {
             modal.style.display = "none";
         }
     }
 }
 
-
+function showMessage(key) {
+    const lanSet = detectLang();
+    const v = lanSet[key];
+    v ? alert(v) : alert(key);
+}
 
 function reboot() {
-    $.ajax({
-        url: baseUrl + "/reboot",
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            showMessage("O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.", "The device is restartin, will be available in 10 seconds.")
-        }, error: function () {
-            showMessage("Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
-        },
-        timeout: 2000
-    });
+    fetch(baseUrl + "/reboot", {
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Accept': 'application/json'
+        }
+    }).then(response => response.status === 200 ?
+        showMessage("device_reboot_ok")
+        : showMessage("device_reboot_error"))
 }
 
 function loadDefaults() {
-    $.ajax({
-        url: baseUrl + "/load-defaults",
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            showMessage("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.", "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.")
-        }, error: function () {
-            showMessage("Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
-        },
-        timeout: 1000
-    });
-}*/
+    fetch(baseUrl + "/load-defaults", {
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Accept': 'application/json'
+        }
+    }).then(response => response.status === 200 ?
+        showMessage("defaults_ok")
+        : showMessage("defaults_error"))
+}
 
 document.addEventListener("DOMContentLoaded", () => {
-    //loadsLanguage();
+
+    document.getElementById('features-btn').onclick = function (e) {
+        toggleActive("devices");
+    };
+    document.getElementById('node-btn').onclick = function (e) {
+        toggleActive("node");
+    }
     loadConfig();
     toggleActive("node");
     if (!!window.EventSource) {
