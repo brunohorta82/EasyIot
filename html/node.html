@@ -46,7 +46,7 @@
 
                 <div class="form-group"><label for="wifiSecret"><span
                     class="lang-password">Palavra Passe</span></label> <input class="form-control"
-                                                                              name="wifiSecret" maxlength="60"
+                                                                              maxlength="60"
                                                                               autocomplete="off" type="password"
                                                                               id="wifiSecret"
                                                                               placeholder="ex: superpassword"/>
@@ -118,12 +118,14 @@
             </button>
         </div>
     </form>
-    <div class="box-footer ">
+
         <form>
-            <button type="button" onclick="loadDefaults()" class="btn btn-warning"><span class="lang-reset-factory">Carregar Configuração de Fábrica</span>
+            <div class="box-footer ">
+            <button type="button" onclick="loadDefaults()" class="btn btn-danger"><span class="lang-reset-factory">Carregar Configuração de Fábrica</span>
             </button>
-            <button type="button" onclick="reboot()" class="btn btn-danger"><span class="lang-restart">Reiniciar</span>
+            <button type="button" onclick="reboot()" class="btn btn-warning"><span class="lang-restart">Reiniciar</span>
             </button>
+            </div>
         </form>
-    </div>
+
 </div>

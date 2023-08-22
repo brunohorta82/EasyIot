@@ -7,17 +7,22 @@ body {
 }
 .online{
     background-color: forestgreen !important;
+   color: forestgreen !important;
 }
 .led{
     height: 12px;
     width: 12px;
     border: 1px;
+    color: red;
+    line-height: 1px;
     background-color: red;
     border-radius: 10px;
-    margin-top: 5px;
+    margin-top: 2px;
+
 }
 .onofre-menu {
-    background-color: #86bd9a
+    background-color: #86bd9a;
+    height: 46px;
 }
 .features{
     display: flex;
@@ -67,12 +72,13 @@ body {
 .onofre-menu > li > a {
     border-left: 3px solid transparent;
     color: #fff;
+    height: 46px;
     text-decoration: none
 }
 
 .onofre-menu > li.active > a, .onofre-menu > li.menu-open > a, .onofre-menu > li:hover > a {
     color: #fff;
-    border-bottom: 3px solid #000;
+    border-bottom: 4px solid #000;
     text-decoration: none
 }
 
@@ -126,6 +132,9 @@ body {
 .box-footer{
     margin-top: 50px;
     text-align: right;
+    gap: 20px;
+    display: flex;
+    flex-direction: row;
 }
 .box-body {
     padding: 10px;
@@ -191,7 +200,9 @@ fieldset {
     border: 1px solid transparent;
     border-radius: 4px
 }
-
+.btn:hover{
+    opacity: 80%;
+}
 .btn-primary {
     color: #fff;
     background-color: #3e4b43;

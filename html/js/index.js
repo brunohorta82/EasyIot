@@ -93,6 +93,8 @@ function stringToHTML(text) {
 }
 
 function toggleActive(menu) {
+    findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.remove("active")
+    findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.remove("active")
     fetch(menu + ".html").then(function (response) {
         if (response.ok) {
             return response.text();
@@ -106,14 +108,15 @@ function toggleActive(menu) {
         let html = stringToHTML(text);
         section.append(html);
         if (menu === "devices") {
+            findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.add("active")
             fillDevices();
         } else {
+            findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.add("active")
             fillConfig();
         }
     }).then(()=>{
         const langSet = detectLang();
         document.querySelectorAll("span[class^='lang-']").forEach((l) => {
-            console.log(l.className.replace("lang-", ""));
             const t = langSet[l.className.replace("lang-", "")];
             if (t)
                 l.textContent = t;
@@ -121,9 +124,15 @@ function toggleActive(menu) {
     });
 
 }
+function findByClass(c) {
+    return document.getElementsByClassName(c).item(0);
+}
 
 function findById(id) {
-    return document.getElementById(id);
+    const a = document.getElementById(id);
+    if(!a)
+        console.log("NOT_FOUND "+id)
+    return a;
 }
 
 function fillConfig() {
@@ -161,7 +170,6 @@ function fillConfig() {
 async function loadConfig() {
     const response = await fetch(baseUrl + "/config");
     config = await response.json();
-    fillConfig();
 }
 
 function detectLang() {
@@ -177,11 +185,11 @@ function detectLang() {
 function saveConfig() {
     let mqttIpDns = document.getElementById("mqtt_ip");
     newConfig.nodeId = getValue("nodeId", config.nodeId).trim();
-    newConfig.mqttIpDns = getValue("mqtt_ip", config.mqttIpDns).trim();
-    newConfig.mqttUsername = getValue("mqtt_username", config.mqttUsername).trim();
-    newConfig.mqttPassword = getValue("mqtt_password", config.mqttPassword).trim();
+    newConfig.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
+    newConfig.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
+    newConfig.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
     newConfig.wifiSSID = getValue("ssid", config.wifiSSID).trim();
-    newConfig.wifiSecret = getValue("wifi_secret", config.wifiSecret).trim();
+    newConfig.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
     newConfig.wifiIp = getValue("wifiIp", config.wifiIp).trim();
     newConfig.wifiMask = getValue("wifiMask", config.wifiMask).trim();
     newConfig.wifiGw = getValue("wifiGw", config.wifiGw).trim();
@@ -280,8 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('node-btn').onclick = function (e) {
         toggleActive("node");
     }
-    loadConfig();
-    toggleActive("node");
+    loadConfig().then(() => toggleActive("node"));
     if (!!window.EventSource) {
         source = new EventSource(baseUrl + '/events');
     }

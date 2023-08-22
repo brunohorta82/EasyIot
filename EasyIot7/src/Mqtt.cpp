@@ -85,8 +85,8 @@ boolean reconnect()
         refreshMDNS(config.nodeId);
         for (auto &sw : config.actuatores)
         {
-            subscribeOnMqtt(sw.writeTopic);
-            publishOnMqtt(sw.readTopic, sw.getCurrentState().c_str(), false);
+            // TODO subscribeOnMqtt(sw.writeTopic);
+            // TODO publishOnMqtt(sw.readTopic, sw.getCurrentState().c_str(), false);
         }
     }
 

@@ -555,7 +555,7 @@ void webserverServicesLoop()
 #endif
 #ifdef ESP8266
     if (WiFi.getMode() == WIFI_AP_STA || WiFi.getMode() == WIFI_AP)
-#endif * /
+#endif
       dnsServer.processNextRequest();
     else
       dnsServer.stop();

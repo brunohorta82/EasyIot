@@ -103,7 +103,7 @@ void loop()
   loopMqtt();
   if (!config.isAutoUpdateRequested())
   {
-    config.loopSwitches();
+   // config.loopSwitches();
   }
   if (WiFi.status() == WL_CONNECTED)
     knx.loop();
