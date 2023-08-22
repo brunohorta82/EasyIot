@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include "CloudIO.h"
 #include "WebServer.h"
 #include "CoreWiFi.h"
@@ -9,7 +9,7 @@
 #include "LittleFS.h"
 #include <esp-knx-ip.h>
 
-Config config;
+ConfigOnofre config;
 
 void checkInternalRoutines()
 {

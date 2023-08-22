@@ -3,13 +3,13 @@
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
 #include "constants.h"
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
 #include "CloudIO.h"
 #include "LittleFS.h"
-extern Config config;
-String Config::controlSwitch(const char *id, SwitchStateOrigin origin, String state)
+extern ConfigOnofre config;
+String ConfigOnofre::controlSwitch(const char *id, SwitchStateOrigin origin, String state)
 {
   return "DONE";
 }
@@ -208,7 +208,7 @@ const void ActuatorT::notifyState(bool dirty, const char *origin)
 #ifdef DEBUG_ONOFRE
   Log.notice("%s %s current state: %s" CR, tags::actuatores, name, currentStateToSend.c_str());
 #endif
-  if (mqttConnected)
+  if (mqttConnected())
   {
     publishOnMqtt(readTopic, currentStateToSend.c_str(), true);
   }
@@ -263,7 +263,7 @@ ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, String state)
   return this;
 }
 
-void Config::loopSwitches()
+void ConfigOnofre::loopSwitches()
 {
   for (auto &sw : config.actuatores)
   {

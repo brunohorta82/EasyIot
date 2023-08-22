@@ -1,4 +1,4 @@
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
@@ -6,13 +6,13 @@
 #include "Actuatores.h"
 #include "Sensors.h"
 #include "LittleFS.h"
-Config &Config::init()
+ConfigOnofre &ConfigOnofre::init()
 {
 #ifdef ESP8266
-  strlcpy(chipId, ESP.getChipId().c_str(), sizeof(chipId))
+  strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
 #endif
 #ifdef ESP32
-      uint32_t chipIdHex = 0;
+  uint32_t chipIdHex = 0;
   for (int i = 0; i < 17; i = i + 8)
   {
     chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
@@ -38,7 +38,7 @@ Config &Config::init()
   return save();
 }
 
-Config &Config::load()
+ConfigOnofre &ConfigOnofre::load()
 {
 
   if (!LittleFS.exists(configFilenames::config))
@@ -54,10 +54,10 @@ Config &Config::load()
     Log.notice("%s Failed to read file, using default configuration." CR, tags::config);
 #endif
 #ifdef ESP8266
-  strlcpy(chipId, ESP.getChipId().c_str(), sizeof(chipId))
+  strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
 #endif
 #ifdef ESP32
-      uint32_t chipIdHex = 0;
+  uint32_t chipIdHex = 0;
   for (int i = 0; i < 17; i = i + 8)
   {
     chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
@@ -102,7 +102,7 @@ Config &Config::load()
 #endif
   return *this;
 }
-Config &Config::save()
+ConfigOnofre &ConfigOnofre::save()
 {
   File file = LittleFS.open(configFilenames::config, "w+");
   StaticJsonDocument<1024> doc;
@@ -161,12 +161,12 @@ Config &Config::save()
   }
   file.close();
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s Config stored." CR, tags::config);
+  Log.notice("%s ConfigOnofre stored." CR, tags::config);
 #endif
   return *this;
 }
 
-Config &Config::update(JsonObject &root)
+ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
   char lastNodeId[32];
   strlcpy(lastNodeId, nodeId, sizeof(lastNodeId));
@@ -204,7 +204,7 @@ Config &Config::update(JsonObject &root)
   return this->save();
 }
 
-void Config::json(JsonVariant &root)
+void ConfigOnofre::json(JsonVariant &root)
 {
   root["nodeId"] = nodeId;
   root["idSequence"] = idSequence;
@@ -256,12 +256,12 @@ void Config::json(JsonVariant &root)
   }
 }
 
-void Config::requestWifiScan()
+void ConfigOnofre::requestWifiScan()
 {
   wifiScan = true;
 }
 
-bool Config::isWifiScanRequested()
+bool ConfigOnofre::isWifiScanRequested()
 {
   if (wifiScan)
   {
@@ -271,12 +271,12 @@ bool Config::isWifiScanRequested()
   return false;
 }
 
-void Config::requestCloudIOSync()
+void ConfigOnofre::requestCloudIOSync()
 {
   cloudIOSync = true;
 }
 
-bool Config::isCloudIOSyncRequested()
+bool ConfigOnofre::isCloudIOSyncRequested()
 {
   if (cloudIOSync)
   {
@@ -286,11 +286,11 @@ bool Config::isCloudIOSyncRequested()
   return false;
 }
 
-void Config::requestReloadWifi()
+void ConfigOnofre::requestReloadWifi()
 {
   wifiReload = true;
 }
-bool Config::isReloadWifiRequested()
+bool ConfigOnofre::isReloadWifiRequested()
 {
   if (wifiReload)
   {
@@ -300,11 +300,11 @@ bool Config::isReloadWifiRequested()
   return false;
 }
 
-void Config::requestRestart()
+void ConfigOnofre::requestRestart()
 {
   reboot = true;
 }
-bool Config::isRestartRequested()
+bool ConfigOnofre::isRestartRequested()
 {
   if (reboot)
   {
@@ -314,11 +314,11 @@ bool Config::isRestartRequested()
   return false;
 }
 
-void Config::requestAutoUpdate()
+void ConfigOnofre::requestAutoUpdate()
 {
   autoUpdate = true;
 }
-bool Config::isAutoUpdateRequested()
+bool ConfigOnofre::isAutoUpdateRequested()
 {
   if (autoUpdate)
   {
@@ -328,11 +328,11 @@ bool Config::isAutoUpdateRequested()
   return false;
 }
 
-void Config::requestLoadDefaults()
+void ConfigOnofre::requestLoadDefaults()
 {
   loadDefaults = true;
 }
-bool Config::isLoadDefaultsRequested()
+bool ConfigOnofre::isLoadDefaultsRequested()
 {
   if (loadDefaults)
   {
@@ -342,7 +342,7 @@ bool Config::isLoadDefaultsRequested()
   return false;
 }
 
-int Config::nextId()
+int ConfigOnofre::nextId()
 {
   idSequence++;
   this->save();

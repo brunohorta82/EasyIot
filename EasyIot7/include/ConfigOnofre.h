@@ -7,7 +7,7 @@
 #include <ArduinoLog.h>
 #endif
 
-class Config
+class ConfigOnofre
 {
 public:
   char nodeId[32] = {};
@@ -40,11 +40,11 @@ public:
   int i2cSDA = -1;
   int i2cSCL = -1;
   void json(JsonVariant &root);
-  Config &update(JsonObject &root);
-  Config &save();
-  Config &init();
-  Config &load();
-  Config &removeSwitch(const char *id);
+  ConfigOnofre &update(JsonObject &root);
+  ConfigOnofre &save();
+  ConfigOnofre &init();
+  ConfigOnofre &load();
+  ConfigOnofre &removeSwitch(const char *id);
   int nextId();
   void loopSwitches();
   String controlSwitch(const char *id, SwitchStateOrigin origin, String state);

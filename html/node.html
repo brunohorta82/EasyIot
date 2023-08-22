@@ -4,7 +4,7 @@
         <fieldset id="ff" disabled>
             <div class="box-body">
                 <div class="form-group"><label for="nodeId"><span class="lang-name">Nome</span></label> <input
-                    class="form-control" maxlength="30" type="text" name="nodeId" id="nodeId"
+                    class="form-control" maxlength="30" type="text" id="nodeId"
                     placeholder="ex: kitchen" required/></div>
             </div>
             <div class="box-body">
@@ -16,20 +16,20 @@
                 <div class="form-group"><label for="accessPointPassword"><span
                     class="lang-password">Palavra Passe</span>
                     AP</label> <input autocomplete="off" class="form-control" type="password"
-                                      name="accessPointPassword" id="accessPointPassword"
+                                      id="accessPointPassword"
                                       placeholder="ex: superPassword"/></div>
 
                 <div class="form-group"><label for="apiUser"><span
                     class="lang-username">Utilizador</span></label> <input autocomplete="off"
                                                                            class="form-control" type="text"
-                                                                           name="apiUser" id="apiUser"
+                                                                           id="apiUser"
                                                                            placeholder="ex: admin"/></div>
 
 
                 <div class="form-group"><label for="apiPassword"><span
                     class="lang-password">Palavra Passe</span></label> <input autocomplete="off"
                                                                               class="form-control"
-                                                                              type="password" name="apiPassword"
+                                                                              type="password"
                                                                               id="apiPassword"
                                                                               placeholder="ex: superPassword"/>
                 </div>
@@ -38,43 +38,41 @@
             <div class="box-header "><h3 class="box-title">WI-FI </h3></div>
             <div class="box-body">
 
-                <div class="form-group"><label for="ssid">SSID</label> <input class="form-control"
+                <div class="form-group"><label for="wifiSSID">SSID</label> <input class="form-control"
                                                                               maxlength="23" autocomplete="off"
-                                                                              type="text" name="wifiSSID"
-                                                                              id="ssid"
+                                                                              type="text"
+                                                                              id="wifiSSID"
                                                                               placeholder="ex: meuwifi"/></div>
 
-                <div class="form-group"><label for="wifi_secret"><span
+                <div class="form-group"><label for="wifiSecret"><span
                     class="lang-password">Palavra Passe</span></label> <input class="form-control"
                                                                               name="wifiSecret" maxlength="60"
                                                                               autocomplete="off" type="password"
-                                                                              id="wifi_secret"
+                                                                              id="wifiSecret"
                                                                               placeholder="ex: superpassword"/>
                 </div>
             </div>
             <div class="box-body">
-                <label for="staticIp">DHCP</label>
+                <label for="dhcp">DHCP</label>
                 <label class="switch">
-                    <input  value="true"  name="staticIp" id="staticIp" onchange="toggleSwitch(this)" type="checkbox">
+                    <input  value="true"  name="dhcp" id="dhcp" onchange="toggleSwitch(this)" type="checkbox">
                     <span class="slider round"></span>
                 </label>
             </div>
             <div class="box-body">
-                <div class="form-group"><label for="ssid">IP</label> <input class="form-control" type="text"
-                                                                            name="wifiIp" id="wifiIp"
+                <div class="form-group"><label for="wifiIp">IP</label> <input class="form-control" type="text"
+                                                                           id="wifiIp"
                                                                             maxlength="15"
                                                                             placeholder="ex: 192.168.1.20"/>
                 </div>
-
-                <div class="form-group"><label for="wifi_secret">Gateway</label> <input class="form-control"
-                                                                                        name="wifiGw"
+                <div class="form-group"><label for="wifiGw">Gateway</label> <input class="form-control"
                                                                                         id="wifiGw"
                                                                                         maxlength="15"
                                                                                         placeholder="ex: 192.168.1.254"/>
                 </div>
-                <div class="form-group"><label for="wifi_secret"><span
+                <div class="form-group"><label for="wifiMask"><span
                     class="lang-netmask">Máscara de Rede</span></label> <input class="form-control"
-                                                                               maxlength="15" name="wifiMask"
+                                                                               maxlength="15"
                                                                                id="wifiMask"
                                                                                placeholder="ex: 255.255.255.0"/>
                 </div>
@@ -85,24 +83,23 @@
             </div>
             <div class="box-header "><h3 class="box-title">MQTT </h3></div>
             <div class="box-body">
-                <div class="form-group"><label for="mqtt_ip">Broker IP / DNS</label> <input class="form-control"
-                                                                                            name="mqttIpDns"
+                <div class="form-group"><label for="mqttIpDns">Broker IP / DNS</label> <input class="form-control"
                                                                                             type="text"
                                                                                             maxlength="40"
-                                                                                            id="mqtt_ip"
+                                                                                            id="mqttIpDns"
                                                                                             placeholder="ex: 192.168.1.30"/>
                 </div>
-                <div class="form-group"><label for="mqtt_username"><span
+                <div class="form-group"><label for="mqttUsername"><span
                     class="lang-username">Utilizador</span></label>
-                    <input class="form-control" autocomplete="off" name="mqttUsername" type="text"
-                           maxlength="30" id="mqtt_username" placeholder="ex: iam"/></div>
+                    <input class="form-control" autocomplete="off" type="text"
+                           maxlength="30" id="mqttUsername" placeholder="ex: iam"/></div>
 
 
-                <div class="form-group"><label for="mqtt_password"><span
+                <div class="form-group"><label for="mqttPassword"><span
                     class="lang-password">Palavra Passe</span></label> <input class="form-control"
-                                                                              name="mqttPassword" maxlength="62"
+                                                                              maxlength="62"
                                                                               type="password" autocomplete="off"
-                                                                              id="mqtt_password"
+                                                                              id="mqttPassword"
                                                                               placeholder="ex: superstrongpassword"/>
 
                 </div>

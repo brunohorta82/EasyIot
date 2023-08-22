@@ -2,8 +2,8 @@
 #include "Templates.h"
 #include "Actuatores.h"
 #include "Sensors.h"
-#include "Config.h"
-extern Config config;
+#include "ConfigOnofre.h"
+extern ConfigOnofre config;
 void preparePzem()
 {
     SensorT pzem;

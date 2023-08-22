@@ -1,11 +1,11 @@
 #include "Mqtt.h"
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include <PubSubClient.h>
 #include "Actuatores.h"
 #include "CoreWiFi.h"
 #include "constants.h"
 #include "HomeAssistantMqttDiscovery.h"
-extern Config config;
+extern ConfigOnofre config;
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
 void processMqttAction(const char *topic, const char *payload)

@@ -15,23 +15,23 @@ gzip -k  ../html/js/index.min.js
 gzip -k  ../html/css/styles.min.css
 
 xxd -i -n devices_html ../html/devices.min.html.gz > include/DevicesHtml.h 
-sed -i "" "s/unsigned char index_html/unsigned char index_html PROGMEM/" include/DevicesHtml.h
+sed -i "" "s/\[\]/\[\] PROGMEM/" include/DevicesHtml.h
 echo "#include <Arduino.h>\n\r$(cat include/DevicesHtml.h)" > include/DevicesHtml.h 
 
 xxd -i -n index_html ../html/index.min.html.gz > include/IndexHtml.h 
-sed -i "" "s/unsigned char index_html/unsigned char index_html PROGMEM/" include/IndexHtml.h
+sed -i "" "s/\[\]/\[\] PROGMEM/" include/IndexHtml.h
 echo "#include <Arduino.h>\n\r$(cat include/IndexHtml.h)" > include/IndexHtml.h 
 
 xxd -i -n node_html ../html/node.min.html.gz > include/NodeHtml.h 
-sed -i "" "s/unsigned char index_html/unsigned char index_html PROGMEM/" include/NodeHtml.h
+sed -i "" "s/\[\]/\[\] PROGMEM/" include/NodeHtml.h
 echo "#include <Arduino.h>\n\r$(cat include/NodeHtml.h)" > include/NodeHtml.h 
 
 xxd -i -n index_js ../html/js/index.min.js.gz > include/IndexJs.h 
-sed -i "" "s/unsigned char index_js/unsigned char index_js PROGMEM/" include/IndexJs.h
+sed -i "" "s/\[\]/\[\] PROGMEM/" include/IndexJs.h
 echo "#include <Arduino.h>\n\r$(cat include/IndexJs.h)" > include/IndexJs.h 
 
 xxd -i -n styles_min_css ../html/css/styles.min.css.gz > include/StylesMinCss.h 
-sed -i "" "s/unsigned char styles_min_css/unsigned char styles_min_css PROGMEM/" include/StylesMinCss.h
+sed -i "" "s/\[\]/\[\] PROGMEM/" include/StylesMinCss.h
 echo "#include <Arduino.h>\n\r$(cat include/StylesMinCss.h)" > include/StylesMinCss.h 
 
 rm -f ../html/js/index.tmp.js

@@ -1,5 +1,5 @@
 #include "CloudIO.h"
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include "CoreWiFi.h"
 #include <Ticker.h>
 #include <AsyncMqttClient.h>
@@ -12,7 +12,7 @@
 #ifdef ESP32
 #include <HTTPClient.h>
 #endif
-extern Config config;
+extern ConfigOnofre config;
 AsyncMqttClient mqttClient;
 Ticker mqttReconnectTimer;
 Ticker cloudIOReconnectTimer;

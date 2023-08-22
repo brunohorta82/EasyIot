@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.135"
+let baseUrl = "http://192.168.122.134"
 let config;
 var newConfig = {};
 let source = null;
@@ -81,7 +81,87 @@ var WORDS_EN = {
     "prefix": "Prefix",
     "apikey": "API Key"
 };
+function stringToHTML (text) {
+    let parser = new DOMParser();
+    let doc = parser.parseFromString(text, 'text/html');
+    return doc.body;
+}
+function toggleActive(menu) {
+  //  $('.onofre-menu').find('li').removeClass('active');
+    //$('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
+ /*   document.getElementsByClassName("content").item(0)load(menu + ".html", function () {
+        if (menu === "devices") {
+           // fillDevices();
+        } else {
+            fillConfig();
+        }
+     //   loadsLanguage(localStorage.getItem('lang'));
+    });*/
+    fetch(menu + ".html").then(function (response) {
+        if (response.ok) {
+            return response.text();
+        }
+        throw response;
+    }).then(function (text) {
+        let dialog = document.getElementsByClassName("content").item(0);
+        let html = stringToHTML(text);
+        dialog.append( html);
+        fillConfig();
+    });
 
+}
+function findById(id){
+ return    document.getElementById(id);
+}
+function fillConfig() {
+    if (!config) return;
+    document.title = 'BH OnOfre ' + config.nodeId;
+    let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
+    findById("version_lbl").textContent =config.firmware;
+    findById("lbl-chip").textContent ="ID: " + config.chipId;
+    findById("lbl-mac").textContent ="MAC: " + config.mac;
+    findById("ssid_lbl").textContent =config.wifiSSID;
+    findById("mqtt_lbl").textContent =config.mqttIpDns;
+    if (config.mqttConnected) {
+       //TODO ICON
+    }
+    findById("dhcp").checked = config.dhcp;
+    findById("ff").removeAttribute('disabled');
+    findById("nodeId").value = config.nodeId;
+    findById("mqttIpDns").value = config.mqttIpDns;
+    findById("mqttUsername").value = config.mqttUsername;
+    findById("mqttPassword").value = config.mqttPassword;
+    findById("wifiSSID").value = config.wifiSSID;
+    findById("wifiSecret").value = config.wifiSecret;
+    findById("wifiIp").value = config.wifiIp;
+    findById("wifiMask").value = config.wifiMask;
+    findById("wifiGw").value = config.wifiGw;
+    findById("accessPointPassword").value = config.accessPointPassword;
+    findById("apiPassword").value = config.apiPassword;
+    findById("apiUser").value = config.apiUser;
+    findById("wifiIp").value = config.wifiIp;
+
+    /*
+
+
+    $('#wifi-signal').text(percentage + "%");
+    $('#mqtt_lbl').text(config.mqttIpDns);
+    if (config.mqttConnected) {
+        $('#mqtt-state').text(showText("ligado", "connected"));
+    } else {
+        $('#mqtt-state').text(showText("desligado", "disconnected"));
+    }
+
+*/
+}
+
+async function loadConfig() {
+    const response = await fetch(baseUrl + "/config");
+    config = await response.json();
+    fillConfig();
+}
+
+/*
 function loadsLanguage() {
     let lang = "PT";
     if (/^en/.test(navigator.language)) {
@@ -112,24 +192,6 @@ function showText(pt, en) {
     //  return localStorage.getItem('lang').toString() === "PT" ? pt : en;
 }
 
-function loadConfig() {
-    var targetUrl = baseUrl + "/config";
-    $.ajax({
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            config = response;
-            fillConfig();
-        },
-        error: function () {
-            showMessage("Erro a carregar configuração", "Configuration load failed.")
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
-}
 
 function loadDevice(func, e, next) {
     const targetUrl = baseUrl + "/" + e;
@@ -150,18 +212,7 @@ function loadDevice(func, e, next) {
     });
 }
 
-function toggleActive(menu) {
-    $('.onofre-menu').find('li').removeClass('active');
-    $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
-    $(".content").load(menu + ".html", function () {
-        if (menu === "devices") {
-            fillDevices();
-        } else {
-            fillConfig();
-        }
-        loadsLanguage(localStorage.getItem('lang'));
-    });
-}
+
 
 
 function fillGpioSelect(id) {
@@ -249,49 +300,7 @@ function fillDevices() {
     }
 }
 
-function fillConfig() {
-    if (!config) return;
-    $(".bh-model").text(config.hardware);
-    $(".bh-onofre-item").removeClass("hide");
-    $("#version_lbl").text(config.firmware);
-    $("#lbl-chip").text("ID: " + config.chipId);
-    $("#lbl-mac").text("MAC: " + config.mac);
-    $('input[name="nodeId"]').val(config.nodeId);
-    $(document).prop('title', 'BH OnOfre ' + config.nodeId);
-    $('input[name="mqttIpDns"]').val(config.mqttIpDns);
-    $('#mqtt_lbl').text(config.mqttIpDns);
-    $('input[name="mqttUsername"]').val(config.mqttUsername);
-    $('input[name="mqttPassword"]').val(config.mqttPassword);
-    $('input[name="wifiSSID"]').val(config.wifiSSID);
-    $('input[name="wifiSecret"]').val(config.wifiSecret);
-    $('input[name="knxArea"]').val(config.knxArea);
-    $('input[name="knxMember"]').val(config.knxMember);
-    $('input[name="knxLine"]').val(config.knxLine);
-    let staticIp = document.getElementById("staticIp");
-    if (staticIp) {
-        staticIp.checked = !config.staticIp;
-    }
-    $('input[name="wifiIp"]').val(config.wifiIp);
-    $('input[name="wifiMask"]').val(config.wifiMask);
-    $('input[name="wifiGw"]').val(config.wifiGw);
-    $('input[name="accessPointPassword"]').val(config.accessPointPassword);
-    $('input[name="apiPassword"]').val(config.apiPassword);
-    $('input[name="apiUser"]').val(config.apiUser);
-    $('input[name="emoncmsServer"]').val(config.emoncmsServer);
-    $('input[name="emoncmsPath"]').val(config.emoncmsPath);
-    $('input[name="emoncmsApikey"]').val(config.emoncmsApikey);
-    $('#ssid_lbl').text(config.wifiSSID);
-    let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
-    $('#wifi-signal').text(percentage + "%");
-    $('#mqtt_lbl').text(config.mqttIpDns);
-    if (config.mqttConnected) {
-        $('#mqtt-state').text(showText("ligado", "connected"));
-    } else {
-        $('#mqtt-state').text(showText("desligado", "disconnected"));
-    }
-    $('#ff').prop('disabled', false);
 
-}
 
 function reboot() {
     $.ajax({
@@ -319,21 +328,11 @@ function loadDefaults() {
         },
         timeout: 1000
     });
-}
+}*/
 
-$(document).ready(function () {
-
-    loadsLanguage();
+document.addEventListener("DOMContentLoaded", () => {
+    //loadsLanguage();
     loadConfig();
-    $('#node_id').on('keypress', function (e) {
-        if (e.which === 32)
-            return false;
-    });
-    $('.menu-item').click(function (e) {
-        let menu = $(e.currentTarget).data('menu');
-        toggleActive(menu);
-
-    });
     toggleActive("node");
     if (!!window.EventSource) {
         source = new EventSource(baseUrl + '/events');

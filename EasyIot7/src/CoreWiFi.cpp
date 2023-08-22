@@ -1,14 +1,14 @@
 #include "CoreWiFi.h"
 #include "constants.h"
 #include <JustWifi.h>
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include "WebServer.h"
 #include "Mqtt.h"
 #include "CloudIO.h"
 #include <esp-knx-ip.h>
 int retryCount = 0;
 unsigned long connectedOn = 0ul;
-extern Config config;
+extern ConfigOnofre config;
 String getApName()
 {
   String version = String(VERSION, 3);

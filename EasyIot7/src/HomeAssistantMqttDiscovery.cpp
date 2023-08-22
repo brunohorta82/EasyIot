@@ -3,8 +3,8 @@
 #include "HomeAssistantMqttDiscovery.h"
 #include "constants.h"
 #include "Mqtt.h"
-#include "Config.h"
-extern Config config;
+#include "ConfigOnofre.h"
+extern ConfigOnofre config;
 void initHomeAssistantDiscovery()
 {
   for (auto &sw : config.actuatores)

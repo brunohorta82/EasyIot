@@ -3,7 +3,7 @@
 #include <ArduinoLog.h>
 #include "constants.h"
 #include "WebServer.h"
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include "Mqtt.h"
 #include "CoreWiFi.h"
 #include <DallasTemperature.h>
@@ -22,7 +22,7 @@ bool displayOn = true;
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, DISPLAY_BTN);
 #define OLED_RESET 16 // Reset pin # (or -1 if sharing Arduino reset pin)
-extern Config config;
+extern ConfigOnofre config;
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
 {
   if (config.i2cSDA < 0 || config.i2cSCL < 0)

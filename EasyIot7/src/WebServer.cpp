@@ -16,10 +16,10 @@
 #include <FS.h>
 #include "Mqtt.h"
 #include "CloudIO.h"
-#include <Config.h>
+#include <ConfigOnofre.h>
 #include "CoreWiFi.h"
 #include <Ticker.h>
-#include "Config.h"
+#include "ConfigOnofre.h"
 #include "Templates.h"
 #ifdef ESP32
 #include <WebServer.h>
@@ -36,7 +36,7 @@ DNSServer dnsServer;
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
 unsigned long switchesSize = 6874;
-extern Config config;
+extern ConfigOnofre config;
 void performUpdate()
 {
 #ifdef DEBUG_ONOFRE
