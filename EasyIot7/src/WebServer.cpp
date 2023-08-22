@@ -6,7 +6,6 @@
 #include "IndexHtml.h"
 #include "StylesMinCss.h"
 #include "IndexJs.h"
-#include "StaticJs.h"
 #include "AsyncJson.h"
 #include "Actuatores.h"
 #include "Sensors.h"
@@ -276,17 +275,6 @@ void loadUI()
     response->addHeader("Cache-Control", "max-age=600");
     request->send(response); });
 
-  server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=600");
-    request->send(response); });
-
   // CSS
   server.on("/css/styles.css", HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -301,10 +289,13 @@ void loadUI()
 }
 void loadAPI()
 {
+
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+#if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
+#endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["result"] = "Reboot requested";
@@ -314,9 +305,10 @@ void loadAPI()
 
   server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+#if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
-
+#endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["result"] = "Load defaults requested";
@@ -368,6 +360,7 @@ void loadAPI()
     response->setLength();
     request->send(response);
     config.requestAutoUpdate(); });
+
   server.on(
       "/update", HTTP_POST, [](AsyncWebServerRequest *request)
       {
@@ -383,32 +376,41 @@ void loadAPI()
      request->send(response); },
       [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
       {
-     if(!index){
+        if (!index)
+        {
 #ifdef DEBUG_ONOFRE
-       Log.notice("%s Update Start: %s" CR, tags::system ,filename.c_str());
+          Log.notice("%s Update Start: %s" CR, tags::system, filename.c_str());
 #endif
 #ifdef ESP8266
-       Update.runAsync(true);
+          Update.runAsync(true);
 #endif
-       if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
-         Update.printError(Serial);
-       }
-     }
-     if(!Update.hasError()){
-       if(Update.write(data, len) != len){
-         Update.printError(Serial);
-       }
-     }
-     if(final){
-       if(Update.end(true)){
+          if (!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000))
+          {
+            Update.printError(Serial);
+          }
+        }
+        if (!Update.hasError())
+        {
+          if (Update.write(data, len) != len)
+          {
+            Update.printError(Serial);
+          }
+        }
+        if (final)
+        {
+          if (Update.end(true))
+          {
 #ifdef DEBUG_ONOFRE
-         Log.notice("%s Update Success: %d" CR, tags::system, index+len);
+            Log.notice("%s Update Success: %d" CR, tags::system, index + len);
 #endif
-         config.requestRestart();
-       } else {
-         config.requestRestart();
-       }
-     } });
+            config.requestRestart();
+          }
+          else
+          {
+            config.requestRestart();
+          }
+        }
+      });
 
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request)
             {
