@@ -1,9 +1,85 @@
-let baseUrl = "http://192.168.122.134"
+let baseUrl = "http://192.168.187.134"
 let config;
 var newConfig = {};
 let source = null;
 var WORDS_PT = {}
-var WORDS_RO = {}
+var WORDS_RO = {
+    "gate": "Poarta",
+    "pin-state-a": "Pin State A",
+    "pin-state-b": "Pin State B",
+    "pin-out-3": "Pin State C",
+    "update-from-server": "ACTUALIZARE NOUA",
+    "node": "Modul",
+    "up": "Sus",
+    "down": "Jos",
+    "group": "Grup",
+    "integrations": "INTEGRARE",
+    "sensors": "Senzori",
+    "integrate": "Integrare",
+    "released": "Release",
+    "reading-interval": "Interval de Citire",
+    "update": "ATUALIZARE",
+    "features": "FUNCTII",
+    "current-version": "Versiunea curenta",
+    "new-file": "Alegeti noul fisier",
+    "install-new-version": "Actualizati automat la versiune",
+    "install-file-version": "Instalati versiunea fisierului",
+    "version": "Versiune",
+    "save": "Salvati",
+    "choose": "Alege",
+    "auto-state": "Stare automata",
+    "clean-fields": "Stergeti toate campurile",
+    "username": "Nume de utilizator",
+    "password": "Parola",
+    "yes": "Da",
+    "no": "Nu",
+    "disconnected": "deconectat",
+    "dconnected": "conectat",
+    "netmask": "Netmask",
+    "system": "Sistem",
+    "name": "Nume",
+    "in": "in",
+    "seconds": "secunde",
+    "restart": "Repornire",
+    "reset-factory": "Incarcare setare de fabrica",
+    "switches": "Intrerupator",
+    "remove": "Sterge",
+    "new": "Creaza nou",
+    "family": "Familie",
+    "switch": "Intrerupator",
+    "light": "Lumina",
+    "cover": "Jaluzea",
+    "garage": "Garaj",
+    "normal": "Generic",
+    "push": "Push",
+    "dual-push": "Dual Push",
+    "dual-normal": "Dual Generic",
+    "mode": "Mod",
+    "relay-mqtt": "Relu / MQTT",
+    "mqtt": "MQTT",
+    "control": "Output",
+    "pin-in-a": "Pinul de intrare a",
+    "pin-in-b": "Pinul de intrare b",
+    "pin-in-c": "Pinul de intrare c",
+    "pin-out-1": "Pinul de iesire a",
+    "pin-out-2": "Pinul de iesire b",
+    "none": "Nedesemnata",
+    "retain-message": "Retain Messages",
+    "command": "Command",
+    "state": "Stare",
+    "on": "Pornit",
+    "off": "Deconectat",
+    "open": "Deschis",
+    "close": "Inchis",
+    "stop": "Stop",
+    "time": "Timp",
+    "17": "A0",
+    "line": "Linia",
+    "member": "Membru",
+    "address": "Address",
+    "prefix": "Prefix",
+    "apikey": "API Key"
+}
 var WORDS_EN = {
     "pin-state-a": "Pin State A",
     "gate": "Gate",
@@ -81,22 +157,24 @@ var WORDS_EN = {
     "prefix": "Prefix",
     "apikey": "API Key"
 };
-function stringToHTML (text) {
+
+function stringToHTML(text) {
     let parser = new DOMParser();
     let doc = parser.parseFromString(text, 'text/html');
     return doc.body;
 }
+
 function toggleActive(menu) {
-  //  $('.onofre-menu').find('li').removeClass('active');
+    //  $('.onofre-menu').find('li').removeClass('active');
     //$('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
- /*   document.getElementsByClassName("content").item(0)load(menu + ".html", function () {
-        if (menu === "devices") {
-           // fillDevices();
-        } else {
-            fillConfig();
-        }
-     //   loadsLanguage(localStorage.getItem('lang'));
-    });*/
+    /*   document.getElementsByClassName("content").item(0)load(menu + ".html", function () {
+           if (menu === "devices") {
+              // fillDevices();
+           } else {
+               fillConfig();
+           }
+        //   loadsLanguage(localStorage.getItem('lang'));
+       });*/
     fetch(menu + ".html").then(function (response) {
         if (response.ok) {
             return response.text();
@@ -105,25 +183,27 @@ function toggleActive(menu) {
     }).then(function (text) {
         let dialog = document.getElementsByClassName("content").item(0);
         let html = stringToHTML(text);
-        dialog.append( html);
+        dialog.append(html);
         fillConfig();
     });
 
 }
-function findById(id){
- return    document.getElementById(id);
+
+function findById(id) {
+    return document.getElementById(id);
 }
+
 function fillConfig() {
     if (!config) return;
     document.title = 'BH OnOfre ' + config.nodeId;
     let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
-    findById("version_lbl").textContent =config.firmware;
-    findById("lbl-chip").textContent ="ID: " + config.chipId;
-    findById("lbl-mac").textContent ="MAC: " + config.mac;
-    findById("ssid_lbl").textContent =config.wifiSSID;
-    findById("mqtt_lbl").textContent =config.mqttIpDns;
+    findById("version_lbl").textContent = config.firmware;
+    findById("lbl-chip").textContent = "ID: " + config.chipId;
+    findById("lbl-mac").textContent = "MAC: " + config.mac;
+    findById("ssid_lbl").textContent = config.wifiSSID;
+    findById("mqtt_lbl").textContent = config.mqttIpDns;
     if (config.mqttConnected) {
-       //TODO ICON
+        //TODO ICON
     }
     findById("dhcp").checked = config.dhcp;
     findById("ff").removeAttribute('disabled');
