@@ -81,7 +81,7 @@ void prepareGarage()
 #endif
     config.actuatores.push_back(garage);
 }
-void load(enum Template _template)
+void templateSelect(enum Template _template)
 {
     switch (_template)
     {

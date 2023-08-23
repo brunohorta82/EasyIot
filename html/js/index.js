@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.167"
+let baseUrl = "http://192.168.187.131"
 let config;
 var newConfig = {};
 let source = null;
@@ -165,6 +165,14 @@ function fillConfig() {
     findById("apiPassword").value = config.apiPassword;
     findById("apiUser").value = config.apiUser;
     findById("wifiIp").value = config.wifiIp;
+
+    source.addEventListener("bhonofre/"+config.chipId+"/available", (s)=>{
+        if(s.data === "online"){
+            findById("mqtt_state").classList.add("online")
+        } else {
+            findById("mqtt_state").classList.remove("online")
+        }
+    })
 }
 
 async function loadConfig() {
@@ -197,7 +205,6 @@ function saveConfig() {
     newConfig.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
     newConfig.apiPassword = getValue("apiPassword", config.apiPassword).trim();
     newConfig.apiUser = getValue("apiUser", config.apiUser).trim();
-
     fetch(baseUrl + "/save-config", {
         method: "POST",
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
@@ -292,4 +299,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!!window.EventSource) {
         source = new EventSource(baseUrl + '/events');
     }
+
 });

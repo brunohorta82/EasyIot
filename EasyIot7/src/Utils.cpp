@@ -72,6 +72,25 @@ void normalize(String &inputStr)
     inputStr.replace("|", "");
 }
 
+int rssiToWiFiQuality(int rssi)
+{
+    int quality = 0;
+
+    if (rssi <= -100)
+    {
+        quality = 0;
+    }
+    else if (rssi >= -50)
+    {
+        quality = 100;
+    }
+    else
+    {
+        quality = 2 * (rssi + 100);
+    }
+    return quality;
+}
+
 boolean isValidNumber(const char *str)
 {
     size_t length = strlen(str);

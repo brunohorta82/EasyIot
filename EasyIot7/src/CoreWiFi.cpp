@@ -68,7 +68,6 @@ void infoWifi()
     Log.notice("%s MAC  %s " CR, tags::wifi, WiFi.softAPmacAddress().c_str());
     Log.notice("----------------------------------------------" CR);
 #endif
-    refreshMDNS(config.nodeId);
   }
 }
 void enableScan()
@@ -131,7 +130,6 @@ void dissableAP()
 
 void infoCallback(justwifi_messages_t code, char *parameter)
 {
-
   switch (code)
   {
   case MESSAGE_ACCESSPOINT_FAILED:
@@ -163,16 +161,16 @@ void infoCallback(justwifi_messages_t code, char *parameter)
       strlcpy(config.wifiSSID, WiFi.SSID().c_str(), sizeof(config.wifiSSID));
       strlcpy(config.wifiSecret, WiFi.psk().c_str(), sizeof(config.wifiSecret));
     }
-
+    setupWebPanel();
+    startWebserver();
     knx.start();
     infoWifi();
-    connectoToCloudIO();
-    setupWebserverAsync();
     break;
 
   case MESSAGE_ACCESSPOINT_CREATED:
     infoWifi();
-    setupWebserverAsync();
+    setupCaptivePortal();
+    startWebserver();
     break;
   }
 }
@@ -181,6 +179,7 @@ void refreshMDNS(const char *lastName)
 {
   bool success = false;
 #ifdef ESP32
+  MDNS.end();
   success = MDNS.begin(String(config.nodeId).c_str());
 #endif
 #ifdef ESP8266
@@ -245,5 +244,4 @@ void loopWiFi()
 #ifdef ESP8266
   MDNS.update();
 #endif
-  webserverServicesLoop();
 }

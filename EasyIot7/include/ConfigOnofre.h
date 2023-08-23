@@ -1,8 +1,10 @@
 #pragma once
+#include "constants.h"
 #include "Utils.hpp"
 #include <ArduinoJson.h>
 #include "Actuatores.h"
 #include "Sensors.h"
+#include "Notify.h"
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
@@ -10,6 +12,7 @@
 class ConfigOnofre
 {
 public:
+  int templateId = {0};
   char nodeId[32] = {};
   char chipId[32] = {};
   int idSequence = 0;
@@ -46,6 +49,7 @@ public:
   ConfigOnofre &load();
   ConfigOnofre &removeSwitch(const char *id);
   int nextId();
+  void loadTemplate(int templateId);
   void loopSwitches();
   String controlSwitch(const char *id, SwitchStateOrigin origin, String state);
   void requestCloudIOSync();

@@ -6,6 +6,7 @@
 #include "Actuatores.h"
 #include "Sensors.h"
 #include "LittleFS.h"
+#include "Templates.h"
 ConfigOnofre &ConfigOnofre::init()
 {
 #ifdef ESP8266
@@ -47,11 +48,13 @@ ConfigOnofre &ConfigOnofre::load()
   }
 
   File file = LittleFS.open(configFilenames::config, "r+");
-  StaticJsonDocument<1024> doc;
-  DeserializationError error = deserializeJson(doc, file);
+  StaticJsonDocument<DYNAMIC_JSON_DOCUMENT_SIZE> doc;
 #ifdef DEBUG_ONOFRE
+  DeserializationError error = deserializeJson(doc, file);
   if (error)
     Log.notice("%s Failed to read file, using default configuration." CR, tags::config);
+#else
+  deserializeJson(doc, file);
 #endif
 #ifdef ESP8266
   strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
@@ -63,6 +66,7 @@ ConfigOnofre &ConfigOnofre::load()
     chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
   idSequence = doc["idSequence"];
+  templateId = doc["templateId"];
   strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
 #endif
   strlcpy(nodeId,
@@ -102,10 +106,16 @@ ConfigOnofre &ConfigOnofre::load()
 #endif
   return *this;
 }
+void ConfigOnofre::loadTemplate(int templateId)
+{
+  templateSelect((Template)templateId);
+  this->templateId = templateId;
+}
 ConfigOnofre &ConfigOnofre::save()
 {
   File file = LittleFS.open(configFilenames::config, "w+");
-  StaticJsonDocument<1024> doc;
+  StaticJsonDocument<DYNAMIC_JSON_DOCUMENT_SIZE> doc;
+  doc["templateId"] = templateId;
   doc["idSequence"] = idSequence;
   if (!String(nodeId).isEmpty())
     doc["nodeId"] = nodeId;
@@ -148,7 +158,7 @@ ConfigOnofre &ConfigOnofre::save()
     a["family"] = s.family;
     a["cloudIOSupport"] = s.cloudIOSupport;
     a["haSupport"] = s.haSupport;
-    char knxAddress[10];
+    char knxAddress[13];
     sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
     a["knxAddress"] = knxAddress;
     a["state"] = s.state;
@@ -163,6 +173,7 @@ ConfigOnofre &ConfigOnofre::save()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s ConfigOnofre stored." CR, tags::config);
 #endif
+  setupMQTT();
   return *this;
 }
 
@@ -200,7 +211,6 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
     // TODO  reloadSwitches();
     // reloadSensors();
   }
-  refreshMDNS(lastNodeId);
   return this->save();
 }
 
@@ -249,7 +259,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["family"] = s.family;
     a["cloudIOSupport"] = s.cloudIOSupport;
     a["haSupport"] = s.haSupport;
-    char knxAddress[10];
+    char knxAddress[13];
     sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
     a["knxAddress"] = knxAddress;
     a["state"] = s.state;

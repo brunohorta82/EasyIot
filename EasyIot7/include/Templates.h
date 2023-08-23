@@ -1,3 +1,3 @@
 #pragma once
 #include "constants.h"
-void load(enum Template _template);
+void templateSelect(enum Template _template);

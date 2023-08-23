@@ -73,6 +73,7 @@ boolean reconnect()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, config.mqttIpDns);
 #endif
+    publishMessage(getAvailableTopic(), constantsMqtt::unavailablePayload);
     if (mqttClient.connect(config.chipId, String(config.mqttUsername).c_str(), String(config.mqttPassword).c_str(), getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
     {
 #ifdef DEBUG_ONOFRE
@@ -82,7 +83,7 @@ boolean reconnect()
         publishOnMqtt(getConfigStatusTopic().c_str(), String("{\"firmware\":" + String(VERSION, 3) + "}").c_str(), true);
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
-        refreshMDNS(config.nodeId);
+        publishMessage(getAvailableTopic(), constantsMqtt::availablePayload);
         for (auto &sw : config.actuatores)
         {
             // TODO subscribeOnMqtt(sw.writeTopic);
@@ -95,19 +96,18 @@ boolean reconnect()
 
 void setupMQTT()
 {
-    if (strlen(config.mqttIpDns) == 0)
-    {
-        return;
-    }
+
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Setup" CR, tags::mqtt);
 #endif
     if (mqttConnected())
     {
         mqttClient.disconnect();
-        refreshMDNS(config.nodeId);
     }
-
+    if (strlen(config.mqttIpDns) == 0)
+    {
+        return;
+    }
     mqttClient.setServer(config.mqttIpDns, config.mqttPort);
     mqttClient.setCallback(callbackMqtt);
 }

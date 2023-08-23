@@ -1,7 +1,4 @@
-#include "Sensors.h"
-#include "Actuatores.h"
 #include "HomeAssistantMqttDiscovery.h"
-#include "constants.h"
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 extern ConfigOnofre config;
@@ -35,7 +32,7 @@ void createHaSwitch(ActuatorT &sw)
   object["unique_id"] = sw.id;
   object["cmd_t"] = sw.writeTopic;
 
-  object["avty_t"] = getAvailableTopic();
+  object["avty_t"] = config.healthTopic;
   String family = String(sw.family);
   if (sw.isGarage())
   {
@@ -84,7 +81,7 @@ void addToHomeAssistant(SensorT &s)
   object["unique_id"] = s.id;
   object["stat_t"] = s.readTopic;
 
-  object["avty_t"] = getAvailableTopic();
+  object["avty_t"] = config.healthTopic;
 
   switch (s.type)
   {

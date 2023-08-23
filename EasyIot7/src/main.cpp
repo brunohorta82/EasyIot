@@ -57,12 +57,6 @@ void checkInternalRoutines()
   }
 }
 
-void setTime()
-{
-  configTime(0, 0, NTP_SERVER);
-  setenv("TZ", TZ_INFO, 1);
-}
-
 void startFileSystem()
 {
   if (!LittleFS.begin())
@@ -86,25 +80,23 @@ void setup()
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
-
-  setTime();
   startFileSystem();
   config.load();
   setupWiFi();
+  setupCors();
   setupMQTT();
-  setupWebserverAsync();
 }
 
 void loop()
 {
   checkInternalRoutines();
-  webserverServicesLoop();
   loopWiFi();
-  loopMqtt();
   if (!config.isAutoUpdateRequested())
   {
-   // config.loopSwitches();
+    webserverServicesLoop();
+    loopMqtt();
+    config.loopSwitches();
+    if (WiFi.status() == WL_CONNECTED)
+      knx.loop();
   }
-  if (WiFi.status() == WL_CONNECTED)
-    knx.loop();
 }

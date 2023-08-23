@@ -4,7 +4,9 @@ body {
     font-size: 14px;
     color: #cccccc;
     background: #222;
+    margin: 0;
 }
+
 .online{
     background-color: forestgreen !important;
    color: forestgreen !important;
@@ -20,9 +22,17 @@ body {
     margin-top: 2px;
 
 }
-.onofre-menu {
+.navbar{
+    display: flex;
+    justify-content: space-between;
     background-color: #86bd9a;
+    position: fixed;
+    width: 100%;
+    z-index: 999;
+}
+.onofre-menu {
     height: 46px;
+    width: 100%;
 }
 .features{
     display: flex;
@@ -78,16 +88,21 @@ body {
 
 .onofre-menu > li.active > a, .onofre-menu > li.menu-open > a, .onofre-menu > li:hover > a {
     color: #fff;
-    border-bottom: 4px solid #000;
+    border-bottom: 4px solid #333;
     text-decoration: none
 }
 
 .stats-panel {
     display: flex;
-    padding: 10px;
+    padding: 5px;
     width: 100%;
     gap: 10px;
     flex-direction: row;
+    position: fixed;
+    margin-top: 45px;
+    background-color: #333;
+    border-bottom: 1px solid #ccc;
+    z-index: 999;
 }
 
 .onofre-footer {
@@ -100,7 +115,8 @@ body {
     min-height: 250px;
     padding: 15px;
     margin-right: auto;
-    margin-left: auto
+    margin-left: auto;
+    padding-top: 70px;
 }
 
 
@@ -117,7 +133,9 @@ body {
 }
 
 .onofre-menu > li > a {
-    padding: 12px 5px 12px 15px;
+    padding-top: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
     display: block
 }
 
@@ -227,11 +245,9 @@ a {
 }
 
 .btl-save-all {
-    position: absolute;
-    top: 0;
-    right: 0;
     width: 120px;
-    margin: 16px;
+    margin: 8px;
+    margin-right: 16px;
 }
 
 .switch {
