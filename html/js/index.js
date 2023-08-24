@@ -224,8 +224,21 @@ function getValue(id, f) {
 }
 
 function toggleSwitch(arg) {
-    arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList = {};
-    arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList.add(arg.checked ? "feature-icon-on" : "feature-icon-off");
+    const action = {
+        id: parseInt(arg.id),
+        state:arg.checked ? 100 : 0
+    };
+    fetch(baseUrl + "/control-feature", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: JSON.stringify(action)
+    }).then(response => response.json()).then(json => {
+        arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList = {};
+        arg.checked = json.state >0;
+        arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList.add(json.state ? "feature-icon-on" : "feature-icon-off");
+    }).catch(() =>
+        showMessage("control_state_error")
+    );
 }
 
 function fillDevices() {

@@ -110,7 +110,7 @@ public:
     {
         return knxAddress[0] > 0 && knxAddress[1] >= 0 && knxAddress[2] == 0;
     };
-    ActuatorT *changeState(SwitchStateOrigin origin, String state);
+    ActuatorT *changeState(SwitchStateOrigin origin, int state);
     const char *rotateState();
     const String getCurrentState();
     void setup();

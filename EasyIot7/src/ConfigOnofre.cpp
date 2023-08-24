@@ -51,11 +51,13 @@ ConfigOnofre &ConfigOnofre::load()
   StaticJsonDocument<DYNAMIC_JSON_DOCUMENT_SIZE> doc;
 #ifdef DEBUG_ONOFRE
   DeserializationError error = deserializeJson(doc, file);
+  serializeJsonPretty(doc, Serial);
   if (error)
     Log.notice("%s Failed to read file, using default configuration." CR, tags::config);
 #else
   deserializeJson(doc, file);
 #endif
+
 #ifdef ESP8266
   strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
 #endif
@@ -95,10 +97,14 @@ ConfigOnofre &ConfigOnofre::load()
   JsonArray features = doc["features"];
   for (auto d : features)
   {
-    ActuatorT a;
-    a.id = d["id"];
-    strlcpy(a.name, d["name"] | "", sizeof(a.name));
-    actuatores.push_back(a);
+    ActuatorT actuator;
+    actuator.id = d["id"];
+    strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
+    actuator.state = d["state"] | 0;
+    JsonArray outputs = d["outputs"];
+    for (auto out : outputs)
+      actuator.outputs.push_back(out);
+    actuatores.push_back(actuator);
   }
   file.close();
 #ifdef DEBUG_ONOFRE
@@ -162,6 +168,11 @@ ConfigOnofre &ConfigOnofre::save()
     sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
     a["knxAddress"] = knxAddress;
     a["state"] = s.state;
+    JsonArray outputs = a.createNestedArray("outputs");
+    for (auto out : s.outputs)
+    {
+      outputs.add(out);
+    }
   }
   if (serializeJson(doc, file) == 0)
   {
@@ -176,7 +187,20 @@ ConfigOnofre &ConfigOnofre::save()
   setupMQTT();
   return *this;
 }
+void ConfigOnofre::controlFeature(SwitchStateOrigin origin, JsonObject &action, JsonVariant &result)
+{
 
+  for (auto a : actuatores)
+  {
+    if (a.id == action["id"])
+    {
+      result["state"] = a.changeState(origin, action["state"])->state;
+      result["result"] = "OK";
+      return;
+    }
+  }
+  result["result"] = "ID_NOT_FOUND";
+}
 ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
   char lastNodeId[32];
@@ -263,6 +287,11 @@ void ConfigOnofre::json(JsonVariant &root)
     sprintf(knxAddress, "%d.%d.%d", s.knxAddress[0], s.knxAddress[1], s.knxAddress[2]);
     a["knxAddress"] = knxAddress;
     a["state"] = s.state;
+    JsonArray outputs = a.createNestedArray("outputs");
+    for (auto out : s.outputs)
+    {
+      outputs.add(out);
+    }
   }
 }
 

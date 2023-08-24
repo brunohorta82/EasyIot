@@ -147,7 +147,7 @@ void switchesCallback(message_t const &msg, void *arg)
   case KNX_CT_WRITE:
   {
     uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
-    s->changeState(SwitchStateOrigin::KNX, String(stateIdx));
+    s->changeState(SwitchStateOrigin::KNX, String(stateIdx).toInt()); // TODO
     break;
   }
   };
@@ -158,7 +158,7 @@ void mqttSwitchControl(SwitchStateOrigin origin, const char *topic, const char *
   {
     if (strcmp(sw.writeTopic, topic) == 0)
     {
-      sw.changeState(origin, String(payload));
+      sw.changeState(origin, String(payload).toInt()); // TODO
     }
   }
 }
@@ -228,22 +228,26 @@ const void ActuatorT::notifyState(bool dirty, const char *origin)
 
       if (sw.id == id)
       {
-        sw.changeState(SwitchStateOrigin::INTERNAL, currentStateToSend.c_str());
+        sw.changeState(SwitchStateOrigin::INTERNAL, currentStateToSend.toInt());
       }
     }
   }
 }
-ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, String state)
+ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, int state)
 {
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
-  Log.notice("%s State:     %s" CR, tags::actuatores, state);
+  Log.notice("%s State:     %d" CR, tags::actuatores, state);
   Log.notice("%s From : %d" CR, tags::actuatores, origin);
   Log.notice("%s Family : %d" CR, tags::actuatores, family);
 #endif
+  if (outputs.size() == 0)
+  {
+    return this;
+  }
   if (isCover())
   {
-    int level = state.toInt();
+    int level = state;
     if (level > 100)
       shutter->stop();
     else
@@ -257,9 +261,9 @@ ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, String state)
   }
   else if (isLight() || isSwitch())
   {
-    writeToPIN(outputs[0], state.toInt() ? HIGH : LOW);
+    writeToPIN(outputs[0], state ? HIGH : LOW);
   }
-
+  this->state = state;
   return this;
 }
 

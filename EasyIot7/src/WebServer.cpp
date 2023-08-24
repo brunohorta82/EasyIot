@@ -308,6 +308,19 @@ void loadAPI()
     config.requestCloudIOSync(); }));
 
   server
+      .addHandler(new AsyncCallbackJsonWebHandler("/control-feature", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    JsonObject action = json.as<JsonObject>();
+    config.controlFeature(SwitchStateOrigin::WEBPANEL,action,root);
+    response->setLength();
+    request->send(response); }));
+  server
       .on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
           {
 #if WEB_SECURE_ON

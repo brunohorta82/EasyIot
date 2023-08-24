@@ -69,6 +69,7 @@ public:
 
   void requestReloadWifi();
   bool isReloadWifiRequested();
+  void controlFeature(SwitchStateOrigin origin, JsonObject &action, JsonVariant &result);
 
 private:
   bool reboot = false;
