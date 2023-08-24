@@ -23,7 +23,6 @@ void preparePzem()
     pzem.cloudIOSupport = true;
     pzem.delayRead = 5000;
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
-    getAtualSensorsConfig().items.push_back(pzem);
     config.sensors.push_back(pzem);
 }
 void prepareLight(String name, unsigned int output, unsigned int input)

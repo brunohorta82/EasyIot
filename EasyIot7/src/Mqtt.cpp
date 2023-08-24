@@ -5,13 +5,11 @@
 #include "CoreWiFi.h"
 #include "constants.h"
 #include "HomeAssistantMqttDiscovery.h"
+#include "WebServer.h"
 extern ConfigOnofre config;
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
-void processMqttAction(const char *topic, const char *payload)
-{
-    mqttSwitchControl(SwitchStateOrigin::MQTT, topic, payload);
-}
+
 void callbackMqtt(char *topic, byte *payload, unsigned int length)
 {
 #ifdef DEBUG_ONOFRE
@@ -24,70 +22,40 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
     Log.notice("%s Payload: " CR, tags::mqtt, payload_as_string);
 #endif
-    if ((strcmp(topic, String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str()) == 0 || strcmp(topic, String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str()) == 0) && strcmp(payload_as_string, constantsMqtt::availablePayload) == 0)
+    if (homeAssistantOnline(topic, payload_as_string))
     {
         initHomeAssistantDiscovery();
     }
     else
     {
-        processMqttAction(topic, payload_as_string);
+        config.controlFeature(SwitchStateOrigin::MQTT, topic, payload_as_string);
     }
 
     free(payload_as_string);
 }
 
-String getBaseTopic()
-{
-    String topic;
-
-    if (strlen(config.mqttUsername) == 0)
-    {
-        topic.concat("bhonofre");
-    }
-    else
-    {
-        topic.concat(config.mqttUsername);
-    }
-    topic.concat("/");
-    topic.concat(config.chipId);
-    return topic;
-}
-String getAvailableTopic()
-{
-    String baseTopic = getBaseTopic();
-    baseTopic.concat("/available");
-    return baseTopic;
-}
-String getConfigStatusTopic()
-{
-    String baseTopic = getBaseTopic();
-    baseTopic.concat("/config/status");
-    return baseTopic;
-}
-
 boolean reconnect()
 {
 
-    if (WiFi.status() != WL_CONNECTED || strlen(config.mqttIpDns) == 0)
+    if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
         return false;
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, config.mqttIpDns);
 #endif
-    publishMessage(getAvailableTopic(), constantsMqtt::unavailablePayload);
-    if (mqttClient.connect(config.chipId, String(config.mqttUsername).c_str(), String(config.mqttPassword).c_str(), getAvailableTopic().c_str(), 0, true, constantsMqtt::unavailablePayload, true))
+    sendToServerEvents("mqtt_health", constantsMqtt::unavailablePayload);
+    if (mqttClient.connect(config.chipId, String(config.mqttUsername).c_str(), String(config.mqttPassword).c_str(), config.healthTopic, 0, true, constantsMqtt::unavailablePayload, true))
     {
 #ifdef DEBUG_ONOFRE
         Log.notice("%s Connected to %s" CR, tags::mqtt, config.mqttIpDns);
 #endif
-        publishOnMqtt(getAvailableTopic().c_str(), constantsMqtt::availablePayload, true);
-        publishOnMqtt(getConfigStatusTopic().c_str(), String("{\"firmware\":" + String(VERSION, 3) + "}").c_str(), true);
+        publishOnMqtt(config.healthTopic, constantsMqtt::availablePayload, true);
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
-        publishMessage(getAvailableTopic(), constantsMqtt::availablePayload);
+        sendToServerEvents("mqtt_health", constantsMqtt::availablePayload);
         for (auto &sw : config.actuatores)
         {
-            // TODO subscribeOnMqtt(sw.writeTopic);
-            // TODO publishOnMqtt(sw.readTopic, sw.getCurrentState().c_str(), false);
+            subscribeOnMqtt(sw.writeTopic);
+            sw.notifyState(SwitchStateOrigin::MQTT);
         }
     }
 
@@ -114,7 +82,7 @@ void setupMQTT()
 
 void loopMqtt()
 {
-    if (WiFi.status() != WL_CONNECTED || strlen(config.mqttIpDns) == 0)
+    if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
         return;
     static unsigned long lastReconnectAttempt = millis();
     if (!mqttConnected())
@@ -138,7 +106,7 @@ void loopMqtt()
     }
 }
 
-void publishOnMqtt(const char *topic, const char *payload, bool retain)
+void publishOnMqtt(const char *topic, String payload, bool retain)
 {
     if (strlen(config.mqttIpDns) == 0)
     {
@@ -155,7 +123,7 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
         return;
     }
     static unsigned int retries = 0;
-    while (!mqttClient.publish(topic, payload, retain) && retries < 3)
+    while (!mqttClient.publish(topic, payload.c_str(), retain) && retries < 3)
     {
         retries++;
     }

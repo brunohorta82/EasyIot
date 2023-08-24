@@ -6,5 +6,5 @@ void stopWebserver();
 void setupCaptivePortal();
 void setupCors();
 void webserverServicesLoop();
-void sendToServerEvents(const String &topic, const char *payload);
+void sendToServerEvents(String topic, String payload);
 void performUpdate();

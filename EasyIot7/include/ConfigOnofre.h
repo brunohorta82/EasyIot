@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 #include "Actuatores.h"
 #include "Sensors.h"
-#include "Notify.h"
+#include "LittleFS.h"
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
@@ -21,12 +21,13 @@ public:
   int mqttPort = 1883;
   char mqttUsername[32];
   char mqttPassword[64];
-  char writeTopic[128];
-  char readTopic[128];
-  char healthTopic[128];
+  char writeTopic[64];
+  char readTopic[64];
+  char healthTopic[64];
   // CLOUDIO
   char cloudIOUsername[40];
   char cloudIOPassword[64];
+  char cloudIOhealthTopic[64];
   // WIFI
   char wifiSSID[32];
   char wifiSecret[64];
@@ -70,6 +71,8 @@ public:
   void requestReloadWifi();
   bool isReloadWifiRequested();
   void controlFeature(SwitchStateOrigin origin, JsonObject &action, JsonVariant &result);
+  void controlFeature(SwitchStateOrigin origin, String topic, String payload);
+  void controlFeature(SwitchStateOrigin origin, int id, int state);
 
 private:
   bool reboot = false;

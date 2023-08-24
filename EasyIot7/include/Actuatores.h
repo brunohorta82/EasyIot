@@ -1,7 +1,7 @@
 #pragma once
 #include "Arduino.h"
 #include "constants.h"
-#include <Bounce2.h>
+#include <Button2.h>
 #include "ArduinoJson.h"
 #include <vector>
 #include "FS.h"
@@ -10,10 +10,10 @@ enum SwitchState
 {
     OFF = 0,
     ON = 1,
-    OPEN = 2,
-    CLOSE = 3,
-    STOP = 4,
-    PERCENTAGE = 5,
+    OPEN = 0,
+    CLOSE = 100,
+    STOP = 101,
+    TOGGLE = 102
 };
 enum SwitchStateOrigin
 {
@@ -52,6 +52,7 @@ public:
     char name[24] = {0};
     SwitchFamily family = SWITCH_PUSH;
     SwitchControlType typeControl = VIRTUAL;
+    int state = 0;
     // INTEGRATIONS
     bool cloudIOSupport = true;
     bool haSupport = false;
@@ -64,14 +65,14 @@ public:
     char readTopic[128]{};
     // GPIOS INPUT
     std::vector<unsigned int> inputs;
-    std::vector<Bounce> inputsBounced;
+    std::vector<Button2> buttons;
 
     // GPIOS OUTPUT
     std::vector<unsigned int> outputs;
 
     // CONTROL VARIABLES
-    unsigned int lastState = 0;
-    unsigned int state = 0;
+    int lastInputEvent = 0;
+    int currentInputEvent = 0;
     int lastPercentage = 0;
     bool lastPrimaryGpioState = true;
     bool lastSecondaryGpioState = true;
@@ -110,12 +111,19 @@ public:
     {
         return knxAddress[0] > 0 && knxAddress[1] >= 0 && knxAddress[2] == 0;
     };
+    String familyToText()
+    {
+        if (isLight())
+            return "light";
+        if (isCover())
+            return "cover";
+        if (isGarage())
+            return "garage";
+        if (isSwitch())
+            return "switch";
+        return "generic";
+    };
     ActuatorT *changeState(SwitchStateOrigin origin, int state);
-    const char *rotateState();
-    const String getCurrentState();
     void setup();
-    const void notifyState(bool dirty, const char *origin);
+    void notifyState(SwitchStateOrigin origin);
 };
-
-void stateSwitchByName(const char *name, const char *state, const char *value);
-void mqttSwitchControl(SwitchStateOrigin origin, const char *topic, const char *payload);

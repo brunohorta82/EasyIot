@@ -13,12 +13,11 @@ String getApName()
 {
   String version = String(VERSION, 3);
   version.replace(".", "x");
-  return "OnOfre-" + String(config.chipId) + "-" + version;
+  if (strcmp(config.nodeId, config.chipId) == 0)
+    return "OnOfre-" + String(config.chipId) + "-" + version;
+  return String(config.nodeId) + "-" + version;
 }
-bool wifiConnected()
-{
-  return jw.connectable();
-}
+
 void reloadWiFiConfig()
 {
   jw.disconnect();
@@ -174,7 +173,10 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
   }
 }
-
+bool wifiConnected()
+{
+  return WiFi.status() == WL_CONNECTED;
+}
 void refreshMDNS(const char *lastName)
 {
   bool success = false;

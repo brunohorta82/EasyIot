@@ -64,7 +64,7 @@ void onMqttConnect(bool sessionPresent)
   for (auto &sw : config.actuatores)
   {
     subscribeOnMqttCloudIO(sw.writeTopic);
-    notifyStateToCloudIO(sw.readTopic, sw.getCurrentState().c_str());
+    notifyStateToCloudIO(sw.readTopic, String(sw.state).c_str());
   }
   mqttClient.publish(config.healthTopic, 0, true, "1\0");
   for (auto &ss : config.sensors)
@@ -116,7 +116,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   }
   else
   {
-    mqttSwitchControl(SwitchStateOrigin::CLOUDIO, topic, msg);
+    // TODO  mqttSwitchControl(SwitchStateOrigin::CLOUDIO, topic, msg);
   }
 }
 
@@ -128,7 +128,7 @@ void setupCloudIO()
   mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
   mqttClient.setCleanSession(true);
-  mqttClient.setWill(config.healthTopic, 0, true, "0\0");
+  mqttClient.setWill(config.cloudIOhealthTopic, 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(config.chipId);
   mqttClient.setCredentials(config.cloudIOUsername, config.cloudIOPassword);
@@ -152,7 +152,7 @@ void cloudIoKeepAlive()
 }
 WiFiClient client;
 HTTPClient http;
-void connectoToCloudIO()
+void connectToCloudIO()
 {
 
   cloudIOReconnectTimer.detach();
@@ -168,37 +168,11 @@ void connectoToCloudIO()
   String payload = "";
   size_t s = config.actuatores.size();
   size_t ss = config.sensors.size();
-  const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(ActuatorT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
-  DynamicJsonDocument doc(CAPACITY);
-  JsonObject device = doc.to<JsonObject>();
-  device["chipId"] = config.chipId;
-  device["currentVersion"] = String(VERSION, 3);
-  device["nodeId"] = config.nodeId;
-  device["wifi"] = config.wifiSSID;
-  device["macAddr"] = WiFi.macAddress();
-  JsonArray feactures = device.createNestedArray("features");
-  for (auto &sw : config.actuatores)
-  {
-    JsonObject sdoc = feactures.createNestedObject();
-    sdoc["id"] = sw.id;
-    sdoc["name"] = sw.name;
-    sdoc["family"] = sw.family;
-    sdoc["shutterPercentage"] = sw.lastPercentage;
-    sdoc["stateControl"] = sw.getCurrentState();
-    sdoc["cloudIOSupport"] = sw.cloudIOSupport;
-    sdoc["knk"] = String(sw.knxAddress[0]) + "." + String(sw.knxAddress[1]) + "." + String(sw.knxAddress[2]);
-  }
-  for (const auto &ss : getAtualSensorsConfig().items)
-  {
-    JsonObject sdoc = feactures.createNestedObject();
-    sdoc["id"] = ss.id;
-    sdoc["name"] = ss.name;
-    sdoc["family"] = ss.deviceClass;
-    sdoc["stateControl"] = ss.lastReading;
-    sdoc["cloudIOSupport"] = ss.cloudIOSupport;
-  }
+  DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
+  JsonVariant root = doc.to<JsonVariant>();
+  config.json(root);
   serializeJson(doc, payload);
-  http.begin(client, "http://cloudio.bhonofre.pt/devices");
+  http.begin(client, "http://cloudio.bhonofre.pt/devices/config");
   http.addHeader("Content-Type", "application/json");
 #ifdef DEBUG_ONOFRE
   Log.error("%s [HTTP] POST %d" CR, tags::cloudIO, reconectCount);

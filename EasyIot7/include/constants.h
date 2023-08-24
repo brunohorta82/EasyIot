@@ -72,33 +72,3 @@ namespace constanstsCloudIO
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
 } // namespace constanstsCloudIO
-
-namespace constanstsSwitch
-{
-
-    constexpr const unsigned long delayDebounce{25ul};              // 25 milliseconds
-    constexpr const unsigned long delayCoverProtection{50ul};       // 50 milliseconds
-    constexpr const unsigned long coverAutoStopProtection{90000ul}; // after 90 seconds turn off all relay to enhance the lifecycle
-    constexpr const char *payloadOn{"ON"};
-    constexpr const char *payloadOff{"OFF"};
-    constexpr const char *payloadClose{"CLOSE"};
-    constexpr const char *payloadOpen{"OPEN"};
-    constexpr const char *payloadStop{"STOP"};
-
-    constexpr const char *familyLight{"light"};
-    constexpr const char *familySwitch{"switch"};
-    constexpr const char *familyCover{"cover"};
-    constexpr const char *familyGate{"garage"};
-
-    constexpr const int offIdx{0};
-    constexpr const int onIdx{1};
-    constexpr const int firtStopIdx{2};
-    constexpr const int openIdx{3};
-    constexpr const int secondStopIdx{4};
-    constexpr const int closeIdx{5};
-    constexpr const int coverStartIdx{2};
-    constexpr const int converEndIdx{5};
-    constexpr const int switchStartIdx{0};
-    constexpr const int switchEndIdx{1};
-
-} // namespace constanstsSwitch

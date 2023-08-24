@@ -4,9 +4,6 @@
 #include "WebServer.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
-#include "Actuatores.h"
-#include "Sensors.h"
-#include "LittleFS.h"
 #include <esp-knx-ip.h>
 
 ConfigOnofre config;
@@ -18,7 +15,7 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s CloudIO requested.", tags::system);
 #endif
-    connectoToCloudIO();
+    connectToCloudIO();
   }
 
   if (config.isWifiScanRequested())
@@ -31,6 +28,7 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Restart requested.", tags::system);
 #endif
+    delay(100);
     ESP.restart();
   }
 
@@ -84,7 +82,7 @@ void setup()
   config.load();
   setupWiFi();
   setupCors();
-  setupMQTT();
+  // setupMQTT();
 }
 
 void loop()

@@ -19,5 +19,6 @@ bool wifiConnected();
 void reloadWiFiConfig();
 void scanNewWifiNetworks();
 void enableScan();
+bool wifiConnected();
 void refreshMDNS(const char *lastName);
 #endif

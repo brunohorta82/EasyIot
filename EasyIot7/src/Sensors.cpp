@@ -1,7 +1,6 @@
 #include "Sensors.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include <ArduinoLog.h>
-#include "constants.h"
 #include "WebServer.h"
 #include "ConfigOnofre.h"
 #include "Mqtt.h"
@@ -13,61 +12,9 @@
 #include "CloudIO.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
-#include <Bounce2.h>
-#include "LittleFS.h"
-#include <Adafruit_SSD1306.h>
-#define DISPLAY_BTN 16
-bool displayOn = true;
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 32 // OLED display height, in pixels
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, DISPLAY_BTN);
-#define OLED_RESET 16 // Reset pin # (or -1 if sharing Arduino reset pin)
+
 extern ConfigOnofre config;
-void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
-{
-  if (config.i2cSDA < 0 || config.i2cSCL < 0)
-    display.clearDisplay();
-  display.setTextSize(1);              // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setCursor(5, 0);
-  display.println((String(_power) + "W").c_str());
-  display.setCursor(5, 8);
-  display.println((String(_energy) + "Kwh").c_str());
-  display.setCursor(5, 16);
-  display.println((String(_voltage) + "V").c_str());
-  display.setCursor(5, 24);
-  display.println((String(_amperage) + "A").c_str());
 
-  display.display();
-}
-
-void setupDisplay()
-{
-  if (config.i2cSDA < 0 || config.i2cSCL < 0)
-    return;
-  Wire.begin(config.i2cSDA, config.i2cSCL);
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-  {
-    return;
-  }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println(F("BH PZEM"));
-
-  display.display();
-}
-
-struct Sensors &getAtualSensorsConfig()
-{
-  static Sensors sensors;
-  return sensors;
-}
-void Sensors::resetAll()
-{
-  resetSensors(getAtualSensorsConfig());
-}
 void Sensors::load(File &file)
 {
   auto n_items = items.size();
@@ -121,8 +68,6 @@ void Sensors::load(File &file)
       IPAddress ip(192, 168, 1, item.secondaryGpio);
       item.pzem->setAddress(ip);
       configPIN(item.tertiaryGpio, INPUT);
-
-      setupDisplay();
     }
     break;
     case PZEM_004T_V03:
@@ -370,7 +315,7 @@ void publishReadings(String &readings, SensorT &sensor)
   String id = String(sensor.id);
   sendToServerEvents(id, readings.c_str());
   if (sensor.cloudIOSupport)
-    notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str(), readings.length());
+    notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str());
   if (sensor.mqttSupport)
   {
     publishOnMqtt(sensor.readTopic, readings.c_str(), sensor.mqttRetain);

@@ -114,7 +114,7 @@ function toggleActive(menu) {
             findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.add("active")
             fillConfig();
         }
-    }).then(()=>{
+    }).then(() => {
         const langSet = detectLang();
         document.querySelectorAll("span[class^='lang-']").forEach((l) => {
             const t = langSet[l.className.replace("lang-", "")];
@@ -130,8 +130,8 @@ function findByClass(c) {
 
 function findById(id) {
     const a = document.getElementById(id);
-    if(!a)
-        console.log("NOT_FOUND "+id)
+    if (!a)
+        console.log("NOT_FOUND " + id)
     return a;
 }
 
@@ -166,13 +166,7 @@ function fillConfig() {
     findById("apiUser").value = config.apiUser;
     findById("wifiIp").value = config.wifiIp;
 
-    source.addEventListener("bhonofre/"+config.chipId+"/available", (s)=>{
-        if(s.data === "online"){
-            findById("mqtt_state").classList.add("online")
-        } else {
-            findById("mqtt_state").classList.remove("online")
-        }
-    })
+
 }
 
 async function loadConfig() {
@@ -207,7 +201,7 @@ function saveConfig() {
     newConfig.apiUser = getValue("apiUser", config.apiUser).trim();
     fetch(baseUrl + "/save-config", {
         method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(newConfig)
     }).then(response => response.json()).then(json => config = json).then(() => {
         showMessage("config_save_ok");
@@ -226,16 +220,12 @@ function getValue(id, f) {
 function toggleSwitch(arg) {
     const action = {
         id: parseInt(arg.id),
-        state:arg.checked ? 100 : 0
+        state: arg.checked ? 1 : 0
     };
     fetch(baseUrl + "/control-feature", {
         method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(action)
-    }).then(response => response.json()).then(json => {
-        arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList = {};
-        arg.checked = json.state >0;
-        arg.parentNode.parentNode.getElementsByTagName("svg").item(0).classList.add(json.state ? "feature-icon-on" : "feature-icon-off");
     }).catch(() =>
         showMessage("control_state_error")
     );
@@ -245,12 +235,13 @@ function fillDevices() {
     let temp, item, a;
     temp = document.getElementsByTagName("template")[0];
     item = temp.content.querySelector("div");
-    var modal = document.getElementById("myModal");
+    const modal = document.getElementById("modal");
     for (const f of config.features) {
         a = document.importNode(item, true);
+        a.id = "f-"+f.id;
         a.getElementsByClassName("feature-name").item(0).textContent = f.name;
-        a.getElementsByTagName("svg").item(0).classList.add(f.state === 1 ? "feature-icon-on" : "feature-icon-off");
-        a.getElementsByTagName("input").item(0).checked = f.state === 1;
+        a.getElementsByTagName("svg").item(0).classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
+        a.getElementsByTagName("input").item(0).checked = f.state > 0;
         a.getElementsByTagName("input").item(0).id = f.id;
         document.getElementById("devices_config").appendChild(a);
         a.getElementsByClassName("feature-name").item(0).onclick = function () {
@@ -259,6 +250,13 @@ function fillDevices() {
             modal.getElementsByClassName("f-name").item(1).value = f.name;
 
         }
+        source.addEventListener(f.id, (s) => {
+            const box = document.getElementById("f-"+f.id);
+            box.getElementsByTagName("svg").item(0).classList.remove("feature-icon-on");
+            box.getElementsByTagName("svg").item(0).classList.remove("feature-icon-off");
+            box.getElementsByTagName("svg").item(0).classList.add(s.data > 0 ? "feature-icon-on" : "feature-icon-off");
+            box.getElementsByTagName("input").item(0).checked = s.data > 0;
+        })
     }
     const span = document.getElementsByClassName("close")[0];
     span.onclick = function () {
@@ -312,5 +310,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!!window.EventSource) {
         source = new EventSource(baseUrl + '/events');
     }
-
+    source.addEventListener("mqtt_health", (s) => {
+        if (s.data === "online") {
+            findById("mqtt_state").classList.add("online")
+        } else {
+            findById("mqtt_state").classList.remove("online")
+        }
+    })
 });

@@ -423,7 +423,7 @@ void setupCaptivePortal()
 void stopWebserver()
 {
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s WEBSERVER STOPED" CR, tags::system);
+  Log.notice("%s WEBSERVER STOP" CR, tags::system);
 #endif
   DefaultHeaders::Instance().end();
   server.end();
@@ -431,7 +431,7 @@ void stopWebserver()
 void startWebserver()
 {
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s WEBSERVER STARTED %d" CR, tags::system);
+  Log.notice("%s WEBSERVER START" CR, tags::system);
 #endif
   server.begin();
 }
@@ -459,10 +459,10 @@ void setupWebPanel()
     } });
 }
 
-void sendToServerEvents(const String &topic, const char *payload)
+void sendToServerEvents(String topic, String payload)
 {
   if (events.count() > 0)
-    events.send(payload, topic.c_str(), millis());
+    events.send(payload.c_str(), topic.c_str(), millis());
 }
 
 void webserverServicesLoop()

@@ -8,7 +8,7 @@ void initHomeAssistantDiscovery()
   {
     if (!sw.haSupport)
       continue;
-    publishOnMqtt(sw.readTopic, sw.getCurrentState().c_str(), true);
+    publishOnMqtt(sw.readTopic, String(sw.state).c_str(), true);
     addToHomeAssistant(sw);
   }
   for (auto &ss : config.sensors)
@@ -19,7 +19,10 @@ void initHomeAssistantDiscovery()
     addToHomeAssistant(ss);
   }
 }
-
+bool homeAssistantOnline(String topic, String payload)
+{
+  return (topic.compareTo(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status")) == 0 || topic.compareTo(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status")) == 0) && payload.compareTo(constantsMqtt::availablePayload) == 0;
+}
 void createHaSwitch(ActuatorT &sw)
 {
   if (!sw.haSupport)
@@ -37,21 +40,21 @@ void createHaSwitch(ActuatorT &sw)
   if (sw.isGarage())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_open"] = constanstsSwitch::payloadOpen;
-    object["payload_close"] = constanstsSwitch::payloadClose;
-    object["payload_stop"] = constanstsSwitch::payloadStop;
-    object["state_open"] = constanstsSwitch::payloadOpen;
-    object["state_closed"] = constanstsSwitch::payloadClose;
-    object["state_stopped"] = constanstsSwitch::payloadStop;
+    object["payload_open"] = 0;
+    object["payload_close"] = 100;
+    object["payload_stop"] = 101;
+    object["state_open"] = 0;
+    object["state_closed"] = 100;
+    object["state_stopped"] = 101;
     object["device_class"] = "garage";
     family = "cover";
   }
 
   if (sw.isCover())
   {
-    object["payload_open"] = constanstsSwitch::payloadOpen;
-    object["payload_close"] = constanstsSwitch::payloadClose;
-    object["payload_stop"] = constanstsSwitch::payloadStop;
+    object["payload_open"] = 0;
+    object["payload_close"] = 100;
+    object["payload_stop"] = 101;
     object["device_class"] = "shutter";
     object["position_open"] = 0;
     object["position_closed"] = 100;
@@ -61,8 +64,8 @@ void createHaSwitch(ActuatorT &sw)
   if (sw.isLight() || sw.isSwitch())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_on"] = constanstsSwitch::payloadOn;
-    object["payload_off"] = constanstsSwitch::payloadOff;
+    object["payload_on"] = 0;
+    object["payload_off"] = 100;
   }
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
