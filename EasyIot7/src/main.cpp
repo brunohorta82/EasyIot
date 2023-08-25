@@ -82,7 +82,7 @@ void setup()
   config.load();
   setupWiFi();
   setupCors();
-  // setupMQTT();
+  setupMQTT();
 }
 
 void loop()

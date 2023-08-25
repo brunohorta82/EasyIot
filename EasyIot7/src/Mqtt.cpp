@@ -20,7 +20,7 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     payload_as_string[length] = 0;
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
-    Log.notice("%s Payload: " CR, tags::mqtt, payload_as_string);
+    Log.notice("%s Payload: %s" CR, tags::mqtt, payload_as_string);
 #endif
     if (homeAssistantOnline(topic, payload_as_string))
     {

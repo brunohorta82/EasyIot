@@ -54,7 +54,7 @@ public:
     SwitchControlType typeControl = VIRTUAL;
     int state = 0;
     // INTEGRATIONS
-    bool cloudIOSupport = true;
+    bool cloudIOSupport = false;
     bool haSupport = false;
     // KNX
     uint8_t knxAddress[3] = {0, 0, 0};

@@ -19,7 +19,6 @@ void preparePzem()
     pzem.tertiaryGpio = constantsConfig::noGPIO;
     pzem.mqttRetain = true;
     pzem.haSupport = true;
-    pzem.emoncmsSupport = true;
     pzem.cloudIOSupport = true;
     pzem.delayRead = 5000;
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
@@ -29,6 +28,8 @@ void prepareLight(String name, unsigned int output, unsigned int input)
 {
     ActuatorT light;
     light.id = config.nextId();
+    light.haSupport = true;
+    light.cloudIOSupport = true;
     light.family = LIGHT_GENERIC;
     strlcpy(light.name, name.c_str(), sizeof(light.name));
     light.typeControl = SwitchControlType::GPIO_OUTPUT;
@@ -41,6 +42,8 @@ void prepareCover()
     ActuatorT cover;
     cover.id = config.nextId();
     cover.family = LIGHT_GENERIC;
+    cover.haSupport = true;
+    cover.cloudIOSupport = true;
 #ifdef CONFIG_LANG_PT
     strlcpy(cover.name, "Estore", sizeof(cover.name));
 #elif CONFIG_LANG_EN
@@ -63,6 +66,8 @@ void prepareGarage()
     ActuatorT garage;
     garage.id = config.nextId();
     garage.family = LIGHT_GENERIC;
+    garage.haSupport = true;
+    garage.cloudIOSupport = true;
 #ifdef CONFIG_LANG_PT
     strlcpy(garage.name, "Garagem", sizeof(garage.name));
 #elif CONFIG_LANG_EN

@@ -101,39 +101,9 @@ void Sensors::save(File &file) const
 }
 void SensorT::load(File &file)
 {
-  file.read((uint8_t *)id, sizeof(id));
-  file.read((uint8_t *)name, sizeof(name));
-  file.read((uint8_t *)family, sizeof(family));
-  file.read((uint8_t *)&type, sizeof(type));
-  file.read((uint8_t *)deviceClass, sizeof(deviceClass));
-  file.read((uint8_t *)&mqttRetain, sizeof(mqttRetain));
-  file.read((uint8_t *)&haSupport, sizeof(haSupport));
-  file.read((uint8_t *)&emoncmsSupport, sizeof(emoncmsSupport));
-  file.read((uint8_t *)&primaryGpio, sizeof(primaryGpio));
-  file.read((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
-  file.read((uint8_t *)&tertiaryGpio, sizeof(tertiaryGpio));
-  file.read((uint8_t *)&pullup, sizeof(pullup));
-  file.read((uint8_t *)&delayRead, sizeof(delayRead));
-  file.read((uint8_t *)&mqttSupport, sizeof(mqttSupport));
-  file.read((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
 }
 void SensorT::save(File &file) const
 {
-  file.write((uint8_t *)id, sizeof(id));
-  file.write((uint8_t *)name, sizeof(name));
-  file.write((uint8_t *)family, sizeof(family));
-  file.write((uint8_t *)&type, sizeof(type));
-  file.write((uint8_t *)deviceClass, sizeof(deviceClass));
-  file.write((uint8_t *)&mqttRetain, sizeof(mqttRetain));
-  file.write((uint8_t *)&haSupport, sizeof(haSupport));
-  file.write((uint8_t *)&emoncmsSupport, sizeof(emoncmsSupport));
-  file.write((uint8_t *)&primaryGpio, sizeof(primaryGpio));
-  file.write((uint8_t *)&secondaryGpio, sizeof(secondaryGpio));
-  file.write((uint8_t *)&tertiaryGpio, sizeof(tertiaryGpio));
-  file.write((uint8_t *)&pullup, sizeof(pullup));
-  file.write((uint8_t *)&delayRead, sizeof(delayRead));
-  file.write((uint8_t *)&mqttSupport, sizeof(mqttSupport));
-  file.write((uint8_t *)&cloudIOSupport, sizeof(cloudIOSupport));
 }
 
 void Sensors::save()
@@ -179,8 +149,6 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["lastBinaryState"] = ss.lastBinaryState;
     sdoc["haSupport"] = ss.haSupport;
     sdoc["cloudIOSupport"] = ss.cloudIOSupport;
-    sdoc["mqttSupport"] = ss.mqttSupport;
-    sdoc["emoncmsSupport"] = ss.emoncmsSupport;
   }
 }
 Sensors &Sensors::remove(int id)
@@ -229,9 +197,7 @@ void SensorT::updateFromJson(JsonObject doc)
   delayRead = doc["delayRead"] | 0;
   mqttRetain = doc["mqttRetain"] | true;
   cloudIOSupport = doc["cloudIOSupport"] | true;
-  mqttSupport = doc["mqttSupport"] | false;
   haSupport = doc["haSupport"] | true;
-  emoncmsSupport = doc["emoncmsSupport"] | false;
   strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOn));
   strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
   strlcpy(mqttPayload, "", sizeof(mqttPayload));
@@ -316,7 +282,7 @@ void publishReadings(String &readings, SensorT &sensor)
   sendToServerEvents(id, readings.c_str());
   if (sensor.cloudIOSupport)
     notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str());
-  if (sensor.mqttSupport)
+  if (mqttConnected())
   {
     publishOnMqtt(sensor.readTopic, readings.c_str(), sensor.mqttRetain);
   }

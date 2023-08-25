@@ -4,6 +4,9 @@
 extern ConfigOnofre config;
 void initHomeAssistantDiscovery()
 {
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Init HomeAssistant Discovery" CR, tags::homeassistant);
+#endif
   for (auto &sw : config.actuatores)
   {
     if (!sw.haSupport)
@@ -28,47 +31,48 @@ void createHaSwitch(ActuatorT &sw)
   if (!sw.haSupport)
     return;
   String objectStr = "";
+  String uniqueId = String(sw.id) + String(config.chipId);
   const size_t capacity = JSON_OBJECT_SIZE(8) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
-  object["unique_id"] = sw.id;
+  object["unique_id"] = uniqueId;
   object["cmd_t"] = sw.writeTopic;
 
   object["avty_t"] = config.healthTopic;
-  String family = String(sw.family);
+  String family = sw.familyToText();
   if (sw.isGarage())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_open"] = 0;
-    object["payload_close"] = 100;
-    object["payload_stop"] = 101;
-    object["state_open"] = 0;
-    object["state_closed"] = 100;
-    object["state_stopped"] = 101;
+    object["payload_open"] = SwitchState::OPEN;
+    object["payload_close"] = SwitchState::CLOSE;
+    object["payload_stop"] = SwitchState::STOP;
+    object["state_open"] = SwitchState::OPEN;
+    object["state_closed"] = SwitchState::CLOSE;
+    object["state_stopped"] = SwitchState::STOP;
     object["device_class"] = "garage";
     family = "cover";
   }
 
   if (sw.isCover())
   {
-    object["payload_open"] = 0;
-    object["payload_close"] = 100;
-    object["payload_stop"] = 101;
+    object["payload_open"] = SwitchState::OPEN;
+    object["payload_close"] = SwitchState::CLOSE;
+    object["payload_stop"] = SwitchState::STOP;
     object["device_class"] = "shutter";
-    object["position_open"] = 0;
-    object["position_closed"] = 100;
+    object["position_open"] = SwitchState::OPEN;
+    object["position_closed"] = SwitchState::CLOSE;
     object["position_topic"] = sw.readTopic;
     object["set_position_topic"] = sw.writeTopic;
   }
   if (sw.isLight() || sw.isSwitch())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_on"] = 0;
-    object["payload_off"] = 100;
+    object["payload_on"] = SwitchState::ON;
+    object["payload_off"] = SwitchState::OFF;
   }
   serializeJson(object, objectStr);
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + String(sw.id) + "/config").c_str(), objectStr.c_str(), false);
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
 }
 
 void addToHomeAssistant(SensorT &s)
@@ -264,7 +268,7 @@ void addToHomeAssistant(ActuatorT &sw)
 
 void removeFromHomeAssistant(ActuatorT &sw)
 {
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(sw.family) + "/" + String(sw.id) + "/config").c_str(), "", false);
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + sw.familyToText() + "/" + String(sw.id) + "/config").c_str(), "", false);
   delay(3);
 }
 

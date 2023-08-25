@@ -37,6 +37,8 @@ namespace tags
     constexpr const char *webserver{"[WEBSERVER]"};
     constexpr const char *emoncms{"[EMONCMS]"};
     constexpr const char *cloudIO{"[CLOUDIO]"};
+    constexpr const char *homeassistant{"[homeassistant]"};
+
 } // namespace tags
 namespace configFilenames
 {

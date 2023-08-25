@@ -38,11 +38,8 @@ struct SensorT
   char readTopic[128];
   char mqttPayload[128];
   bool mqttRetain = true;
-  bool emoncmsSupport = false;
   bool cloudIOSupport = true;
   bool haSupport = false;
-  bool knxSupport = false;
-  bool mqttSupport = false;
 
   // INPUT GPIO
   unsigned int primaryGpio = constantsConfig::noGPIO;
