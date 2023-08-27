@@ -3,8 +3,6 @@
 #include <JustWifi.h>
 #include "ConfigOnofre.h"
 #include "WebServer.h"
-#include "Mqtt.h"
-#include "CloudIO.h"
 #include <esp-knx-ip.h>
 int retryCount = 0;
 unsigned long connectedOn = 0ul;
@@ -163,6 +161,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     setupWebPanel();
     startWebserver();
     knx.start();
+    config.requestCloudIOSync();
     infoWifi();
     break;
 

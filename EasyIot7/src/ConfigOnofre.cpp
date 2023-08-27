@@ -218,9 +218,9 @@ void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String topic, String
 {
   for (auto &a : actuatores)
   {
-    if (strcmp(a.writeTopic, topic.c_str()) == 0)
+    if (strcmp(a.writeTopic, topic.c_str()) == 0 || strcmp(a.cloudIOwriteTopic, topic.c_str()) == 0)
     {
-      controlFeature(origin, a.id ,payload.toInt());
+      controlFeature(origin, a.id, payload.toInt());
       return;
     }
   }

@@ -304,8 +304,7 @@ void loadAPI()
     JsonObject configJson = json.as<JsonObject>();
     config.update(configJson).json(root);
     response->setLength();
-    request->send(response);
-    config.requestCloudIOSync(); }));
+    request->send(response); }));
 
   server
       .addHandler(new AsyncCallbackJsonWebHandler("/control-feature", [](AsyncWebServerRequest *request, JsonVariant json)

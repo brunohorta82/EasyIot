@@ -30,7 +30,6 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     {
         config.controlFeature(SwitchStateOrigin::MQTT, topic, payload_as_string);
     }
-
     free(payload_as_string);
 }
 

@@ -21,13 +21,14 @@ public:
   int mqttPort = 1883;
   char mqttUsername[32];
   char mqttPassword[64];
-  char writeTopic[64];
-  char readTopic[64];
   char healthTopic[64];
+
   // CLOUDIO
   char cloudIOUsername[40];
   char cloudIOPassword[64];
   char cloudIOhealthTopic[64];
+  char cloudIOwriteTopic[64];
+  char cloudIOreadTopic[64];
   // WIFI
   char wifiSSID[32];
   char wifiSecret[64];

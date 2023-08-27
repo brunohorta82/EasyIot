@@ -20,75 +20,56 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
   {
     shutters->getActuatorT()->shutterState[i] = state[i];
   }
-
-  // TODO getAtualSwitchesConfig().save();
-  if (mqttConnected())
-  {
-    // TODO publishOnMqtt(shutters->getActuatorT()->stateTopic(), shutters->getActuatorT()->getCurrentState().c_str(), false);
-  }
-  /* if (shutters->getActuatorT()->cloudIOSupport)
-   {
-     if (shutters->getActuatorT()->getCurrentState().equalsIgnoreCase(constanstsSwitch::payloadStop))
-     {
-       // TODO  notifyStateToCloudIO(shutters->getActuatorT()->mqttCloudStateTopic, shutters->getActuatorT()->getCurrentState().c_str(), strlen(shutters->getActuatorT()->getCurrentState().c_str()));
-     }
-     else
-     {
-       char dump[4] = {0};
-       int l = sprintf(dump, "%d", shutters->getActuatorT()->lastPercentage);
-       // TODO notifyStateToCloudIO(shutters->getActuatorT()->mqttCloudStateTopic, dump, l);
-     }
-   }*/
+  config.save();
 }
 void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 {
-  /*  if (s->getActuatorT()->outputs.size() != 2)
+  if (s->getActuatorT()->outputs.size() != 2)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.error("%s No outputs configured" CR, tags::actuatores);
+#endif
+    return;
+  }
+  switch (operation)
+  {
+  case ShuttersOperation::UP:
+    if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
-  #ifdef DEBUG_ONOFRE
-      Log.error("%s No outputs configured" CR, tags::switches);
-  #endif
-      return;
+#ifdef ESP32
+      writeToPIN(s->getActuatorT()->outputs[0], LOW);
+      delay(1);
+      writeToPIN(s->getActuatorT()->outputs[1], HIGH);
+#else
+      writeToPIN(s->getActuatorT()->outputs[0], HIGH);
+      delay(1);
+      writeToPIN(s->getActuatorT()->outputs[1], HIGH);
+#endif
     }
-    switch (operation)
+    break;
+  case ShuttersOperation::DOWN:
+    if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
     {
-    case ShuttersOperation::UP:
-      if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-  #ifdef ESP32
-        writeToPIN(s->getActuatorT()->outputs[0], LOW);
-        delay(1);
-        writeToPIN(s->getActuatorT()->outputs[1], HIGH);
-  #else
-        writeToPIN(s->getActuatorT()->outputs[0], HIGH);
-        delay(1);
-        writeToPIN(s->getActuatorT()->outputs[1], HIGH);
-  #endif
-      }
-      break;
-    case ShuttersOperation::DOWN:
-      if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-        writeToPIN(s->getActuatorT()->outputs[0], HIGH);
-        delay(1);
-        writeToPIN(s->getActuatorT()->outputs[1], LOW);
-      }
-
-      break;
-    case ShuttersOperation::HALT:
-      if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-
-  #ifdef ESP32
-        writeToPIN(s->getActuatorT()->outputs[0], LOW);
-        delay(1);
-        writeToPIN(s->getActuatorT()->outputs[1], LOW);
-  #else
-        writeToPIN(s->getActuatorT()->outputs[0], LOW);
-  #endif
-      }
-      break;
+      writeToPIN(s->getActuatorT()->outputs[0], HIGH);
+      delay(1);
+      writeToPIN(s->getActuatorT()->outputs[1], LOW);
     }
-    */
+
+    break;
+  case ShuttersOperation::HALT:
+    if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
+    {
+
+#ifdef ESP32
+      writeToPIN(s->getActuatorT()->outputs[0], LOW);
+      delay(1);
+      writeToPIN(s->getActuatorT()->outputs[1], LOW);
+#else
+      writeToPIN(s->getActuatorT()->outputs[0], LOW);
+#endif
+    }
+    break;
+  }
 }
 void readLastShutterState(char *dest, byte length, char *value)
 {
@@ -100,18 +81,18 @@ void readLastShutterState(char *dest, byte length, char *value)
 
 void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
-  /* shutters->getActuatorT()->lastPercentage = level;
+  shutters->getActuatorT()->lastPercentage = level;
 
-   char dump[4] = {0};
-   int l = sprintf(dump, "%d", level);
-   if (mqttConnected)
-   {
-     publishOnMqtt(shutters->getActuatorT()->stateTopic(), dump, false);
-   }
-   if (shutters->getActuatorT()->cloudIOSupport)
-   {
-     // TODO   notifyStateToCloudIO(shutters->getActuatorT()->mqttCloudStateTopic, dump, l);
-   }*/
+  char dump[4] = {0};
+  int l = sprintf(dump, "%d", level);
+  if (mqttConnected)
+  {
+    publishOnMqtt(shutters->getActuatorT()->readTopic, dump, false);
+  }
+  if (shutters->getActuatorT()->cloudIOSupport)
+  {
+    notifyStateToCloudIO(shutters->getActuatorT()->cloudIOreadTopic, dump);
+  }
 }
 
 void switchesCallback(message_t const &msg, void *arg)
