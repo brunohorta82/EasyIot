@@ -73,6 +73,7 @@ struct SwitchT
     Bounce *debouncerSecondary = nullptr;
     int statePoolIdx = -1;
     bool isCover = false;
+    bool isGate = false;
     unsigned long lastChangeState = 0;
 
     // CLOUDIO

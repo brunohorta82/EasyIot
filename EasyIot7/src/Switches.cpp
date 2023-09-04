@@ -56,7 +56,15 @@ void SwitchT::updateFromJson(JsonObject doc)
   knxLevelTwo = doc["knxLevelTwo"] | 0;
   knxLevelThree = doc["knxLevelThree"] | 0;
   knxSupport = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree >= 0;
-  primaryStateGpio = doc["primaryStateGpio"] | constantsConfig::noGPIO;
+  if (isGate)
+  {
+    primaryStateGpio = 13;
+  }
+  else
+  {
+    primaryStateGpio = doc["primaryStateGpio"] | constantsConfig::noGPIO;
+  }
+
   secondaryStateGpio = doc["secondaryStateGpio"] | constantsConfig::noGPIO;
   thirdGpioControl = doc["thirdGpioControl"] | constantsConfig::noGPIO;
 
@@ -286,6 +294,7 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 void SwitchT::configPins()
 {
   isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
+  isGate = strcmp(family, constanstsSwitch::familyGate) == 0;
   if (isCover)
   {
     shutter = new Shutters(this);
@@ -303,6 +312,12 @@ void SwitchT::configPins()
   configPIN(thirdGpioControl, OUTPUT);
   configPIN(secondaryStateGpio, INPUT_PULLUP);
   configPIN(primaryStateGpio, INPUT_PULLUP);
+  if (isGate)
+  {
+    writeToPIN(primaryGpioControl, inverted ? HIGH : LOW);   // TURN OFF
+    writeToPIN(secondaryGpioControl, inverted ? HIGH : LOW); // TURN OFF
+    writeToPIN(thirdGpioControl, inverted ? HIGH : LOW);     // TURN OFF
+  }
   if (primaryGpio != constantsConfig::noGPIO)
   {
     debouncerPrimary = new Bounce();
@@ -756,10 +771,7 @@ const String SwitchT::changeState(const char *state, const char *origin)
     {
       if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl == constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
-        if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx || statePoolIdx == constanstsSwitch::firtStopIdx || statePoolIdx == constanstsSwitch::secondStopIdx)
-        {
-          timedOn(primaryGpioControl, inverted, 1000);
-        }
+        timedOn(primaryGpioControl, inverted, 1000);
       }
       else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
       {
@@ -872,7 +884,28 @@ void loop(Switches &switches)
       sw.debouncerSecondary->update();
       secondaryGpioEvent = sw.debouncerSecondary->read();
     }
-
+    if (sw.isGate)
+    {
+      bool primaryStateGpioEvent = true;
+      bool secondaryStateGpioEvent = true;
+      if (sw.primaryStateGpio != constantsConfig::noGPIO)
+      {
+        primaryStateGpioEvent = readPIN(sw.primaryStateGpio);
+        if (sw.lastPrimaryStateGpioState != primaryStateGpioEvent)
+        {
+          sw.lastPrimaryStateGpioState = primaryStateGpioEvent;
+          if (primaryStateGpioEvent)
+          {
+            sw.statePoolIdx = constanstsSwitch::openIdx;
+          }
+          else
+          {
+            sw.statePoolIdx = constanstsSwitch::closeIdx;
+          }
+          sw.notifyState(true, "LOOP");
+        }
+      }
+    }
     switch (sw.mode)
     {
     case SWITCH:
@@ -894,47 +927,6 @@ void loop(Switches &switches)
       }
 
       break;
-    case GATE_SWITCH:
-    {
-      bool primaryStateGpioEvent = true;
-      bool secondaryStateGpioEvent = true;
-      if (sw.primaryStateGpio != constantsConfig::noGPIO)
-      {
-        primaryStateGpioEvent = readPIN(sw.primaryStateGpio);
-        if (sw.lastPrimaryStateGpioState != primaryStateGpioEvent)
-        {
-          sw.lastPrimaryStateGpioState = primaryStateGpioEvent;
-          if (primaryStateGpioEvent)
-          {
-            sw.statePoolIdx = constanstsSwitch::closeIdx;
-          }
-          else
-          {
-            sw.statePoolIdx = constanstsSwitch::openIdx;
-          }
-          sw.notifyState(true, "LOOP");
-        }
-      }
-      if (sw.secondaryStateGpio != constantsConfig::noGPIO)
-      {
-        secondaryStateGpioEvent = readPIN(sw.secondaryStateGpio);
-        if (sw.lastSecondaryStateGpioState != secondaryStateGpioEvent)
-        {
-          sw.lastSecondaryStateGpioState = secondaryStateGpioEvent;
-          if (secondaryStateGpioEvent)
-          {
-            sw.statePoolIdx = constanstsSwitch::openIdx;
-          }
-          else
-          {
-            sw.statePoolIdx = constanstsSwitch::closeIdx;
-          }
-          sw.notifyState(true, "LOOP");
-        }
-      }
-    }
-
-    break;
     case DUAL_SWITCH:
       if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
       {

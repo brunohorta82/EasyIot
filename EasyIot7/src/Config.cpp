@@ -252,7 +252,7 @@ void Config::toJson(JsonVariant &root)
   root["wifiGw"] = wifiGw;
   root["staticIp"] = staticIp;
   root["apName"] = apName;
-  root["firmware"] = VERSION;
+  root["firmware"] = String(VERSION, 3);
   root["chipId"] = chipId;
   root["mac"] = WiFi.macAddress();
   root["apiUser"] = apiUser;

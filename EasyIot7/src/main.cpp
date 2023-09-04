@@ -37,6 +37,7 @@ void checkInternalRoutines()
 
     Log.notice("%s Rebooting...", tags::system);
 #endif
+    delay(100);
     ESP.restart();
   }
   if (loadDefaultsRequested())

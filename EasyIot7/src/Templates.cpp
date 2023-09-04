@@ -96,8 +96,14 @@ void loadSwitchDefaults()
     one.mode = SwitchMode::PUSH;
     strlcpy(one.name, "Garagem", sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
-    one.primaryGpio = constantsConfig::noGPIO;
     one.primaryStateGpio = 13;
+    one.secondaryGpioControl = constantsConfig::noGPIO;
+#ifdef ESP8266
+    one.primaryGpio = 12u;
+#endif
+#ifdef ESP32
+    one.primaryGpio = 14u;
+#endif
     one.autoStateDelay = 0;
 #endif
 
@@ -113,7 +119,7 @@ void loadSwitchDefaults()
     strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
 #endif
 
-#if defined DUAL_LIGHT || GATE
+#if defined DUAL_LIGHT
     one.secondaryGpio = constantsConfig::noGPIO;
     one.secondaryGpioControl = constantsConfig::noGPIO;
 #endif

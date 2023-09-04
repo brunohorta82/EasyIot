@@ -169,17 +169,17 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
   }
 }
-
 void refreshMDNS(const char *lastName)
 {
   bool success = false;
 #ifdef ESP32
+  MDNS.end();
   success = MDNS.begin(String(getAtualConfig().nodeId).c_str());
 #endif
 #ifdef ESP8266
   MDNS.removeService(lastName, "bhonofre", "tcp");
   MDNS.close();
-  success = MDNS.begin(String(getAtualConfig().nodeId), INADDR_ANY, 10);
+  success = MDNS.begin(String(config.nodeId), INADDR_ANY, 10);
 #endif
 
   if (success)
@@ -188,7 +188,12 @@ void refreshMDNS(const char *lastName)
     MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(getAtualConfig().chipId));
     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
     MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
-    MDNS.addServiceTxt("bhonofre", "tcp", "firmwareMode", constantsConfig::firmwareMode);
+#ifdef ESP32
+    MDNS.addServiceTxt("bhonofre", "tcp", "mcu", "ESP32");
+#endif
+#ifdef ESP8266
+    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", "ESP8266");
+#endif
   }
   else
   {
