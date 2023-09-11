@@ -40,7 +40,7 @@ void createHaSwitch(const SwitchT &sw)
 
   object["avty_t"] = getAvailableTopic();
   String family = String(sw.family);
-  if (strcmp(sw.family, constanstsSwitch::familyGate) == 0)
+  if (strcmp(sw.family, constanstsSwitch::familyGarage) == 0)
   {
     object["stat_t"] = sw.mqttStateTopic;
     object["payload_open"] = constanstsSwitch::payloadOpen;

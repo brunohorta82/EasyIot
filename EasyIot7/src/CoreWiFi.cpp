@@ -179,7 +179,7 @@ void refreshMDNS(const char *lastName)
 #ifdef ESP8266
   MDNS.removeService(lastName, "bhonofre", "tcp");
   MDNS.close();
-  success = MDNS.begin(String(config.nodeId), INADDR_ANY, 10);
+  success = MDNS.begin(getAtualConfig().nodeId, INADDR_ANY, 10);
 #endif
 
   if (success)

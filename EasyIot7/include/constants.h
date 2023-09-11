@@ -82,7 +82,7 @@ namespace constanstsSwitch
     constexpr const char *familyLight{"light"};
     constexpr const char *familySwitch{"switch"};
     constexpr const char *familyCover{"cover"};
-    constexpr const char *familyGate{"garage"};
+    constexpr const char *familyGarage{"garage"};
 
     constexpr const int offIdx{0};
     constexpr const int onIdx{1};

@@ -28,7 +28,7 @@ void SwitchT::updateFromJson(JsonObject doc)
   strlcpy(id, idStr.c_str(), sizeof(id));
   if (SwitchMode::GATE_SWITCH == mode)
   {
-    strlcpy(family, constanstsSwitch::familyGate, sizeof(family));
+    strlcpy(family, constanstsSwitch::familyGarage, sizeof(family));
   }
   else
   {
@@ -294,7 +294,7 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 void SwitchT::configPins()
 {
   isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
-  isGate = strcmp(family, constanstsSwitch::familyGate) == 0;
+  isGate = strcmp(family, constanstsSwitch::familyGarage) == 0;
   if (isCover)
   {
     shutter = new Shutters(this);
@@ -572,7 +572,7 @@ int findPoolIdx(const char *state, int currentIdx, const char *family)
 {
   int start, end;
 
-  if (strcmp(family, constanstsSwitch::familyCover) == 0 || strcmp(family, constanstsSwitch::familyGate) == 0)
+  if (strcmp(family, constanstsSwitch::familyCover) == 0 || strcmp(family, constanstsSwitch::familyGarage) == 0)
   {
     start = constanstsSwitch::coverStartIdx;
     end = constanstsSwitch::converEndIdx;
@@ -718,7 +718,7 @@ const String SwitchT::changeState(const char *state, const char *origin)
   bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
   bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
   bool isFromKnx = strcmp("KNX", origin) == 0;
-  bool isGate = strncmp(family, constanstsSwitch::familyGate, sizeof(constanstsSwitch::familyGate)) == 0;
+  bool isGate = strncmp(family, constanstsSwitch::familyGarage, sizeof(constanstsSwitch::familyGarage)) == 0;
   if (isCover)
   {
     if (typeControl == SwitchControlType::GPIO_OUTPUT)

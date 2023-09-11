@@ -95,7 +95,7 @@ void loadSwitchDefaults()
 #if defined GATE
     one.mode = SwitchMode::PUSH;
     strlcpy(one.name, "Garagem", sizeof(one.name));
-    strlcpy(one.family, constanstsSwitch::familyGate, sizeof(one.family));
+    strlcpy(one.family, constanstsSwitch::familyGarage, sizeof(one.family));
     one.primaryStateGpio = 13;
     one.secondaryGpioControl = constantsConfig::noGPIO;
 #ifdef ESP8266
