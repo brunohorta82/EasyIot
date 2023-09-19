@@ -202,7 +202,7 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
     shutters->getSwitchT()->shutterState[i] = state[i];
   }
 
-  getAtualSwitchesConfig().save();
+  getAtualSwitchesConfig().save(false);
   if (shutters->getSwitchT()->mqttSupport)
   {
     publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), false);
@@ -387,7 +387,7 @@ void SwitchT::load(File &file)
     changeState(getCurrentState().c_str(), "LOAD");
 }
 
-void Switches::save()
+void Switches::save(bool syncState)
 {
   if (!LittleFS.begin())
   {
@@ -404,7 +404,8 @@ void Switches::save()
 #ifdef DEBUG_ONOFRE
   Log.error("%s Request CloudIO Sync" CR, tags::switches);
 #endif
-  requestCloudIOSync();
+  if (!syncState)
+    requestCloudIOSync();
 }
 
 void switchesCallback(message_t const &msg, void *arg)
@@ -471,7 +472,7 @@ Switches &Switches::remove(const char *id)
   unsubscribeOnMqtt(match->mqttCommandTopic);
   removeFromHaDiscovery(*match);
   items.erase(match);
-  save();
+  save(false);
   return *this;
 }
 
@@ -494,11 +495,11 @@ void reloadSwitches()
 {
   for (auto &sw : getAtualSwitchesConfig().items)
     sw.reloadMqttTopics();
-  getAtualSwitchesConfig().save();
+  getAtualSwitchesConfig().save(false);
 }
 void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 {
-  getAtualSwitchesConfig().save();
+  getAtualSwitchesConfig().save(false);
   removeFromHaDiscovery(sw);
   if (sw.haSupport)
     addToHaDiscovery(sw);
@@ -557,7 +558,7 @@ void load(Switches &switches)
     Log.notice("%s Default config loaded." CR, tags::switches);
 #endif
     loadSwitchDefaults();
-    getAtualSwitchesConfig().save();
+    getAtualSwitchesConfig().save(false);
   }
   File file = LittleFS.open(configFilenames::switches, "r+");
   switches.load(file);
@@ -861,7 +862,7 @@ void loop(Switches &switches)
 #ifdef DEBUG_ONOFRE
     Log.notice("%s AUTO SAVE" CR, tags::switches);
 #endif
-    getAtualSwitchesConfig().save();
+    getAtualSwitchesConfig().save(true);
   }
   for (auto &sw : switches.items)
   {

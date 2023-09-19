@@ -1,7 +1,6 @@
 #pragma once
 namespace constantsMqtt
 {
-    constexpr const char *mqttCloudURL{"mqtt.bhonofre.pt"};
     constexpr const char *availablePayload{"online"};
     constexpr const char *homeAssistantAutoDiscoveryPrefixLegacy{"hass"};
     constexpr const char *homeAssistantAutoDiscoveryPrefix{"homeassistant"};
@@ -63,6 +62,7 @@ namespace constantsConfig
 
 namespace constanstsCloudIO
 {
+    constexpr const char *cloudioDevicesUrl{"http://cloudio.bhonofre.pt/devices"};
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
 } // namespace constanstsCloudIO

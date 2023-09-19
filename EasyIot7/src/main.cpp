@@ -135,7 +135,6 @@ void loop()
   {
     loop(getAtualSwitchesConfig());
     loop(getAtualSensorsConfig());
-    loopTime();
   }
   if (WiFi.status() == WL_CONNECTED)
     knx.loop();

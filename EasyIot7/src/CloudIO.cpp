@@ -176,6 +176,7 @@ void setupCloudIO()
   mqttClient.onMessage(onMqttMessage);
   mqttClient.onPublish(onMqttPublish);
   mqttClient.setCleanSession(true);
+  mqttClient.setKeepAlive(60);
   mqttClient.setWill(getAtualConfig().availableCloudIO, 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(getAtualConfig().chipId);
@@ -247,7 +248,7 @@ void connectoToCloudIO()
     sdoc["cloudIOSupport"] = ss.cloudIOSupport;
   }
   serializeJson(doc, payload);
-  http.begin(client, "http://cloudio.bhonofre.pt/devices");
+  http.begin(client, constanstsCloudIO::cloudioDevicesUrl);
   http.addHeader("Content-Type", "application/json");
 #ifdef DEBUG_ONOFRE
   Log.error("%s [HTTP] POST %d" CR, tags::cloudIO, reconectCount);

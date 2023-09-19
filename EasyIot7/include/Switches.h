@@ -112,7 +112,7 @@ struct Switches
     void load(File &file);
     const char *rotate(const char *id);
     void save(File &file) const;
-    void save();
+    void save(bool syncState);
     const String stateSwitchById(const char *id, const char *state);
     Switches &remove(const char *id);
     Switches &updateFromJson(const String &id, JsonObject &doc);
