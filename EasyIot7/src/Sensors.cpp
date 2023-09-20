@@ -87,32 +87,32 @@ void Sensors::load(File &file)
       continue;
       break;
     case LDR:
-      strlcpy(item.deviceClass, "LIGHTNESS", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "lightness", sizeof(item.deviceClass));
       break;
     case PIR:
     case RCWL_0516:
-      strlcpy(item.deviceClass, "MOTION", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "motion", sizeof(item.deviceClass));
       configPIN(item.primaryGpio, INPUT);
       break;
     case REED_SWITCH_NC:
     case REED_SWITCH_NO:
-      strlcpy(item.deviceClass, "ALARM", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "alarm", sizeof(item.deviceClass));
       configPIN(item.primaryGpio, INPUT_PULLUP);
       break;
     case DHT_11:
     case DHT_21:
     case DHT_22:
-      strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "temperature", sizeof(item.deviceClass));
       item.dht = new DHT_nonblocking(item.primaryGpio, item.type);
       break;
     case DS18B20:
-      strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "temperature", sizeof(item.deviceClass));
       item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
       break;
 
     case PZEM_004T:
     {
-      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "power", sizeof(item.deviceClass));
 #if defined(ESP8266)
       item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
 #endif
@@ -129,7 +129,7 @@ void Sensors::load(File &file)
     break;
     case PZEM_004T_V03:
     {
-      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "power", sizeof(item.deviceClass));
 
 #if defined(ESP8266)
       // static SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
@@ -145,7 +145,7 @@ void Sensors::load(File &file)
 #endif
       break;
     case PZEM_017:
-      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
+      strlcpy(item.deviceClass, "power", sizeof(item.deviceClass));
       // TODO item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
       // TODO item.pzemModbus->Begin(9600, 2);
 #if WITH_DISPLAY
@@ -368,25 +368,25 @@ void SensorT::updateFromJson(JsonObject doc)
     return;
     break;
   case LDR:
-    strlcpy(deviceClass, "LIGHTNESS", sizeof(deviceClass));
+    strlcpy(deviceClass, "lightness", sizeof(deviceClass));
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     strlcpy(mqttPayload, "{\"illuminance\":0}", sizeof(mqttPayload));
     break;
   case PIR:
   case RCWL_0516:
-    strlcpy(deviceClass, "MOTION", sizeof(deviceClass));
+    strlcpy(deviceClass, "motion", sizeof(deviceClass));
     configPIN(primaryGpio, INPUT);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NC:
-    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
+    strlcpy(deviceClass, "alarm", sizeof(deviceClass));
     configPIN(primaryGpio, INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":1}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NO:
-    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
+    strlcpy(deviceClass, "alarm", sizeof(deviceClass));
     configPIN(primaryGpio, INPUT_PULLUP);
     strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
     strlcpy(mqttPayload, "{\"binary_state\":0}", sizeof(mqttPayload));
@@ -394,18 +394,18 @@ void SensorT::updateFromJson(JsonObject doc)
   case DHT_11:
   case DHT_21:
   case DHT_22:
-    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
+    strlcpy(deviceClass, "temperature", sizeof(deviceClass));
     dht = new DHT_nonblocking(primaryGpio, type);
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     strlcpy(mqttPayload, "{\"humidity\":0,\"temperature\":0}", sizeof(mqttPayload));
     break;
   case DS18B20:
-    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
+    strlcpy(deviceClass, "temperature", sizeof(deviceClass));
     dallas = new DallasTemperature(new OneWire(primaryGpio));
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
   case PZEM_004T:
-    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
+    strlcpy(deviceClass, "power", sizeof(deviceClass));
 #ifdef ESP8266
     pzem = new PZEM004T(primaryGpio, secondaryGpio);
 #endif
@@ -416,7 +416,7 @@ void SensorT::updateFromJson(JsonObject doc)
     break;
   case PZEM_004T_V03:
   {
-    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
+    strlcpy(deviceClass, "power", sizeof(deviceClass));
 #if defined(ESP8266)
     // static SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
     pzemv03 = new PZEM004Tv30(primaryGpio, secondaryGpio);
@@ -430,7 +430,7 @@ void SensorT::updateFromJson(JsonObject doc)
   }
   break;
   case PZEM_017:
-    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
+    strlcpy(deviceClass, "power", sizeof(deviceClass));
     // TODO pzemModbus = new Modbus(primaryGpio, secondaryGpio);
     //  TODO pzemModbus->Begin(9600, 2);
     break;
