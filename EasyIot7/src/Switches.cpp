@@ -401,11 +401,13 @@ void Switches::save(bool syncState)
     return;
   this->save(file);
   file.close();
-#ifdef DEBUG_ONOFRE
-  Log.error("%s Request CloudIO Sync" CR, tags::switches);
-#endif
   if (!syncState)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.error("%s Request CloudIO Sync" CR, tags::switches);
+#endif
     requestCloudIOSync();
+  }
 }
 
 void switchesCallback(message_t const &msg, void *arg)
@@ -623,7 +625,25 @@ void mqttSwitchControl(Switches &switches, const char *topic, const char *payloa
         sw.childLock = false;
         continue;
       }
-      sw.changeState(payload, "MQTT");
+      if (sw.isCover)
+      {
+        sw.changeState(payload, "MQTT");
+      }
+      else
+      {
+        if (strcmp(payload, "100") == 0)
+        {
+          sw.changeState("ON", "MQTT");
+        }
+        else if (strcmp(payload, "0") == 0)
+        {
+          sw.changeState("OFF", "MQTT");
+        }
+        else
+        {
+          sw.changeState(payload, "MQTT");
+        }
+      }
     }
   }
 }

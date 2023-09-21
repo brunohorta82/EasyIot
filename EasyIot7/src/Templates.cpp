@@ -1,5 +1,3 @@
-#ifndef TEMPLATES_h
-#define TEMPLATES_h
 #include "Templates.h"
 #include <Arduino.h>
 #include "Switches.h"
@@ -67,17 +65,13 @@ void loadSwitchDefaults()
     SwitchT one;
     one.firmware = VERSION;
     one.typeControl = SwitchControlType::GPIO_OUTPUT;
-    one.knxSupport = false;
-    one.haSupport = false;
-    one.mqttSupport = false;
-    one.cloudIOSupport = true;
-    one.pullup = true;
-    one.mqttRetain = false;
-    one.inverted = false;
     one.primaryGpioControl = 4u;
-    one.secondaryGpioControl = 5u;
-    one.lastPrimaryGpioState = false;
-    one.lastSecondaryGpioState = false;
+#ifdef ESP8266
+    one.primaryGpio = 12u;
+#endif
+#ifdef ESP32
+    one.primaryGpio = 14u;
+#endif
 
 #if defined DUAL_LIGHT
     one.mode = SWITCH;
@@ -98,66 +92,27 @@ void loadSwitchDefaults()
     strlcpy(one.family, constanstsSwitch::familyGarage, sizeof(one.family));
     one.primaryStateGpio = 13;
     one.secondaryGpioControl = constantsConfig::noGPIO;
-#ifdef ESP8266
-    one.primaryGpio = 12u;
-#endif
-#ifdef ESP32
-    one.primaryGpio = 14u;
-#endif
-    one.autoStateDelay = 0;
-#endif
 
-#if defined DUAL_LIGHT || COVER
-#ifdef ESP8266
-    one.primaryGpio = 12u;
-#endif
-#ifdef ESP32
-    one.primaryGpio = 14u;
-#endif
-
-    one.autoStateDelay = 0ul;
-    strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
-#endif
-
-#if defined DUAL_LIGHT
-    one.secondaryGpio = constantsConfig::noGPIO;
-    one.secondaryGpioControl = constantsConfig::noGPIO;
 #endif
     String idStr;
     generateId(idStr, one.name, 1, sizeof(one.id));
     strlcpy(one.id, idStr.c_str(), sizeof(one.id));
-    one.reloadMqttTopics();
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
+    one.reloadMqttTopics();
     getAtualSwitchesConfig().items.push_back(one);
-
 #if defined DUAL_LIGHT
     SwitchT two;
     two.firmware = VERSION;
-    two.lastPrimaryGpioState = false;
-    two.lastSecondaryGpioState = false;
     strlcpy(two.name, "Interruptor2", sizeof(two.name));
     String idStr2;
     generateId(idStr2, two.name, 1, sizeof(two.id));
     strlcpy(two.id, idStr2.c_str(), sizeof(two.id));
     strlcpy(two.family, constanstsSwitch::familyLight, sizeof(two.family));
     two.primaryGpio = 13u;
-    two.secondaryGpio = constantsConfig::noGPIO;
-    two.autoStateDelay = 0ul;
-    strlcpy(two.autoStateValue, "", sizeof(two.autoStateValue));
-    two.typeControl = SwitchControlType::GPIO_OUTPUT;
     two.mode = SWITCH;
-    two.knxSupport = false;
-    two.haSupport = false;
-    two.mqttSupport = false;
-    two.cloudIOSupport = true;
-    two.pullup = true;
-    two.mqttRetain = false;
-    two.inverted = false;
-    two.reloadMqttTopics();
     two.statePoolIdx = findPoolIdx("", two.statePoolIdx, two.family);
     two.primaryGpioControl = 5u;
-    two.secondaryGpioControl = constantsConfig::noGPIO;
+    two.reloadMqttTopics();
     getAtualSwitchesConfig().items.push_back(two);
 #endif
 }
-#endif
