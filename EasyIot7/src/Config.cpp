@@ -2,224 +2,21 @@
 #include "constants.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
-
 #include <esp-knx-ip.h>
-
 #include "WebServer.h"
 #include "Switches.h"
 #include "Sensors.h"
-const char *NTP_SERVER = "pt.pool.ntp.org";
-const char *TZ_INFO = "WET-0WEST-1,M3.5.0/01:00:00,M10.5.0/02:00:00";
-tm timeinfo;
-time_t now;
-unsigned long lastNTPtime = 0ul;
-// CONTROL FLAGS
-static bool g_reboot = false;
-static bool g_loadDefaults = false;
-static bool g_autoUpdate = false;
-static bool g_wifiReload = false;
-static bool g_cloudIOSync = false;
-static bool g_wifiScan = false;
-struct Config &
-getAtualConfig()
-{
-  static Config config;
-  return config;
-}
+
+extern Config config;
 void generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
   id.reserve(maxSize);
-  id.concat(getAtualConfig().chipId);
+  id.concat(config.chipId);
   id.concat(name);
   id.concat(familyCode);
   normalize(id);
 }
-long getTime()
-{
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    return 0;
-  }
-  time_t now = time(nullptr);
-  return now;
-}
-void loopTime()
-{
-  if (WiFi.status() == WL_CONNECTED && lastNTPtime + 1000 < millis())
-  {
-    long time = getTime();
-    if (getAtualConfig().connectedOn == 0ul && time > 1576082395)
-    {
-      getAtualConfig().connectedOn = time;
-      refreshMDNS(getAtualConfig().nodeId);
-    }
-    lastNTPtime = millis();
-  }
-}
-boolean isValidNumber(const char *str)
-{
-  size_t length = strlen(str);
-  for (byte i = 0; i < length; i++)
-  {
-    if (isDigit(str[i]))
-      return true;
-  }
-  return false;
-}
-void requestWifiScan()
-{
-  g_wifiScan = true;
-}
-bool wifiScanRequested()
-{
-  if (g_wifiScan)
-  {
-    g_wifiScan = false;
-    return true;
-  }
-  return false;
-}
-void requestCloudIOSync()
-{
-  g_cloudIOSync = true;
-}
-bool cloudIOSync()
-{
-  if (g_cloudIOSync)
-  {
-    g_cloudIOSync = false;
-    return true;
-  }
-  return false;
-}
-void requestReloadWifi()
-{
-  g_wifiReload = true;
-}
-bool reloadWifiRequested()
-{
-  if (g_wifiReload)
-  {
-    g_wifiReload = false;
-    return true;
-  }
-  return false;
-}
 
-void requestRestart()
-{
-  g_reboot = true;
-}
-bool restartRequested()
-{
-  if (g_reboot)
-  {
-    g_reboot = false;
-    return true;
-  }
-  return false;
-}
-
-void requestAutoUpdate()
-{
-  g_autoUpdate = true;
-}
-bool autoUpdateRequested()
-{
-  if (g_autoUpdate)
-  {
-    g_autoUpdate = false;
-    return true;
-  }
-  return false;
-}
-
-void configPIN(uint8_t pin, uint8_t mode)
-{
-#ifdef ESP8266
-  if (pin == 16)
-  {
-    if (mode == INPUT_PULLUP)
-    {
-      mode = INPUT_PULLDOWN_16;
-    }
-  }
-#endif
-  if (pin == constantsConfig::noGPIO)
-  {
-    return;
-  }
-  pinMode(pin, mode);
-}
-
-void writeToPIN(uint8_t pin, uint8_t val)
-{
-  if (pin == constantsConfig::noGPIO)
-  {
-    return;
-  }
-  digitalWrite(pin, val);
-}
-
-bool readPIN(uint8_t pin)
-{
-  if (pin == constantsConfig::noGPIO)
-  {
-    return true;
-  }
-  return digitalRead(pin);
-}
-void requestLoadDefaults()
-{
-  g_loadDefaults = true;
-}
-bool loadDefaultsRequested()
-{
-  if (g_loadDefaults)
-  {
-    g_loadDefaults = false;
-    return true;
-  }
-  return false;
-}
-
-void normalize(String &inputStr)
-{
-  inputStr.toLowerCase();
-  inputStr.trim();
-  inputStr.replace("_", "");
-  inputStr.replace(".", "");
-  inputStr.replace("/", "");
-  inputStr.replace("\\", "");
-  inputStr.replace("º", "");
-  inputStr.replace("ª", "");
-  inputStr.replace("ç", "c");
-  inputStr.replace("á", "a");
-  inputStr.replace("à", "a");
-  inputStr.replace("&", "");
-  inputStr.replace("%", "");
-  inputStr.replace("$", "");
-  inputStr.replace("#", "");
-  inputStr.replace("!", "");
-  inputStr.replace("+", "");
-  inputStr.replace(",", "");
-  inputStr.replace("\"", "");
-  inputStr.replace(" ", "");
-  inputStr.replace("â", "a");
-  inputStr.replace("ã", "a");
-  inputStr.replace("ú", "u");
-  inputStr.replace("ù", "u");
-  inputStr.replace("é", "e");
-  inputStr.replace("è", "e");
-  inputStr.replace("ê", "e");
-  inputStr.replace("í", "i");
-  inputStr.replace("ì", "i");
-  inputStr.replace("õ", "o");
-  inputStr.replace("ó", "o");
-  inputStr.replace("ò", "o");
-  inputStr.replace("@", "o");
-  inputStr.replace("|", "");
-}
 
 void Config::save()
 {
@@ -268,7 +65,7 @@ void Config::toJson(JsonVariant &root)
   root["signal"] = WiFi.RSSI();
   root["mode"] = (int)WiFi.getMode();
   root["mqttConnected"] = mqttConnected();
-  root["firmwareMode"] = constantsConfig::firmwareMode;
+  root["firmwareMode"] = "NO_FEATURES";
   JsonVariant pins = root.createNestedArray("pins");
 #ifdef ESP8266
   std::vector<int> pinsRef = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
@@ -421,7 +218,7 @@ String getChipId()
 Config &Config::updateFromJson(JsonObject &root)
 {
   char lastNodeId[32];
-  strlcpy(lastNodeId, getAtualConfig().nodeId, sizeof(lastNodeId));
+  strlcpy(lastNodeId, config.nodeId, sizeof(lastNodeId));
   bool reloadWifi = staticIp != root["staticIp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
   String chipIdStr = getChipId();
@@ -439,7 +236,7 @@ Config &Config::updateFromJson(JsonObject &root)
   knxLine = static_cast<uint8_t>(root["knxLine"] | 0);
   knxMember = static_cast<uint8_t>(root["knxMember"] | 0);
   emoncmsServerStr.replace("https", "http");
-  knx.physical_address_set(knx.PA_to_address(getAtualConfig().knxArea, getAtualConfig().knxLine, getAtualConfig().knxMember));
+  knx.physical_address_set(knx.PA_to_address(config.knxArea, config.knxLine, config.knxMember));
   while (emoncmsServerStr.endsWith("/"))
   {
 
@@ -474,6 +271,92 @@ Config &Config::updateFromJson(JsonObject &root)
     reloadSensors();
   }
   refreshMDNS(lastNodeId);
-  getAtualConfig().save();
+  config.save();
   return *this;
+}
+
+void Config::requestWifiScan()
+{
+  wifiScan = true;
+}
+
+bool Config::isWifiScanRequested()
+{
+  if (wifiScan)
+  {
+    wifiScan = false;
+    return true;
+  }
+  return false;
+}
+
+void Config::requestCloudIOSync()
+{
+  cloudIOSync = true;
+}
+
+bool Config::isCloudIOSyncRequested()
+{
+  if (cloudIOSync)
+  {
+    cloudIOSync = false;
+    return true;
+  }
+  return false;
+}
+
+void Config::requestReloadWifi()
+{
+  wifiReload = true;
+}
+bool Config::isReloadWifiRequested()
+{
+  if (wifiReload)
+  {
+    wifiReload = false;
+    return true;
+  }
+  return false;
+}
+
+void Config::requestRestart()
+{
+  reboot = true;
+}
+bool Config::isRestartRequested()
+{
+  if (reboot)
+  {
+    reboot = false;
+    return true;
+  }
+  return false;
+}
+
+void Config::requestAutoUpdate()
+{
+  autoUpdate = true;
+}
+bool Config::isAutoUpdateRequested()
+{
+  if (autoUpdate)
+  {
+    autoUpdate = false;
+    return true;
+  }
+  return false;
+}
+
+void Config::requestLoadDefaults()
+{
+  loadDefaults = true;
+}
+bool Config::isLoadDefaultsRequested()
+{
+  if (loadDefaults)
+  {
+    loadDefaults = false;
+    return true;
+  }
+  return false;
 }

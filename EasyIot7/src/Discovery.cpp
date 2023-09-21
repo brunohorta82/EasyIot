@@ -4,6 +4,7 @@
 #include "constants.h"
 #include "Mqtt.h"
 #include "Config.h"
+extern Config config;
 void initHaDiscovery(const Switches &switches)
 {
   for (const auto &sw : switches.items)
@@ -78,7 +79,7 @@ void addToHaDiscovery(const SensorT &s)
 {
   if (!s.haSupport)
     return;
-  String chip = String(getAtualConfig().chipId);
+  String chip = String(config.chipId);
   String objectStr = "";
   const size_t capacity = JSON_OBJECT_SIZE(14) + 300;
   DynamicJsonDocument doc(capacity);
@@ -243,14 +244,14 @@ void addToHaDiscovery(const SwitchT &sw)
 {
   if (!sw.haSupport)
     return;
-  if (strlen(getAtualConfig().mqttIpDns) == 0)
+  if (strlen(config.mqttIpDns) == 0)
   {
 #ifdef DEBUG_ONOFRE
     Log.warning("%s Setup required to publish discovery messages" CR, tags::mqtt);
 #endif
     return;
   }
-  if (strlen(getAtualConfig().mqttIpDns) == 0)
+  if (strlen(config.mqttIpDns) == 0)
   {
 #ifdef DEBUG_ONOFRE
     Log.warning("%s Mqtt not configured" CR, tags::discovery);

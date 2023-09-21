@@ -1,36 +1,31 @@
-#ifndef TEMPLATES_h
-#define TEMPLATES_h
-#include "Templates.h"
+#include "Templates.hpp"
 #include <Arduino.h>
 #include "Switches.h"
 #include "Sensors.h"
 #include "Config.h"
+extern Config config;
 void loadDefaultConfig()
 {
-    strlcpy(getAtualConfig().nodeId, getChipId().c_str(), sizeof(getAtualConfig().nodeId));
-    strlcpy(getAtualConfig().chipId, getAtualConfig().nodeId, sizeof(getAtualConfig().chipId));
-    getAtualConfig().mqttPort = constantsMqtt::defaultPort;
-    getAtualConfig().staticIp = false;
-    strlcpy(getAtualConfig().apSecret, constantsConfig::apSecret, sizeof(getAtualConfig().apSecret));
-    strlcpy(getAtualConfig().apiUser, constantsConfig::apiUser, sizeof(getAtualConfig().apiUser));
-    strlcpy(getAtualConfig().apiPassword, constantsConfig::apiPassword, sizeof(getAtualConfig().apiPassword));
+    strlcpy(config.nodeId, getChipId().c_str(), sizeof(config.nodeId));
+    strlcpy(config.chipId, config.nodeId, sizeof(config.chipId));
+    config.mqttPort = constantsMqtt::defaultPort;
+    config.staticIp = false;
+    strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
+    strlcpy(config.apiUser, constantsConfig::apiUser, sizeof(config.apiUser));
+    strlcpy(config.apiPassword, constantsConfig::apiPassword, sizeof(config.apiPassword));
 #ifdef WIFI_SSID
-    strlcpy(getAtualConfig().wifiSSID, WIFI_SSID, sizeof(getAtualConfig().wifiSSID));
+    strlcpy(config.wifiSSID, WIFI_SSID, sizeof(config.wifiSSID));
 #endif
 #ifdef WIFI_SECRET
-    strlcpy(getAtualConfig().wifiSecret, WIFI_SECRET, sizeof(getAtualConfig().wifiSecret));
+    strlcpy(config.wifiSecret, WIFI_SECRET, sizeof(config.wifiSecret));
 #endif
-    getAtualConfig().knxArea = 1;
-    getAtualConfig().knxLine = 1;
-    getAtualConfig().knxMember = 1;
-    getAtualConfig().firmware = VERSION;
+    config.knxArea = 1;
+    config.knxLine = 1;
+    config.knxMember = 1;
+    config.firmware = VERSION;
 }
-void loadSensorsDefaults()
+void preparePzem()
 {
-#ifdef NO_FEATURES
-    return;
-#endif
-#if defined BHPZEM
     SensorT pzem;
     pzem.firmware = VERSION;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
@@ -57,13 +52,121 @@ void loadSensorsDefaults()
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
     pzem.reloadMqttTopics();
     getAtualSensorsConfig().items.push_back(pzem);
-#endif
 }
+void prepareLight(String name, unsigned int output, unsigned int input)
+{
+    SwitchT one;
+    one.firmware = VERSION;
+    one.typeControl = SwitchControlType::GPIO_OUTPUT;
+    one.primaryGpioControl = output;
+    one.mode = PUSH;
+    strlcpy(one.name, name.c_str(), sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
+    one.primaryGpio = input;
+    strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
+    String idStr;
+    generateId(idStr, one.name, 1, sizeof(one.id));
+    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
+    one.reloadMqttTopics();
+    one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
+    getAtualSwitchesConfig().items.push_back(one);
+}
+void prepareCover()
+{
+    SwitchT one;
+    one.firmware = VERSION;
+    one.typeControl = SwitchControlType::GPIO_OUTPUT;
+    one.primaryGpioControl = 4u;
+    one.secondaryGpioControl = 5u;
+    one.lastPrimaryGpioState = false;
+    one.lastSecondaryGpioState = false;
+    one.mode = DUAL_PUSH;
+    strlcpy(one.name, "Estore", sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
+    one.secondaryGpio = 13u;
+#ifdef ESP8266
+    one.primaryGpio = 12u;
+#endif
+#ifdef ESP32
+    one.primaryGpio = 14u;
+#endif
+    strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
+    String idStr;
+    generateId(idStr, one.name, 1, sizeof(one.id));
+    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
+    one.reloadMqttTopics();
+    one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
+    getAtualSwitchesConfig().items.push_back(one);
+}
+void prepareGarage()
+{
+    SwitchT one;
+    one.firmware = VERSION;
+    one.typeControl = SwitchControlType::GPIO_OUTPUT;
+    one.primaryGpioControl = 4u;
+    one.secondaryGpioControl = 5u;
+    one.mode = SwitchMode::PUSH;
+    strlcpy(one.name, "Garagem", sizeof(one.name));
+    strlcpy(one.family, constanstsSwitch::familyGarage, sizeof(one.family));
+    one.primaryStateGpio = 13;
+    one.secondaryGpioControl = constantsConfig::noGPIO;
+#ifdef ESP8266
+    one.primaryGpio = 12u;
+#endif
+#ifdef ESP32
+    one.primaryGpio = 14u;
+#endif
+    String idStr;
+    generateId(idStr, one.name, 1, sizeof(one.id));
+    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
+    one.reloadMqttTopics();
+    one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
+    getAtualSwitchesConfig().items.push_back(one);
+}
+void templateSelect(enum Template _template)
+{
+    switch (_template)
+    {
+    case Template::NO_TEMPLATE:
+        break;
+    case PZEM:
+        preparePzem();
+        break;
+    case Template::DUAL_LIGHT:
+    {
+#ifdef CONFIG_LANG_PT
+        String name1 = "Interruptor1";
+        String name2 = "Interruptor2";
+#elif CONFIG_LANG_EN
+        String name1 = "Switch1";
+        String name2 = "Switch2";
+#elif CONFIG_LANG_RO
+        String name1 = "Switch1";
+        String name2 = "Switch2";
+#endif
+#ifdef ESP8266
+        prepareLight(name1, 4u, 12u);
+#endif
+#ifdef ESP32
+        prepareLight(name1, 4u, 14u);
+#endif
+        prepareLight(name2, 5u, 13u);
+    }
+    break;
+    case Template::COVER:
+        prepareCover();
+        break;
+    case Template::GARAGE:
+        prepareGarage();
+        break;
+    default:
+        return;
+        break;
+    }
+}
+
 void loadSwitchDefaults()
 {
-#ifdef NO_FEATURES
-    return;
-#endif
     SwitchT one;
     one.firmware = VERSION;
     one.typeControl = SwitchControlType::GPIO_OUTPUT;
@@ -78,13 +181,6 @@ void loadSwitchDefaults()
     one.secondaryGpioControl = 5u;
     one.lastPrimaryGpioState = false;
     one.lastSecondaryGpioState = false;
-
-#if defined DUAL_LIGHT
-    one.mode = SWITCH;
-    strlcpy(one.name, "Interruptor1", sizeof(one.name));
-    strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
-#endif
-
 #if defined COVER
     one.mode = DUAL_PUSH;
     strlcpy(one.name, "Estore", sizeof(one.name));
@@ -129,35 +225,4 @@ void loadSwitchDefaults()
     one.reloadMqttTopics();
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
     getAtualSwitchesConfig().items.push_back(one);
-
-#if defined DUAL_LIGHT
-    SwitchT two;
-    two.firmware = VERSION;
-    two.lastPrimaryGpioState = false;
-    two.lastSecondaryGpioState = false;
-    strlcpy(two.name, "Interruptor2", sizeof(two.name));
-    String idStr2;
-    generateId(idStr2, two.name, 1, sizeof(two.id));
-    strlcpy(two.id, idStr2.c_str(), sizeof(two.id));
-    strlcpy(two.family, constanstsSwitch::familyLight, sizeof(two.family));
-    two.primaryGpio = 13u;
-    two.secondaryGpio = constantsConfig::noGPIO;
-    two.autoStateDelay = 0ul;
-    strlcpy(two.autoStateValue, "", sizeof(two.autoStateValue));
-    two.typeControl = SwitchControlType::GPIO_OUTPUT;
-    two.mode = SWITCH;
-    two.knxSupport = false;
-    two.haSupport = false;
-    two.mqttSupport = false;
-    two.cloudIOSupport = true;
-    two.pullup = true;
-    two.mqttRetain = false;
-    two.inverted = false;
-    two.reloadMqttTopics();
-    two.statePoolIdx = findPoolIdx("", two.statePoolIdx, two.family);
-    two.primaryGpioControl = 5u;
-    two.secondaryGpioControl = constantsConfig::noGPIO;
-    getAtualSwitchesConfig().items.push_back(two);
-#endif
 }
-#endif

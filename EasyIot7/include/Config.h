@@ -7,9 +7,10 @@
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
-
-struct Config
+#include "Utils.hpp"
+class Config
 {
+public:
   double firmware = VERSION;
   char nodeId[32];
   char mqttIpDns[40];
@@ -46,35 +47,36 @@ struct Config
   Config &updateFromJson(JsonObject &root);
   void save(File &file) const;
   void load(File &file);
+  void requestCloudIOSync();
+  bool isCloudIOSyncRequested();
+
+  void requestWifiScan();
+  bool isWifiScanRequested();
+
+  void requestRestart();
+  bool isRestartRequested();
+
+  void requestAutoUpdate();
+  bool isAutoUpdateRequested();
+
+  void requestLoadDefaults();
+  bool isLoadDefaultsRequested();
+
+  void requestReloadWifi();
+  bool isReloadWifiRequested();
+
+private:
+  bool reboot = false;
+  bool loadDefaults = false;
+  bool autoUpdate = false;
+  bool wifiReload = false;
+  bool cloudIOSync = false;
+  bool wifiScan = false;
 };
 
-struct Config &getAtualConfig();
 void load(Config &config);
-void requestCloudIOSync();
-bool cloudIOSync();
-
-void requestWifiScan();
-bool wifiScanRequested();
-
-void requestRestart();
-bool restartRequested();
-
-void requestAutoUpdate();
-bool autoUpdateRequested();
-
-void requestLoadDefaults();
-bool loadDefaultsRequested();
-
-bool reloadWifiRequested();
-
 void normalize(String &inputStr);
 boolean isValidNumber(const char *str);
-
-void configPIN(uint8_t pin, uint8_t mode);
-void writeToPIN(uint8_t pin, uint8_t val);
-bool readPIN(uint8_t pin);
 void generateId(String &id, const String &name, int familyCode, size_t maxSize);
-void loopTime();
-long getTime();
 String getChipId();
 #endif

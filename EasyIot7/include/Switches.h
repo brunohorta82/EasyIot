@@ -55,7 +55,7 @@ struct SwitchT
     bool inverted = false;
 
     // AUTOMATIONS
-    unsigned long autoStateDelay = 0;
+    unsigned long autoStateDelay = 0ul;
     char autoStateValue[10] = {0};
 
     // MQTT
@@ -65,10 +65,10 @@ struct SwitchT
 
     // CONTROL VARIABLES
     int lastPercentage = 0;
-    bool lastPrimaryGpioState = true;
-    bool lastSecondaryGpioState = true;
-    bool lastPrimaryStateGpioState = true;
-    bool lastSecondaryStateGpioState = true;
+    bool lastPrimaryGpioState = false;
+    bool lastSecondaryGpioState = false;
+    bool lastPrimaryStateGpioState = false;
+    bool lastSecondaryStateGpioState = false;
     Bounce *debouncerPrimary = nullptr;
     Bounce *debouncerSecondary = nullptr;
     int statePoolIdx = -1;
@@ -122,7 +122,6 @@ void stateSwitchByName(Switches &switches, const char *name, const char *state, 
 void loop(Switches &switches);
 void load(Switches &switches);
 void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
-void sendToServerEvents(const String &topic, const String &payload);
 struct Switches &getAtualSwitchesConfig();
 int findPoolIdx(const char *state, int currentIdx, const char *family);
 void reloadSwitches();

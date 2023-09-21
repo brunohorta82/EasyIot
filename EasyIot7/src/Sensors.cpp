@@ -13,9 +13,8 @@
 #include "CloudIO.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
-#include "WebRequests.h"
 #include <Bounce2.h>
-#include "Templates.h"
+
 #define BUS_SDA 2  //-1 if you don't use display
 #define BUS_SCL 13 //-1 if you don't use display
 #if WITH_DISPLAY
@@ -27,7 +26,7 @@ bool displayOn = true;
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, DISPLAY_BTN);
 #define OLED_RESET 16 // Reset pin # (or -1 if sharing Arduino reset pin)
-
+extern Config config;
 void printOnDisplay(float _voltage, float _amperage, float _power, float _energy)
 {
   display.clearDisplay();
@@ -144,14 +143,6 @@ void Sensors::load(File &file)
       setupDisplay();
 #endif
       break;
-    case PZEM_017:
-      strlcpy(item.deviceClass, "power", sizeof(item.deviceClass));
-      // TODO item.pzemModbus = new Modbus(item.primaryGpio, item.secondaryGpio);
-      // TODO item.pzemModbus->Begin(9600, 2);
-#if WITH_DISPLAY
-      setupDisplay();
-#endif
-      break;
     }
   }
 }
@@ -234,16 +225,6 @@ void Sensors::save()
 }
 void load(Sensors &sensors)
 {
-
-  if (!LittleFS.exists(configFilenames::sensors))
-  {
-#ifdef DEBUG_ONOFRE
-    Log.notice("%s Default config loaded." CR, tags::sensors);
-#endif
-    loadSensorsDefaults();
-    getAtualSensorsConfig().save();
-  }
-
   File file = LittleFS.open(configFilenames::sensors, "r");
   sensors.load(file);
   file.close();
@@ -429,11 +410,6 @@ void SensorT::updateFromJson(JsonObject doc)
     strlcpy(family, constantsSensor::familySensor, sizeof(family));
   }
   break;
-  case PZEM_017:
-    strlcpy(deviceClass, "power", sizeof(deviceClass));
-    // TODO pzemModbus = new Modbus(primaryGpio, secondaryGpio);
-    //  TODO pzemModbus->Begin(9600, 2);
-    break;
   }
   reloadMqttTopics();
   doc["id"] = id;
@@ -456,15 +432,13 @@ void publishReadings(String &readings, SensorT &sensor)
 
   strlcpy(sensor.lastReading, readings.c_str(), sizeof(sensor.lastReading));
   String id = String(sensor.id);
-  sendToServerEvents(id, readings.c_str());
+  sendToServerEvents(id, readings);
   if (sensor.cloudIOSupport)
     notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str(), readings.length());
   if (sensor.mqttSupport)
   {
     publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
   }
-  if (sensor.emoncmsSupport)
-    publishOnEmoncms(sensor, readings);
 }
 
 void resetSensors(Sensors &sensors)
@@ -694,58 +668,6 @@ void loop(Sensors &sensors)
 #endif
         }
       }
-      break;
-    case PZEM_017:
-      /* TODO if (ss.lastRead + ss.delayRead < millis())
-      {
-
-        ss.lastRead = millis();
-        float v = -1;
-        float i = -1;
-        float p = -1;
-        float c = -1;
-        static uint8_t send_retry = 0;
-        bool data_ready = ss.pzemModbus->ReceiveReady();
-        if (data_ready)
-        {
-
-          uint8_t buffer[22];
-          uint8_t error = ss.pzemModbus->ReceiveBuffer(buffer, 8);
-          if (error)
-          {
-#ifdef DEBUG_ONOFRE
-            Log.notice("%s PZEM ERROR" CR, tags::sensors);
-#endif
-          }
-          else
-          {
-            v = (float)((buffer[3] << 8) + buffer[4]) / 100.0;
-            i = (float)((buffer[5] << 8) + buffer[6]) / 100.0;
-            p = (float)((buffer[9] << 24) + (buffer[10] << 16) + (buffer[7] << 8) + buffer[8]) / 10.0;
-            c = (float)((buffer[13] << 24) + (buffer[14] << 16) + (buffer[11] << 8) + buffer[12]);
-            auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
-#if WITH_DISPLAY
-            printOnDisplay(v, i, p, c);
-#endif
-            publishReadings(readings, ss);
-#ifdef DEBUG_ONOFRE
-            Log.notice("%s %s" CR, tags::sensors, readings.c_str());
-#endif
-          }
-        }
-
-        if (0 == send_retry || data_ready)
-        {
-          send_retry = 5;
-          ss.pzemModbus->Send(0x01, 0x04, 0, 8);
-        }
-        else
-        {
-
-          send_retry--;
-        }
-      }
-      */
       break;
     }
   }

@@ -1,4 +1,12 @@
 #pragma once
+enum Template
+{
+    NO_TEMPLATE,
+    DUAL_LIGHT,
+    COVER,
+    GARAGE,
+    PZEM
+};
 namespace constantsMqtt
 {
     constexpr const char *availablePayload{"online"};

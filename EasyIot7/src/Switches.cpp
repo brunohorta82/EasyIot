@@ -1,18 +1,15 @@
+#include <Arduino.h>
 #include "Switches.h"
 #include "Discovery.h"
 #include "WebServer.h"
 #include "constants.h"
 #include "Config.h"
 #include "Mqtt.h"
-#include "WebRequests.h"
-
 #include <esp-knx-ip.h>
-
 #include <Bounce2.h>
 #include "CloudIO.h"
 #include <Shutters.h>
-#include "Templates.h"
-
+extern Config config;
 struct Switches &getAtualSwitchesConfig()
 {
   static Switches switches;
@@ -405,7 +402,7 @@ void Switches::save(bool syncState)
   Log.error("%s Request CloudIO Sync" CR, tags::switches);
 #endif
   if (!syncState)
-    requestCloudIOSync();
+    config.requestCloudIOSync();
 }
 
 void switchesCallback(message_t const &msg, void *arg)
@@ -551,15 +548,6 @@ void update(Switches &switches, const String &id, JsonObject doc)
 
 void load(Switches &switches)
 {
-
-  if (!LittleFS.exists(configFilenames::switches))
-  {
-#ifdef DEBUG_ONOFRE
-    Log.notice("%s Default config loaded." CR, tags::switches);
-#endif
-    loadSwitchDefaults();
-    getAtualSwitchesConfig().save(false);
-  }
   File file = LittleFS.open(configFilenames::switches, "r+");
   switches.load(file);
   file.close();
@@ -656,7 +644,8 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
   {
     notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend.c_str(), currentStateToSend.length());
   }
-  sendToServerEvents(id, currentStateToSend.c_str());
+
+  sendToServerEvents(id, currentStateToSend);
   if (dirty)
     getAtualSwitchesConfig().lastChange = millis();
   if (strcmp("KNX", origin) != 0 && knxSupport)

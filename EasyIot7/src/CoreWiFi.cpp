@@ -3,38 +3,36 @@
 #include <JustWifi.h>
 #include "Config.h"
 #include "WebServer.h"
-#include "Mqtt.h"
-#include "CloudIO.h"
 #include <esp-knx-ip.h>
 int retryCount = 0;
 unsigned long connectedOn = 0ul;
+extern Config config;
 String getApName()
 {
   String version = String(VERSION, 3);
   version.replace(".", "x");
-  return "OnOfre-" + String(getAtualConfig().chipId) + "-" + version;
+  if (strcmp(config.nodeId, config.chipId) == 0)
+    return "OnOfre-" + String(config.chipId) + "-" + version;
+  return String(config.nodeId) + "-" + version;
 }
-bool wifiConnected()
-{
-  return jw.connectable();
-}
+
 void reloadWiFiConfig()
 {
   jw.disconnect();
-  jw.setHostname(getAtualConfig().nodeId);
+  jw.setHostname(config.nodeId);
   jw.cleanNetworks();
-  jw.setSoftAP(getApName().c_str(), getAtualConfig().apSecret);
-  if (getAtualConfig().staticIp)
+  jw.setSoftAP(getApName().c_str(), constantsConfig::apSecret);
+  if (config.staticIp)
   {
-    jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret, getAtualConfig().wifiIp, getAtualConfig().wifiGw, getAtualConfig().wifiMask, getAtualConfig().wifiGw, true);
+    jw.addNetwork(config.wifiSSID, config.wifiSecret, config.wifiIp, config.wifiGw, config.wifiMask, config.wifiGw, true);
   }
-  else if (strlen(getAtualConfig().wifiSecret) > 0)
+  else if (strlen(config.wifiSecret) > 0)
   {
-    jw.addNetwork(getAtualConfig().wifiSSID, getAtualConfig().wifiSecret);
+    jw.addNetwork(config.wifiSSID, config.wifiSecret);
   }
   else
   {
-    jw.addNetwork(getAtualConfig().wifiSSID);
+    jw.addNetwork(config.wifiSSID);
   }
 }
 void infoWifi()
@@ -53,7 +51,7 @@ void infoWifi()
     Log.notice("%s GW    %s " CR, tags::wifi, WiFi.gatewayIP().toString().c_str());
     Log.notice("%s MASK  %s " CR, tags::wifi, WiFi.subnetMask().toString().c_str());
     Log.notice("%s DNS   %s " CR, tags::wifi, WiFi.dnsIP().toString().c_str());
-    // TODO  Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.hostname().c_str());
+    Log.notice("%s HOST  %s " CR, tags::wifi, WiFi.getHostname());
     Log.notice("----------------------------------------------" CR);
 #endif
   }
@@ -67,7 +65,6 @@ void infoWifi()
     Log.notice("%s MAC  %s " CR, tags::wifi, WiFi.softAPmacAddress().c_str());
     Log.notice("----------------------------------------------" CR);
 #endif
-    refreshMDNS(getAtualConfig().nodeId);
   }
 }
 void enableScan()
@@ -103,16 +100,23 @@ void scanNewWifiNetworks()
       uint8_t *BSSID_scan;
       int32_t chan_scan;
       bool hidden_scan;
-      // TODO WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
+#ifdef ESP32
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
+#endif
+#ifdef ESP32
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
+#endif
+#ifdef ESP8266
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
+#endif
       object.add(ssid_scan);
-
 #ifdef DEBUG_ONOFRE
       Log.notice("%s Network found %s" CR, tags::wifi, ssid_scan.c_str());
 #endif
     }
     String networks = "";
     serializeJson(doc, networks);
-    sendToServerEvents("wifi-networks", networks.c_str());
+    sendToServerEvents("wifi-networks", networks);
   }
   WiFi.scanDelete();
 }
@@ -123,7 +127,6 @@ void dissableAP()
 
 void infoCallback(justwifi_messages_t code, char *parameter)
 {
-
   switch (code)
   {
   case MESSAGE_ACCESSPOINT_FAILED:
@@ -150,44 +153,48 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
 
   case MESSAGE_CONNECTED:
-    if (strlen(getAtualConfig().wifiSSID) == 0)
+    if (strlen(config.wifiSSID) == 0)
     {
-      strlcpy(getAtualConfig().wifiSSID, WiFi.SSID().c_str(), sizeof(getAtualConfig().wifiSSID));
-      strlcpy(getAtualConfig().wifiSecret, WiFi.psk().c_str(), sizeof(getAtualConfig().wifiSecret));
-      getAtualConfig().save();
+      strlcpy(config.wifiSSID, WiFi.SSID().c_str(), sizeof(config.wifiSSID));
+      strlcpy(config.wifiSecret, WiFi.psk().c_str(), sizeof(config.wifiSecret));
     }
-
+    setupWebPanel();
+    startWebserver();
     knx.start();
+    config.requestCloudIOSync();
     infoWifi();
-    connectoToCloudIO();
-    setupWebserverAsync();
     break;
 
   case MESSAGE_ACCESSPOINT_CREATED:
     infoWifi();
-    setupWebserverAsync();
+    setupCaptivePortal();
+    startWebserver();
     break;
   }
+}
+bool wifiConnected()
+{
+  return WiFi.status() == WL_CONNECTED;
 }
 void refreshMDNS(const char *lastName)
 {
   bool success = false;
 #ifdef ESP32
   MDNS.end();
-  success = MDNS.begin(String(getAtualConfig().nodeId).c_str());
+  success = MDNS.begin(String(config.nodeId).c_str());
 #endif
 #ifdef ESP8266
   MDNS.removeService(lastName, "bhonofre", "tcp");
   MDNS.close();
-  success = MDNS.begin(getAtualConfig().nodeId, INADDR_ANY, 10);
+  success = MDNS.begin(String(config.nodeId), INADDR_ANY, 10);
 #endif
 
   if (success)
   {
     MDNS.addService("bhonofre", "tcp", 80);
-    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(getAtualConfig().chipId));
+    MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(config.chipId));
     MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
-    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(getAtualConfig().wifiSSID));
+    MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(config.wifiSSID));
 #ifdef ESP32
     MDNS.addServiceTxt("bhonofre", "tcp", "mcu", "ESP32");
 #endif
@@ -207,22 +214,21 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
 
   if (code == MESSAGE_CONNECTED)
   {
-    refreshMDNS(getAtualConfig().nodeId);
+    refreshMDNS(config.nodeId);
   }
 }
 void setupWiFi()
 {
-  // TODO WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   WiFi.setSleep(false);
-  jw.setHostname(getAtualConfig().nodeId);
+  jw.setHostname(config.nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
 
 #if JUSTWIFI_ENABLE_SMARTCONFIG
-  if (strlen(getAtualConfig().wifiSSID) == 0)
+  if (strlen(config.wifiSSID) == 0)
     jw.startSmartConfig();
 #endif
-  jw.setSoftAP(getApName().c_str(), getAtualConfig().apSecret);
+  jw.setSoftAP(getApName().c_str(), constantsConfig::apSecret);
   jw.enableAP(false);
   jw.enableAPFallback(true);
   jw.enableSTA(true);
@@ -239,5 +245,4 @@ void loopWiFi()
 #ifdef ESP8266
   MDNS.update();
 #endif
-  webserverServicesLoop();
 }

@@ -1,49 +1,69 @@
 #include "WebServer.h"
-#ifdef ESP32
-#include "Update.h"
-#endif
 #include <DNSServer.h>
-#include "constants.h"
+#include "AsyncJson.h"
+#include <ESPAsyncWebServer.h>
+#include "Config.h"
+#include "CaptivePortal.h"
+#include "Utils.hpp"
+
 #include "StaticSite.h"
 #include "StaticCss.h"
 #include "StaticJs.h"
 #include "AsyncJson.h"
 #include "Switches.h"
 #include "Sensors.h"
-#include <vector>
-#include "ArduinoJson.h"
-#include <ESPAsyncWebServer.h>
-#include <FS.h>
-#include "Mqtt.h"
-#include "CloudIO.h"
-#include <Config.h>
-#include "CoreWiFi.h"
-#include <Ticker.h>
-#define REALM "onofre"
-extern "C" uint32_t _FS_start;
-extern "C" uint32_t _FS_end;
+
+#ifdef ESP32
+#include <WebServer.h>
+#include <HTTPClient.h>
+#include <HTTPUpdate.h>
+#include "Update.h"
+#endif
+#ifdef ESP8266
+#include <ESP8266httpUpdate.h>
+#include <ESP8266mDNS.h>
+#endif
+
 DNSServer dnsServer;
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
-Ticker configStore;
-unsigned long switchesSize = 6874;
-int getRSSIasQuality(int RSSI)
+extern Config config;
+void performUpdate()
 {
-  int quality = 0;
-
-  if (RSSI <= -100)
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
+#endif
+  WiFiClient client;
+  t_httpUpdate_return ret;
+#ifdef ESP8266
+  ret = ESPhttpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
+#endif
+#ifdef ESP32
+  ret = httpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
+#endif
+  switch (ret)
   {
-    quality = 0;
+  case HTTP_UPDATE_FAILED:
+#ifdef DEBUG_ONOFRE
+#ifdef ESP8266
+    Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+#endif
+#ifdef ESP32
+    Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+#endif
+#endif
+    break;
+  case HTTP_UPDATE_NO_UPDATES:
+#ifdef DEBUG_ONOFRE
+    Log.notice("HTTP_UPDATE_NO_UPDATES");
+#endif
+    break;
+  case HTTP_UPDATE_OK:
+#ifdef DEBUG_ONOFRE
+    Log.notice("HTTP_UPDATE_OK");
+#endif
+    break;
   }
-  else if (RSSI >= -50)
-  {
-    quality = 100;
-  }
-  else
-  {
-    quality = 2 * (RSSI + 100);
-  }
-  return quality;
 }
 class CaptiveRequestHandler : public AsyncWebHandler
 {
@@ -55,7 +75,10 @@ public:
   {
     return true;
   }
-
+  void restart()
+  {
+    config.requestRestart();
+  }
   void handleRequest(AsyncWebServerRequest *request)
   {
 
@@ -65,23 +88,34 @@ public:
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
+    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0 && request->arg("t").length() > 0)
     {
-      String n_name = String(request->arg("i"));
-      normalize(n_name);
-      strlcpy(getAtualConfig().nodeId, n_name.c_str(), sizeof(getAtualConfig().nodeId));
-      strlcpy(getAtualConfig().wifiSSID, request->arg("s").c_str(), sizeof(getAtualConfig().wifiSSID));
+      String n_name = config.chipId;
+      if (request->hasArg("t"))
+      {
+        n_name = String(request->arg("i"));
+        normalize(n_name);
+        if (n_name.isEmpty())
+          n_name = config.chipId;
+      }
+
+      strlcpy(config.nodeId, n_name.c_str(), sizeof(config.nodeId));
+      strlcpy(config.wifiSSID, request->arg("s").c_str(), sizeof(config.wifiSSID));
+      if (request->hasArg("t"))
+      {
+        // TODOO config.loadTemplate(request->arg("t").toInt());
+      }
+
       if (request->hasArg("p"))
       {
-        Serial.println(request->arg("p"));
-        strlcpy(getAtualConfig().wifiSecret, request->arg("p").c_str(), sizeof(getAtualConfig().wifiSecret));
+        strlcpy(config.wifiSecret, request->arg("p").c_str(), sizeof(config.wifiSecret));
       }
       else
       {
-        strlcpy(getAtualConfig().wifiSecret, "", sizeof(getAtualConfig().wifiSecret));
+        strlcpy(config.wifiSecret, "", sizeof(config.wifiSecret));
       }
       String storedR = FPSTR(HTTP_SAVED);
-      storedR.replace("{o}", String("http://" + String(getAtualConfig().nodeId) + ".local").c_str());
+      storedR.replace("{o}", String("http://" + String(config.nodeId) + ".local").c_str());
       response->print(storedR.c_str());
       response->print(FPSTR(HTTP_END));
       request->send(response);
@@ -120,11 +154,9 @@ public:
         {
           if (indices[i] == -1)
             continue; // skip dups
-          int quality = getRSSIasQuality(WiFi.RSSI(indices[i]));
-
           String item = FPSTR(HTTP_ITEM);
           String rssiQ;
-          rssiQ += quality;
+          rssiQ += rssiToWiFiQuality(WiFi.RSSI(indices[i]));
           item.replace("{v}", WiFi.SSID(indices[i]));
           item.replace("{r}", rssiQ);
 
@@ -142,7 +174,6 @@ public:
           {
             item.replace("{i}", "");
           }
-          // DEBUG_WM(item);
           scan += item;
         }
         WiFi.scanDelete();
@@ -156,17 +187,24 @@ public:
     }
     if (!store)
     {
-      response->print(FPSTR(HTTP_FORM_START));
+      String form = FPSTR(HTTP_FORM_START);
+      form.replace("{n}", config.nodeId);
+      /* if (config.templateId == 0)
+       {
+         form.replace("class='hide'", "");
+       }*/
+      response->print(form);
       response->print(FPSTR(HTTP_END));
       request->send(response);
     }
     if (store)
     {
-      getAtualConfig().save();
-      configStore.once(1, requestRestart);
+      config.save();
+      config.requestRestart();
     }
   }
 };
+
 AsyncJsonResponse *errorResponse(const char *cause)
 {
   AsyncJsonResponse *responseError = new AsyncJsonResponse();
@@ -176,13 +214,14 @@ AsyncJsonResponse *errorResponse(const char *cause)
   responseError->setLength();
   return responseError;
 }
-void loadUI()
+
+void loadWebPanel()
 {
   // HTML
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
@@ -194,7 +233,7 @@ void loadUI()
   server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
@@ -205,7 +244,7 @@ void loadUI()
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
@@ -216,7 +255,7 @@ void loadUI()
   server.on("/wifi.html", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", wifi_html, sizeof(wifi_html));
@@ -227,7 +266,7 @@ void loadUI()
   server.on("/devices.html", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", devices_html, sizeof(devices_html));
@@ -239,7 +278,7 @@ void loadUI()
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
@@ -250,7 +289,7 @@ void loadUI()
   server.on("/js/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", jquery_min_js, sizeof(jquery_min_js));
@@ -262,7 +301,7 @@ void loadUI()
   server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
@@ -274,18 +313,18 @@ void loadAPI()
 {
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["result"] = "Reboot requested";
     response->setLength();
     request->send(response);
-    requestRestart(); });
+    config.requestRestart(); });
 
   server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 
     AsyncJsonResponse *response = new AsyncJsonResponse();
@@ -293,12 +332,12 @@ void loadAPI()
     root["result"] = "Load defaults requested";
     response->setLength();
     request->send(response);
-    requestLoadDefaults(); });
+    config.requestLoadDefaults(); });
 
   server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
@@ -310,18 +349,13 @@ void loadAPI()
     root["status"] = WiFi.isConnected();
     root["signal"] = WiFi.RSSI();
     root["mac"] = WiFi.macAddress();
-    root["mode"] = (int)WiFi.getMode();
-    root["mqtt"] = mqttConnected();
-    root["cloudIO"] = cloudIOConnected();
-    root["connectedOn"] = getAtualConfig().connectedOn;
-    root["currentTime"] = getTime();
     response->setLength();
     request->send(response); });
 
   server.on("/scan-wifi-networks", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
@@ -329,28 +363,28 @@ void loadAPI()
     root["result"] = "Wi-Fi Scan started";
     response->setLength();
     request->send(response);
-    requestWifiScan(); });
+    config.requestWifiScan(); });
 
   server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["result"] = "Auto-Update started";
     response->setLength();
     request->send(response);
-    requestAutoUpdate(); });
+    config.requestAutoUpdate(); });
   server.on(
       "/update", HTTP_POST, [](AsyncWebServerRequest *request)
       {
 #if WEB_SECURE_ON
-       if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword,REALM))
+       if (!request->authenticate(config.apiUser, config.apiPassword,REALM))
        return request->requestAuthentication(REALM);
 #endif
      bool error = Update.hasError();
      if(error)
-       requestRestart();
+       config.requestRestart();
      AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Update</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update successfully, will be redirected automatically in 20 seconds. Please Wait...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update failed, it may be necessary to manually reset the device and try again.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
      response->addHeader("Connection", "close");
      request->send(response); },
@@ -377,45 +411,45 @@ void loadAPI()
 #ifdef DEBUG_ONOFRE
          Log.notice("%s Update Success: %d" CR, tags::system, index+len);
 #endif
-         requestRestart();
+         config.requestRestart();
        } else {
-          requestRestart();
+          config.requestRestart();
        }
      } });
 
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
-    getAtualConfig().toJson(root);
+    config.toJson(root);
     response->setLength();
     request->send(response); });
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json)
                                                     {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
-    JsonObject config = json.as<JsonObject>();
-    getAtualConfig().updateFromJson(config).toJson(root);
+    JsonObject configJson = json.as<JsonObject>();
+    config.updateFromJson(configJson).toJson(root);
     response->setLength();
     request->send(response);
-    requestCloudIOSync(); }));
+    config.requestCloudIOSync(); }));
 
   server.on("/switches", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncJsonResponse *response = new AsyncJsonResponse(true, switchesSize);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().toJson(root);
     response->setLength();
@@ -424,7 +458,7 @@ void loadAPI()
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-switch", [](AsyncWebServerRequest *request, JsonVariant json)
                                                     {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
@@ -438,12 +472,12 @@ void loadAPI()
     getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson).toJson(root);
     response->setLength();
     request->send(response);
-    requestCloudIOSync(); }));
+    config.requestCloudIOSync(); }));
 
   server.on("/remove-switch", HTTP_DELETE, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
@@ -451,17 +485,17 @@ void loadAPI()
       request->send(errorResponse("Id missing"));
       return;
     }
-    AsyncJsonResponse *response = new AsyncJsonResponse(true, switchesSize);
+    AsyncJsonResponse *response = new AsyncJsonResponse(true);
     JsonVariant &root = response->getRoot();
     getAtualSwitchesConfig().remove(request->arg("id").c_str()).toJson(root);
     response->setLength();
     request->send(response);
-    requestCloudIOSync(); });
+    config.requestCloudIOSync(); });
 
   server.on("/rotate-state-switch", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
@@ -477,7 +511,7 @@ void loadAPI()
 
   server.on("/state-switch", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
     if (!request->hasArg("id"))
     {
@@ -504,7 +538,7 @@ void loadAPI()
   server.on("/sensors", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse(true);
@@ -516,7 +550,7 @@ void loadAPI()
   server.addHandler(new AsyncCallbackJsonWebHandler("/save-sensor", [](AsyncWebServerRequest *request, JsonVariant json)
                                                     {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
@@ -530,12 +564,12 @@ void loadAPI()
     getAtualSensorsConfig().updateFromJson(request->arg("id").c_str(), sensorJson).toJson(root);
     response->setLength();
     request->send(response);
-    requestCloudIOSync(); }));
+    config.requestCloudIOSync(); }));
 
   server.on("/remove-sensor", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
-    if (!request->authenticate(getAtualConfig().apiUser, getAtualConfig().apiPassword, REALM))
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
     if (!request->hasArg("id"))
@@ -548,18 +582,42 @@ void loadAPI()
     getAtualSensorsConfig().remove(request->arg("id").c_str()).toJson(root);
     response->setLength();
     request->send(response);
-    requestCloudIOSync(); });
+    config.requestCloudIOSync(); });
 }
-bool headerNotLoaded = true;
-void setupWebserverAsync()
+void setupCaptivePortal()
 {
+  server.reset();
   WiFi.scanNetworks(true);
-  server.addHandler(&events);
   dnsServer.start(53, "*", WiFi.softAPIP());
   server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER); // only when requested from AP
-  loadUI();
+}
+void stopWebserver()
+{
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s WEBSERVER STOP" CR, tags::system);
+#endif
+  DefaultHeaders::Instance().end();
+  server.end();
+}
+void startWebserver()
+{
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s WEBSERVER START" CR, tags::system);
+#endif
+  server.begin();
+}
+void setupCors()
+{
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
+  DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
+}
+void setupWebPanel()
+{
+  server.reset();
+  server.addHandler(&events);
+  loadWebPanel();
   loadAPI();
-
   server.onNotFound([](AsyncWebServerRequest *request)
                     {
     if (request->method() == HTTP_OPTIONS)
@@ -570,23 +628,23 @@ void setupWebserverAsync()
     {
       request->send(404);
     } });
-  if (headerNotLoaded)
-  {
-    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-    DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
-    DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
-    headerNotLoaded = false;
-  }
-  server.begin();
 }
 
-void sendToServerEvents(const String &topic, const char *payload)
+void sendToServerEvents(String topic, String payload)
 {
-  events.send(payload, topic.c_str(), millis());
+  if (events.count() > 0)
+    events.send(payload.c_str(), topic.c_str(), millis());
 }
 
 void webserverServicesLoop()
 {
-
-  dnsServer.processNextRequest();
+#ifdef ESP32
+  if (WiFi.getMode() == WIFI_MODE_APSTA || WiFi.getMode() == WIFI_MODE_AP)
+#endif
+#ifdef ESP8266
+    if (WiFi.getMode() == WIFI_AP_STA || WiFi.getMode() == WIFI_AP)
+#endif
+      dnsServer.processNextRequest();
+    else
+      dnsServer.stop();
 }
