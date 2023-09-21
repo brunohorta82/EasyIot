@@ -398,567 +398,577 @@ void Switches::save(bool syncState)
     return;
   this->save(file);
   file.close();
-#ifdef DEBUG_ONOFRE
-  Log.error("%s Request CloudIO Sync" CR, tags::switches);
-#endif
   if (!syncState)
-    config.requestCloudIOSync();
-}
-
-void switchesCallback(message_t const &msg, void *arg)
-{
-  auto s = static_cast<SwitchT *>(arg);
-  switch (msg.ct)
   {
-  case KNX_CT_ADC_ANSWER:
-  case KNX_CT_ADC_READ:
-  case KNX_CT_ANSWER:
-  case KNX_CT_ESCAPE:
-  case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
-  case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
-  case KNX_CT_INDIVIDUAL_ADDR_WRITE:
-  case KNX_CT_MASK_VERSION_READ:
-  case KNX_CT_MASK_VERSION_RESPONSE:
-  case KNX_CT_MEM_ANSWER:
-  case KNX_CT_MEM_READ:
-  case KNX_CT_MEM_WRITE:
-  case KNX_CT_READ:
-  case KNX_CT_RESTART:
-    break;
-
-  case KNX_CT_WRITE:
-  {
-    uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
-    s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-    break;
+#ifdef DEBUG_ONOFRE
+    Log.error("%s Request CloudIO Sync" CR, tags::switches);
+#endif
+    if (!syncState)
+      config.requestCloudIOSync();
   }
-  };
-}
 
-void Switches::load(File &file)
-{
-  auto n_items = items.size();
-  file.read((uint8_t *)&n_items, sizeof(n_items));
-  items.clear();
-  items.resize(n_items);
-  for (auto &item : items)
+  void switchesCallback(message_t const &msg, void *arg)
   {
-    item.load(file);
-    if (item.knxSupport)
+    auto s = static_cast<SwitchT *>(arg);
+    switch (msg.ct)
     {
-      knx.callback_unassign(item.knxIdAssign);
-      knx.callback_deregister(item.knxIdRegister);
-      item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
-      item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
-      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
-      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, 0, 0));
+    case KNX_CT_ADC_ANSWER:
+    case KNX_CT_ADC_READ:
+    case KNX_CT_ANSWER:
+    case KNX_CT_ESCAPE:
+    case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
+    case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
+    case KNX_CT_INDIVIDUAL_ADDR_WRITE:
+    case KNX_CT_MASK_VERSION_READ:
+    case KNX_CT_MASK_VERSION_RESPONSE:
+    case KNX_CT_MEM_ANSWER:
+    case KNX_CT_MEM_READ:
+    case KNX_CT_MEM_WRITE:
+    case KNX_CT_READ:
+    case KNX_CT_RESTART:
+      break;
+
+    case KNX_CT_WRITE:
+    {
+      uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
+      s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
+      break;
     }
+    };
   }
-  knx.reload();
-}
 
-Switches &Switches::remove(const char *id)
-{
-  auto match = std::find_if(items.begin(), items.end(), [id](const SwitchT &item)
-                            { return strcmp(id, item.id) == 0; });
-
-  if (match == items.end())
+  void Switches::load(File & file)
   {
-    return *this;
-  }
-  unsubscribeOnMqtt(match->mqttCommandTopic);
-  removeFromHaDiscovery(*match);
-  items.erase(match);
-  save(false);
-  return *this;
-}
-
-void SwitchT::reloadMqttTopics()
-{
-  String mqttTopic;
-  mqttTopic.reserve(sizeof(mqttCommandTopic));
-  mqttTopic.concat(getBaseTopic());
-  mqttTopic.concat("/");
-  mqttTopic.concat(family);
-  mqttTopic.concat("/");
-  mqttTopic.concat(id);
-  mqttTopic.concat("/set");
-  strlcpy(mqttCommandTopic, mqttTopic.c_str(), sizeof(mqttCommandTopic));
-  mqttTopic.replace("/set", "/state");
-  strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
-}
-
-void reloadSwitches()
-{
-  for (auto &sw : getAtualSwitchesConfig().items)
-    sw.reloadMqttTopics();
-  getAtualSwitchesConfig().save(false);
-}
-void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
-{
-  getAtualSwitchesConfig().save(false);
-  removeFromHaDiscovery(sw);
-  if (sw.haSupport)
-    addToHaDiscovery(sw);
-  for (auto &item : switches.items)
-  {
-    if (item.knxSupport)
+    auto n_items = items.size();
+    file.read((uint8_t *)&n_items, sizeof(n_items));
+    items.clear();
+    items.resize(n_items);
+    for (auto &item : items)
     {
-      item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
-      item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
-      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
-      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, 0, 0));
+      item.load(file);
+      if (item.knxSupport)
+      {
+        knx.callback_unassign(item.knxIdAssign);
+        knx.callback_deregister(item.knxIdRegister);
+        item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
+        item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+        knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+        knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, 0, 0));
+      }
     }
+    knx.reload();
   }
-}
-Switches &Switches::updateFromJson(const String &id, JsonObject &doc)
-{
-  for (auto &sw : items)
+
+  Switches &Switches::remove(const char *id)
   {
-    if (strcmp(id.c_str(), sw.id) == 0)
+    auto match = std::find_if(items.begin(), items.end(), [id](const SwitchT &item)
+                              { return strcmp(id, item.id) == 0; });
+
+    if (match == items.end())
     {
-      sw.updateFromJson(doc);
-      saveAndRefreshServices(*this, sw);
       return *this;
     }
-  }
-  SwitchT newSw;
-  newSw.updateFromJson(doc);
-  items.push_back(newSw);
-  saveAndRefreshServices(*this, newSw);
-  return *this;
-}
-
-void update(Switches &switches, const String &id, JsonObject doc)
-{
-  for (auto &sw : switches.items)
-  {
-    if (strcmp(id.c_str(), sw.id) == 0)
-    {
-      sw.updateFromJson(doc);
-      saveAndRefreshServices(switches, sw);
-      return;
-    }
-  }
-  SwitchT newSw;
-  newSw.updateFromJson(doc);
-  switches.items.push_back(newSw);
-  saveAndRefreshServices(switches, newSw);
-}
-
-void load(Switches &switches)
-{
-  File file = LittleFS.open(configFilenames::switches, "r+");
-  switches.load(file);
-  file.close();
-
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Stored values was loaded." CR, tags::switches);
-#endif
-}
-
-int findPoolIdx(const char *state, int currentIdx, const char *family)
-{
-  int start, end;
-
-  if (strcmp(family, constanstsSwitch::familyCover) == 0 || strcmp(family, constanstsSwitch::familyGarage) == 0)
-  {
-    start = constanstsSwitch::coverStartIdx;
-    end = constanstsSwitch::converEndIdx;
-  }
-  else
-  {
-    start = constanstsSwitch::switchStartIdx;
-    end = constanstsSwitch::switchEndIdx;
+    unsubscribeOnMqtt(match->mqttCommandTopic);
+    removeFromHaDiscovery(*match);
+    items.erase(match);
+    save(false);
+    return *this;
   }
 
-  if (currentIdx < 0)
-    return start; // INIT POOL STATE IDX
-
-  if (strlen(state) < 0 || strcmp(state, "") == 0)
-  { // RETURN NEXT POOL STATE
-    int poolSize = end - start + 1;
-    return ((currentIdx - start + 1) % poolSize) + start;
-  }
-
-  int max = (end - start) * 2;
-  unsigned int p = currentIdx;
-  while (max > 0)
+  void SwitchT::reloadMqttTopics()
   {
-    if (strcmp(state, STATES_POLL[p].c_str()) == 0)
-    {
-      return p;
-    }
-    p = ((p - start + 1) % (end - start + 1)) + start;
-    max--;
-  }
-  return -1;
-}
-
-void mqttSwitchControl(Switches &switches, const char *topic, const char *payload)
-{
-  for (auto &sw : switches.items)
-  {
-    if (strcmp(sw.mqttCommandTopic, topic) == 0 || strcmp(sw.mqttCloudCommandTopic, topic) == 0)
-    {
-      if (strcmp(payload, "DISABLED") == 0)
-      {
-        sw.childLock = true;
-        continue;
-      }
-      else if (strcmp(payload, "ENABLED") == 0)
-      {
-        sw.childLock = false;
-        continue;
-      }
-      sw.changeState(payload, "MQTT");
-    }
-  }
-}
-const char *Switches::rotate(const char *id)
-{
-  for (auto &sw : items)
-  {
-    if (strcmp(id, sw.id) == 0)
-    {
-      return sw.rotateState();
-    }
-  }
-  return "ERROR";
-}
-const void SwitchT::notifyState(bool dirty, const char *origin)
-{
-  if (strcmp("INTERNAL", origin) == 0)
-  {
-    return;
-  }
-  const String currentStateToSend = getCurrentState();
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
-#endif
-  if (mqttSupport)
-  {
-    publishOnMqtt(mqttStateTopic, currentStateToSend.c_str(), true);
-  }
-  if (cloudIOSupport)
-  {
-    notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend.c_str(), currentStateToSend.length());
+    String mqttTopic;
+    mqttTopic.reserve(sizeof(mqttCommandTopic));
+    mqttTopic.concat(getBaseTopic());
+    mqttTopic.concat("/");
+    mqttTopic.concat(family);
+    mqttTopic.concat("/");
+    mqttTopic.concat(id);
+    mqttTopic.concat("/set");
+    strlcpy(mqttCommandTopic, mqttTopic.c_str(), sizeof(mqttCommandTopic));
+    mqttTopic.replace("/set", "/state");
+    strlcpy(mqttStateTopic, mqttTopic.c_str(), sizeof(mqttStateTopic));
   }
 
-  sendToServerEvents(id, currentStateToSend);
-  if (dirty)
-    getAtualSwitchesConfig().lastChange = millis();
-  if (strcmp("KNX", origin) != 0 && knxSupport)
-  {
-    knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
-    delay(5);
-    knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
-  }
-  bool knxGroup = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree == 0;
-  if (knxGroup)
+  void reloadSwitches()
   {
     for (auto &sw : getAtualSwitchesConfig().items)
+      sw.reloadMqttTopics();
+    getAtualSwitchesConfig().save(false);
+  }
+  void saveAndRefreshServices(Switches & switches, const SwitchT &sw)
+  {
+    getAtualSwitchesConfig().save(false);
+    removeFromHaDiscovery(sw);
+    if (sw.haSupport)
+      addToHaDiscovery(sw);
+    for (auto &item : switches.items)
     {
-
-      if (strcmp(sw.id, id) != 0)
+      if (item.knxSupport)
       {
-        sw.changeState(currentStateToSend.c_str(), "INTERNAL");
+        item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
+        item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
+        knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
+        knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, 0, 0));
       }
     }
   }
-}
-const char *SwitchT::rotateState()
-{
-  int idx = findPoolIdx("", statePoolIdx, family);
-  if (idx < 0)
+  Switches &Switches::updateFromJson(const String &id, JsonObject &doc)
   {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s Error on rotate" CR, tags::switches);
-#endif
-    return "ERROR";
+    for (auto &sw : items)
+    {
+      if (strcmp(id.c_str(), sw.id) == 0)
+      {
+        sw.updateFromJson(doc);
+        saveAndRefreshServices(*this, sw);
+        return *this;
+      }
+    }
+    SwitchT newSw;
+    newSw.updateFromJson(doc);
+    items.push_back(newSw);
+    saveAndRefreshServices(*this, newSw);
+    return *this;
   }
 
-  const char *state = STATES_POLL[idx].c_str();
-  changeState(state, "ROTATE");
-  return state;
-}
-void knkGroupNotifyState(const SwitchT &sw, const char *state)
-{
-}
-void timedOn(unsigned int gpio, bool inverted, unsigned onTime)
-{
-  Serial.println("PORTAO4");
-  configPIN(gpio, OUTPUT);
-  writeToPIN(gpio, inverted ? LOW : HIGH); // TURN ON
-  unsigned long pressOn = millis();
-  while (pressOn + onTime > millis())
+  void update(Switches & switches, const String &id, JsonObject doc)
+  {
+    for (auto &sw : switches.items)
+    {
+      if (strcmp(id.c_str(), sw.id) == 0)
+      {
+        sw.updateFromJson(doc);
+        saveAndRefreshServices(switches, sw);
+        return;
+      }
+    }
+    SwitchT newSw;
+    newSw.updateFromJson(doc);
+    switches.items.push_back(newSw);
+    saveAndRefreshServices(switches, newSw);
+  }
+
+  void load(Switches & switches)
+  {
+    File file = LittleFS.open(configFilenames::switches, "r+");
+    switches.load(file);
+    file.close();
+
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Stored values was loaded." CR, tags::switches);
+#endif
+  }
+
+  int findPoolIdx(const char *state, int currentIdx, const char *family)
+  {
+    int start, end;
+
+    if (strcmp(family, constanstsSwitch::familyCover) == 0 || strcmp(family, constanstsSwitch::familyGarage) == 0)
+    {
+      start = constanstsSwitch::coverStartIdx;
+      end = constanstsSwitch::converEndIdx;
+    }
+    else
+    {
+      start = constanstsSwitch::switchStartIdx;
+      end = constanstsSwitch::switchEndIdx;
+    }
+
+    if (currentIdx < 0)
+      return start; // INIT POOL STATE IDX
+
+    if (strlen(state) < 0 || strcmp(state, "") == 0)
+    { // RETURN NEXT POOL STATE
+      int poolSize = end - start + 1;
+      return ((currentIdx - start + 1) % poolSize) + start;
+    }
+
+    int max = (end - start) * 2;
+    unsigned int p = currentIdx;
+    while (max > 0)
+    {
+      if (strcmp(state, STATES_POLL[p].c_str()) == 0)
+      {
+        return p;
+      }
+      p = ((p - start + 1) % (end - start + 1)) + start;
+      max--;
+    }
+    return -1;
+  }
+
+  void mqttSwitchControl(Switches & switches, const char *topic, const char *payload)
+  {
+    for (auto &sw : switches.items)
+    {
+      if (strcmp(sw.mqttCommandTopic, topic) == 0 || strcmp(sw.mqttCloudCommandTopic, topic) == 0)
+      {
+        if (strcmp(payload, "DISABLED") == 0)
+        {
+          sw.childLock = true;
+          continue;
+        }
+        else if (strcmp(payload, "ENABLED") == 0)
+        {
+          sw.childLock = false;
+          continue;
+        }
+        if (sw.isCover)
+        {
+          sw.changeState(payload, "MQTT");
+        }
+        else
+        {
+          if (strcmp(payload, "100") == 0)
+          {
+            sw.changeState("ON", "MQTT");
+          }
+          else if (strcmp(payload, "0") == 0)
+          {
+            sw.changeState("OFF", "MQTT");
+          }
+          else
+          {
+            sw.changeState(payload, "MQTT");
+          }
+        }
+      }
+    }
+  }
+  const char *Switches::rotate(const char *id)
+  {
+    for (auto &sw : items)
+    {
+      if (strcmp(id, sw.id) == 0)
+      {
+        return sw.rotateState();
+      }
+    }
+    return "ERROR";
+  }
+  const void SwitchT::notifyState(bool dirty, const char *origin)
+  {
+    if (strcmp("INTERNAL", origin) == 0)
+    {
+      return;
+    }
+    const String currentStateToSend = getCurrentState();
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
+#endif
+    if (mqttSupport)
+    {
+      publishOnMqtt(mqttStateTopic, currentStateToSend.c_str(), true);
+    }
+    if (cloudIOSupport)
+    {
+      notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend.c_str(), currentStateToSend.length());
+    }
+
+    sendToServerEvents(id, currentStateToSend);
+    if (dirty)
+      getAtualSwitchesConfig().lastChange = millis();
+    if (strcmp("KNX", origin) != 0 && knxSupport)
+    {
+      knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+      delay(5);
+      knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
+    }
+    bool knxGroup = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree == 0;
+    if (knxGroup)
+    {
+      for (auto &sw : getAtualSwitchesConfig().items)
+      {
+
+        if (strcmp(sw.id, id) != 0)
+        {
+          sw.changeState(currentStateToSend.c_str(), "INTERNAL");
+        }
+      }
+    }
+  }
+  const char *SwitchT::rotateState()
+  {
+    int idx = findPoolIdx("", statePoolIdx, family);
+    if (idx < 0)
+    {
+#ifdef DEBUG_ONOFRE
+      Log.error("%s Error on rotate" CR, tags::switches);
+#endif
+      return "ERROR";
+    }
+
+    const char *state = STATES_POLL[idx].c_str();
+    changeState(state, "ROTATE");
+    return state;
+  }
+  void knkGroupNotifyState(const SwitchT &sw, const char *state)
   {
   }
-  writeToPIN(gpio, inverted ? HIGH : LOW); // TURN OFF
-}
-const String SwitchT::changeState(const char *state, const char *origin)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Name:      %s" CR, tags::switches, name);
-  Log.notice("%s State:     %s" CR, tags::switches, state);
-  Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
-  Log.notice("%s From : %s" CR, tags::switches, origin);
-  Log.notice("%s Family : %s" CR, tags::switches, family);
-#endif
-  bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
-  bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
-  bool isFromKnx = strcmp("KNX", origin) == 0;
-  bool isGate = strncmp(family, constanstsSwitch::familyGarage, sizeof(constanstsSwitch::familyGarage)) == 0;
-  if (isCover)
+  void timedOn(unsigned int gpio, bool inverted, unsigned onTime)
   {
-    if (typeControl == SwitchControlType::GPIO_OUTPUT)
+    Serial.println("PORTAO4");
+    configPIN(gpio, OUTPUT);
+    writeToPIN(gpio, inverted ? LOW : HIGH); // TURN ON
+    unsigned long pressOn = millis();
+    while (pressOn + onTime > millis())
     {
-      if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+    }
+    writeToPIN(gpio, inverted ? HIGH : LOW); // TURN OFF
+  }
+  const String SwitchT::changeState(const char *state, const char *origin)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Name:      %s IN:%d OUT:%d" CR, tags::switches, name, primaryGpio, primaryGpioControl);
+    Log.notice("%s State:     %s" CR, tags::switches, state);
+    Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
+    Log.notice("%s From : %s" CR, tags::switches, origin);
+    Log.notice("%s Family : %s" CR, tags::switches, family);
+#endif
+    bool dirty = strcmp(state, getCurrentState().c_str()) != 0;
+    bool isCover = strcmp(family, constanstsSwitch::familyCover) == 0;
+    bool isFromKnx = strcmp("KNX", origin) == 0;
+    bool isGate = strncmp(family, constanstsSwitch::familyGarage, sizeof(constanstsSwitch::familyGarage)) == 0;
+    if (isCover)
+    {
+      if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
-        shutter->setLevel(0);
-        statePoolIdx = constanstsSwitch::openIdx;
+        if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+        {
+          shutter->setLevel(0);
+          statePoolIdx = constanstsSwitch::openIdx;
+        }
+        else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+        {
+          shutter->stop();
+          statePoolIdx = statePoolIdx == 3 ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
+        }
+        else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
+        {
+          shutter->setLevel(100);
+          statePoolIdx = constanstsSwitch::closeIdx;
+        }
+        else if (isValidNumber(state))
+        {
+          shutter->setLevel(max(0, min(100, atoi(state))));
+        }
       }
-      else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+      else
       {
-        shutter->stop();
-        statePoolIdx = statePoolIdx == 3 ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
+        if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+        {
+          statePoolIdx = constanstsSwitch::openIdx;
+        }
+        else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+        {
+          statePoolIdx = statePoolIdx == 3 ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
+        }
+        else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
+        {
+          statePoolIdx = constanstsSwitch::closeIdx;
+        }
+        notifyState(dirty, origin);
       }
-      else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
+    }
+    else if (isGate)
+    {
+      statePoolIdx = findPoolIdx(state, statePoolIdx, family);
+      if (statePoolIdx < 0)
       {
-        shutter->setLevel(100);
-        statePoolIdx = constanstsSwitch::closeIdx;
+        return "ERROR";
       }
-      else if (isValidNumber(state))
+      if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
-        shutter->setLevel(max(0, min(100, atoi(state))));
+        if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl == constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
+        {
+          timedOn(primaryGpioControl, inverted, 1000);
+        }
+        else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
+        {
+          if (statePoolIdx == constanstsSwitch::closeIdx)
+          {
+            timedOn(primaryGpioControl, inverted, 1000);
+          }
+          else if (statePoolIdx == constanstsSwitch::openIdx)
+          {
+            timedOn(secondaryGpioControl, inverted, 1000);
+          }
+        }
+        else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl != constantsConfig::noGPIO)
+        {
+          if (statePoolIdx == constanstsSwitch::closeIdx)
+          {
+            timedOn(primaryGpio, inverted, 1000);
+          }
+          else if (statePoolIdx == constanstsSwitch::openIdx)
+          {
+            timedOn(secondaryGpioControl, inverted, 1000);
+          }
+          else
+          {
+            timedOn(thirdGpioControl, inverted, 1000);
+          }
+        }
       }
     }
     else
     {
-      if (strcmp(constanstsSwitch::payloadOpen, state) == 0)
+      statePoolIdx = findPoolIdx(state, statePoolIdx, family);
+      if (statePoolIdx < 0)
+        return "ERROR";
+      lastChangeState = millis();
+      if (statePoolIdx == constanstsSwitch::onIdx)
       {
-        statePoolIdx = constanstsSwitch::openIdx;
+        if (typeControl == SwitchControlType::GPIO_OUTPUT)
+        {
+          configPIN(primaryGpioControl, OUTPUT);
+          writeToPIN(primaryGpioControl, HIGH); // TURN ON
+        }
       }
-      else if (strcmp(constanstsSwitch::payloadStop, state) == 0)
+      else if (statePoolIdx == constanstsSwitch::offIdx)
       {
-        statePoolIdx = statePoolIdx == 3 ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx;
-      }
-      else if (strcmp(constanstsSwitch::payloadClose, state) == 0)
-      {
-        statePoolIdx = constanstsSwitch::closeIdx;
+        if (typeControl == SwitchControlType::GPIO_OUTPUT)
+        {
+          configPIN(primaryGpioControl, OUTPUT);
+          writeToPIN(primaryGpioControl, LOW); // TURN OFF
+        }
       }
       notifyState(dirty, origin);
     }
-  }
-  else if (isGate)
-  {
-    statePoolIdx = findPoolIdx(state, statePoolIdx, family);
-    if (statePoolIdx < 0)
-    {
-      return "ERROR";
-    }
-    if (typeControl == SwitchControlType::GPIO_OUTPUT)
-    {
-      if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl == constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
-      {
-        timedOn(primaryGpioControl, inverted, 1000);
-      }
-      else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl == constantsConfig::noGPIO)
-      {
-        if (statePoolIdx == constanstsSwitch::closeIdx)
-        {
-          timedOn(primaryGpioControl, inverted, 1000);
-        }
-        else if (statePoolIdx == constanstsSwitch::openIdx)
-        {
-          timedOn(secondaryGpioControl, inverted, 1000);
-        }
-      }
-      else if (primaryGpioControl != constantsConfig::noGPIO && secondaryGpioControl != constantsConfig::noGPIO && thirdGpioControl != constantsConfig::noGPIO)
-      {
-        if (statePoolIdx == constanstsSwitch::closeIdx)
-        {
-          timedOn(primaryGpio, inverted, 1000);
-        }
-        else if (statePoolIdx == constanstsSwitch::openIdx)
-        {
-          timedOn(secondaryGpioControl, inverted, 1000);
-        }
-        else
-        {
-          timedOn(thirdGpioControl, inverted, 1000);
-        }
-      }
-    }
-  }
-  else
-  {
-    statePoolIdx = findPoolIdx(state, statePoolIdx, family);
-    if (statePoolIdx < 0)
-      return "ERROR";
-    lastChangeState = millis();
 
-    if (statePoolIdx == constanstsSwitch::onIdx)
-    {
-      if (typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-        configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
-      }
-    }
-    else if (statePoolIdx == constanstsSwitch::offIdx)
-    {
-      if (typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-        configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); // TURN OFF
-      }
-    }
-    else if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
-    {
-      if (typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-        configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
-      }
-    }
-
-    notifyState(dirty, origin);
+    return getCurrentState();
   }
 
-  return getCurrentState();
-}
-
-const String Switches::stateSwitchById(const char *id, const char *state)
-{
-  for (auto &sw : getAtualSwitchesConfig().items)
+  const String Switches::stateSwitchById(const char *id, const char *state)
   {
-    if (strcmp(id, sw.id) == 0)
+    for (auto &sw : getAtualSwitchesConfig().items)
     {
-      return sw.changeState(state, "BY_ID");
+      if (strcmp(id, sw.id) == 0)
+      {
+        return sw.changeState(state, "BY_ID");
+      }
     }
+    return "ERROR";
   }
-  return "ERROR";
-}
-bool stateTimeout(SwitchT &sw)
-{
-  return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.getCurrentState().c_str()) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
-}
-void loop(Switches &switches)
-{
-  if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
+  bool stateTimeout(SwitchT & sw)
   {
+    return sw.autoStateDelay > 0 && strlen(sw.autoStateValue) > 0 && strcmp(sw.autoStateValue, sw.getCurrentState().c_str()) != 0 && sw.lastChangeState + sw.autoStateDelay < millis();
+  }
+  void loop(Switches & switches)
+  {
+    if (switches.lastChange > 0 && switches.lastChange + constantsConfig::storeConfigDelay < millis())
+    {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s AUTO SAVE" CR, tags::switches);
+      Log.notice("%s AUTO SAVE" CR, tags::switches);
 #endif
-    getAtualSwitchesConfig().save(true);
-  }
-  for (auto &sw : switches.items)
-  {
-
-    if (sw.isCover)
-      sw.shutter->loop();
-    if (sw.childLock)
-      continue;
-    bool primaryGpioEvent = true;
-
-    bool secondaryGpioEvent = true;
-
-    if (sw.primaryGpio != constantsConfig::noGPIO)
-    {
-      sw.debouncerPrimary->update();
-      primaryGpioEvent = sw.debouncerPrimary->read();
+      getAtualSwitchesConfig().save(true);
     }
-    if (sw.secondaryGpio != constantsConfig::noGPIO)
+    for (auto &sw : switches.items)
     {
-      sw.debouncerSecondary->update();
-      secondaryGpioEvent = sw.debouncerSecondary->read();
-    }
-    if (sw.isGate)
-    {
-      bool primaryStateGpioEvent = true;
-      bool secondaryStateGpioEvent = true;
-      if (sw.primaryStateGpio != constantsConfig::noGPIO)
+
+      if (sw.isCover)
+        sw.shutter->loop();
+      if (sw.childLock)
+        continue;
+      bool primaryGpioEvent = true;
+
+      bool secondaryGpioEvent = true;
+
+      if (sw.primaryGpio != constantsConfig::noGPIO)
       {
-        primaryStateGpioEvent = readPIN(sw.primaryStateGpio);
-        if (sw.lastPrimaryStateGpioState != primaryStateGpioEvent)
+        sw.debouncerPrimary->update();
+        primaryGpioEvent = sw.debouncerPrimary->read();
+      }
+      if (sw.secondaryGpio != constantsConfig::noGPIO)
+      {
+        sw.debouncerSecondary->update();
+        secondaryGpioEvent = sw.debouncerSecondary->read();
+      }
+      if (sw.isGate)
+      {
+        bool primaryStateGpioEvent = true;
+        bool secondaryStateGpioEvent = true;
+        if (sw.primaryStateGpio != constantsConfig::noGPIO)
         {
-          sw.lastPrimaryStateGpioState = primaryStateGpioEvent;
-          if (primaryStateGpioEvent)
+          primaryStateGpioEvent = readPIN(sw.primaryStateGpio);
+          if (sw.lastPrimaryStateGpioState != primaryStateGpioEvent)
           {
-            sw.statePoolIdx = constanstsSwitch::openIdx;
+            sw.lastPrimaryStateGpioState = primaryStateGpioEvent;
+            if (primaryStateGpioEvent)
+            {
+              sw.statePoolIdx = constanstsSwitch::openIdx;
+            }
+            else
+            {
+              sw.statePoolIdx = constanstsSwitch::closeIdx;
+            }
+            sw.notifyState(true, "LOOP");
           }
-          else
+        }
+      }
+      switch (sw.mode)
+      {
+      case SWITCH:
+        if (sw.primaryGpio != constantsConfig::noGPIO && sw.lastPrimaryGpioState != primaryGpioEvent)
+        {
+#ifdef DEBUG_ONOFRE
+          Log.notice("%s 1 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches, sw.lastPrimaryGpioState, primaryGpioEvent);
+#endif
+          sw.rotateState();
+#ifdef DEBUG_ONOFRE
+          Log.notice("%s 2 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches, sw.lastPrimaryGpioState, primaryGpioEvent);
+#endif
+        }
+        break;
+      case PUSH:
+        if (sw.primaryGpio != constantsConfig::noGPIO && !primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
+        {
+          sw.rotateState();
+        }
+
+        break;
+      case DUAL_SWITCH:
+        if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
+        {
+          if (primaryGpioEvent && secondaryGpioEvent && (sw.lastPrimaryGpioState != primaryGpioEvent || sw.lastSecondaryGpioState != secondaryGpioEvent))
           {
-            sw.statePoolIdx = constanstsSwitch::closeIdx;
+            sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx].c_str(), "DUAL_SWITCH_STOP");
           }
-          sw.notifyState(true, "LOOP");
+          else if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
+          {
+            sw.changeState(STATES_POLL[constanstsSwitch::openIdx].c_str(), "DUAL_SWITCH_OPEN");
+          }
+          else if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
+          {
+            sw.changeState(STATES_POLL[constanstsSwitch::closeIdx].c_str(), "DUAL_SWITCH_CLOSE");
+          }
         }
-      }
-    }
-    switch (sw.mode)
-    {
-    case SWITCH:
-      if (sw.primaryGpio != constantsConfig::noGPIO && sw.lastPrimaryGpioState != primaryGpioEvent)
-      {
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s 1 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches, sw.lastPrimaryGpioState, primaryGpioEvent);
-#endif
-        sw.rotateState();
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s 2 lastPrimaryGpioState %d primaryGpioEvent %d" CR, tags::switches, sw.lastPrimaryGpioState, primaryGpioEvent);
-#endif
-      }
-      break;
-    case PUSH:
-      if (sw.primaryGpio != constantsConfig::noGPIO && !primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
-      {
-        sw.rotateState();
-      }
-
-      break;
-    case DUAL_SWITCH:
-      if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
-      {
-        if (primaryGpioEvent && secondaryGpioEvent && (sw.lastPrimaryGpioState != primaryGpioEvent || sw.lastSecondaryGpioState != secondaryGpioEvent))
+        break;
+      case DUAL_PUSH:
+        if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
         {
-          sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::firtStopIdx].c_str(), "DUAL_SWITCH_STOP");
+          if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
+          { // PUSHED
+            sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::firtStopIdx : constanstsSwitch::openIdx].c_str(), "DUAL_PUSH");
+          }
+          if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
+          { // PUSHED
+            sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::closeIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::closeIdx].c_str(), "DUAL_PUSH");
+          }
         }
-        else if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
-        {
-          sw.changeState(STATES_POLL[constanstsSwitch::openIdx].c_str(), "DUAL_SWITCH_OPEN");
-        }
-        else if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
-        {
-          sw.changeState(STATES_POLL[constanstsSwitch::closeIdx].c_str(), "DUAL_SWITCH_CLOSE");
-        }
+        break;
+      default:
+        break;
       }
-      break;
-    case DUAL_PUSH:
-      if (strcmp(sw.family, constanstsSwitch::familyCover) == 0 && sw.primaryGpio != constantsConfig::noGPIO && sw.secondaryGpio != constantsConfig::noGPIO)
+      sw.lastPrimaryGpioState = primaryGpioEvent;
+      sw.lastSecondaryGpioState = secondaryGpioEvent;
+      if (stateTimeout(sw))
       {
-        if (!primaryGpioEvent && sw.lastPrimaryGpioState != primaryGpioEvent)
-        { // PUSHED
-          sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::openIdx ? constanstsSwitch::firtStopIdx : constanstsSwitch::openIdx].c_str(), "DUAL_PUSH");
-        }
-        if (!secondaryGpioEvent && sw.lastSecondaryGpioState != secondaryGpioEvent)
-        { // PUSHED
-          sw.changeState(STATES_POLL[sw.statePoolIdx == constanstsSwitch::closeIdx ? constanstsSwitch::secondStopIdx : constanstsSwitch::closeIdx].c_str(), "DUAL_PUSH");
-        }
-      }
-      break;
-    default:
-      break;
-    }
-    sw.lastPrimaryGpioState = primaryGpioEvent;
-    sw.lastSecondaryGpioState = secondaryGpioEvent;
-    if (stateTimeout(sw))
-    {
 
 #ifdef DEBUG_ONOFRE
-      Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, STATES_POLL[sw.statePoolIdx].c_str());
+        Log.notice("%s State Timeout set change switch to %s " CR, tags::switches, STATES_POLL[sw.statePoolIdx].c_str());
 #endif
-      sw.changeState(STATES_POLL[findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.family)].c_str(), "AUTO_TIMEOUT");
+        sw.changeState(STATES_POLL[findPoolIdx(sw.autoStateValue, sw.statePoolIdx, sw.family)].c_str(), "AUTO_TIMEOUT");
+      }
     }
   }
-}
