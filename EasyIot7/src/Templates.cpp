@@ -74,7 +74,7 @@ void loadSwitchDefaults()
 #endif
 
 #if defined DUAL_LIGHT
-    one.mode = SWITCH;
+    one.mode = PUSH;
     strlcpy(one.name, "Interruptor1", sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
 #endif
@@ -84,6 +84,7 @@ void loadSwitchDefaults()
     strlcpy(one.name, "Estore", sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
     one.secondaryGpio = 13u;
+    one.secondaryGpioControl = 5u;
 #endif
 
 #if defined GATE
@@ -92,26 +93,28 @@ void loadSwitchDefaults()
     strlcpy(one.family, constanstsSwitch::familyGarage, sizeof(one.family));
     one.primaryStateGpio = 13;
     one.secondaryGpioControl = constantsConfig::noGPIO;
-
 #endif
+
     String idStr;
     generateId(idStr, one.name, 1, sizeof(one.id));
     strlcpy(one.id, idStr.c_str(), sizeof(one.id));
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
     one.reloadMqttTopics();
     getAtualSwitchesConfig().items.push_back(one);
+
 #if defined DUAL_LIGHT
     SwitchT two;
     two.firmware = VERSION;
+    two.typeControl = SwitchControlType::GPIO_OUTPUT;
     strlcpy(two.name, "Interruptor2", sizeof(two.name));
     String idStr2;
     generateId(idStr2, two.name, 1, sizeof(two.id));
     strlcpy(two.id, idStr2.c_str(), sizeof(two.id));
     strlcpy(two.family, constanstsSwitch::familyLight, sizeof(two.family));
     two.primaryGpio = 13u;
-    two.mode = SWITCH;
-    two.statePoolIdx = findPoolIdx("", two.statePoolIdx, two.family);
     two.primaryGpioControl = 5u;
+    two.mode = PUSH;
+    two.statePoolIdx = findPoolIdx("", two.statePoolIdx, two.family);
     two.reloadMqttTopics();
     getAtualSwitchesConfig().items.push_back(two);
 #endif

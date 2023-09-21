@@ -65,10 +65,10 @@ struct SwitchT
 
     // CONTROL VARIABLES
     int lastPercentage = 0;
-    bool lastPrimaryGpioState = true;
-    bool lastSecondaryGpioState = true;
-    bool lastPrimaryStateGpioState = true;
-    bool lastSecondaryStateGpioState = true;
+    bool lastPrimaryGpioState = false;
+    bool lastSecondaryGpioState = false;
+    bool lastPrimaryStateGpioState = false;
+    bool lastSecondaryStateGpioState = false;
     Bounce *debouncerPrimary = nullptr;
     Bounce *debouncerSecondary = nullptr;
     int statePoolIdx = -1;

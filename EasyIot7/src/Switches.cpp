@@ -730,7 +730,7 @@ void timedOn(unsigned int gpio, bool inverted, unsigned onTime)
 const String SwitchT::changeState(const char *state, const char *origin)
 {
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s Name:      %s" CR, tags::switches, name);
+  Log.notice("%s Name:      %s IN:%d OUT:%d" CR, tags::switches, name, primaryGpio, primaryGpioControl);
   Log.notice("%s State:     %s" CR, tags::switches, state);
   Log.notice("%s State IDX: %d" CR, tags::switches, statePoolIdx);
   Log.notice("%s From : %s" CR, tags::switches, origin);
@@ -828,13 +828,12 @@ const String SwitchT::changeState(const char *state, const char *origin)
     if (statePoolIdx < 0)
       return "ERROR";
     lastChangeState = millis();
-
     if (statePoolIdx == constanstsSwitch::onIdx)
     {
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
         configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
+        writeToPIN(primaryGpioControl, HIGH); // TURN ON
       }
     }
     else if (statePoolIdx == constanstsSwitch::offIdx)
@@ -842,18 +841,9 @@ const String SwitchT::changeState(const char *state, const char *origin)
       if (typeControl == SwitchControlType::GPIO_OUTPUT)
       {
         configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? HIGH : LOW); // TURN OFF
+        writeToPIN(primaryGpioControl, LOW); // TURN OFF
       }
     }
-    else if (statePoolIdx == constanstsSwitch::closeIdx || statePoolIdx == constanstsSwitch::openIdx)
-    {
-      if (typeControl == SwitchControlType::GPIO_OUTPUT)
-      {
-        configPIN(primaryGpioControl, OUTPUT);
-        writeToPIN(primaryGpioControl, inverted ? LOW : HIGH); // TURN ON
-      }
-    }
-
     notifyState(dirty, origin);
   }
 
