@@ -170,13 +170,6 @@ void loadSwitchDefaults()
     SwitchT one;
     one.firmware = VERSION;
     one.typeControl = SwitchControlType::GPIO_OUTPUT;
-    one.knxSupport = false;
-    one.haSupport = false;
-    one.mqttSupport = false;
-    one.cloudIOSupport = true;
-    one.pullup = true;
-    one.mqttRetain = false;
-    one.inverted = false;
     one.primaryGpioControl = 4u;
     one.secondaryGpioControl = 5u;
     one.lastPrimaryGpioState = false;
@@ -187,8 +180,21 @@ void loadSwitchDefaults()
     strlcpy(one.family, constanstsSwitch::familyCover, sizeof(one.family));
     one.secondaryGpio = 13u;
 #endif
-
-#if defined GATE
+    strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
+    String idStr;
+    generateId(idStr, one.name, 1, sizeof(one.id));
+    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
+    one.reloadMqttTopics();
+    one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
+    getAtualSwitchesConfig().items.push_back(one);
+}
+void prepareGarage()
+{
+    SwitchT one;
+    one.firmware = VERSION;
+    one.typeControl = SwitchControlType::GPIO_OUTPUT;
+    one.primaryGpioControl = 4u;
+    one.secondaryGpioControl = 5u;
     one.mode = SwitchMode::PUSH;
     strlcpy(one.name, "Garagem", sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyGarage, sizeof(one.family));
@@ -222,7 +228,7 @@ void loadSwitchDefaults()
     String idStr;
     generateId(idStr, one.name, 1, sizeof(one.id));
     strlcpy(one.id, idStr.c_str(), sizeof(one.id));
-    one.reloadMqttTopics();
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
+    one.reloadMqttTopics();
     getAtualSwitchesConfig().items.push_back(one);
 }
