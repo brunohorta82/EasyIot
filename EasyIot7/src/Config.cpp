@@ -6,27 +6,20 @@
 #include "WebServer.h"
 #include "Switches.h"
 #include "Sensors.h"
+#include "Templates.hpp"
 
 extern Config config;
 void generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
   id.reserve(maxSize);
-  id.concat(config.chipId);
+  id.concat(getChipId());
   id.concat(name);
   id.concat(familyCode);
   normalize(id);
 }
 
-
 void Config::save()
 {
-  if (!LittleFS.begin())
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s File storage can't start" CR, tags::config);
-#endif
-    return;
-  }
   File file = LittleFS.open(configFilenames::config, "w+");
   this->save(file);
   file.close();
@@ -109,6 +102,7 @@ void Config::save(File &file) const
 }
 void Config::load(File &file)
 {
+  strlcpy(chipId, getChipId().c_str(), sizeof(chipId));
   file.read((uint8_t *)&firmware, sizeof(firmware));
   if (firmware < 8.1)
   {
@@ -137,7 +131,7 @@ void Config::load(File &file)
   file.read((uint8_t *)&knxArea, sizeof(knxArea));
   file.read((uint8_t *)&knxLine, sizeof(knxLine));
   file.read((uint8_t *)&knxMember, sizeof(knxMember));
-  strlcpy(chipId, getChipId().c_str(), sizeof(chipId));
+
   file.read((uint8_t *)cloudIOUserName, sizeof(cloudIOUserName));
   if (firmware < VERSION)
   {
@@ -149,21 +143,6 @@ void Config::load(File &file)
 }
 void load(Config &config)
 {
-  configTime(0, 0, NTP_SERVER);
-  setenv("TZ", TZ_INFO, 1);
-  if (!LittleFS.begin())
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s File storage can't start" CR, tags::config);
-#endif
-    if (!LittleFS.format())
-    {
-#ifdef DEBUG_ONOFRE
-      Log.error("%s Unable to format Filesystem, please ensure you built firmware with filesystem support." CR, tags::config);
-#endif
-    }
-  }
-
   if (!LittleFS.exists(configFilenames::config))
   {
 #ifdef DEBUG_ONOFRE
@@ -274,7 +253,10 @@ Config &Config::updateFromJson(JsonObject &root)
   config.save();
   return *this;
 }
-
+void Config::loadTemplate(int templateId)
+{
+  templateSelect((Template)templateId);
+}
 void Config::requestWifiScan()
 {
   wifiScan = true;

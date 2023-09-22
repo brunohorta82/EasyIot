@@ -17,6 +17,7 @@ Ticker mqttReconnectTimer;
 Ticker cloudIOReconnectTimer;
 int reconectCount = 0;
 extern Config config;
+extern Switches switches;
 void disconnectToClounIOMqtt()
 {
 #ifdef DEBUG_ONOFRE
@@ -66,7 +67,7 @@ void onMqttConnect(bool sessionPresent)
   topicAction.concat("/remote-action");
   strlcpy(config.mqttCloudRemoteActionsTopic, topicAction.c_str(), sizeof(config.mqttCloudRemoteActionsTopic));
   subscribeOnMqttCloudIO(config.mqttCloudRemoteActionsTopic);
-  for (auto &sw : getAtualSwitchesConfig().items)
+  for (auto &sw : switches.items)
   {
 
     String topic;
@@ -158,7 +159,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   }
   else
   {
-    mqttSwitchControl(getAtualSwitchesConfig(), topic, msg);
+    mqttSwitchControl(switches, topic, msg);
   }
 }
 
@@ -215,7 +216,7 @@ void connectToCloudIO()
 
   reconectCount++;
   String payload = "";
-  size_t s = getAtualSwitchesConfig().items.size();
+  size_t s = switches.items.size();
   size_t ss = getAtualSensorsConfig().items.size();
   const size_t CAPACITY = JSON_ARRAY_SIZE(s + ss) + (s * JSON_OBJECT_SIZE(8) + sizeof(SwitchT)) + (ss * (JSON_OBJECT_SIZE(7) + sizeof(SensorT)));
   DynamicJsonDocument doc(CAPACITY);
@@ -228,7 +229,7 @@ void connectToCloudIO()
   device["firmwareMode"] = "NO_FEATURES";
   device["macAddr"] = WiFi.macAddress();
   JsonArray feactures = device.createNestedArray("features");
-  for (auto &sw : getAtualSwitchesConfig().items)
+  for (auto &sw : switches.items)
   {
     JsonObject sdoc = feactures.createNestedObject();
     sdoc["id"] = sw.id;

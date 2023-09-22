@@ -18,6 +18,7 @@
 #include "constants.h"
 #include "CloudIO.h"
 Config config;
+Switches switches;
 void checkInternalRoutines()
 {
   if (config.isCloudIOSyncRequested())
@@ -87,9 +88,8 @@ void setup()
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
   startFileSystem();
-
   load(config);
-  load(getAtualSwitchesConfig());
+  load(switches);
   load(getAtualSensorsConfig());
   setupWiFi();
   setupCors();
@@ -104,7 +104,7 @@ void loop()
   loopMqtt();
   if (!config.isAutoUpdateRequested())
   {
-    loop(getAtualSwitchesConfig());
+    loop(switches);
     loop(getAtualSensorsConfig());
   }
   if (WiFi.status() == WL_CONNECTED)

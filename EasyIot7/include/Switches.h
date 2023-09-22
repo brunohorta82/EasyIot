@@ -23,8 +23,9 @@ enum SwitchControlType
     NONE = 2
 };
 
-struct SwitchT
+class SwitchT
 {
+public:
     double firmware = 0.0;
     char id[32] = {0}; // Generated from name without spaces and no special characters
     char name[24] = {0};
@@ -105,8 +106,9 @@ struct SwitchT
     const void notifyState(bool dirty, const char *origin);
     void reloadMqttTopics();
 };
-struct Switches
+class Switches
 {
+public:
     unsigned long lastChange = 0ul;
     std::vector<SwitchT> items;
     void load(File &file);
@@ -122,7 +124,6 @@ void stateSwitchByName(Switches &switches, const char *name, const char *state, 
 void loop(Switches &switches);
 void load(Switches &switches);
 void mqttSwitchControl(Switches &switches, const char *topic, const char *payload);
-struct Switches &getAtualSwitchesConfig();
 int findPoolIdx(const char *state, int currentIdx, const char *family);
 void reloadSwitches();
 #endif

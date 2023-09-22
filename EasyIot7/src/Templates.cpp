@@ -4,6 +4,7 @@
 #include "Sensors.h"
 #include "Config.h"
 extern Config config;
+extern Switches switches;
 void loadDefaultConfig()
 {
     strlcpy(config.nodeId, getChipId().c_str(), sizeof(config.nodeId));
@@ -50,11 +51,11 @@ void preparePzem()
     strlcpy(pzem.payloadOff, "OFF", sizeof(pzem.payloadOff));
     strlcpy(pzem.mqttPayload, "", sizeof(pzem.mqttPayload));
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
-    pzem.reloadMqttTopics();
     getAtualSensorsConfig().items.push_back(pzem);
 }
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
+    Serial.println(name);
     SwitchT one;
     one.firmware = VERSION;
     one.typeControl = SwitchControlType::GPIO_OUTPUT;
@@ -63,13 +64,11 @@ void prepareLight(String name, unsigned int output, unsigned int input)
     strlcpy(one.name, name.c_str(), sizeof(one.name));
     strlcpy(one.family, constanstsSwitch::familyLight, sizeof(one.family));
     one.primaryGpio = input;
-    strlcpy(one.autoStateValue, "", sizeof(one.autoStateValue));
     String idStr;
-    generateId(idStr, one.name, 1, sizeof(one.id));
-    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
-    one.reloadMqttTopics();
+    generateId(idStr, name, 1, sizeof(one.id));
+    strlcpy(one.id, name.c_str(), sizeof(one.id));
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
-    getAtualSwitchesConfig().items.push_back(one);
+    switches.items.push_back(one);
 }
 void prepareCover()
 {
@@ -96,7 +95,7 @@ void prepareCover()
     strlcpy(one.id, idStr.c_str(), sizeof(one.id));
     one.reloadMqttTopics();
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
-    getAtualSwitchesConfig().items.push_back(one);
+    switches.items.push_back(one);
 }
 void prepareGarage()
 {
@@ -121,10 +120,12 @@ void prepareGarage()
     strlcpy(one.id, idStr.c_str(), sizeof(one.id));
     one.reloadMqttTopics();
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
-    getAtualSwitchesConfig().items.push_back(one);
+    switches.items.push_back(one);
 }
 void templateSelect(enum Template _template)
 {
+    switches.items.clear();
+
     switch (_template)
     {
     case Template::NO_TEMPLATE:
@@ -134,6 +135,7 @@ void templateSelect(enum Template _template)
         break;
     case Template::DUAL_LIGHT:
     {
+        switches.items.resize(2);
 #ifdef CONFIG_LANG_PT
         String name1 = "Interruptor1";
         String name2 = "Interruptor2";

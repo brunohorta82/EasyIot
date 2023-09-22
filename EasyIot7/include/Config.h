@@ -47,6 +47,7 @@ public:
   Config &updateFromJson(JsonObject &root);
   void save(File &file) const;
   void load(File &file);
+  void loadTemplate(int templateId);
   void requestCloudIOSync();
   bool isCloudIOSyncRequested();
 

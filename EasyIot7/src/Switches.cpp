@@ -10,11 +10,8 @@
 #include "CloudIO.h"
 #include <Shutters.h>
 extern Config config;
-struct Switches &getAtualSwitchesConfig()
-{
-  static Switches switches;
-  return switches;
-}
+extern Switches switches;
+
 void SwitchT::updateFromJson(JsonObject doc)
 {
   firmware = VERSION;
@@ -96,7 +93,7 @@ void Switches::save(File &file) const
   file.write((uint8_t *)&n_items, sizeof(n_items));
   for (const auto &item : items)
     item.save(file);
-  getAtualSwitchesConfig().lastChange = 0ul;
+  switches.lastChange = 0ul;
 }
 void Switches::toJson(JsonVariant &root)
 {
@@ -199,7 +196,7 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
     shutters->getSwitchT()->shutterState[i] = state[i];
   }
 
-  getAtualSwitchesConfig().save(false);
+  switches.save(false);
   if (shutters->getSwitchT()->mqttSupport)
   {
     publishOnMqtt(shutters->getSwitchT()->mqttStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), false);
@@ -386,13 +383,6 @@ void SwitchT::load(File &file)
 
 void Switches::save(bool syncState)
 {
-  if (!LittleFS.begin())
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s File storage can't start" CR, tags::switches);
-#endif
-    return;
-  }
   File file = LittleFS.open(configFilenames::switches, "w+");
   if (!file)
     return;
@@ -492,13 +482,13 @@ void SwitchT::reloadMqttTopics()
 
 void reloadSwitches()
 {
-  for (auto &sw : getAtualSwitchesConfig().items)
+  for (auto &sw : switches.items)
     sw.reloadMqttTopics();
-  getAtualSwitchesConfig().save(false);
+  switches.save(false);
 }
 void saveAndRefreshServices(Switches &switches, const SwitchT &sw)
 {
-  getAtualSwitchesConfig().save(false);
+  switches.save(false);
   removeFromHaDiscovery(sw);
   if (sw.haSupport)
     addToHaDiscovery(sw);
@@ -550,6 +540,10 @@ void update(Switches &switches, const String &id, JsonObject doc)
 
 void load(Switches &switches)
 {
+  if (!LittleFS.exists(configFilenames::switches))
+  {
+    return;
+  }
   File file = LittleFS.open(configFilenames::switches, "r+");
   switches.load(file);
   file.close();
@@ -667,7 +661,7 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
 
   sendToServerEvents(id, currentStateToSend);
   if (dirty)
-    getAtualSwitchesConfig().lastChange = millis();
+    switches.lastChange = millis();
   if (strcmp("KNX", origin) != 0 && knxSupport)
   {
     knx.write_1byte_int(knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree), statePoolIdx);
@@ -677,7 +671,7 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
   bool knxGroup = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree == 0;
   if (knxGroup)
   {
-    for (auto &sw : getAtualSwitchesConfig().items)
+    for (auto &sw : switches.items)
     {
 
       if (strcmp(sw.id, id) != 0)
@@ -841,7 +835,7 @@ const String SwitchT::changeState(const char *state, const char *origin)
 
 const String Switches::stateSwitchById(const char *id, const char *state)
 {
-  for (auto &sw : getAtualSwitchesConfig().items)
+  for (auto &sw : switches.items)
   {
     if (strcmp(id, sw.id) == 0)
     {
@@ -861,7 +855,7 @@ void loop(Switches &switches)
 #ifdef DEBUG_ONOFRE
     Log.notice("%s AUTO SAVE" CR, tags::switches);
 #endif
-    getAtualSwitchesConfig().save(true);
+    switches.save(true);
   }
   for (auto &sw : switches.items)
   {

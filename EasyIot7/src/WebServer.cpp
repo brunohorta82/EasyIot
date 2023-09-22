@@ -28,6 +28,7 @@ DNSServer dnsServer;
 static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
 extern Config config;
+extern Switches switches;
 void performUpdate()
 {
 #ifdef DEBUG_ONOFRE
@@ -103,7 +104,7 @@ public:
       strlcpy(config.wifiSSID, request->arg("s").c_str(), sizeof(config.wifiSSID));
       if (request->hasArg("t"))
       {
-        // TODOO config.loadTemplate(request->arg("t").toInt());
+        config.loadTemplate(request->arg("t").toInt());
       }
 
       if (request->hasArg("p"))
@@ -189,18 +190,20 @@ public:
     {
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);
-      /* if (config.templateId == 0)
-       {
-         form.replace("class='hide'", "");
-       }*/
+      if ((getAtualSensorsConfig().items.size() + switches.items.size()) == 0)
+      {
+        form.replace("class='hide'", "");
+      }
       response->print(form);
       response->print(FPSTR(HTTP_END));
       request->send(response);
     }
     if (store)
     {
-      config.save();
-      config.requestRestart();
+      //  config.save();
+      // getAtualSensorsConfig().save();
+      // getAtualSwitchesConfig().save(true);
+      // config.requestRestart();
     }
   }
 };
@@ -451,7 +454,7 @@ void loadAPI()
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse(true);
     JsonVariant &root = response->getRoot();
-    getAtualSwitchesConfig().toJson(root);
+   switches.toJson(root);
     response->setLength();
     request->send(response); });
 
@@ -469,7 +472,7 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse(false, 1024U);
     JsonVariant &root = response->getRoot();
     JsonObject switchJson = json.as<JsonObject>();
-    getAtualSwitchesConfig().updateFromJson(request->arg("id").c_str(), switchJson).toJson(root);
+   switches.updateFromJson(request->arg("id").c_str(), switchJson).toJson(root);
     response->setLength();
     request->send(response);
     config.requestCloudIOSync(); }));
@@ -487,7 +490,7 @@ void loadAPI()
     }
     AsyncJsonResponse *response = new AsyncJsonResponse(true);
     JsonVariant &root = response->getRoot();
-    getAtualSwitchesConfig().remove(request->arg("id").c_str()).toJson(root);
+    switches.remove(request->arg("id").c_str()).toJson(root);
     response->setLength();
     request->send(response);
     config.requestCloudIOSync(); });
@@ -505,7 +508,7 @@ void loadAPI()
     }
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
-    root["stateControl"] = getAtualSwitchesConfig().rotate(request->arg("id").c_str());
+    root["stateControl"] = switches.rotate(request->arg("id").c_str());
     response->setLength();
     request->send(response); });
 
@@ -523,7 +526,7 @@ void loadAPI()
       request->send(errorResponse("State missing"));
       return;
     }
-    const String stateResult = getAtualSwitchesConfig().stateSwitchById(request->arg("id").c_str(), request->arg("state").c_str());
+    const String stateResult = switches.stateSwitchById(request->arg("id").c_str(), request->arg("state").c_str());
     if (strcmp("ERROR", stateResult.c_str()) == 0)
     {
       request->send(errorResponse("Invalid State"));
