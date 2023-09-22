@@ -15,6 +15,7 @@ void generateId(String &id, const String &name, int familyCode, size_t maxSize)
   id.concat(getChipId());
   id.concat(name);
   id.concat(familyCode);
+  id.toLowerCase();
   normalize(id);
 }
 

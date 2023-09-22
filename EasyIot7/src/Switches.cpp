@@ -205,13 +205,13 @@ void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte lengt
   {
     if (shutters->getSwitchT()->getCurrentState().equalsIgnoreCase(constanstsSwitch::payloadStop))
     {
-      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, shutters->getSwitchT()->getCurrentState().c_str(), strlen(shutters->getSwitchT()->getCurrentState().c_str()));
+      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, shutters->getSwitchT()->getCurrentState().c_str());
     }
     else
     {
       char dump[4] = {0};
       int l = sprintf(dump, "%d", shutters->getSwitchT()->lastPercentage);
-      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, dump, l);
+      notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, dump);
     }
   }
 }
@@ -282,7 +282,7 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
   }
   if (shutters->getSwitchT()->cloudIOSupport)
   {
-    notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, dump, l);
+    notifyStateToCloudIO(shutters->getSwitchT()->mqttCloudStateTopic, dump);
   }
 }
 void SwitchT::configPins()
@@ -648,7 +648,7 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
   }
   const String currentStateToSend = getCurrentState();
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s %s current state: %s" CR, tags::switches, name, currentStateToSend.c_str());
+  Log.notice("%s %s current state: %s  %s" CR, tags::switches, name, currentStateToSend.c_str(), mqttCloudStateTopic);
 #endif
   if (mqttSupport)
   {
@@ -656,7 +656,7 @@ const void SwitchT::notifyState(bool dirty, const char *origin)
   }
   if (cloudIOSupport)
   {
-    notifyStateToCloudIO(mqttCloudStateTopic, currentStateToSend.c_str(), currentStateToSend.length());
+    notifyStateToCloudIO(this);
   }
 
   sendToServerEvents(id, currentStateToSend);

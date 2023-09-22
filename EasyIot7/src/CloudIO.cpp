@@ -14,35 +14,46 @@
 #endif
 AsyncMqttClient mqttClient;
 Ticker mqttReconnectTimer;
-Ticker cloudIOReconnectTimer;
-int reconectCount = 0;
 extern Config config;
 extern Switches switches;
-void disconnectToClounIOMqtt()
+
+void disconnectToCloudIOMqtt()
 {
 #ifdef DEBUG_ONOFRE
   Log.error("%s Disconnect to MQTT..." CR, tags::cloudIO);
 #endif
   mqttClient.disconnect();
 }
-void connectToClounIOMqtt()
+void connectToCloudIOMqtt()
 {
 #ifdef DEBUG_ONOFRE
   Log.error("%s Connecting to MQTT..." CR, tags::cloudIO);
 #endif
   mqttClient.connect();
 }
-
 bool mqttCloudIOConnected()
 {
   return mqttClient.connected();
 }
-void notifyStateToCloudIO(const char *topic, const char *state, size_t length)
+void notifyStateToCloudIO(SwitchT *s)
 {
-  if (!mqttClient.connected())
+  if (!mqttCloudIOConnected())
     return;
-  mqttClient.publish(topic, 0, true, state, length);
+#ifdef DEBUG_ONOFRE
+  Log.warning("%s Message sent to %s with value %s" CR, tags::cloudIO, s->mqttCloudStateTopic, s->getCurrentState());
+#endif
+  mqttClient.publish(s->mqttCloudStateTopic, 0, true, s->getCurrentState().c_str());
 }
+void notifyStateToCloudIO(const String topic, const String state)
+{
+  if (!mqttCloudIOConnected())
+    return;
+#ifdef DEBUG_ONOFRE
+  Log.warning("%s Message sent to %s with value %s" CR, tags::cloudIO, topic, state);
+#endif
+  mqttClient.publish(topic.c_str(), 0, true, state.c_str());
+}
+
 void subscribeOnMqttCloudIO(const char *topic)
 {
   if (!mqttCloudIOConnected())
@@ -65,22 +76,22 @@ void onMqttConnect(bool sessionPresent)
   topicAction.concat("/");
   topicAction.concat(config.chipId);
   topicAction.concat("/remote-action");
+  topicAction.toLowerCase();
   strlcpy(config.mqttCloudRemoteActionsTopic, topicAction.c_str(), sizeof(config.mqttCloudRemoteActionsTopic));
   subscribeOnMqttCloudIO(config.mqttCloudRemoteActionsTopic);
   for (auto &sw : switches.items)
   {
 
     String topic;
-    topic.reserve(200);
     topic.concat(config.cloudIOUserName);
     topic.concat("/");
-    topic.concat(config.chipId);
+    topic.concat(getChipId());
     topic.concat("/");
     topic.concat(sw.family);
     topic.concat("/");
     topic.concat(sw.id);
     topic.concat("/set");
-
+    topic.toLowerCase();
     strlcpy(sw.mqttCloudCommandTopic, topic.c_str(), sizeof(sw.mqttCloudCommandTopic));
     subscribeOnMqttCloudIO(sw.mqttCloudCommandTopic);
 
@@ -91,7 +102,7 @@ void onMqttConnect(bool sessionPresent)
     {
       char dump[4] = {0};
       int l = sprintf(dump, "%d", sw.lastPercentage);
-      notifyStateToCloudIO(sw.mqttCloudStateTopic, dump, l);
+      notifyStateToCloudIO(sw.mqttCloudStateTopic, dump);
     }
     else
     {
@@ -111,6 +122,7 @@ void onMqttConnect(bool sessionPresent)
     topic.concat("/");
     topic.concat(ss.id);
     topic.concat("/status");
+    topic.toLowerCase();
     strlcpy(ss.mqttCloudStateTopic, topic.c_str(), sizeof(ss.mqttCloudStateTopic));
     mqttClient.publish(ss.mqttCloudStateTopic, 0, true, ss.lastReading);
   }
@@ -122,67 +134,35 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 #ifdef DEBUG_ONOFRE
   Log.warning("%s Disconnected from MQTT." CR, tags::cloudIO);
 #endif
-  if (WiFi.isConnected())
+  if (wifiConnected())
   {
-    mqttReconnectTimer.once(2, connectToClounIOMqtt);
+    mqttReconnectTimer.once(2, connectToCloudIOMqtt);
   }
-}
-bool cloudIOConnected()
-{
-  return mqttClient.connected();
-}
-void onMqttSubscribe(uint16_t packetId, uint8_t qos)
-{
-}
-
-void onMqttUnsubscribe(uint16_t packetId)
-{
 }
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
   char msg[100];
-#ifdef DEBUG_ONOFRE
-  Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
-#endif
-  strlcpy(msg, payload, len + 1);
-  if (strcmp(topic, config.mqttCloudRemoteActionsTopic) == 0)
-  {
-    if (strcmp(msg, "REBOOT") == 0)
-    {
-      config.requestRestart();
-    }
-    if (strcmp(msg, "UPDATE") == 0)
-    {
-      config.requestAutoUpdate();
-    }
-  }
-  else
-  {
-    mqttSwitchControl(switches, topic, msg);
-  }
-}
 
-void onMqttPublish(uint16_t packetId)
-{
+  strlcpy(msg, payload, len + 1);
+#ifdef DEBUG_ONOFRE
+  Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, msg);
+#endif
+  mqttSwitchControl(switches, topic, msg);
 }
 
 void setupCloudIO()
 {
-
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onSubscribe(onMqttSubscribe);
-  mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
-  mqttClient.onPublish(onMqttPublish);
   mqttClient.setCleanSession(true);
   mqttClient.setKeepAlive(60);
   mqttClient.setWill(config.availableCloudIO, 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(config.chipId);
   mqttClient.setCredentials(config.cloudIOUserName, config.cloudIOUserPassword);
-  connectToCloudIO();
+  connectToCloudIOMqtt();
 }
 bool tryCloudConnection()
 {
@@ -204,17 +184,13 @@ WiFiClient client;
 HTTPClient http;
 void connectToCloudIO()
 {
-
-  cloudIOReconnectTimer.detach();
-  if (WiFi.status() != WL_CONNECTED || reconectCount > 3)
+  if (!wifiConnected())
   {
 #ifdef DEBUG_ONOFRE
-    Log.error("%s [HTTP] reconectCount %d" CR, tags::cloudIO, reconectCount);
+    Log.error("%s No WiFi Connection %d" CR, tags::cloudIO);
 #endif
     return;
   }
-
-  reconectCount++;
   String payload = "";
   size_t s = switches.items.size();
   size_t ss = getAtualSensorsConfig().items.size();
@@ -252,7 +228,7 @@ void connectToCloudIO()
   http.begin(client, constanstsCloudIO::cloudioDevicesUrl);
   http.addHeader("Content-Type", "application/json");
 #ifdef DEBUG_ONOFRE
-  Log.error("%s [HTTP] POST %d" CR, tags::cloudIO, reconectCount);
+  Log.error("%s [HTTP] POST " CR, tags::cloudIO);
 #endif
   // start connection and send HTTP header and body
   int httpCode = http.POST(payload.c_str());
@@ -267,7 +243,6 @@ void connectToCloudIO()
     // file found at server
     if (httpCode == HTTP_CODE_NO_CONTENT)
     {
-      reconectCount = 0;
       return;
     }
     if (httpCode == HTTP_CODE_OK)
@@ -294,11 +269,10 @@ void connectToCloudIO()
 #ifdef DEBUG_ONOFRE
         Log.error("%s SETUP MQTT CLOUD" CR, tags::cloudIO);
 #endif
-        if (mqttClient.connected())
+        if (mqttCloudIOConnected())
         {
-          mqttClient.disconnect();
+          disconnectToCloudIOMqtt();
         }
-        reconectCount = 0;
         tryCloudConnection();
       }
       else
@@ -317,7 +291,6 @@ void connectToCloudIO()
 #ifdef DEBUG_ONOFRE
       Log.error("%s [HTTP] POST... failed, error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
-      cloudIOReconnectTimer.once(10, cloudIoKeepAlive);
     }
   }
   else
@@ -325,6 +298,5 @@ void connectToCloudIO()
 #ifdef DEBUG_ONOFRE
     Log.error("%s [HTTP] POST... error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
 #endif
-    cloudIOReconnectTimer.once(10, cloudIoKeepAlive);
   }
 }

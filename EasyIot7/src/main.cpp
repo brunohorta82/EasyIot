@@ -25,7 +25,7 @@ void checkInternalRoutines()
   if (config.isCloudIOSyncRequested())
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s CloudIO requested.", tags::system);
+    Log.notice("%s CloudIO requested.\n", tags::system);
 #endif
     connectToCloudIO();
   }
@@ -38,7 +38,7 @@ void checkInternalRoutines()
   if (config.isRestartRequested())
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Restart requested.", tags::system);
+    Log.notice("%s Restart requested.\n", tags::system);
 #endif
     delay(100);
     ESP.restart();
@@ -47,7 +47,7 @@ void checkInternalRoutines()
   if (config.isLoadDefaultsRequested())
   {
 #ifdef DEBUG_ONOFREs
-    Log.notice("%s Load Defaults requested.", tags::system);
+    Log.notice("%s Load Defaults requested\n.", tags::system);
 #endif
     LittleFS.format();
     config.requestRestart();

@@ -67,7 +67,7 @@ void prepareLight(String name, unsigned int output, unsigned int input)
     one.primaryGpio = input;
     String idStr;
     generateId(idStr, name, 1, sizeof(one.id));
-    strlcpy(one.id, name.c_str(), sizeof(one.id));
+    strlcpy(one.id, idStr.c_str(), sizeof(one.id));
     one.statePoolIdx = findPoolIdx("", one.statePoolIdx, one.family);
     switches.items.push_back(one);
 }

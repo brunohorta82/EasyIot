@@ -429,7 +429,7 @@ void publishReadings(String &readings, SensorT &sensor)
   String id = String(sensor.id);
   sendToServerEvents(id, readings);
   if (sensor.cloudIOSupport)
-    notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str(), readings.length());
+    notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str());
   if (sensor.mqttSupport)
   {
     publishOnMqtt(sensor.mqttStateTopic, readings.c_str(), sensor.mqttRetain);
