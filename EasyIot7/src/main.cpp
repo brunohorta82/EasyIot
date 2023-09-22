@@ -19,6 +19,7 @@
 #include "CloudIO.h"
 Config config;
 Switches switches;
+bool loopFeatures = true;
 void checkInternalRoutines()
 {
   if (config.isCloudIOSyncRequested())
@@ -102,11 +103,11 @@ void loop()
   webserverServicesLoop();
   loopWiFi();
   loopMqtt();
-  if (!config.isAutoUpdateRequested())
+  if (!config.isAutoUpdateRequested() && loopFeatures)
   {
     loop(switches);
     loop(getAtualSensorsConfig());
   }
-  if (WiFi.status() == WL_CONNECTED)
+  if (wifiConnected())
     knx.loop();
 }

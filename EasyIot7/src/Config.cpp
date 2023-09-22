@@ -253,10 +253,7 @@ Config &Config::updateFromJson(JsonObject &root)
   config.save();
   return *this;
 }
-void Config::loadTemplate(int templateId)
-{
-  templateSelect((Template)templateId);
-}
+
 void Config::requestWifiScan()
 {
   wifiScan = true;

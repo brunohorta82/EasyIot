@@ -106,14 +106,13 @@ public:
     const void notifyState(bool dirty, const char *origin);
     void reloadMqttTopics();
 };
-class Switches
+struct Switches
 {
-public:
     unsigned long lastChange = 0ul;
     std::vector<SwitchT> items;
     void load(File &file);
     const char *rotate(const char *id);
-    void save(File &file) const;
+    void saveToFile(File &file) const;
     void save(bool syncState);
     const String stateSwitchById(const char *id, const char *state);
     Switches &remove(const char *id);

@@ -53,6 +53,7 @@ void preparePzem()
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
     getAtualSensorsConfig().items.push_back(pzem);
 }
+
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
     Serial.println(name);
@@ -135,7 +136,6 @@ void templateSelect(enum Template _template)
         break;
     case Template::DUAL_LIGHT:
     {
-        switches.items.resize(2);
 #ifdef CONFIG_LANG_PT
         String name1 = "Interruptor1";
         String name2 = "Interruptor2";

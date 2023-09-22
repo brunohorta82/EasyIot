@@ -87,7 +87,7 @@ void SwitchT::updateFromJson(JsonObject doc)
   doc["mqttCommandTopic"] = mqttCommandTopic;
   doc["mqttStateTopic"] = mqttStateTopic;
 }
-void Switches::save(File &file) const
+void Switches::saveToFile(File &file) const
 {
   auto n_items = items.size();
   file.write((uint8_t *)&n_items, sizeof(n_items));
@@ -330,6 +330,35 @@ void SwitchT::configPins()
   Log.notice("%s lastSecondaryGpioState %d" CR, tags::switches, lastSecondaryGpioState);
 #endif
 }
+void switchesCallback(message_t const &msg, void *arg)
+{
+  auto s = static_cast<SwitchT *>(arg);
+  switch (msg.ct)
+  {
+  case KNX_CT_ADC_ANSWER:
+  case KNX_CT_ADC_READ:
+  case KNX_CT_ANSWER:
+  case KNX_CT_ESCAPE:
+  case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
+  case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
+  case KNX_CT_INDIVIDUAL_ADDR_WRITE:
+  case KNX_CT_MASK_VERSION_READ:
+  case KNX_CT_MASK_VERSION_RESPONSE:
+  case KNX_CT_MEM_ANSWER:
+  case KNX_CT_MEM_READ:
+  case KNX_CT_MEM_WRITE:
+  case KNX_CT_READ:
+  case KNX_CT_RESTART:
+    break;
+
+  case KNX_CT_WRITE:
+  {
+    uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
+    s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
+    break;
+  }
+  };
+}
 void SwitchT::load(File &file)
 {
   file.read((uint8_t *)&firmware, sizeof(firmware));
@@ -374,6 +403,16 @@ void SwitchT::load(File &file)
   file.read((uint8_t *)&secondaryStateGpio, sizeof(secondaryStateGpio));
   file.read((uint8_t *)&thirdGpioControl, sizeof(thirdGpioControl));
   knxSupport = knxLevelOne > 0 && knxLevelTwo >= 0 && knxLevelThree >= 0;
+  if (knxSupport)
+  {
+    knx.callback_unassign(knxIdAssign);
+    knx.callback_deregister(knxIdRegister);
+    knxIdRegister = knx.callback_register(String(name), switchesCallback, this);
+    knxIdAssign = knx.callback_assign(knxIdRegister, knx.GA_to_address(knxLevelOne, knxLevelTwo, knxLevelThree));
+    knx.callback_assign(knxIdRegister, knx.GA_to_address(knxLevelOne, knxLevelTwo, 0));
+    knx.callback_assign(knxIdRegister, knx.GA_to_address(knxLevelOne, 0, 0));
+    knx.reload();
+  }
   firmware = VERSION;
   configPins();
   bool isLight = strncmp(family, constanstsSwitch::familyLight, sizeof(constanstsSwitch::familyLight)) == 0;
@@ -386,7 +425,7 @@ void Switches::save(bool syncState)
   File file = LittleFS.open(configFilenames::switches, "w+");
   if (!file)
     return;
-  this->save(file);
+  this->saveToFile(file);
   file.close();
   if (!syncState)
   {
@@ -396,35 +435,6 @@ void Switches::save(bool syncState)
     if (!syncState)
       config.requestCloudIOSync();
   }
-}
-void switchesCallback(message_t const &msg, void *arg)
-{
-  auto s = static_cast<SwitchT *>(arg);
-  switch (msg.ct)
-  {
-  case KNX_CT_ADC_ANSWER:
-  case KNX_CT_ADC_READ:
-  case KNX_CT_ANSWER:
-  case KNX_CT_ESCAPE:
-  case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
-  case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
-  case KNX_CT_INDIVIDUAL_ADDR_WRITE:
-  case KNX_CT_MASK_VERSION_READ:
-  case KNX_CT_MASK_VERSION_RESPONSE:
-  case KNX_CT_MEM_ANSWER:
-  case KNX_CT_MEM_READ:
-  case KNX_CT_MEM_WRITE:
-  case KNX_CT_READ:
-  case KNX_CT_RESTART:
-    break;
-
-  case KNX_CT_WRITE:
-  {
-    uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
-    s->changeState(STATES_POLL[stateIdx].c_str(), "KNX");
-    break;
-  }
-  };
 }
 
 void Switches::load(File &file)
@@ -436,17 +446,7 @@ void Switches::load(File &file)
   for (auto &item : items)
   {
     item.load(file);
-    if (item.knxSupport)
-    {
-      knx.callback_unassign(item.knxIdAssign);
-      knx.callback_deregister(item.knxIdRegister);
-      item.knxIdRegister = knx.callback_register(String(item.name), switchesCallback, &item);
-      item.knxIdAssign = knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, item.knxLevelThree));
-      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, item.knxLevelTwo, 0));
-      knx.callback_assign(item.knxIdRegister, knx.GA_to_address(item.knxLevelOne, 0, 0));
-    }
   }
-  knx.reload();
 }
 
 Switches &Switches::remove(const char *id)

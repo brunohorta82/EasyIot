@@ -12,6 +12,7 @@
 #include "AsyncJson.h"
 #include "Switches.h"
 #include "Sensors.h"
+#include "Templates.hpp"
 
 #ifdef ESP32
 #include <WebServer.h>
@@ -29,6 +30,7 @@ static AsyncWebServer server(80);
 static AsyncEventSource events("/events");
 extern Config config;
 extern Switches switches;
+extern bool loopFeatures;
 void performUpdate()
 {
 #ifdef DEBUG_ONOFRE
@@ -104,7 +106,8 @@ public:
       strlcpy(config.wifiSSID, request->arg("s").c_str(), sizeof(config.wifiSSID));
       if (request->hasArg("t"))
       {
-        config.loadTemplate(request->arg("t").toInt());
+        loopFeatures = false;
+        templateSelect((Template)request->arg("t").toInt());
       }
 
       if (request->hasArg("p"))
@@ -188,6 +191,7 @@ public:
     }
     if (!store)
     {
+
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);
       if ((getAtualSensorsConfig().items.size() + switches.items.size()) == 0)
@@ -200,10 +204,10 @@ public:
     }
     if (store)
     {
-      //  config.save();
-      // getAtualSensorsConfig().save();
-      // getAtualSwitchesConfig().save(true);
-      // config.requestRestart();
+      config.save();
+      getAtualSensorsConfig().save();
+      switches.save(true);
+      config.requestRestart();
     }
   }
 };
