@@ -1,1 +1,156 @@
-<div class="box box-primary"> <div class="box-header with-border"><h3 class="box-title "><span class="lang-node">NÓ</span></h3></div><form> <fieldset id="ff" disabled> <div class="box-body"> <div class="row"> <div class="col-md-6 col-xs-12"> <div class="form-group"><label for="nodeId"><span class="lang-name">Nome</span></label> <input class="form-control" maxlength="30" type="text" name="nodeId" id="nodeId" placeholder="ex: kitchen" required/></div></div></div></div><div class="box-footer save"> <button type="button" onclick="saveNode()" class="btn btn-primary"><span class="lang-save">Guardar</span></button> </div></fieldset> </form> <div class="box-header"><h3 class="box-title"><span class="lang-system">Sistema</span></h3></div><form> <div class="box-footer"> <div style="margin-left: 10px;" class="row"> <div style="padding: 10px;" class="col-md-3 col-xs-12"><span style="font-weight: bolder">Chip ID </span> <span id="lbl-chip" style="background-color: #86bd9a;color: white;padding: 2px 10px 2px 10px;border-radius: 10px;">...</span> </div><div style="padding: 10px;" class="col-md-3 col-xs-12"><span style=" font-weight: bolder">MAC </span> <span style="background-color: #86bd9a;color: white;padding: 2px 10px 2px 10px;border-radius: 10px;" id="lbl-mac">...</span></div></div></div><div class="box-footer"> <button type="button" style="float: right" onclick="loadDefaults()" class="btn btn-warning"><span class="lang-reset-factory">Carregar Configuração de Fábrica</span></button> <button type="button" onclick="reboot()" class="btn btn-danger"><span class="lang-restart">Reiniciar</span> </button> </div></form></div><div class="box box-primary"> <div class="box-header with-border"><h3 class="box-title"><span class="lang-update">ATUALIZAR </span></h3></div><form role="form" method="POST" action="/update" enctype="multipart/form-data"> <fieldset> <div class="box-body"> <div class="row"> <div class="col-xs-12"> <div class="form-group"><label for="firmwareInputFile"><span class="lang-new-file">Escolher o ficheiro da nova versão</span></label> <input id="firmwareInputFile" name="update" type="file"/></div></div></div></div><div class="box-footer"> <button type="submit" class="btn btn-primary "><span class="lang-install-file-version"> Instalar ficheiro</span> </button> </div></fieldset> </form></div>
+<div class="box box-primary">
+    <div class="box-header with-border"><h3 class="box-title "><span class="lang-node">NÓ</span></h3></div>
+    <form>
+        <fieldset id="ff" disabled>
+            <div class="box-body">
+                <div class="row">
+                    <div class="col-md-6 col-xs-12">
+                        <div class="form-group"><label for="nodeId"><span class="lang-name">Nome</span></label> <input
+                            class="form-control" maxlength="30" type="text" name="nodeId" id="nodeId"
+                            placeholder="ex: kitchen" required/></div>
+                    </div>
+                </div>
+            </div>
+            <div class="box-header with-border"><h3 class="box-title">AP WI-FI </h3></div>
+            <div class="box-body">
+                <div class="row">
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="apSecret">Password</label> <input autocomplete="off"
+                                                                                              class="form-control"
+                                                                                              type="password"
+                                                                                              name="apSecret"
+                                                                                              id="apSecret"
+                                                                                              placeholder="ex: superPassword"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="box-header with-border"><h3 class="box-title">WI-FI </h3></div>
+            <div id="wifi_log_box" class="hidden box-header with-border"><h6 class="box-title"><span
+                id="wifi_log_lbl"></span></h6></div>
+            <div class="box-body">
+                <div class="row">
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="ssid">SSID</label> <input class="form-control"
+                                                                                      maxlength="23" autocomplete="off"
+                                                                                      type="text" name="wifiSSID"
+                                                                                      id="ssid"
+                                                                                      placeholder="ex: meuwifi"/></div>
+                    </div>
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="wifi_secret"><span
+                            class="lang-password">Palavra Passe</span></label> <input class="form-control"
+                                                                                      name="wifiSecret" maxlength="60"
+                                                                                      autocomplete="off" type="password"
+                                                                                      id="wifi_secret"
+                                                                                      placeholder="ex: superpassword"/>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xs-12"><label for="staticIp">DHCP</label> <input class="form-control"
+                                                                                              style="width: 40px"
+                                                                                              type="checkbox"
+                                                                                              id="staticIp"
+                                                                                              name="staticIp"
+                                                                                              value="true"><br></div>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="row">
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="ssid">IP</label> <input class="form-control" type="text"
+                                                                                    name="wifiIp" id="wifiIp"
+                                                                                    maxlength="15"
+                                                                                    placeholder="ex: 192.168.1.20"/>
+                        </div>
+                    </div>
+                    <div class="col-md-4 c’ol-xs-12">
+                        <div class="form-group"><label for="wifi_secret">Gateway</label> <input class="form-control"
+                                                                                                name="wifiGw"
+                                                                                                id="wifiGw"
+                                                                                                maxlength="15"
+                                                                                                placeholder="ex: 192.168.1.254"/>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="wifi_secret"><span
+                            class="lang-netmask">Máscara de Rede</span></label> <input class="form-control"
+                                                                                       maxlength="15" name="wifiMask"
+                                                                                       id="wifiMask"
+                                                                                       placeholder="ex: 255.255.255.0"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="row">
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="mqtt_ip">Broker IP / DNS</label> <input class="form-control"
+                                                                                                    name="mqttIpDns"
+                                                                                                    type="text"
+                                                                                                    maxlength="40"
+                                                                                                    id="mqtt_ip"
+                                                                                                    placeholder="ex: 192.168.1.30"/>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="mqtt_username"><span class="lang-username">Utilizador</span></label>
+                            <input class="form-control" autocomplete="off" name="mqttUsername" type="text"
+                                   maxlength="30" id="mqtt_username" placeholder="ex: iam"/></div>
+                    </div>
+                    <div class="col-md-4 col-xs-12">
+                        <div class="form-group"><label for="mqtt_password"><span
+                            class="lang-password">Palavra Passe</span></label> <input class="form-control"
+                                                                                      name="mqttPassword" maxlength="62"
+                                                                                      type="password" autocomplete="off"
+                                                                                      id="mqtt_password"
+                                                                                      placeholder="ex: superstrongpassword"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="box-footer save">
+                <button type="button" onclick="saveNode()" class="btn btn-primary"><span
+                    class="lang-save">Guardar</span></button>
+            </div>
+        </fieldset>
+    </form>
+    <div class="box-header"><h3 class="box-title"><span class="lang-system">Sistema</span></h3></div>
+    <form>
+        <div class="box-footer">
+            <div style="margin-left: 10px;" class="row">
+                <div style="padding: 10px;" class="col-md-3 col-xs-12"><span style="font-weight: bolder">Chip ID </span>
+                    <span id="lbl-chip"
+                          style="background-color: #86bd9a;color: white;padding: 2px 10px 2px 10px;border-radius: 10px;">...</span>
+                </div>
+                <div style="padding: 10px;" class="col-md-3 col-xs-12"><span style=" font-weight: bolder">MAC </span>
+                    <span style="background-color: #86bd9a;color: white;padding: 2px 10px 2px 10px;border-radius: 10px;"
+                          id="lbl-mac">...</span></div>
+            </div>
+        </div>
+        <div class="box-footer">
+            <button type="button" style="float: right" onclick="loadDefaults()" class="btn btn-warning"><span
+                class="lang-reset-factory">Carregar Configuração de Fábrica</span></button>
+            <button type="button" onclick="reboot()" class="btn btn-danger"><span class="lang-restart">Reiniciar</span>
+            </button>
+        </div>
+    </form>
+</div>
+<div class="box box-primary">
+    <div class="box-header with-border"><h3 class="box-title"><span class="lang-update">ATUALIZAR </span></h3></div>
+    <form role="form" method="POST" action="/update" enctype="multipart/form-data">
+        <fieldset>
+            <div class="box-body">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="form-group"><label for="firmwareInputFile"><span class="lang-new-file">Escolher o ficheiro da nova versão</span></label>
+                            <input id="firmwareInputFile" name="update" type="file"/></div>
+                    </div>
+                </div>
+            </div>
+            <div class="box-footer">
+                <button type="submit" class="btn btn-primary "><span class="lang-install-file-version"> Instalar ficheiro</span>
+                </button>
+            </div>
+        </fieldset>
+    </form>
+</div>

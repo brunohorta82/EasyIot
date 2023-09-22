@@ -3,7 +3,6 @@
 
 #include "Arduino.h"
 #include "Switches.h"
-#include "ShuttersOperation.hpp"
 #include <vector>
 #include "Shutters/StoredState.hpp"
 

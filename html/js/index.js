@@ -1,8 +1,6 @@
+let baseUrl = "http://192.168.187.131"
 let config;
 let source = null;
-const endpoint = {
-    baseUrl: ""
-};
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
 }
@@ -70,106 +68,13 @@ function show(id) {
 function hide(id) {
     $('#' + id).addClass("hide");
 }
-var WORDS_EN = {
-    "pin-state-a":"Pin State A",
-    "gate":"Gate",
-    "pin-state-b":"Pin State B",
-    "pin-out-3": "Output Pin C",
-    "update-from-server": "NEW UPGRADE",
-    "node": "NODE",
-    "up": "Up",
-    "down": "Down",
-    "reading-interval": "Readings every",
-    "sensors": "Sensors",
-    "integrations": "INTEGRATIONS",
-    "update": "UPDATE",
-    "features": "FEATURES",
-    "current-version": "Current version",
-    "new-file": "Choose new version file",
-    "install-new-version": "Auto Upgrade to version",
-    "install-file-version": "Install file version",
-    "version": "Version",
-    "save": "Save",
-    "clean-fields": "Clear all Fields",
-    "username": "Username",
-    "password": "Password",
-    "yes": "Yes",
-    "no": "No",
-    "netmask": "Netmask",
-    "system": "System",
-    "name": "Name",
-    "restart": "Restart",
-    "seconds": "seconds",
-    "in": "in",
-    "reset-factory": "Load Factory Defaults",
-    "switches": "Switches",
-    "remove": "Remove",
-    "new": "New",
-    "family": "Family",
-    "switch": "Switch",
-    "light": "Light",
-    "cover": "Cover",
-    "garage": "Garage",
-    "released": "Released",
-    "disconnected": "disconnected",
-    "dconnected": "connected",
-    "integrate": "Integrate",
-    "normal": "Generic",
-    "choose": "select",
-    "push": "Push",
-    "dual-push": "Dual Push",
-    "dual-normal": "Dual Generic",
-    "mode": "Mode",
-    "relay": "Relay",
-    "control": "Output",
-    "pin-in-a": "Input Pin a",
-    "pin-in-b": "Input Pin b",
-    "pin-out-1": "Output Pin a",
-    "pin-out-2": "Output Pin b",
-    "none": "None",
-    "retain-message": "Retain Messages",
-    "command": "Command",
-    "state": "State",
-    "on": "On",
-    "auto-state": "Auto State",
-    "off": "Off",
-    "open": "Open",
-    "close": "Closed",
-    "mqtt": "MQTT",
-    "stop": "Stop",
-    "time": "Time",
-    "group": "Group",
-    "pin-in-c": "Input Pin c",
-    "line": "Line",
-    "member": "Member",
-    "address": "Address",
-    "prefix": "Prefix",
-    "apikey": "API Key"
-};
-function loadsLanguage(lang) {
-    localStorage.setItem('lang', "EN");
-    $('span[class^="lang"]').each(function () {
-        let langVar = (this.className).replace('lang-', '');
-        let text = window['WORDS_' + lang][langVar];
-        $(this).text(text);
-    });
-    $('option[class^="lang"]').each(function () {
-        let langVar = (this.className).replace('lang-', '');
-        let text = window['WORDS_' + lang][langVar];
-        if (!text) {
-            text = langVar;
-        }
-        $(this).text(text);
-    });
+
+function showMessage(pt) {
+  alert(pt);
 }
-function showMessage(pt, en) {
-    localStorage.getItem('lang').toString() === "PT" ? alert(pt) : alert(en);
-}
-function showText(pt, en) {
-    return localStorage.getItem('lang').toString() === "PT" ? pt : en;
-}
+
 function loadConfig() {
-    var targetUrl = endpoint.baseUrl + "/config";
+    var targetUrl = baseUrl + "/config";
     $.ajax({
         url: targetUrl,
         contentType: "text/plain; charset=utf-8",
@@ -179,7 +84,7 @@ function loadConfig() {
             fillConfig();
         },
         error: function () {
-            showMessage("Erro a carregar configuração", "Configuration load failed.")
+            showMessage("Erro a carregar configuração")
         }, complete: function () {
 
         },
@@ -187,7 +92,7 @@ function loadConfig() {
     });
 }
 function loadDevice(func, e, next) {
-    const targetUrl = endpoint.baseUrl + "/" + e;
+    const targetUrl = baseUrl + "/" + e;
     $.ajax({
         url: targetUrl,
         contentType: "application/json",
@@ -199,7 +104,7 @@ function loadDevice(func, e, next) {
             }
         },
         error: function () {
-            showMessage("Erro a carregar configuração de funcionalidades.", "Features Configuration load failed.")
+            showMessage("Erro a carregar configuração de funcionalidades.")
         },
         timeout: 2000
     });
@@ -250,7 +155,6 @@ function toggleActive(menu) {
             systemStatus();
             fillConfig();
         }
-        loadsLanguage(localStorage.getItem('lang'));
     });
 }
 function fillSwitches(payload) {
@@ -317,7 +221,6 @@ function applySwitchFamily(id) {
     }
     applySwitchMode(id);
     applyTypeControl(id);
-    loadsLanguage(localStorage.getItem('lang'));
 }
 function fillGpioSelect(id) {
     addToSelect(id, "lang-none", 99);
@@ -337,7 +240,6 @@ function applySwitchMode(id) {
     }else   if ($('#family_' + id).val() == "gate") {
         show("secondaryGpioControlRow_" + id)
     }
-    loadsLanguage(localStorage.getItem('lang'));
 }
 function applyTypeControl(id) {
     hide("secondaryGpioControlRow_" + id);
@@ -480,7 +382,6 @@ function buildSensor(obj) {
     setOptionOnSelect('s_tertiaryGpio_' + obj.id, obj.tertiaryGpio);
     setOptionOnSelect('s_type_' + obj.id, obj.type);
     applySensorRequiredGpio(obj.id);
-    loadsLanguage(localStorage.getItem('lang'));
 }
 function updateSensorReadings(id, name, value) {
     if ($('#value_' + id).length > 0) {
@@ -703,15 +604,13 @@ function buildSwitch(obj) {
     setOptionOnSelect('primaryStateGpio_' + obj.id, obj.primaryStateGpio);
     setOptionOnSelect('secondaryStateGpio_' + obj.id, obj.secondaryStateGpio);
     setOptionOnSelect('autoStateValue_' + obj.id, obj.autoStateValue);
-
-    loadsLanguage(localStorage.getItem('lang'));
 }
 function stateSwitch(id, state) {
     let toggleState = state;
     if ((toggleState === "ON" || toggleState === "OFF") && ($("#btn_on_" + id).hasClass("ON") || $("#btn_on_" + id).hasClass("OFF"))) {
         toggleState = $("#btn_on_" + id).hasClass("ON") ? "OFF" : "ON";
     }
-    const targetUrl = endpoint.baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
+    const targetUrl = baseUrl + "/state-switch?state=" + toggleState + "&id=" + id;
     $.ajax({
         type: "GET",
         url: targetUrl,
@@ -729,7 +628,7 @@ function stateSwitch(id, state) {
     });
 }
 function rotateState(id) {
-    const targetUrl = endpoint.baseUrl + "/rotate-state-switch?id=" + id;
+    const targetUrl = baseUrl + "/rotate-state-switch?id=" + id;
     $.ajax({
         type: "GET",
         url: targetUrl,
@@ -765,7 +664,7 @@ function saveSensor(id) {
         "delayRead": parseInt($('#s_delayRead_' + id).val()) * 1000,
 
     };
-    const targetUrl = endpoint.baseUrl + "/save-sensor?id=" + device.id;
+    const targetUrl = baseUrl + "/save-sensor?id=" + device.id;
     $.ajax({
         type: "POST",
         url: targetUrl,
@@ -813,7 +712,7 @@ function saveSwitch(id) {
         "primaryGpioControl": parseInt($('#primaryGpioControl_' + id).val()),
         "secondaryGpioControl": parseInt($('#secondaryGpioControl_' + id).val()),
     };
-    const targetUrl = endpoint.baseUrl + "/save-switch?id=" + device.id;
+    const targetUrl = baseUrl + "/save-switch?id=" + device.id;
     $.ajax({
         type: "POST",
         url: targetUrl,
@@ -834,7 +733,7 @@ function saveSwitch(id) {
     });
 }
 function storeConfig() {
-    const targetUrl = endpoint.baseUrl + "/save-config";
+    const targetUrl = baseUrl + "/save-config";
     $.ajax({
         type: "POST",
         url: targetUrl,
@@ -854,9 +753,9 @@ function storeConfig() {
 }
 function saveNode() {
     config.nodeId = $('#nodeId').val().trim();
-    storeConfig();
-}
-function saveWifi() {
+    config.mqttIpDns = $('#mqtt_ip').val().trim();
+    config.mqttUsername = $('#mqtt_username').val().trim();
+    config.mqttPassword = $('#mqtt_password').val().trim();
     config.wifiSSID = $('#ssid').val().trim();
     config.wifiSecret = $('#wifi_secret').val().trim();
     config.wifiIp = $('#wifiIp').val().trim();
@@ -866,20 +765,9 @@ function saveWifi() {
     config.apSecret = $('#apSecret').val().trim();
     storeConfig();
 }
-function saveMqtt() {
-    config.mqttIpDns = $('#mqtt_ip').val().trim();
-    config.mqttUsername = $('#mqtt_username').val().trim();
-    config.mqttPassword = $('#mqtt_password').val().trim();
-    storeConfig();
-}
-function saveEmoncms() {
-    config.emoncmsServer = $('#emoncmsServer').val().trim();
-    config.emoncmsPath = $('#emoncmsPath').val().trim();
-    config.emoncmsApikey = $('#emoncmsApikey').val().trim();
-    storeConfig();
-}
+
 function removeSwitch(id) {
-    const targetUrl = endpoint.baseUrl + "/remove-switch?id=" + id;
+    const targetUrl = baseUrl + "/remove-switch?id=" + id;
     $.ajax({
         url: targetUrl,
         type: 'DELETE',
@@ -895,7 +783,7 @@ function removeSwitch(id) {
     });
 }
 function removeSensor(id) {
-    const targetUrl = endpoint.baseUrl + "/remove-sensor?id=" + id;
+    const targetUrl = baseUrl + "/remove-sensor?id=" + id;
     $.ajax({
         url: targetUrl,
         type: 'DELETE',
@@ -912,7 +800,7 @@ function removeSensor(id) {
 }
 function reboot() {
     $.ajax({
-        url: endpoint.baseUrl + "/reboot",
+        url: baseUrl + "/reboot",
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
@@ -925,7 +813,7 @@ function reboot() {
 }
 function loadDefaults() {
     $.ajax({
-        url: endpoint.baseUrl + "/load-defaults",
+        url: baseUrl + "/load-defaults",
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
@@ -938,7 +826,7 @@ function loadDefaults() {
 }
 function systemStatus() {
     $.ajax({
-        url: endpoint.baseUrl + "/system-status",
+        url: baseUrl + "/system-status",
         contentType: "text/plain; charset=utf-8",
         dataType: "json",
         success: function (response) {
@@ -953,9 +841,9 @@ function systemStatus() {
                 $('#mqtt_lbl').text(config.mqttIpDns);
             }
             if (response.mqtt) {
-                $('#mqtt-state').text(showText("ligado", "connected"));
+                $('#mqtt-state').text("ligado");
             } else {
-                $('#mqtt-state').text(showText("desligado", "disconnected"));
+                $('#mqtt-state').text("desligado");
             }
             $('#wifi-signal').text(percentage + "%");
         }, error: function () {
@@ -965,14 +853,8 @@ function systemStatus() {
     });
 }
 $(document).ready(function () {
-    let lang = localStorage.getItem('lang');
-    if (lang) {
-        loadsLanguage(lang);
-    } else {
-        window.navigator.language.startsWith("en") ? loadsLanguage("EN") : loadsLanguage("PT");
-    }
     loadConfig();
-    $('#node_id').on('keypress', function (e) {
+    $('#nodeId').on('keypress', function (e) {
         if (e.which === 32)
             return false;
     });
@@ -981,10 +863,10 @@ $(document).ready(function () {
         toggleActive(menu);
 
     });
-    systemStatus();
+   // systemStatus();
     toggleActive("node");
     setInterval(systemStatus, 15000);
     if (!!window.EventSource) {
-        source = new EventSource(endpoint.baseUrl + '/events');
+        source = new EventSource(baseUrl + '/events');
     }
 });

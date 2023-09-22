@@ -8,6 +8,12 @@
 static const String STATES_POLL[] = {constanstsSwitch::payloadOff, constanstsSwitch::payloadOn, constanstsSwitch::payloadStop, constanstsSwitch::payloadOpen, constanstsSwitch::payloadStop, constanstsSwitch::payloadClose, constanstsSwitch::payloadOpen, constanstsSwitch::payloadClose};
 class Bounce;
 class Shutters;
+enum class ShuttersOperation : uint8_t {
+  UP = 1,
+  DOWN = 2,
+  HALT = 3
+};
+
 enum SwitchMode
 {
     SWITCH = 1,

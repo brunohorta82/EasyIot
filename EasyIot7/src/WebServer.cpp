@@ -6,9 +6,13 @@
 #include "CaptivePortal.h"
 #include "Utils.hpp"
 
-#include "StaticSite.h"
-#include "StaticCss.h"
-#include "StaticJs.h"
+#include "IndexHtml.h"
+#include "StylesMinCss.h"
+#include "JQuery.h"
+#include "IndexJs.h"
+#include "DevicesHtml.h"
+#include "NodeHtml.h"
+
 #include "AsyncJson.h"
 #include "Switches.h"
 #include "Sensors.h"
@@ -237,17 +241,6 @@ void loadWebPanel()
 
     request->send(response); });
 
-  server.on("/integrations.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", integrations_html, sizeof(integrations_html));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=600");
-    request->send(response); });
-
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
@@ -255,17 +248,6 @@ void loadWebPanel()
       return request->requestAuthentication(REALM);
 #endif
     AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=600");
-    request->send(response); });
-
-  server.on("/wifi.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", wifi_html, sizeof(wifi_html));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
     request->send(response); });
@@ -305,7 +287,7 @@ void loadWebPanel()
     request->send(response); });
 
   // CSS
-  server.on("/css/styles.min.css", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/css/styles.css", HTTP_GET, [](AsyncWebServerRequest *request)
             {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
