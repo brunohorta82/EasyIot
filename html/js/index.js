@@ -1,16 +1,217 @@
-let baseUrl = "http://192.168.187.131"
+let baseUrl = "http://192.168.187.134"
 let config;
+var newConfig = {};
 let source = null;
+var WORDS_PT = {
+    "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
+    "config_save_ok": "Configuração Guardada",
+    "device_reboot_ok": "O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.",
+    "device_reboot_error": "Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
+    "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
+    "defaults_error": "Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
+}
+
+function stringToHTML(text) {
+    let parser = new DOMParser();
+    let doc = parser.parseFromString(text, 'text/html');
+    return doc.body;
+}
+
+function toggleActive(menu) {
+    findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.remove("active")
+    findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.remove("active")
+    fetch(menu + ".html").then(function (response) {
+        if (response.ok) {
+            return response.text();
+        }
+        throw response;
+    }).then(function (text) {
+        let section = document.getElementsByClassName("content").item(0);
+        for (const sectionElement of section.childNodes) {
+            section.removeChild(sectionElement);
+        }
+        let html = stringToHTML(text);
+        section.append(html);
+        if (menu === "devices") {
+            findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.add("active")
+            loadDevice(fillSwitches, "switches", function () {
+                loadDevice(fillSensors, "sensors", function () {
+                });
+            });
+        } else {
+            findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.add("active")
+            fillConfig();
+        }
+    }).then(() => {
+        const langSet = detectLang();
+        document.querySelectorAll("span[class^='lang-']").forEach((l) => {
+            const t = langSet[l.className.replace("lang-", "")];
+            if (t)
+                l.textContent = t;
+        });
+    });
+}
+function findByClass(c) {
+    return document.getElementsByClassName(c).item(0);
+}
+
+function findById(id) {
+    const a = document.getElementById(id);
+    if (!a)
+        console.log("NOT_FOUND " + id)
+    return a;
+}
+
+function fillConfig() {
+    if (!config) return;
+    document.title = 'BH OnOfre ' + config.nodeId;
+    let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
+    findById("wifi-signal").textContent = percentage + "%";
+    findById("version_lbl").textContent = config.firmware;
+    findById("lbl-chip").textContent = "ID: " + config.chipId;
+    findById("lbl-mac").textContent = "MAC: " + config.mac;
+    findById("ssid_lbl").textContent = config.wifiSSID;
+    findById("mqtt_lbl").textContent = config.mqttIpDns;
+    if (config.mqttConnected) {
+        findById("mqtt_state").classList.add("online")
+    } else {
+        findById("mqtt_state").classList.remove("online")
+    }
+    findById("dhcp").checked = config.dhcp;
+    findById("ff").removeAttribute('disabled');
+    findById("nodeId").value = config.nodeId;
+    findById("mqttIpDns").value = config.mqttIpDns;
+    findById("mqttUsername").value = config.mqttUsername;
+    findById("mqttPassword").value = config.mqttPassword;
+    findById("wifiSSID").value = config.wifiSSID;
+    findById("wifiSecret").value = config.wifiSecret;
+    findById("wifiIp").value = config.wifiIp;
+    findById("wifiMask").value = config.wifiMask;
+    findById("wifiGw").value = config.wifiGw;
+    findById("accessPointPassword").value = config.accessPointPassword;
+    findById("apiPassword").value = config.apiPassword;
+    findById("apiUser").value = config.apiUser;
+    findById("wifiIp").value = config.wifiIp;
+}
+
+async function loadConfig() {
+    const response = await fetch(baseUrl + "/config");
+    config = await response.json();
+}
+
+function detectLang() {
+    let lang = "PT";
+    return window['WORDS_' + lang];
+}
+
+function saveConfig() {
+    let mqttIpDns = document.getElementById("mqtt_ip");
+    newConfig.nodeId = getValue("nodeId", config.nodeId).trim();
+    newConfig.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
+    newConfig.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
+    newConfig.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
+    newConfig.wifiSSID = getValue("ssid", config.wifiSSID).trim();
+    newConfig.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
+    newConfig.wifiIp = getValue("wifiIp", config.wifiIp).trim();
+    newConfig.wifiMask = getValue("wifiMask", config.wifiMask).trim();
+    newConfig.wifiGw = getValue("wifiGw", config.wifiGw).trim();
+    newConfig.dhcp = getValue("dhcp", config.dhcp) === "true";
+    newConfig.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
+    newConfig.apiPassword = getValue("apiPassword", config.apiPassword).trim();
+    newConfig.apiUser = getValue("apiUser", config.apiUser).trim();
+    fetch(baseUrl + "/save-config", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(newConfig)
+    }).then(response => response.json()).then(json => config = json).then(() => {
+        showMessage("config_save_ok");
+        fillConfig();
+    }).catch(() =>
+        showMessage("config_save_error")
+    );
+
+}
+
+function getValue(id, f) {
+    let v = document.getElementById(id);
+    return v ? v.value : f;
+}
+
+function toggleSwitch(arg) {
+    const action = {
+        id: parseInt(arg.id),
+        state: arg.checked ? 1 : 0
+    };
+    fetch(baseUrl + "/control-feature", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(action)
+    }).catch(() =>
+        showMessage("control_state_error")
+    );
+}
+
+
+function showMessage(key) {
+    const lanSet = detectLang();
+    const v = lanSet[key];
+    v ? alert(v) : alert(key);
+}
+
+function reboot() {
+    fetch(baseUrl + "/reboot", {
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Accept': 'application/json'
+        }
+    }).then(response => response.status === 200 ?
+        showMessage("device_reboot_ok")
+        : showMessage("device_reboot_error"))
+}
+
+function loadDefaults() {
+    fetch(baseUrl + "/load-defaults", {
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Accept': 'application/json'
+        }
+    }).then(response => response.status === 200 ?
+        showMessage("defaults_ok")
+        : showMessage("defaults_error"))
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    document.getElementById('features-btn').onclick = function (e) {
+        toggleActive("devices");
+    };
+    document.getElementById('node-btn').onclick = function (e) {
+        toggleActive("node");
+    }
+    loadConfig().then(() => toggleActive("node"));
+    if (!!window.EventSource) {
+        source = new EventSource(baseUrl + '/events');
+    }
+    source.addEventListener("mqtt_health", (s) => {
+        if (s.data === "online") {
+            findById("mqtt_state").classList.add("online")
+        } else {
+            findById("mqtt_state").classList.remove("online")
+        }
+    })
+});
+
 function removeFromSelect(select, value) {
     $("#" + select + " option[value='" + value + "']").remove();
 }
-function addToSelect(select, class_, value) {
+function addToSelect(select, class_, value, label) {
     let sel = document.getElementById(select);
     if (sel) {
         removeFromSelect(select, value);
         let opt = document.createElement('option');
         opt.appendChild(document.createTextNode(""));
         opt.value = value;
+        opt.label  = label
         sel.appendChild(opt);
         $("#" + select + " option[value='" + value + "']").addClass(class_);
     }
@@ -32,9 +233,6 @@ function buildSwitchTemplate() {
         "knxLevelOne": 0,
         "knxLevelTwo": 0,
         "knxLevelThree": 0,
-        "pullup": false,
-        "mqttRetain": false,
-        "inverted": false,
         "primaryGpioControl": 99,
         "secondaryGpioControl": 99,
     };
@@ -47,11 +245,6 @@ function buildSensorTemplate() {
         "name": "Novo Sensor",
         "primaryGpio": 99,
         "type": 65,
-        "knxLevelOne": 0,
-        "knxLevelTwo": 0,
-        "knxLevelThree": 0,
-        "mqttRetain": true,
-        "mqttStateTopic": "../state",
         "delayRead": 2000
     };
     buildSensor(device);
@@ -70,27 +263,9 @@ function hide(id) {
 }
 
 function showMessage(pt) {
-  alert(pt);
+  alert(detectLang()[pt] || pt);
 }
 
-function loadConfig() {
-    var targetUrl = baseUrl + "/config";
-    $.ajax({
-        url: targetUrl,
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            config = response;
-            fillConfig();
-        },
-        error: function () {
-            showMessage("Erro a carregar configuração")
-        }, complete: function () {
-
-        },
-        timeout: 2000
-    });
-}
 function loadDevice(func, e, next) {
     const targetUrl = baseUrl + "/" + e;
     $.ajax({
@@ -107,54 +282,6 @@ function loadDevice(func, e, next) {
             showMessage("Erro a carregar configuração de funcionalidades.")
         },
         timeout: 2000
-    });
-}
-function fillConfig() {
-    if (!config) return;
-    $(".bh-model").text(config.hardware);
-    $(".bh-onofre-item").removeClass("hide");
-    $("#version_lbl").text(config.firmware);
-    $("#lbl-chip").text(config.chipId);
-    $("#lbl-mac").text(config.mac);
-    $('input[name="nodeId"]').val(config.nodeId);
-    $(document).prop('title', 'BH OnOfre ' + config.nodeId);
-    $('input[name="mqttIpDns"]').val(config.mqttIpDns);
-    $('#mqtt_lbl').text(config.mqttIpDns);
-    $('input[name="mqttUsername"]').val(config.mqttUsername);
-    $('input[name="mqttPassword"]').val(config.mqttPassword);
-    $('input[name="wifiSSID"]').val(config.wifiSSID);
-    $('input[name="wifiSecret"]').val(config.wifiSecret);
-    $('input[name="knxArea"]').val(config.knxArea);
-    $('input[name="knxMember"]').val(config.knxMember);
-    $('input[name="knxLine"]').val(config.knxLine);
-    let staticIp = document.getElementById("staticIp");
-    if (staticIp) {
-        staticIp.checked = !config.staticIp;
-    }
-    $('input[name="wifiIp"]').val(config.wifiIp);
-    $('input[name="wifiMask"]').val(config.wifiMask);
-    $('input[name="wifiGw"]').val(config.wifiGw);
-    $('input[name="apSecret"]').val(config.apSecret);
-    $('input[name="emoncmsServer"]').val(config.emoncmsServer);
-    $('input[name="emoncmsPath"]').val(config.emoncmsPath);
-    $('input[name="emoncmsApikey"]').val(config.emoncmsApikey);
-    $('#ff').prop('disabled', false);
-
-}
-function toggleActive(menu) {
-    $('.sidebar-menu').find('li').removeClass('active');
-    $('.menu-item[data-menu="' + menu + '"]').closest('li').addClass('active');
-    $(".content").load(menu + ".html", function () {
-        if (menu === "devices") {
-            loadDevice(fillSwitches, "switches", function () {
-                loadDevice(fillSensors, "sensors", function () {
-                });
-
-            });
-        } else {
-            systemStatus();
-            fillConfig();
-        }
     });
 }
 function fillSwitches(payload) {
@@ -199,33 +326,33 @@ function applySwitchFamily(id) {
         show("btn_close_" + id);
         show("btn_stop_" + id);
         show("btn_open_" + id);
-        addToSelect('mode_' + id, "lang-push", 2);
-        addToSelect('mode_' + id, "lang-dual-normal", 4);
-        addToSelect('mode_' + id, "lang-dual-push", 5);
+        addToSelect('mode_' + id, "lang-push", 2,"Pulsador");
+        addToSelect('mode_' + id, "lang-dual-normal", 4,"Normal");
+        addToSelect('mode_' + id, "lang-dual-push", 5,"Pulsador Dulplo");
         show("secondaryGpioControlRow_" + id);
         show("secondaryGpioRow_" + id);
         show("timeBetweenStatesRow_" + id);
-        addToSelect('autoStateValue_' + id, "lang-open", "OPEN");
-        addToSelect('autoStateValue_' + id, "lang-close", "CLOSE");
-        addToSelect('autoStateValue_' + id, "lang-stop", "STOP");
+        addToSelect('autoStateValue_' + id, "lang-open", "OPEN","Abrir");
+        addToSelect('autoStateValue_' + id, "lang-close", "CLOSE","Fechar");
+        addToSelect('autoStateValue_' + id, "lang-stop", "STOP","Parar");
     } else if ($('#family_' + id).val() === "garage") {
         show("btn_on_" + id);
-        addToSelect('mode_' + id, "lang-push", 2);
-        addToSelect('autoStateValue_' + id, "lang-released", "RELEASED");
+        addToSelect('mode_' + id, "lang-push", 2,"Pulsador");
+        addToSelect('autoStateValue_' + id, "lang-released", "RELEASED","Libertar");
     }  else {
         show("btn_on_" + id);
-        addToSelect('mode_' + id, "lang-normal", 1);
-        addToSelect('mode_' + id, "lang-push", 2);
-        addToSelect('autoStateValue_' + id, "lang-on", "ON");
-        addToSelect('autoStateValue_' + id, "lang-off", "OFF");
+        addToSelect('mode_' + id, "lang-normal", 1,"Normal");
+        addToSelect('mode_' + id, "lang-push", 2,"Pulsador");
+        addToSelect('autoStateValue_' + id, "lang-on", "ON","Ligar");
+        addToSelect('autoStateValue_' + id, "lang-off", "OFF","Desligar");
     }
     applySwitchMode(id);
     applyTypeControl(id);
 }
 function fillGpioSelect(id) {
-    addToSelect(id, "lang-none", 99);
-    for (let gpio of config.pins) {
-        addToSelect(id, "lang-" + gpio, gpio);
+    addToSelect(id, "lang-none", 99,"Nenhum");
+    for (let gpio of config.outInPins) {
+        addToSelect(id, "lang-" + gpio, gpio,gpio);
     }
 }
 function applySwitchMode(id) {
@@ -273,12 +400,10 @@ function applySensorRequiredGpio(id) {
 
 }
 function buildSensor(obj) {
-    let checkedMqttRetain = obj.mqttRetain ? "checked" : "";
     let checkedHaSupport = obj.haSupport ? "checked" : "";
-    let checkedEmoncmsSupport = obj.emoncmsSupport ? "checked" : "";
     let checkedMqttSupport = obj.mqttSupport ? "checked" : "";
     let checkedCloudIOSupport = obj.cloudIOSupport ? "checked" : "";
-    $('#sensors_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
+    $('#sensors_config').append('<div id="bss_' + obj.id + '" style="padding: 0; margin: 10px;" class="box box-primary">' +
         '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
         '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
         '                        <div class="pull-right"><span id="value_' + obj.id + '"></span>' +
@@ -290,7 +415,7 @@ function buildSensor(obj) {
         '                        <table class="table table-condensed">' +
         '                            <tbody>' +
         '                            <tr style="  border-top: 1px solid #88bf9c;">' +
-        '                                <td><span class="label-device "><span' +
+        '                                <td><span><span' +
         '                                    class="lang-sensor">Sensor</span></span></td>' +
         '                                <td><select onchange="applySensorRequiredGpio(\'' + obj.id + '\');" class="form-control select-device" id="s_type_' + obj.id + '">' +
         '                                    <option value="65">PIR</option>' +
@@ -309,69 +434,53 @@ function buildSensor(obj) {
         '                            <tr>' +
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-name">NOME</span></span></td>' +
-        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"' +
+        '                                <td><input class="input-device form-control" value="' + obj.name + '"' +
         '                                                            type="text" id="s_name_' + obj.id + '" placeholder="ex: sala"' +
         '                                                            maxlength="30" required/>' +
         '                                </td>' +
         '                            </tr>' +
 
         '                            <tr style="  border-top: 1px solid #88bf9c;">' +
-        '                                <td><span class="label-device "><span' +
+        '                                <td><span><span' +
         '                                    class="lang-pin-in-a">Pino Entrada A</span></span></td>' +
         '                                <td><select class="form-control select-device" id="s_primaryGpio_' + obj.id + '">' +
         '                                </select></td>' +
         '                            <tr>' +
         '                            <tr id="s_secondaryGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device "><span' +
+        '                                <td><span><span' +
         '                                    class="lang-pin-in-b">Pino Entrada B</span></span></td>' +
         '                                <td><select class="form-control select-device" id="s_secondaryGpio_' + obj.id + '">' +
         '                                </select></td>' +
         '                            <tr>' +
         '                            <tr id="s_tertiaryGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device "><span' +
+        '                                <td><span><span' +
         '                                    class="lang-pin-in-c">Pino Entrada C</span></span></td>' +
         '                                <td><select class="form-control select-device" id="s_tertiaryGpio_' + obj.id + '">' +
         '                                </select></td>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word">' + obj.mqttStateTopic + '</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td style="vertical-align: middle"><span class="label-device-indent label-device"><span class="lang-retain-message">Reter Mensagens</span></span></td>' +
-        '                                <td><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttRetain + ' type="checkbox" id="s_mqttRetain_' + obj.id + '" value="' + obj.mqttRetain + '"></td>' +
-        '                            </tr>' +
 
         '                            <tr >' +
         '                                <td><span class="label-device"><span' +
         '                                    class="lang-reading-interval">Leituras a cada </span></span></td>' +
-        '                                <td class="col-xs-8"><input style="float: left; width: 70%;" class="input-device form-control" value="' + obj.delayRead / 1000 + '"' +
-        '                                                            type="text" id="s_delayRead_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="2" required/><span style=" margin-left' +
-        ':10px; float: left;" ' +
-        '                                    class="lang-seconds">Segundos</span> ' +
+        '                                <td ><input style="float: left; width: 70%;" class="input-device form-control" value="' + obj.delayRead / 1000 + '"' +
+        '                                                            type="text" id="s_delayRead_' + obj.id + '" placeholder="ex: 12" maxlength="2" required/><span style=" margin-left:10px; float: left;" class="lang-seconds">Segundos</span> ' +
         '                                </td>' +
         '                            </tr>' +
         '                            <tr>' +
         '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
         '                                <td style="display: inline-flex">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="s_haSupport_' + obj.id + '" value="' + obj.haSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Emoncms</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedEmoncmsSupport + ' type="checkbox" id="s_emoncmsSupport_' + obj.id + '" value="' + obj.emoncmsSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >MQTT</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedMqttSupport + ' type="checkbox" id="s_mqttSupport_' + obj.id + '" value="' + obj.mqttSupport + '">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >CloudIO</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedCloudIOSupport + ' type="checkbox" id="s_cloudIOSupport_' + obj.id + '" value="' + obj.cloudIOSupport + '">' +
         '                               </td>' +
         '                            </tr>' +
         '                            </tbody>' +
         '                        </table>' +
+        '                    </div>' +
         '                        <div class="box-footer save">' +
         '                            <button onclick="removeSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span' +
         '                                class="lang-remove">Remover</span></button>' +
         '                            <button  onclick="saveSensor(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span' +
         '                                class="lang-save">Guardar</span></button>' +
         '                        </div>' +
-        '                    </div>' +
         '                </div>' +
         '            </div>');
     fillGpioSelect('s_primaryGpio_' + obj.id + '');
@@ -392,20 +501,19 @@ function buildSwitch(obj) {
     let on = obj.stateControl === 'ON' ? " " + obj.stateControl + " " : "OFF";
     let open = obj.stateControl === 'OPEN' ? " " + obj.stateControl + " " : "";
     let close = obj.stateControl === 'CLOSE' ? " " + obj.stateControl + " " : "";
-    let checkedMqttSupport = obj.mqttSupport ? "checked" : "";
     let checkedHaSupport = obj.haSupport ? "checked" : "";
     let checkedCloudIOSupport = obj.cloudIOSupport ? "checked" : "";
     source.addEventListener(obj.id, function (e) {
         let state = (e.data === "OFF" || e.data === "ON") ? "on" : e.data.toLowerCase();
         $("#btn_" + state + "_" + obj.id).removeClass("ON");
+        $("#btn_" + state + "_" + obj.id).removeClass("OFF");
         $("#btn_" + state + "_" + obj.id).removeClass("OPEN");
         $("#btn_" + state + "_" + obj.id).removeClass("CLOSE");
         $("#btn_" + state + "_" + obj.id).addClass(e.data);
     }, false);
-    $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="col-lg-4 col-md-6 col-xs-12">' +
-        '                <div style="margin-bottom: 0" class="info-box bg-aqua">' +
-        '                    <div class="info-box-content"><span class="info-box-text">' + obj.name + '</span>' +
-        '                        <div class="pull-right">' +
+    $('#switch_config').append('<div id="bs_' + obj.id + '" style="padding: 0; margin: 10px;" class="feature-box">' +
+        '                <div>' +
+        '                    <div class="old-box-header">' +
         '                            <button onclick="stateSwitch(\'' + obj.id + '\',\'OPEN\')" id="btn_open_' + obj.id + '" class="' + open + ' btn btn-primary btn-control">' +
         '                                <svg width="24" height="24" viewBox="0 0 24 24">' +
         '                                    <path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>' +
@@ -429,104 +537,77 @@ function buildSwitch(obj) {
         '                                    <path fill="#000000" d="M11,3H13V21H11V3Z"/>' +
         '                                </svg>' +
         '                            </button>' +
-        '                        </div>' +
         '                    </div>' +
         '                </div>' +
         '                <div style="font-size: 10px;  border: 0 solid #08c; border-radius: 0" class="box">' +
-        '                    <div class="box-body no-padding">' +
-        '                        <table class="table table-condensed">' +
+        '                    <div class="box-body">' +
+        '                        <table>' +
         '                            <tbody>' +
         '                            <tr>' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-name">NOME</span></span></td>' +
-        '                                <td class="col-xs-8"><input class="input-device form-control" value="' + obj.name + '"' +
+        '                                <td>Nome</td>' +
+        '                                <td ><input class="input-device form-control" value="' + obj.name + '"' +
         '                                                            type="text" id="name_' + obj.id + '" placeholder="ex: luz sala"' +
         '                                                            maxlength="30" required/>' +
         '                                </td>' +
         '                            </tr>' +
         '                            <tr>' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-family">FAMILIA</span></span></td>' +
+        '                                <td>Família</td>' +
         '                                <td><select onchange="applySwitchFamily(\'' + obj.id + '\');" class="form-control select-device" id="family_' + obj.id + '">' +
-        '                                    <option class="lang-switch" value="switch">Interruptor</option>' +
-        '                                    <option class="lang-light" value="light">Luz</option>' +
-        '                                    <option class="lang-cover" value="cover">Estore</option>' +
-        '                                    <option class="lang-garage" value="garage">Garagem</option>' +
+        '                                    <option value="switch">Interruptor</option>' +
+        '                                    <option value="light">Iluminação</option>' +
+        '                                    <option value="cover">Estore</option>' +
+        '                                    <option value="garage">Garagem</option>' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr>' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-mode">MODO</span></span></td>' +
+        '                                <td>Modo</td>' +
         '                                <td><select onchange="applySwitchMode(\'' + obj.id + '\');" class="form-control select-device" id="mode_' + obj.id + '">' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr>' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-control">Controla</span></span></td>' +
+        '                                <td>Atuador</td>' +
         '                                <td><select onchange="applyTypeControl(\'' + obj.id + '\');" class="form-control select-device" id="typeControl_' + obj.id + '">' +
         '                                    <option class="lang-relay" value="1">Relé</option>' +
         '                                    <option value="2">Virtual</option>' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr style="  border-top: 1px solid #88bf9c;">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-in-a">Pino Entrada A</span></span></td>' +
+        '                                <td>Pino Entrada A</td>' +
         '                                <td><select class="form-control select-device" id="primaryGpio_' + obj.id + '">' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr id="secondaryGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-pin-in-b">Pino Entrada B</span></span></td>' +
+        '                                <td>Pino Entrada B</td>' +
         '                                <td><select class="form-control select-device" id="secondaryGpio_' + obj.id + '">' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr id="primaryStateGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-pin-state-a">Pino Estado A</span></span></td>' +
+        '                                <td>Pino Estado A</td>' +
         '                                <td><select class="form-control select-device" id="primaryStateGpio_' + obj.id + '">' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr id="secondaryStateGpioRow_' + obj.id + '"">' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-pin-state-b">Pino Estado B</span></span></td>' +
+        '                                <td>Pino Estado B</td>' +
         '                                <td><select class="form-control select-device" id="secondaryStateGpio_' + obj.id + '">' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr id="primaryGpioControlRow_' + obj.id + '" style="  border-top: 1px solid #d9534f;">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-out-1">Pino Saida 1</span></span></td>' +
+        '                                <td>Pino Saida 1</td>' +
         '                                <td><select class="form-control select-device" id="primaryGpioControl_' + obj.id + '">' +
         '                            </tr>' +
         '                            <tr id="secondaryGpioControlRow_' + obj.id + '" ">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-out-2">Pino Saida 2</span></span></td>' +
+        '                                <td>Pino Saida 2</td>' +
         '                                <td><select class="form-control select-device" id="secondaryGpioControl_' + obj.id + '">' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr id="thirdGpioControlRow_' + obj.id + '" ">' +
-        '                                <td><span class="label-device "><span' +
-        '                                    class="lang-pin-out-3">Pino Saida 3</span></span></td>' +
+        '                                <td>Pino Saida 3</td>' +
         '                                <td><select class="form-control select-device" id="thirdGpioControl_' + obj.id + '">' +
         '                                </select></td>' +
         '                            </tr>' +
         '                            <tr>' +
-        '                                <td><span class="label-device" style="color: #88bf9c; font-size: 13px;">MQTT</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span class="lang-command">Comando</span></span></td>' +
-        '                                <td> <span style="word-break: break-word" >'+config.mqttUsername+'/'+config.chipId+'/' + obj.family +'/' + obj.id + '/set </span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span class="lang-state">Estado</span></span></td>' +
-        '                                <td><span  style="word-break: break-word">'+config.mqttUsername+'/'+config.chipId+'/' + obj.family +'/' + obj.id + '/state</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device" style="color: dodgerblue; font-size: 13px;">KNX</span></td>' +
-        '                            </tr>' +
-        '                            <tr>' +
-        '                                <td><span class="label-device-indent"><span' +
-        '                                    class="lang-group">Grupo</span></span></td>' +
-        '                                <td class="col-xs-8"><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' +
+        '                                <td>KNX</td>' +
+        '                                <td ><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelOne + '"' +
         '                                                            type="text" id="knxLevelOne_' + obj.id + '" placeholder="ex: 2"' +
         '                                                             maxlength="2" required/><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.knxLevelTwo + '"' +
         '                                                            type="text" id="knxLevelTwo_' + obj.id + '" placeholder="ex: 1"' +
@@ -536,9 +617,8 @@ function buildSwitch(obj) {
         '                                </td>' +
         '                            </tr>' +
         '                            <tr id="timeBetweenStatesRow_' + obj.id + '" >' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-time">TEMPO Subida/Descida</span></span></td>' +
-        '                                <td class="col-xs-4"><span style="float: left" class="lang-up">Subida</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.upCourseTime / 1000 + '"' +
+        '                                <td>Calibração</td>' +
+        '                                <td><span style="float: left" class="lang-up">Subida</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.upCourseTime / 1000 + '"' +
         '                                                            type="text" id="upCourseTime_' + obj.id + '" placeholder="ex: 12"' +
         '                                                             maxlength="5" required/><span style="float: left; margin-left: 10px" class="lang-down">Descida</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + obj.downCourseTime / 1000 + '"' +
         '                                                            type="text" id="downCourseTime_' + obj.id + '" placeholder="ex: 12"' +
@@ -546,33 +626,35 @@ function buildSwitch(obj) {
         '                                </td>' +
         '                            </tr>' +
         '                            <tr>' +
-        '                                <td><span class="label-device"><span' +
-        '                                    class="lang-auto-state">Estádo automático</span></span></td>' +
-        '                                <td class="col-xs-8"><span style="float: left" class="lang-in">em</span><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"' +
+        '                                <td>Estádo automático</td>' +
+        '                                <td ><input style="width: 50px; float: left; margin-left: 5px;" class="input-device form-control" value="' + (obj.autoStateDelay / 1000) + '"' +
         '                                                            type="text" id="autoStateDelay_' + obj.id + '" placeholder="ex: 12"' +
-        '                                                             maxlength="8" required/><span style="float: left; margin-left: 5px;" class="lang-seconds">segundos</span> ' +
+        '                                                             maxlength="8" required/>' +
         '                                <select class="form-control select-device" style="float: left; width: 100px; margin-left: 5px;" id="autoStateValue_' + obj.id + '">' +
         '                                    <option class="lang-choose" value="">Escolha</option>' +
         '                                </select>' +
         '                                </td>' +
         '                            </tr>' +
         '                            <tr>' +
+        '                            <td></td><td><span style="margin-left: 5px">segundos</span> ' +
+        '                            </td>' +
+        '                            </tr>' +
+        '                            <tr>' +
         '                                <td style="vertical-align: middle"><span class="label-device"><span class="lang-integrate">Integrar</span></span></td>' +
         '                                <td style="display: inline-flex">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >Home Assistant</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedHaSupport + ' type="checkbox" id="haSupport_' + obj.id + '" value="' + obj.haSupport + '">' +
-        '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >MQTT</span><input class="form-control" style="width: 20px; height: 20px; margin-right: 10px;" ' + checkedMqttSupport + ' type="checkbox" id="mqttSupport_' + obj.id + '" value="' + obj.mqttSupport + '">' +
         '                                       <span style="padding: 6px; color: #4ca2cd; font-weight: 600" >CloudIO</span><input class="form-control" style="width: 20px; height: 20px;" ' + checkedCloudIOSupport + ' type="checkbox" id="cloudIOSupport_' + obj.id + '" value="' + obj.cloudIOSupport + '">' +
         '                               </td>' +
         '                            </tr>' +
         '                            </tbody>' +
         '                        </table>' +
+        '                    </div>' +
         '                        <div class="box-footer save">' +
         '                            <button onclick="removeSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-danger"><span' +
         '                                class="lang-remove">Remover</span></button>' +
         '                            <button  onclick="saveSwitch(\'' + obj.id + '\')" style="font-size: 12px" class="btn btn-primary"><span' +
         '                                class="lang-save">Guardar</span></button>' +
         '                        </div>' +
-        '                    </div>' +
         '                </div>' +
         '            </div>');
 
@@ -732,39 +814,7 @@ function saveSwitch(id) {
         timeout: 2000
     });
 }
-function storeConfig() {
-    const targetUrl = baseUrl + "/save-config";
-    $.ajax({
-        type: "POST",
-        url: targetUrl,
-        dataType: "json",
-        contentType: "application/json",
-        data: JSON.stringify(config),
-        success: function (response) {
-            config = response;
-            fillConfig();
-            showMessage("Configuração Guardada", "Config Stored")
-        },
-        error: function () {
-            showMessage("Não foi possivel guardar a configuração atual, por favor tenta novamente.", "Unable to save current configuration, please try again.")
-        },
-        timeout: 2000
-    });
-}
-function saveNode() {
-    config.nodeId = $('#nodeId').val().trim();
-    config.mqttIpDns = $('#mqtt_ip').val().trim();
-    config.mqttUsername = $('#mqtt_username').val().trim();
-    config.mqttPassword = $('#mqtt_password').val().trim();
-    config.wifiSSID = $('#ssid').val().trim();
-    config.wifiSecret = $('#wifi_secret').val().trim();
-    config.wifiIp = $('#wifiIp').val().trim();
-    config.wifiMask = $('#wifiMask').val().trim();
-    config.wifiGw = $('#wifiGw').val().trim();
-    config.staticIp = !document.getElementById("staticIp").checked;
-    config.apSecret = $('#apSecret').val().trim();
-    storeConfig();
-}
+
 
 function removeSwitch(id) {
     const targetUrl = baseUrl + "/remove-switch?id=" + id;
@@ -798,75 +848,3 @@ function removeSensor(id) {
         timeout: 2000
     });
 }
-function reboot() {
-    $.ajax({
-        url: baseUrl + "/reboot",
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            showMessage("O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.", "The device is restartin, will be available in 10 seconds.")
-        }, error: function () {
-            showMessage("Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
-        },
-        timeout: 2000
-    });
-}
-function loadDefaults() {
-    $.ajax({
-        url: baseUrl + "/load-defaults",
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            showMessage("Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.", "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.")
-        }, error: function () {
-            showMessage("Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.", "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.")
-        },
-        timeout: 1000
-    });
-}
-function systemStatus() {
-    $.ajax({
-        url: baseUrl + "/system-status",
-        contentType: "text/plain; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            $('#ssid_lbl').text(response.wifiSSID);
-            if (document.getElementById("wifiIp") && ($('input[name="wifiIp"]').val().trim().length === 0 || $('input[name="wifiIp"]').val() === "(IP unset)")) {
-                $('input[name="wifiIp"]').val(response.wifiIp);
-                $('input[name="wifiMask"]').val(response.wifiMask);
-                $('input[name="wifiGw"]').val(response.wifiGw);
-            }
-            let percentage = Math.min(2 * (parseInt(response.signal) + 100), 100);
-            if (config) {
-                $('#mqtt_lbl').text(config.mqttIpDns);
-            }
-            if (response.mqtt) {
-                $('#mqtt-state').text("ligado");
-            } else {
-                $('#mqtt-state').text("desligado");
-            }
-            $('#wifi-signal').text(percentage + "%");
-        }, error: function () {
-            $('#wifi-signal').text("0%");
-        },
-        timeout: 2000
-    });
-}
-$(document).ready(function () {
-    loadConfig();
-    $('#nodeId').on('keypress', function (e) {
-        if (e.which === 32)
-            return false;
-    });
-    $('.menu-item').click(function (e) {
-        let menu = $(e.currentTarget).data('menu');
-        toggleActive(menu);
-
-    });
-   // systemStatus();
-    toggleActive("node");
-    setInterval(systemStatus, 15000);
-    if (!!window.EventSource) {
-        source = new EventSource(baseUrl + '/events');
-    }
-});

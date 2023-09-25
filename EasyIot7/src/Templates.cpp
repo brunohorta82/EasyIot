@@ -10,8 +10,8 @@ void loadDefaultConfig()
     strlcpy(config.nodeId, getChipId().c_str(), sizeof(config.nodeId));
     strlcpy(config.chipId, config.nodeId, sizeof(config.chipId));
     config.mqttPort = constantsMqtt::defaultPort;
-    config.staticIp = false;
-    strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
+    config.dhcp = true;
+    strlcpy(config.accessPointPassword, constantsConfig::apSecret, sizeof(config.accessPointPassword));
     strlcpy(config.apiUser, constantsConfig::apiUser, sizeof(config.apiUser));
     strlcpy(config.apiPassword, constantsConfig::apiPassword, sizeof(config.apiPassword));
 #ifdef WIFI_SSID

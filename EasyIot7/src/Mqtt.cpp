@@ -5,6 +5,7 @@
 #include "CoreWiFi.h"
 #include "constants.h"
 #include "Discovery.h"
+#include "WebServer.h"
 extern Config config;
 extern Switches switches;
 static WiFiClient espClient;
@@ -69,8 +70,8 @@ String getConfigStatusTopic()
 
 boolean reconnect()
 {
-
-    if (WiFi.status() != WL_CONNECTED || strlen(config.mqttIpDns) == 0)
+    sendToServerEvents("mqtt_health", constantsMqtt::unavailablePayload);
+    if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
         return false;
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Trying to connect on broker %s" CR, tags::mqtt, config.mqttIpDns);
@@ -90,6 +91,7 @@ boolean reconnect()
             subscribeOnMqtt(sw.mqttCommandTopic);
             publishOnMqtt(sw.mqttStateTopic, sw.getCurrentState().c_str(), sw.mqttRetain);
         }
+        sendToServerEvents("mqtt_health", constantsMqtt::availablePayload);
     }
 
     return mqttConnected();
@@ -97,19 +99,19 @@ boolean reconnect()
 
 void setupMQTT()
 {
-    if (strlen(config.mqttIpDns) == 0)
-    {
-        return;
-    }
+
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Setup" CR, tags::mqtt);
 #endif
     if (mqttConnected())
     {
         mqttClient.disconnect();
-        refreshMDNS(config.nodeId);
+        sendToServerEvents("mqtt_health", constantsMqtt::unavailablePayload);
     }
-
+    if (strlen(config.mqttIpDns) == 0)
+    {
+        return;
+    }
     mqttClient.setServer(config.mqttIpDns, config.mqttPort);
     mqttClient.setCallback(callbackMqtt);
 }

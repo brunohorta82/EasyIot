@@ -32,44 +32,39 @@ void Config::save()
 void Config::toJson(JsonVariant &root)
 {
   root["nodeId"] = nodeId;
+  root["idSequence"] = 0;
+  root["chipId"] = chipId;
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
   root["mqttPassword"] = mqttPassword;
-  root["wifiSSID"] = wifiSSID;
-  root["wifiSecret"] = wifiSecret;
-  root["wifiIp"] = wifiIp;
-  root["wifiMask"] = wifiMask;
-  root["wifiGw"] = wifiGw;
-  root["staticIp"] = staticIp;
-  root["apName"] = apName;
-  root["firmware"] = String(VERSION, 3);
-  root["chipId"] = chipId;
-  root["mac"] = WiFi.macAddress();
+  root["accessPointPassword"] = accessPointPassword;
   root["apiUser"] = apiUser;
   root["apiPassword"] = apiPassword;
-  root["emoncmsServer"] = emoncmsServer;
-  root["emoncmsPath"] = emoncmsPath;
-  root["emoncmsApikey"] = emoncmsApikey;
-  root["knxArea"] = knxArea;
-  root["knxLine"] = knxLine;
-  root["knxMember"] = knxMember;
-  root["currentWifiIp"] = WiFi.localIP().toString();
+  root["wifiSSID"] = wifiSSID;
+  root["wifiSecret"] = wifiSecret;
+  root["dhcp"] = dhcp;
+  // DYNAMIC VALUES
+  root["mqttConnected"] = mqttConnected();
+  root["wifiIp"] = WiFi.localIP().toString();
+  root["wifiMask"] = WiFi.subnetMask().toString();
+  root["wifiGw"] = WiFi.gatewayIP().toString();
+  root["firmware"] = String(VERSION);
+  root["mac"] = WiFi.macAddress();
   root["wifiStatus"] = WiFi.isConnected();
   root["signal"] = WiFi.RSSI();
-  root["mode"] = (int)WiFi.getMode();
-  root["mqttConnected"] = mqttConnected();
-  root["firmwareMode"] = "NO_FEATURES";
-  JsonVariant pins = root.createNestedArray("pins");
+  JsonVariant outInPins = root.createNestedArray("outInPins");
+  JsonVariant inPins = root.createNestedArray("inPins");
 #ifdef ESP8266
   std::vector<int> pinsRef = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
 #endif
 #ifdef ESP32
-  std::vector<int> pinsRef = {4, 5, 7, 8, 13, 14, 19, 20, 21, 22, 25, 26, 27, 32, 33, 34, 35, 36, 37, 38};
+  std::vector<int> pinsRef = {4, 5, 7, 8, 13, 14, 19, 20, 21, 22, 25, 26, 27, 32, 33};
+  std::vector<int> intputOnly = {34, 35, 36, 37, 38};
 #endif
   for (auto p : pinsRef)
   {
-    pins.add(p);
+    outInPins.add(p);
   }
 }
 
@@ -84,11 +79,11 @@ void Config::save(File &file) const
   file.write((uint8_t *)mqttPassword, sizeof(mqttPassword));
   file.write((uint8_t *)wifiSSID, sizeof(wifiSSID));
   file.write((uint8_t *)wifiSecret, sizeof(wifiSecret));
-  file.write((uint8_t *)&staticIp, sizeof(staticIp));
+  file.write((uint8_t *)&dhcp, sizeof(dhcp));
   file.write((uint8_t *)wifiIp, sizeof(wifiIp));
   file.write((uint8_t *)wifiMask, sizeof(wifiMask));
   file.write((uint8_t *)wifiGw, sizeof(wifiGw));
-  file.write((uint8_t *)apSecret, sizeof(apSecret));
+  file.write((uint8_t *)accessPointPassword, sizeof(accessPointPassword));
   file.write((uint8_t *)apName, sizeof(apName));
   file.write((uint8_t *)chipId, sizeof(chipId));
   file.write((uint8_t *)apiUser, sizeof(apiUser));
@@ -117,11 +112,11 @@ void Config::load(File &file)
   file.read((uint8_t *)mqttPassword, sizeof(mqttPassword));
   file.read((uint8_t *)wifiSSID, sizeof(wifiSSID));
   file.read((uint8_t *)wifiSecret, sizeof(wifiSecret));
-  file.read((uint8_t *)&staticIp, sizeof(staticIp));
+  file.read((uint8_t *)&dhcp, sizeof(dhcp));
   file.read((uint8_t *)wifiIp, sizeof(wifiIp));
   file.read((uint8_t *)wifiMask, sizeof(wifiMask));
   file.read((uint8_t *)wifiGw, sizeof(wifiGw));
-  file.read((uint8_t *)apSecret, sizeof(apSecret));
+  file.read((uint8_t *)accessPointPassword, sizeof(accessPointPassword));
   file.read((uint8_t *)apName, sizeof(apName));
   file.read((uint8_t *)chipId, sizeof(chipId));
   file.read((uint8_t *)apiUser, sizeof(apiUser));
@@ -151,8 +146,8 @@ void load(Config &config)
 #endif
     strlcpy(config.nodeId, getChipId().c_str(), sizeof(config.nodeId));
     config.mqttPort = constantsMqtt::defaultPort;
-    config.staticIp = false;
-    strlcpy(config.apSecret, constantsConfig::apSecret, sizeof(config.apSecret));
+    config.dhcp = true;
+    strlcpy(config.accessPointPassword, constantsConfig::apSecret, sizeof(config.accessPointPassword));
     strlcpy(config.apiUser, constantsConfig::apiUser, sizeof(config.apiUser));
     strlcpy(config.apiPassword, constantsConfig::apiPassword, sizeof(config.apiPassword));
 
@@ -199,7 +194,7 @@ Config &Config::updateFromJson(JsonObject &root)
 {
   char lastNodeId[32];
   strlcpy(lastNodeId, config.nodeId, sizeof(lastNodeId));
-  bool reloadWifi = staticIp != root["staticIp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
+  bool reloadWifi = dhcp != root["dhcp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
   bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
   String chipIdStr = getChipId();
   String n_name = root["nodeId"] | chipIdStr;
@@ -211,32 +206,12 @@ Config &Config::updateFromJson(JsonObject &root)
   strlcpy(mqttPassword, root["mqttPassword"] | "", sizeof(mqttPassword));
   strlcpy(wifiSSID, root["wifiSSID"] | "", sizeof(wifiSSID));
   strlcpy(wifiSecret, root["wifiSecret"] | "", sizeof(wifiSecret));
-  String emoncmsServerStr = root["emoncmsServer"] | "";
-  knxArea = static_cast<uint8_t>(root["knxArea"] | 0);
-  knxLine = static_cast<uint8_t>(root["knxLine"] | 0);
-  knxMember = static_cast<uint8_t>(root["knxMember"] | 0);
-  emoncmsServerStr.replace("https", "http");
-  knx.physical_address_set(knx.PA_to_address(config.knxArea, config.knxLine, config.knxMember));
-  while (emoncmsServerStr.endsWith("/"))
-  {
-
-    emoncmsServerStr.remove(emoncmsServerStr.lastIndexOf("/"));
-  }
-  strlcpy(emoncmsServer, emoncmsServerStr.c_str(), sizeof(emoncmsServer));
-  String emoncmsPathStr = root["emoncmsPath"] | "";
-  while (emoncmsPathStr.endsWith("/"))
-  {
-    emoncmsPathStr.remove(emoncmsPathStr.lastIndexOf("/"));
-  }
-  strlcpy(emoncmsPath, emoncmsPathStr.c_str(), sizeof(emoncmsPath));
-
-  strlcpy(emoncmsApikey, root["emoncmsApikey"] | "", sizeof(emoncmsApikey));
   strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
-  staticIp = root["staticIp"];
-  String ap = root["apSecret"] | String(constantsConfig::apSecret);
-  strlcpy(apSecret, ap.c_str(), sizeof(apSecret));
+  dhcp = root["dhcp"] | true;
+  String ap = root["accessPointPassword"] | String(constantsConfig::apSecret);
+  strlcpy(accessPointPassword, ap.c_str(), sizeof(accessPointPassword));
   firmware = root["firmware"] | VERSION;
   strlcpy(mqttAvailableTopic, getAvailableTopic().c_str(), sizeof(mqttAvailableTopic));
 

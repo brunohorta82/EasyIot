@@ -22,11 +22,11 @@ public:
   char mqttAvailableTopic[128];
   char wifiSSID[32];
   char wifiSecret[64];
-  bool staticIp = false;
+  bool dhcp = false;
   char wifiIp[24];
   char wifiMask[24];
   char wifiGw[24];
-  char apSecret[64];
+  char accessPointPassword[64];
   char apName[30];
   char chipId[24];
   char apiUser[32];

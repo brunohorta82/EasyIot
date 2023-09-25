@@ -302,8 +302,10 @@ void loadAPI()
 {
   server.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+#if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
+#endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["result"] = "Reboot requested";
@@ -313,8 +315,10 @@ void loadAPI()
 
   server.on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+#if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
+#endif
 
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
@@ -322,24 +326,6 @@ void loadAPI()
     response->setLength();
     request->send(response);
     config.requestLoadDefaults(); });
-
-  server.on("/system-status", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonVariant &root = response->getRoot();
-    root["wifiSSID"] = WiFi.SSID();
-    root["wifiIp"] = WiFi.localIP().toString();
-    root["wifiGw"] = WiFi.gatewayIP().toString();
-    root["wifiMask"] = WiFi.subnetMask().toString();
-    root["status"] = WiFi.isConnected();
-    root["signal"] = WiFi.RSSI();
-    root["mac"] = WiFi.macAddress();
-    response->setLength();
-    request->send(response); });
 
   server.on("/scan-wifi-networks", HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -353,17 +339,6 @@ void loadAPI()
     response->setLength();
     request->send(response);
     config.requestWifiScan(); });
-
-  server.on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonVariant &root = response->getRoot();
-    root["result"] = "Auto-Update started";
-    response->setLength();
-    request->send(response);
-    config.requestAutoUpdate(); });
   server.on(
       "/update", HTTP_POST, [](AsyncWebServerRequest *request)
       {
