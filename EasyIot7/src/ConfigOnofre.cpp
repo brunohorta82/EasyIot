@@ -319,20 +319,21 @@ void ConfigOnofre::json(JsonVariant &root)
   JsonVariant outInPins = root.createNestedArray("outInPins");
   JsonVariant inPins = root.createNestedArray("inPins");
 #ifdef ESP8266
-  std::vector<int> pinsRef = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
+  std::vector<int> outputInput = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
 #endif
 #ifdef ESP32
   std::vector<int> outputInput = {4, 5, 7, 8, 13, 14, 19, 20, 21, 22, 25, 26, 27, 32, 33};
   std::vector<int> intputOnly = {34, 35, 36, 37, 38};
+  for (auto p : intputOnly)
+  {
+    inPins.add(p);
+  }
 #endif
   for (auto p : outputInput)
   {
     outInPins.add(p);
   }
-  for (auto p : intputOnly)
-  {
-    inPins.add(p);
-  }
+
   JsonArray features = root.createNestedArray("features");
   for (auto s : actuatores)
   {
@@ -343,7 +344,6 @@ void ConfigOnofre::json(JsonVariant &root)
     a["family"] = s.family;
     a["cloudIOSupport"] = s.cloudIOSupport;
     a["haSupport"] = s.haSupport;
-    char knxAddress[13];
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];

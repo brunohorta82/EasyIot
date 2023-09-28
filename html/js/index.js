@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.131"
+let baseUrl = "http://192.168.122.134"
 let config;
 var newConfig = {};
 let source = null;
@@ -10,81 +10,7 @@ var WORDS_PT = {
     "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
     "defaults_error": "Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
 }
-var WORDS_RO = {
-    "config_save_error": "Unable to save current configuration, please try again.",
-    "config_save_ok": "Config Stored",
-    "device_reboot_ok": "The device is restarting, will be available in 10 seconds.",
-    "device_reboot_error": "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
-    "defaults_ok": "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.",
-    "defaults_error": "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
-    "node": "Modul",
-    "integrations": "INTEGRARE",
-    "features": "FUNCTII",
-    "current-version": "Versiunea curenta",
-    "new-file": "Firmware Update",
-    "install-new-version": "Actualizati automat la versiune",
-    "install-file-version": "Instalati versiunea fisierului",
-    "version": "Versiune",
-    "save": "Salvati",
-    "choose": "Alege",
-    "username": "Nume de utilizator",
-    "password": "Parola",
-    "yes": "Da",
-    "no": "Nu",
-    "netmask": "Netmask",
-    "name": "Nume",
-    "reset-factory": "Incarcare setare de fabrica",
-    "remove": "Sterge",
-    "new": "Creaza nou",
-    "family": "Familie",
-    "switch": "Intrerupator",
-    "light": "Lumina",
-    "cover": "Jaluzea",
-    "garage": "Garaj",
-    "normal": "Generic",
-    "push": "Push",
-    "dual-push": "Dual Push",
-    "dual-normal": "Dual Generic",
-    "mode": "Mod",
-    "none": "Nedesemnata"
-}
-var WORDS_EN = {
-    "config_save_error": "Unable to save current configuration, please try again.",
-    "config_save_ok": "Config Stored",
-    "device_reboot_ok": "The device is restarting, will be available in 10 seconds.",
-    "device_reboot_error": "Unable to restart the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
-    "defaults_ok": "Factory setting applied successfully. Please reconnect to Access Point and access the control panel at http://192.168.4.1 in your browser.",
-    "defaults_error": "Unable to load factory configuration on the device, check if it is connected to the correct network. If the problem persists try turning the power off.",
-    "security": "Security",
-    "node": "NODE",
-    "features": "FEATURES",
-    "current-version": "Current version",
-    "new-file": "Firmware Update",
-    "install-new-version": "Auto Upgrade to version",
-    "install-file-version": "Install file version",
-    "version": "Version",
-    "save": "Save All",
-    "clean-fields": "Clear all Fields",
-    "username": "Username",
-    "password": "Password",
-    "yes": "Yes",
-    "no": "No",
-    "netmask": "Netmask",
-    "system": "System",
-    "name": "Name",
-    "restart": "Restart",
-    "seconds": "seconds",
-    "in": "in",
-    "reset-factory": "Load Factory Defaults",
-    "switches": "Switches",
-    "remove": "Remove",
-    "new": "New",
-    "push": "Push",
-    "dual-push": "Dual Push",
-    "dual-normal": "Dual Generic",
-    "mode": "Mode",
-    "none": "None",
-};
+
 
 function stringToHTML(text) {
     let parser = new DOMParser();
@@ -176,11 +102,11 @@ async function loadConfig() {
 
 function detectLang() {
     let lang = "PT";
-    if (/^en/.test(navigator.language)) {
+   /* if (/^en/.test(navigator.language)) {
         lang = "EN";
     } else if (/^ro/.test(navigator.language)) {
         lang = "RO";
-    }
+    }*/
     return window['WORDS_' + lang];
 }
 
