@@ -180,6 +180,10 @@ void ActuatorT::setup()
   for (auto output : outputs)
   {
     configPIN(output, OUTPUT);
+    if (isLight() || isSwitch())
+    {
+      writeToPIN(output, state);
+    }
   }
   for (auto input : inputs)
   {

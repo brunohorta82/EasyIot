@@ -207,6 +207,7 @@ fieldset {
     font-size: 14px;
     font-weight: 400;
     text-align: center;
+    cursor: pointer;
     white-space: nowrap;
     -ms-touch-action: manipulation;
     touch-action: manipulation;
@@ -370,4 +371,16 @@ input:checked + .slider:before {
 }
 .hide{
     display: none;
+}
+.btn-delete{
+    background-color: transparent;
+    border: none;
+    color: #FF5555;
+    cursor: pointer;
+}
+.btn-update{
+    background-color: transparent;
+    border: none;
+    color: #40DF86;
+    cursor: pointer;
 }
