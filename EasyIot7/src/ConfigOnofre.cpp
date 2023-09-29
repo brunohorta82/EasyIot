@@ -4,7 +4,15 @@
 #include <esp-knx-ip.h>
 #include "WebServer.h"
 #include "Templates.h"
-
+void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
+{
+  id.reserve(maxSize);
+  id.concat(chipId);
+  id.concat(name);
+  id.concat(familyCode);
+  id.toLowerCase();
+  normalize(id);
+}
 ConfigOnofre &ConfigOnofre::init()
 {
 #ifdef ESP8266
@@ -95,10 +103,12 @@ ConfigOnofre &ConfigOnofre::load()
   strlcpy(apiUser, doc["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(apiPassword, doc["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
   JsonArray features = doc["features"];
+  int s = 0;
   for (auto d : features)
   {
     ActuatorT actuator;
-    actuator.id = d["id"];
+    actuator.sequence = s++;
+    strlcpy(actuator.uniqueId, d["id"] | "", sizeof(actuator.uniqueId));
     strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
     actuator.family = d["family"];
     actuator.typeControl = d["typeControl"];
@@ -108,8 +118,8 @@ ConfigOnofre &ConfigOnofre::load()
     actuator.knxAddress[1] = d["line"] | 0;
     actuator.knxAddress[2] = d["member"] | 0;
     actuator.state = d["state"] | 0;
-    sprintf(actuator.readTopic, "bhonofre/%s/%s/%d/state", chipId, actuator.familyToText(), actuator.id);
-    sprintf(actuator.writeTopic, "bhonofre/%s/%s/%d/set", chipId, actuator.familyToText(), actuator.id);
+    sprintf(actuator.readTopic, "bhonofre/%s/%s/%d/state", chipId, actuator.familyToText(), actuator.uniqueId);
+    sprintf(actuator.writeTopic, "bhonofre/%s/%s/%d/set", chipId, actuator.familyToText(), actuator.uniqueId);
     JsonArray outputs = d["outputs"];
     for (auto out : outputs)
     {
@@ -176,7 +186,7 @@ ConfigOnofre &ConfigOnofre::save()
   {
     JsonObject a = features.createNestedObject();
     a["type"] = "ACTUATOR";
-    a["id"] = s.id;
+    a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["family"] = s.family;
     a["typeControl"] = s.typeControl;
@@ -212,7 +222,7 @@ ConfigOnofre &ConfigOnofre::save()
 void ConfigOnofre::controlFeature(SwitchStateOrigin origin, JsonObject &action, JsonVariant &result)
 {
 
-  controlFeature(origin, action["id"] | 0, action["state"] | 0);
+  controlFeature(origin, action["id"] | "0", action["state"] | 0);
 }
 void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String topic, String payload)
 {
@@ -220,17 +230,19 @@ void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String topic, String
   {
     if (strcmp(a.writeTopic, topic.c_str()) == 0 || strcmp(a.cloudIOwriteTopic, topic.c_str()) == 0)
     {
-      controlFeature(origin, a.id, payload.toInt());
+      controlFeature(origin, a.uniqueId, payload.toInt());
       return;
     }
   }
 }
-void ConfigOnofre::controlFeature(SwitchStateOrigin origin, int id, int state)
+void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String uniqueId, int state)
 {
   for (auto &a : actuatores)
   {
-    if (a.id == id)
+
+    if (uniqueId.equals(a.uniqueId))
     {
+      Serial.print("IGUAL");
       if (state == SwitchState::TOGGLE)
       {
         if (a.isLight() || a.isSwitch())
@@ -339,7 +351,7 @@ void ConfigOnofre::json(JsonVariant &root)
   {
     JsonObject a = features.createNestedObject();
     a["type"] = "ACTUATOR";
-    a["id"] = s.id;
+    a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["family"] = s.family;
     a["cloudIOSupport"] = s.cloudIOSupport;
@@ -445,11 +457,4 @@ bool ConfigOnofre::isLoadDefaultsRequested()
     return true;
   }
   return false;
-}
-
-int ConfigOnofre::nextId()
-{
-  idSequence++;
-  this->save();
-  return idSequence;
 }

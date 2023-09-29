@@ -145,7 +145,7 @@ function getValue(id, f) {
 
 function toggleSwitch(arg) {
     const action = {
-        id: parseInt(arg.id),
+        id: arg.id,
         state: arg.checked ? 1 : 0
     };
     fetch(baseUrl + "/control-feature", {

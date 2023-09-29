@@ -61,12 +61,12 @@ void onMqttConnect(bool sessionPresent)
 #ifdef DEBUG_ONOFRE
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
 #endif
-  mqttClient.publish(config.healthTopic, 0, true, "1\0");
+  mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1\0");
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
   for (auto &sw : config.actuatores)
   {
-    subscribeOnMqttCloudIO(sw.cloudIOwriteTopic);
-    notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
+    //  subscribeOnMqttCloudIO(sw.cloudIOwriteTopic);
+    // notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
   }
 }
 
@@ -165,7 +165,7 @@ void connectToCloudIO()
   JsonVariant root = doc.to<JsonVariant>();
   config.json(root);
   serializeJson(doc, payload);
-  http.begin(client, "http://cloudio.bhonofre.pt/devices/config");
+  http.begin(client, constanstsCloudIO::configUrl);
   http.addHeader("Content-Type", "application/json");
   int httpCode = http.POST(payload.c_str());
 #ifdef DEBUG_ONOFRE
@@ -183,6 +183,14 @@ void connectToCloudIO()
     DeserializationError error = deserializeJson(doc, payload);
     strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
     strlcpy(config.cloudIOPassword, doc["password"] | "", sizeof(config.cloudIOPassword));
+    snprintf(config.cloudIOhealthTopic, sizeof(config.cloudIOhealthTopic), "%s/%s/available", config.cloudIOUsername, config.chipId);
+    snprintf(config.cloudIOwriteTopic, sizeof(config.cloudIOwriteTopic), "%s/%s/config/set", config.cloudIOUsername, config.chipId);
+    /* for (auto &sw : config.actuatores)
+    {
+      snprintf(sw.cloudIOwriteTopic, sizeof(sw.cloudIOwriteTopic), "%s/%s/%s/%s/set", config.cloudIOUsername, config.chipId, sw.familyToText());
+      snprintf(sw.cloudIOreadTopic, sizeof(sw.cloudIOreadTopic), "%s/%s/status", config.cloudIOUsername, config.chipId);
+    }
+    */
 #ifdef DEBUG_ONOFRE
     Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, config.cloudIOUsername, config.cloudIOPassword);
 #endif

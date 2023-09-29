@@ -50,7 +50,7 @@ public:
   ConfigOnofre &init();
   ConfigOnofre &load();
   ConfigOnofre &removeSwitch(const char *id);
-  int nextId();
+  void generateId(String &id, const String &name, int familyCode, size_t maxSize);
   void loadTemplate(int templateId);
   void loopSwitches();
   String controlSwitch(const char *id, SwitchStateOrigin origin, String state);
@@ -73,7 +73,7 @@ public:
   bool isReloadWifiRequested();
   void controlFeature(SwitchStateOrigin origin, JsonObject &action, JsonVariant &result);
   void controlFeature(SwitchStateOrigin origin, String topic, String payload);
-  void controlFeature(SwitchStateOrigin origin, int id, int state);
+  void controlFeature(SwitchStateOrigin origin, String uniqueId, int state);
 
 private:
   bool reboot = false;

@@ -126,8 +126,13 @@ void switchesCallback(message_t const &msg, void *arg)
 }
 void pressed(Button2 &btn)
 {
-  Serial.println("pressed");
-  config.controlFeature(SwitchStateOrigin::GPIO_INPUT, btn.getID(), SwitchState::TOGGLE);
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(SwitchStateOrigin::GPIO_INPUT, a.uniqueId, SwitchState::TOGGLE);
+    }
+  }
 }
 void released(Button2 &btn)
 {
@@ -189,7 +194,7 @@ void ActuatorT::setup()
   {
     Button2 button;
     button.begin(input);
-    button.setID(id);
+    button.setID(sequence);
     button.setPressedHandler(pressed);
     button.setClickHandler(click);
     button.setDoubleClickHandler(doubleClick);
@@ -222,7 +227,7 @@ void ActuatorT::notifyState(SwitchStateOrigin origin)
   }
 
   // Notify by SSW Webpanel
-  sendToServerEvents(String(id), stateStr.c_str());
+  sendToServerEvents(uniqueId, stateStr.c_str());
 
   // Notify by KNX
   if (SwitchStateOrigin::INTERNAL != origin && isKnxSupport())
@@ -272,7 +277,7 @@ ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, int state)
   {
     for (auto &sw : config.actuatores)
     {
-      if (sw.id == id)
+      if (strcmp(sw.uniqueId, uniqueId) == 0)
       {
         sw.state = state;
         sw.notifyState(SwitchStateOrigin::INTERNAL);

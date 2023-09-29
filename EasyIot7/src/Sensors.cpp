@@ -136,7 +136,7 @@ void Sensors::toJson(JsonVariant &root)
   for (const auto &ss : items)
   {
     JsonVariant sdoc = root.createNestedObject();
-    sdoc["id"] = ss.id;
+    sdoc["id"] = ss.uniqueId;
     sdoc["name"] = ss.name;
     sdoc["family"] = ss.family;
     sdoc["type"] = static_cast<int>(ss.type);
@@ -151,10 +151,10 @@ void Sensors::toJson(JsonVariant &root)
     sdoc["cloudIOSupport"] = ss.cloudIOSupport;
   }
 }
-Sensors &Sensors::remove(int id)
+Sensors &Sensors::remove(String id)
 {
   auto match = std::find_if(items.begin(), items.end(), [id](const SensorT &item)
-                            { return id == item.id; });
+                            { return id.equals(item.uniqueId); });
 
   if (match == items.end())
   {
@@ -186,7 +186,7 @@ void SensorT::updateFromJson(JsonObject doc)
   type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
   String idStr;
   strlcpy(name, doc["name"], sizeof(name));
-  id = config.nextId();
+  strlcpy(uniqueId, doc["id"], sizeof(uniqueId));
   String classDevice = doc["deviceClass"] | String(constantsSensor::powerMeterClass);
   strlcpy(deviceClass, classDevice.c_str(), sizeof(deviceClass));
   dht = NULL;
@@ -271,15 +271,14 @@ void SensorT::updateFromJson(JsonObject doc)
   }
   break;
   }
-  doc["id"] = id;
+  doc["id"] = uniqueId;
 }
 
 void publishReadings(String &readings, SensorT &sensor)
 {
 
   strlcpy(sensor.lastReading, readings.c_str(), sizeof(sensor.lastReading));
-  String id = String(sensor.id);
-  sendToServerEvents(id, readings.c_str());
+  sendToServerEvents(sensor.uniqueId, readings.c_str());
   if (sensor.cloudIOSupport)
     notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str());
   if (mqttConnected())
@@ -295,7 +294,7 @@ void resetSensors(Sensors &sensors)
     if (ss.pzemv03 != NULL)
     {
       ss.pzemv03->resetEnergy();
-      Log.notice("%s {\"pzemv03\": %d}" CR, tags::sensors, ss.id);
+      Log.notice("%s {\"pzemv03\": %s}" CR, tags::sensors, ss.uniqueId);
     }
     else
     {

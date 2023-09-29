@@ -31,7 +31,7 @@ void createHaSwitch(ActuatorT &sw)
   if (!sw.haSupport)
     return;
   String objectStr = "";
-  String uniqueId = String(sw.id) + String(config.chipId);
+  String uniqueId = String(sw.uniqueId) + String(config.chipId);
   const size_t capacity = JSON_OBJECT_SIZE(8) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
@@ -85,7 +85,7 @@ void addToHomeAssistant(SensorT &s)
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = s.name;
-  object["unique_id"] = s.id;
+  object["unique_id"] = s.uniqueId;
   object["stat_t"] = s.readTopic;
 
   object["avty_t"] = config.healthTopic;
@@ -95,20 +95,20 @@ void addToHomeAssistant(SensorT &s)
   case DHT_11:
   case DHT_21:
   case DHT_22:
-    object["unique_id"] = String(s.id) + "T";
+    object["unique_id"] = String(s.uniqueId) + "T";
     object["unit_of_measurement"] = "º";
     object["device_class"] = "temperature";
     object["value_template"] = "{{value_json.temperature}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
     delay(100);
     objectStr = "";
-    object["unique_id"] = String(s.id) + "H";
+    object["unique_id"] = String(s.uniqueId) + "H";
     object["unit_of_measurement"] = "%";
     object["device_class"] = "humidity";
     object["value_template"] = "{{value_json.humidity}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/H" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
     for (int i = 0; i < s.oneWireSensorsCount; i++)
@@ -116,12 +116,12 @@ void addToHomeAssistant(SensorT &s)
       String idx = String(i + 1);
       object["name"] = String(s.name) + idx;
       object["unit_of_measurement"] = "ºC";
-      object["unique_id"] = String(s.id) + idx;
+      object["unique_id"] = String(s.uniqueId) + idx;
       object["device_class"] = "temperature";
       object["value_template"] = String("{{value_json.temperature_") + idx + String("}}");
       objectStr = "";
       serializeJson(object, objectStr);
-      publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.id) + idx + "/config").c_str(), objectStr.c_str(), false);
+      publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/T" + String(s.uniqueId) + idx + "/config").c_str(), objectStr.c_str(), false);
       delay(100);
     }
     break;
@@ -130,7 +130,7 @@ void addToHomeAssistant(SensorT &s)
     object["device_class"] = "illuminance";
     object["value_template"] = "{{value_json.illuminance}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/I" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/I" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PIR:
   case RCWL_0516:
@@ -139,7 +139,7 @@ void addToHomeAssistant(SensorT &s)
     object["payload_on"] = 1;
     object["payload_off"] = 0;
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OC" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OC" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case REED_SWITCH_NC:
   case REED_SWITCH_NO:
@@ -148,7 +148,7 @@ void addToHomeAssistant(SensorT &s)
     object["payload_on"] = 1;
     object["payload_off"] = 0;
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.id) + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/OP" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PZEM_004T:
     object["name"] = String(s.name) + " Power";
@@ -158,7 +158,7 @@ void addToHomeAssistant(SensorT &s)
     object["unique_id"] = "P" + String(s.secondaryGpio) + chip;
     object["value_template"] = "{{value_json.power}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PW" + String(s.id) + chip + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/PW" + String(s.uniqueId) + chip + "/config").c_str(), objectStr.c_str(), false);
     delay(200);
     object["name"] = String(s.name) + " Current";
     object["unit_of_measurement"] = "A";
@@ -166,7 +166,7 @@ void addToHomeAssistant(SensorT &s)
     object["value_template"] = "{{value_json.current}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/CU" + String(s.id) + chip + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/CU" + String(s.uniqueId) + chip + "/config").c_str(), objectStr.c_str(), false);
     delay(200);
     object["name"] = String(s.name) + " Voltage";
     object["unit_of_measurement"] = "V";
@@ -174,7 +174,7 @@ void addToHomeAssistant(SensorT &s)
     object["value_template"] = "{{value_json.voltage}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/VT" + String(s.id) + chip + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/VT" + String(s.uniqueId) + chip + "/config").c_str(), objectStr.c_str(), false);
     delay(200);
     object["name"] = String(s.name) + " Energy";
     object["unit_of_measurement"] = "kWh";
@@ -183,7 +183,7 @@ void addToHomeAssistant(SensorT &s)
     object["value_template"] = "{{value_json.energy}}";
     objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/EN" + String(s.id) + chip + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/EN" + String(s.uniqueId) + chip + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PZEM_004T_V03:
     object["name"] = String(s.name) + " Power";
@@ -268,12 +268,12 @@ void addToHomeAssistant(ActuatorT &sw)
 
 void removeFromHomeAssistant(ActuatorT &sw)
 {
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + sw.familyToText() + "/" + String(sw.id) + "/config").c_str(), "", false);
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + sw.familyToText() + "/" + String(sw.uniqueId) + "/config").c_str(), "", false);
   delay(3);
 }
 
 void removeFromHomeAssistant(SensorT &s)
 {
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/" + String(s.id) + "/config").c_str(), "", false);
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + String(s.family) + "/" + String(s.uniqueId) + "/config").c_str(), "", false);
   delay(3);
 }

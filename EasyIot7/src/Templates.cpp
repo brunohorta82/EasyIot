@@ -8,7 +8,7 @@ void preparePzem()
 {
     SensorT pzem;
     strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
-    pzem.id = config.nextId();
+
     strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
     pzem.primaryGpio = constantsConfig::noGPIO;
     pzem.secondaryGpio = constantsConfig::noGPIO;
@@ -22,26 +22,30 @@ void preparePzem()
     pzem.cloudIOSupport = true;
     pzem.delayRead = 5000;
     strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
+    String idStr;
+    config.generateId(idStr, pzem.name, pzem.type, sizeof(pzem.uniqueId));
+    strlcpy(pzem.uniqueId, idStr.c_str(), sizeof(pzem.uniqueId));
     config.sensors.push_back(pzem);
 }
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
     ActuatorT light;
-    light.id = config.nextId();
     light.haSupport = true;
     light.cloudIOSupport = true;
     light.family = LIGHT_GENERIC;
-    strlcpy(light.name, name.c_str(), sizeof(light.name));
+    strncpy(light.name, name.c_str(), sizeof(light.name));
     light.typeControl = SwitchControlType::GPIO_OUTPUT;
     light.outputs.push_back(output);
     light.inputs.push_back(input);
+    String idStr;
+    config.generateId(idStr, light.name, light.family, sizeof(light.uniqueId));
+    strlcpy(light.uniqueId, idStr.c_str(), sizeof(light.uniqueId));
     config.actuatores.push_back(light);
 }
 void prepareCover()
 {
     ActuatorT cover;
-    cover.id = config.nextId();
-    cover.family = LIGHT_GENERIC;
+    cover.family = COVER_DUAL_PUSH;
     cover.haSupport = true;
     cover.cloudIOSupport = true;
 #ifdef CONFIG_LANG_PT
@@ -59,13 +63,15 @@ void prepareCover()
 #ifdef ESP32
     cover.inputs = {13u, 14u};
 #endif
+    String idStr;
+    config.generateId(idStr, cover.name, cover.family, sizeof(cover.uniqueId));
+    strlcpy(cover.uniqueId, idStr.c_str(), sizeof(cover.uniqueId));
     config.actuatores.push_back(cover);
 }
 void prepareGarage()
 {
     ActuatorT garage;
-    garage.id = config.nextId();
-    garage.family = LIGHT_GENERIC;
+    garage.family = GARAGE_PUSH;
     garage.haSupport = true;
     garage.cloudIOSupport = true;
 #ifdef CONFIG_LANG_PT
@@ -83,6 +89,9 @@ void prepareGarage()
 #ifdef ESP32
     garage.inputs = {13u, 14u};
 #endif
+    String idStr;
+    config.generateId(idStr, garage.name, garage.family, sizeof(garage.uniqueId));
+    strlcpy(garage.uniqueId, idStr.c_str(), sizeof(garage.uniqueId));
     config.actuatores.push_back(garage);
 }
 void templateSelect(enum Template _template)

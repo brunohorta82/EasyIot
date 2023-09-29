@@ -73,4 +73,5 @@ namespace constanstsCloudIO
 {
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
+    constexpr const char *configUrl { "http://cloudio.bhonofre.pt/devices/config" };
 } // namespace constanstsCloudIO
