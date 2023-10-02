@@ -54,13 +54,9 @@ public:
     SwitchFamily family = SWITCH_PUSH;
     SwitchControlType typeControl = VIRTUAL;
     int state = 0;
-    // INTEGRATIONS
     // CLOUDIO
-    bool cloudIOSupport = false;
     char cloudIOwriteTopic[128]{};
     char cloudIOreadTopic[128]{};
-    // HOMEASSISTANT
-    bool haSupport = false;
     // KNX
     uint8_t knxAddress[3] = {0, 0, 0};
     uint8_t knxIdRegister = 0;

@@ -112,8 +112,6 @@ ConfigOnofre &ConfigOnofre::load()
     strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
     actuator.family = d["family"];
     actuator.typeControl = d["typeControl"];
-    actuator.cloudIOSupport = d["cloudIOSupport"];
-    actuator.haSupport = d["haSupport"];
     actuator.knxAddress[0] = d["area"] | 0;
     actuator.knxAddress[1] = d["line"] | 0;
     actuator.knxAddress[2] = d["member"] | 0;
@@ -190,8 +188,6 @@ ConfigOnofre &ConfigOnofre::save()
     a["name"] = s.name;
     a["family"] = s.family;
     a["typeControl"] = s.typeControl;
-    a["cloudIOSupport"] = s.cloudIOSupport;
-    a["haSupport"] = s.haSupport;
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
@@ -301,6 +297,10 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   {
     setupMQTT();
   }
+  JsonArray features = root["features"];
+  for (auto f : features)
+  {
+  }
   return this->save();
 }
 
@@ -354,8 +354,6 @@ void ConfigOnofre::json(JsonVariant &root)
     a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["family"] = s.family;
-    a["cloudIOSupport"] = s.cloudIOSupport;
-    a["haSupport"] = s.haSupport;
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];

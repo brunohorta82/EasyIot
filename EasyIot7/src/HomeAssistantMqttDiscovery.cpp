@@ -9,8 +9,8 @@ void initHomeAssistantDiscovery()
 #endif
   for (auto &sw : config.actuatores)
   {
-    if (!sw.haSupport)
-      continue;
+    if (!mqttConnected())
+      return;
     publishOnMqtt(sw.readTopic, String(sw.state).c_str(), true);
     addToHomeAssistant(sw);
   }
@@ -28,7 +28,7 @@ bool homeAssistantOnline(String topic, String payload)
 }
 void createHaSwitch(ActuatorT &sw)
 {
-  if (!sw.haSupport)
+  if (!mqttConnected())
     return;
   String objectStr = "";
   String uniqueId = String(sw.uniqueId) + String(config.chipId);
@@ -242,7 +242,7 @@ void addToHomeAssistant(SensorT &s)
 }
 void addToHomeAssistant(ActuatorT &sw)
 {
-  if (!sw.haSupport)
+  if (!mqttConnected())
     return;
   if (strlen(config.mqttIpDns) == 0)
   {

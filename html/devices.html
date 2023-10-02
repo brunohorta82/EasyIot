@@ -22,14 +22,41 @@
             <h3 class="f-name"></h3>
         </div>
         <div class="modal-form">
-            <label for="nodeId"><span class="lang-name">Nome</span></label>
+            <label for="f-name"><span class="lang-name">Nome</span></label>
             <input
-                class="f-name form-control" maxlength="30" type="text" name="nodeId" id="nodeId"
+                class="f-name form-control" maxlength="30" type="text" name="f-name" id="f-name"
                 placeholder="ex: kitchen" required/>
         </div>
+        <div class="modal-form">
+                <label>Tipo de Interruptor</label>
+            <div class="modal-form-row">
+                <div>
+                    <input type="radio" id="f-light-generic" name=f-family"  value="8" checked />
+                    <label for="f-light-generic">Normal</label>
+                </div>
+                <div>
+                    <input type="radio" id="f-light-push" name="f-family"  value="7" />
+                    <label for="f-light-push">Pulsador</label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-form">
+            <label >KNX</label>
+            <div class="modal-form-row">
+                <div>
+                    <input min="0" max="255" class="form-control" id="f-area" type="number"/>
+                </div>
+                <div>
+                    <input min="0" max="255" class="form-control" id="f-line"  type="number"/>
+                </div>
+                <div>
+                    <input min="0" max="255" class="form-control" id="f-member" type="number"/>
+                </div>
+            </div>
+        </div>
         <div class="modal-footer">
-            <button  type="button" onclick="saveConfig()" class="btn-delete">DELETE</button>
-            <button  type="button" onclick="saveConfig()" class="btn-update"><span class="lang-save">UPDATE</span></button>
+            <button  type="button" onclick="deleteFeature(this)"  class="btn-delete" id="btn-delete">DELETE</button>
+            <button  type="button" onclick="applyFeatureChanges(this)"  class="btn-update" id="btn-update"><span class="lang-save">UPDATE</span></button>
         </div>
     </div>
 

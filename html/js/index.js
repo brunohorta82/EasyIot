@@ -1,6 +1,5 @@
-let baseUrl = "http://192.168.187.134"
-let config;
-var newConfig = {};
+let baseUrl = "http://192.168.122.134"
+var config;
 let source = null;
 var WORDS_PT = {
     "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
@@ -19,6 +18,9 @@ function stringToHTML(text) {
 }
 
 function toggleActive(menu) {
+    if (menu === "devices") {
+        applyNodeChanges();
+    }
     findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.remove("active")
     findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.remove("active")
     fetch(menu + ".html").then(function (response) {
@@ -110,34 +112,43 @@ function detectLang() {
     return window['WORDS_' + lang];
 }
 
+function applyNodeChanges(){
+    config.nodeId = getValue("nodeId", config.nodeId).trim();
+    config.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
+    config.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
+    config.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
+    config.wifiSSID = getValue("ssid", config.wifiSSID).trim();
+    config.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
+    config.wifiIp = getValue("wifiIp", config.wifiIp).trim();
+    config.wifiMask = getValue("wifiMask", config.wifiMask).trim();
+    config.wifiGw = getValue("wifiGw", config.wifiGw).trim();
+    config.dhcp = getValue("dhcp", config.dhcp) === "true";
+    config.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
+    config.apiPassword = getValue("apiPassword", config.apiPassword).trim();
+    config.apiUser = getValue("apiUser", config.apiUser).trim();
+}
 function saveConfig() {
-    let mqttIpDns = document.getElementById("mqtt_ip");
-    newConfig.nodeId = getValue("nodeId", config.nodeId).trim();
-    newConfig.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
-    newConfig.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
-    newConfig.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
-    newConfig.wifiSSID = getValue("ssid", config.wifiSSID).trim();
-    newConfig.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
-    newConfig.wifiIp = getValue("wifiIp", config.wifiIp).trim();
-    newConfig.wifiMask = getValue("wifiMask", config.wifiMask).trim();
-    newConfig.wifiGw = getValue("wifiGw", config.wifiGw).trim();
-    newConfig.dhcp = getValue("dhcp", config.dhcp) === "true";
-    newConfig.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
-    newConfig.apiPassword = getValue("apiPassword", config.apiPassword).trim();
-    newConfig.apiUser = getValue("apiUser", config.apiUser).trim();
     fetch(baseUrl + "/save-config", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(newConfig)
+        body: JSON.stringify(config)
     }).then(response => response.json()).then(json => config = json).then(() => {
         showMessage("config_save_ok");
-        fillConfig();
     }).catch(() =>
         showMessage("config_save_error")
     );
 
 }
+function  applyFeatureChanges(){
 
+}
+function deleteFeature(e){
+    const index = config.features
+        .indexOf(config.features
+            .filter(f => f.id === e.featureId)[0]);
+    config.features.splice(index, 1);
+    toggleActive("devices");
+}
 function getValue(id, f) {
     let v = document.getElementById(id);
     return v ? v.value : f;
@@ -174,6 +185,13 @@ function fillDevices() {
             modal.style.display = "block";
             modal.getElementsByClassName("f-name").item(0).textContent = f.name;
             modal.getElementsByClassName("f-name").item(1).value = f.name;
+            document.getElementById("f-area").value = f.area;
+            document.getElementById("f-line").value = f.line;
+            document.getElementById("f-member").value = f.member;
+            document.getElementById("f-light-generic").checked = f.family === 8;
+            document.getElementById("f-light-push").checked = f.family === 7;
+            document.getElementById("btn-delete").featureId = f.id;
+
 
         }
         source.addEventListener(f.id, (s) => {

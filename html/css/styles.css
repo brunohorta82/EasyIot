@@ -68,7 +68,7 @@ body {
     display: flex;
     padding: 12px;
     margin: 10px;
-    flex-direction: column;
+    flex-direction: row;
 }
 .vertical-center {
     margin: 0;
@@ -342,8 +342,14 @@ input:checked + .slider:before {
 }
 .modal-form{
     display: flex;
-    padding: 15px;
+    padding: 4px 10px 4px 10px;
     flex-direction: column;
+}
+.modal-form-row{
+    display: flex;
+    padding: 4px 10px 4px 10px;
+    gap: 20px;
+    flex-direction: row;
 }
 .modal-footer{
     display: flex;

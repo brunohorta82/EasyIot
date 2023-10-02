@@ -30,9 +30,7 @@ void preparePzem()
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
     ActuatorT light;
-    light.haSupport = true;
-    light.cloudIOSupport = true;
-    light.family = LIGHT_GENERIC;
+    light.family = LIGHT_PUSH;
     strncpy(light.name, name.c_str(), sizeof(light.name));
     light.typeControl = SwitchControlType::GPIO_OUTPUT;
     light.outputs.push_back(output);
@@ -46,8 +44,6 @@ void prepareCover()
 {
     ActuatorT cover;
     cover.family = COVER_DUAL_PUSH;
-    cover.haSupport = true;
-    cover.cloudIOSupport = true;
 #ifdef CONFIG_LANG_PT
     strlcpy(cover.name, "Estore", sizeof(cover.name));
 #elif CONFIG_LANG_EN
@@ -72,8 +68,6 @@ void prepareGarage()
 {
     ActuatorT garage;
     garage.family = GARAGE_PUSH;
-    garage.haSupport = true;
-    garage.cloudIOSupport = true;
 #ifdef CONFIG_LANG_PT
     strlcpy(garage.name, "Garagem", sizeof(garage.name));
 #elif CONFIG_LANG_EN

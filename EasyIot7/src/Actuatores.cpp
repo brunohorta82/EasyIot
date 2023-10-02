@@ -89,7 +89,7 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
   {
     publishOnMqtt(shutters->getActuatorT()->readTopic, dump, false);
   }
-  if (shutters->getActuatorT()->cloudIOSupport)
+  if (cloudIOConnected())
   {
     notifyStateToCloudIO(shutters->getActuatorT()->cloudIOreadTopic, dump);
   }
@@ -221,7 +221,7 @@ void ActuatorT::notifyState(SwitchStateOrigin origin)
   }
 
   // Notify by MQTT OnofreCloud
-  if (cloudIOSupport)
+  if (cloudIOConnected())
   {
     notifyStateToCloudIO(readTopic, stateStr.c_str());
   }
