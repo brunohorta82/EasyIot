@@ -126,6 +126,7 @@ function applyNodeChanges(){
     config.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
     config.apiPassword = getValue("apiPassword", config.apiPassword).trim();
     config.apiUser = getValue("apiUser", config.apiUser).trim();
+
 }
 function saveConfig() {
     fetch(baseUrl + "/save-config", {
@@ -147,6 +148,9 @@ function deleteFeature(e){
         .indexOf(config.features
             .filter(f => f.id === e.featureId)[0]);
     config.features.splice(index, 1);
+    if(!config.featuresToRemove)config.featuresToRemove = [];
+    config.featuresToRemove.push(e.featureId)
+    console.log(config)
     toggleActive("devices");
 }
 function getValue(id, f) {

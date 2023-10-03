@@ -254,6 +254,7 @@ void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String uniqueId, int
     }
   }
 }
+
 ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
 
@@ -297,9 +298,16 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   {
     setupMQTT();
   }
-  JsonArray features = root["features"];
-  for (auto f : features)
+  JsonArray featuresToRemove = root["featuresToRemove"];
+  for (String id : featuresToRemove)
   {
+    auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const ActuatorT &item)
+                              { return id.equals(item.uniqueId); });
+    if (match == actuatores.end())
+    {
+      return *this;
+    }
+    actuatores.erase(match);
   }
   return this->save();
 }
