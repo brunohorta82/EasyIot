@@ -140,8 +140,13 @@ function saveConfig() {
     );
 
 }
-function  applyFeatureChanges(){
-
+function  applyFeatureChanges(e){
+    const index = config.features
+        .indexOf(config.features
+            .filter(f => f.id === e.featureId)[0]);
+    console.log(index)
+    config.features[index].name = "XPOTO";
+    toggleActive("devices");
 }
 function deleteFeature(e){
     const index = config.features

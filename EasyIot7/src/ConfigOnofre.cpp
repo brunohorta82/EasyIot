@@ -303,11 +303,16 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   {
     auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const ActuatorT &item)
                               { return id.equals(item.uniqueId); });
-    if (match == actuatores.end())
-    {
-      return *this;
-    }
     actuatores.erase(match);
+  }
+  JsonArray features = root["features"];
+  for (auto feature : features)
+  {
+    String id = feature["id"] | "";
+    auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const ActuatorT &item)
+                              { return id.equals(item.uniqueId); });
+    ActuatorT a = actuatores.at(match - actuatores.begin());
+    strlcpy(a.name, feature["name"] | "", sizeof(a.name));
   }
   return this->save();
 }

@@ -5,6 +5,7 @@
 #include "CoreWiFi.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
+#include "HanOnofre.hpp"
 
 ConfigOnofre config;
 
@@ -78,23 +79,26 @@ void setup()
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
-  startFileSystem();
+  /* startFileSystem();
   config.load();
   setupWiFi();
   setupCors();
   setupMQTT();
+  */
+  configHan();
 }
 
 void loop()
 {
-  checkInternalRoutines();
-  loopWiFi();
-  if (!config.isAutoUpdateRequested())
-  {
-    webserverServicesLoop();
-    loopMqtt();
-    config.loopSwitches();
-    if (WiFi.status() == WL_CONNECTED)
-      knx.loop();
-  }
+  /* checkInternalRoutines();
+   loopWiFi();
+   if (!config.isAutoUpdateRequested())
+   {
+     webserverServicesLoop();
+     loopMqtt();
+     config.loopSwitches();
+     if (WiFi.status() == WL_CONNECTED)
+       knx.loop();
+   }*/
+  readHan();
 }
