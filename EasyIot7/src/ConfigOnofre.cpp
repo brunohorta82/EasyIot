@@ -394,7 +394,6 @@ void ConfigOnofre::json(JsonVariant &root)
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
     a["state"] = s.state;
-    a["cloudiosupport"] = true;
     JsonArray outputs = a.createNestedArray("outputs");
     for (auto out : s.outputs)
     {
@@ -413,7 +412,6 @@ void ConfigOnofre::json(JsonVariant &root)
     a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["family"] = s.family;
-    a["cloudiosupport"] = true;
     a["delayRead"] = s.delayRead;
     a["interface"] = s.interface;
   }
