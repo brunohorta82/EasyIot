@@ -12,510 +12,340 @@
 #include "CloudIO.h"
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
-
+#include "HanOnofre.hpp"
+#include <ModbusMaster.h>
 extern ConfigOnofre config;
-
-void Sensors::load(File &file)
+void SensorT::notifyState()
 {
-  auto n_items = items.size();
-  file.read((uint8_t *)&n_items, sizeof(n_items));
-  items.clear();
-  items.resize(n_items);
-  for (auto &item : items)
+  // Notify by MQTT/Homeassistant
+  if (mqttConnected())
   {
-    item.load(file);
-    switch (item.type)
-    {
-    case UNDEFINED:
-#ifdef DEBUG_ONOFRE
-      Log.errorln("%s Invalid type", tags::sensors);
-#endif
-      continue;
-      break;
-    case LDR:
-      strlcpy(item.deviceClass, "LIGHTNESS", sizeof(item.deviceClass));
-      break;
-    case PIR:
-    case RCWL_0516:
-      strlcpy(item.deviceClass, "MOTION", sizeof(item.deviceClass));
-      configPIN(item.primaryGpio, INPUT);
-      break;
-    case REED_SWITCH_NC:
-    case REED_SWITCH_NO:
-      strlcpy(item.deviceClass, "ALARM", sizeof(item.deviceClass));
-      configPIN(item.primaryGpio, INPUT_PULLUP);
-      break;
-    case DHT_11:
-    case DHT_21:
-    case DHT_22:
-      strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
-      item.dht = new DHT_nonblocking(item.primaryGpio, item.type);
-      break;
-    case DS18B20:
-      strlcpy(item.deviceClass, "TEMPERATURE", sizeof(item.deviceClass));
-      item.dallas = new DallasTemperature(new OneWire(item.primaryGpio));
-      break;
-
-    case PZEM_004T:
-    {
-      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
-#if defined(ESP8266)
-      item.pzem = new PZEM004T(item.primaryGpio, item.secondaryGpio);
-#endif
-#if defined(ESP32)
-      item.pzem = new PZEM004T(&Serial2, item.primaryGpio, item.secondaryGpio);
-#endif
-      IPAddress ip(192, 168, 1, item.secondaryGpio);
-      item.pzem->setAddress(ip);
-      configPIN(item.tertiaryGpio, INPUT);
-    }
-    break;
-    case PZEM_004T_V03:
-    {
-      strlcpy(item.deviceClass, "POWER", sizeof(item.deviceClass));
-
-#if defined(ESP8266)
-      SoftwareSerial softwareSerial = SoftwareSerial(item.primaryGpio, item.secondaryGpio);
-      item.pzemv03 = new PZEM004Tv30(softwareSerial);
-#endif
-#if defined(ESP32)
-      item.pzemv03 = new PZEM004Tv30(Serial2, item.primaryGpio, item.secondaryGpio);
-#endif
-      configPIN(item.tertiaryGpio, INPUT);
-    }
-#if WITH_DISPLAY
-      setupDisplay();
-#endif
-      break;
-    }
+    publishOnMqtt(readTopic, state, false);
   }
-}
-void Sensors::save(File &file) const
-{
-  auto n_items = items.size();
-  file.write((uint8_t *)&n_items, sizeof(n_items));
-  for (const auto &item : items)
+  // Notify by MQTT OnofreCloud
+  if (cloudIOConnected())
   {
-    item.save(file);
+    notifyStateToCloudIO(cloudIOreadTopic, state.c_str());
   }
+  // Notify by SSW Webpanel
+  sendToServerEvents(uniqueId, state.c_str());
 }
-void SensorT::load(File &file)
+ModbusMaster node;
+void SensorT::setup()
 {
-}
-void SensorT::save(File &file) const
-{
-}
-
-void Sensors::save()
-{
-}
-void load(Sensors &sensors)
-{
-}
-
-void saveAndRefreshServices(Sensors &sensors, SensorT &ss)
-{
-
-  sensors.save();
-  if (ss.haSupport)
-  {
-    addToHomeAssistant(ss);
-  }
-}
-Sensors &Sensors::updateFromJson(const String &id, JsonObject doc)
-{
-
-  SensorT newSs;
-  newSs.updateFromJson(doc);
-  items.push_back(newSs);
-  saveAndRefreshServices(*this, newSs);
-  return *this;
-}
-void Sensors::toJson(JsonVariant &root)
-{
-  for (const auto &ss : items)
-  {
-    JsonVariant sdoc = root.createNestedObject();
-    sdoc["id"] = ss.uniqueId;
-    sdoc["name"] = ss.name;
-    sdoc["family"] = ss.family;
-    sdoc["type"] = static_cast<int>(ss.type);
-    sdoc["deviceClass"] = ss.deviceClass;
-    sdoc["primaryGpio"] = ss.primaryGpio;
-    sdoc["secondaryGpio"] = ss.secondaryGpio;
-    sdoc["tertiaryGpio"] = ss.tertiaryGpio;
-    sdoc["pullup"] = ss.pullup;
-    sdoc["delayRead"] = ss.delayRead;
-    sdoc["lastBinaryState"] = ss.lastBinaryState;
-    sdoc["haSupport"] = ss.haSupport;
-    sdoc["cloudIOSupport"] = ss.cloudIOSupport;
-  }
-}
-Sensors &Sensors::remove(String id)
-{
-  auto match = std::find_if(items.begin(), items.end(), [id](const SensorT &item)
-                            { return id.equals(item.uniqueId); });
-
-  if (match == items.end())
-  {
-    return *this;
-  }
-  removeFromHomeAssistant(*match);
-  items.erase(match);
-  save();
-  return *this;
-}
-void reloadSensors()
-{
-  getAtualSensorsConfig().save();
-}
-void initSensorsHaDiscovery(Sensors &sensors)
-{
-  for (auto &ss : sensors.items)
-  {
-    addToHomeAssistant(ss);
-    publishOnMqtt(ss.readTopic, ss.mqttPayload, ss.mqttRetain);
-  }
-}
-void SensorT::updateFromJson(JsonObject doc)
-{
-  removeFromHomeAssistant(*this);
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Update Environment" CR, tags::sensors);
-#endif
-  type = static_cast<SensorType>(doc["type"] | static_cast<int>(UNDEFINED));
-  String idStr;
-  strlcpy(name, doc["name"], sizeof(name));
-  strlcpy(uniqueId, doc["id"], sizeof(uniqueId));
-  String classDevice = doc["deviceClass"] | String(constantsSensor::powerMeterClass);
-  strlcpy(deviceClass, classDevice.c_str(), sizeof(deviceClass));
-  dht = NULL;
-  dallas = NULL;
-  primaryGpio = doc["primaryGpio"] | constantsConfig::noGPIO;
-  secondaryGpio = doc["secondaryGpio"] | constantsConfig::noGPIO;
-  tertiaryGpio = doc["tertiaryGpio"] | constantsConfig::noGPIO;
-  delayRead = doc["delayRead"] | 0;
-  mqttRetain = doc["mqttRetain"] | true;
-  cloudIOSupport = doc["cloudIOSupport"] | true;
-  haSupport = doc["haSupport"] | true;
-  strlcpy(payloadOn, doc["payloadOn"] | "ON", sizeof(payloadOn));
-  strlcpy(payloadOff, doc["payloadOff"] | "OFF", sizeof(payloadOff));
-  strlcpy(mqttPayload, "", sizeof(mqttPayload));
-  switch (type)
+  switch (interface)
   {
   case UNDEFINED:
 #ifdef DEBUG_ONOFRE
-    Log.error("%s Invalid type" CR, tags::sensors);
+    Log.errorln("%s Invalid type", tags::sensors);
 #endif
     return;
     break;
   case LDR:
-    strlcpy(deviceClass, "LIGHTNESS", sizeof(deviceClass));
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
-    strlcpy(mqttPayload, "{\"illuminance\":0}", sizeof(mqttPayload));
+    strlcpy(family, "LIGHTNESS", sizeof(family));
     break;
   case PIR:
   case RCWL_0516:
-    strlcpy(deviceClass, "MOTION", sizeof(deviceClass));
+    strlcpy(family, "MOTION", sizeof(family));
     configPIN(primaryGpio, INPUT);
-    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
-    strlcpy(mqttPayload, "{\"binary_state\":false}", sizeof(mqttPayload));
     break;
   case REED_SWITCH_NC:
-    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
-    configPIN(primaryGpio, INPUT_PULLUP);
-    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
-    strlcpy(mqttPayload, "{\"binary_state\":1}", sizeof(mqttPayload));
-    break;
   case REED_SWITCH_NO:
-    strlcpy(deviceClass, "ALARM", sizeof(deviceClass));
+    strlcpy(family, "ALARM", sizeof(family));
     configPIN(primaryGpio, INPUT_PULLUP);
-    strlcpy(family, constantsSensor::binarySensorFamily, sizeof(family));
-    strlcpy(mqttPayload, "{\"binary_state\":0}", sizeof(mqttPayload));
     break;
   case DHT_11:
   case DHT_21:
   case DHT_22:
-    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
-    dht = new DHT_nonblocking(primaryGpio, type);
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
-    strlcpy(mqttPayload, "{\"humidity\":0,\"temperature\":0}", sizeof(mqttPayload));
+    strlcpy(family, "TEMPERATURE", sizeof(family));
+    dht = new DHT_nonblocking(primaryGpio, interface);
     break;
   case DS18B20:
-    strlcpy(deviceClass, "TEMPERATURE", sizeof(deviceClass));
+    strlcpy(family, "TEMPERATURE", sizeof(family));
     dallas = new DallasTemperature(new OneWire(primaryGpio));
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
     break;
-  case PZEM_004T:
-    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
+  case HAN:
+  {
+#ifdef ESP32
+    Serial1.begin(9600, SERIAL_8N2, 13, 14);
+    node.begin(1, Serial1);
+#endif
 #ifdef ESP8266
+    Serial.begin(9600, SERIAL_8N2);
+    Serial.pins(primaryGpio, secondaryGpio);
+    node.begin(1, Serial);
+#endif
+  }
+  break;
+  case PZEM_004T:
+  {
+    strlcpy(family, "POWER", sizeof(family));
+#if defined(ESP8266)
     pzem = new PZEM004T(primaryGpio, secondaryGpio);
 #endif
-#ifdef ESP32
+#if defined(ESP32)
     pzem = new PZEM004T(&Serial2, primaryGpio, secondaryGpio);
 #endif
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
-    break;
+    IPAddress ip(192, 168, 1, secondaryGpio);
+    pzem->setAddress(ip);
+    configPIN(tertiaryGpio, INPUT);
+  }
+  break;
   case PZEM_004T_V03:
   {
-    strlcpy(deviceClass, "POWER", sizeof(deviceClass));
+    strlcpy(family, "POWER", sizeof(family));
+
 #if defined(ESP8266)
     SoftwareSerial softwareSerial = SoftwareSerial(primaryGpio, secondaryGpio);
     pzemv03 = new PZEM004Tv30(softwareSerial);
 #endif
 #if defined(ESP32)
-
     pzemv03 = new PZEM004Tv30(Serial2, primaryGpio, secondaryGpio);
 #endif
-    strlcpy(family, constantsSensor::familySensor, sizeof(family));
+    configPIN(tertiaryGpio, INPUT);
+  }
+#if WITH_DISPLAY
+    setupDisplay();
+#endif
+    break;
+  }
+}
+
+void SensorT::loop()
+{
+  state.clear();
+  switch (interface)
+  {
+  case UNDEFINED:
+    return;
+    break;
+  case LDR:
+  {
+    if (lastRead + delayRead < millis())
+    {
+      lastRead = millis();
+      int ldrRaw = analogRead(primaryGpio);
+      String analogReadAsString = String(ldrRaw);
+      state = String("{\"illuminance\":" + analogReadAsString + "}");
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s {\"illuminance\": %d }" CR, tags::sensors, ldrRaw);
+#endif
+    }
   }
   break;
-  }
-  doc["id"] = uniqueId;
-}
 
-void publishReadings(String &readings, SensorT &sensor)
-{
-
-  strlcpy(sensor.lastReading, readings.c_str(), sizeof(sensor.lastReading));
-  sendToServerEvents(sensor.uniqueId, readings.c_str());
-  if (sensor.cloudIOSupport)
-    notifyStateToCloudIO(sensor.mqttCloudStateTopic, readings.c_str());
-  if (mqttConnected())
+  case PIR:
+  case REED_SWITCH_NC:
+  case RCWL_0516:
   {
-    publishOnMqtt(sensor.readTopic, readings.c_str(), sensor.mqttRetain);
-  }
-}
-
-void resetSensors(Sensors &sensors)
-{
-  for (auto &ss : sensors.items)
-  {
-    if (ss.pzemv03 != NULL)
+    bool binaryState = readPIN(primaryGpio);
+    if (lastBinaryState != binaryState)
     {
-      ss.pzemv03->resetEnergy();
-      Log.notice("%s {\"pzemv03\": %s}" CR, tags::sensors, ss.uniqueId);
-    }
-    else
-    {
-      Log.notice("%s {\"pzemv03\": null}" CR, tags::sensors);
+      lastRead = millis();
+      lastBinaryState = binaryState;
+      String binaryStateAsString = String(binaryState);
+      state = String("{\"binary_state\":" + (binaryStateAsString) + "}");
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s" CR, tags::sensors, state.c_str());
+#endif
     }
   }
-}
-bool initRealTimeSensors = true;
-void loop(Sensors &sensors)
-{
+  break;
+  case REED_SWITCH_NO:
+  {
+    bool binaryState = !readPIN(primaryGpio);
+    if (lastBinaryState != binaryState)
+    {
+      lastRead = millis();
+      lastBinaryState = binaryState;
+      String binaryStateAsString = String(binaryState);
+      state = String("{\"binary_state\":" + binaryStateAsString + "}");
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s" CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  break;
 
-  for (auto &ss : sensors.items)
+  case DHT_11:
+  case DHT_21:
+  case DHT_22:
+  {
+    float temperature;
+    float humidity;
+    if (dht->measure(&temperature, &humidity) == true)
+    {
+      if (lastRead + delayRead < millis())
+      {
+        lastRead = millis();
+        String temperatureAsString = String(temperature);
+        String humidityAsString = String(humidity);
+        state = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
+        notifyState();
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, temperature, humidity);
+#endif
+      }
+    }
+  }
+  break;
+  case DS18B20:
   {
 
-    if (ss.primaryGpio == constantsConfig::noGPIO)
-      continue;
-    switch (ss.type)
+    if (lastRead + delayRead < millis())
     {
-    case UNDEFINED:
-      continue;
-      break;
-    case LDR:
-    {
-      if (ss.lastRead + ss.delayRead < millis())
+      dallas->begin();
+      oneWireSensorsCount = dallas->getDeviceCount();
+      for (int i = 0; i < oneWireSensorsCount; i++)
       {
-        ss.lastRead = millis();
-        int ldrRaw = analogRead(ss.primaryGpio);
-        String analogReadAsString = String(ldrRaw);
-        auto readings = String("{\"illuminance\":" + analogReadAsString + "}");
-        publishReadings(readings, ss);
+        StaticJsonDocument<256> doc;
+        JsonObject obj = doc.to<JsonObject>();
+        dallas->requestTemperatures();
+        lastRead = millis();
+        float temperature = dallas->getTempCByIndex(i);
+        String temperatureAsString = String("temperature_") + String(i + 1);
+        obj[temperatureAsString] = temperature;
+        serializeJson(doc, state);
+        notifyState();
 #ifdef DEBUG_ONOFRE
-        Log.notice("%s {\"illuminance\": %d }" CR, tags::sensors, ldrRaw);
+        Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
       }
     }
-    break;
+  }
+  case HAN:
+  {
 
-    case PIR:
-    case REED_SWITCH_NC:
-    case RCWL_0516:
+    if (lastRead + delayRead < millis())
     {
-      bool binaryState = readPIN(ss.primaryGpio);
-      if (ss.lastBinaryState != binaryState || initRealTimeSensors)
+      lastRead = millis();
+      StaticJsonDocument<256>
+          doc;
+      JsonObject obj = doc.to<JsonObject>();
+      node.clearResponseBuffer();
+      if (node.readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == node.ku8MBSuccess)
       {
-        ss.lastRead = millis();
-        ss.lastBinaryState = binaryState;
-        String binaryStateAsString = String(binaryState);
-        auto readings = String("{\"binary_state\":" + (binaryStateAsString) + "}");
-        publishReadings(readings, ss);
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s %s" CR, tags::sensors, readings.c_str());
-#endif
+        doc["voltage"] = node.getResponseBuffer(0) / 10.0;
+        doc["current"] = node.getResponseBuffer(1) / 10.0;
       }
-    }
-    break;
-    case REED_SWITCH_NO:
-    {
-      bool binaryState = !readPIN(ss.primaryGpio);
-      if (ss.lastBinaryState != binaryState || initRealTimeSensors)
+      if (node.readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 1) == node.ku8MBSuccess)
       {
-        ss.lastRead = millis();
-        ss.lastBinaryState = binaryState;
-        String binaryStateAsString = String(binaryState);
-        auto readings = String("{\"binary_state\":" + binaryStateAsString + "}");
-        publishReadings(readings, ss);
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s %s" CR, tags::sensors, readings.c_str());
-#endif
+        doc["power"] = node.getResponseBuffer(1) | node.getResponseBuffer(0) << 16;
       }
-    }
-    break;
-
-    case DHT_11:
-    case DHT_21:
-    case DHT_22:
-    {
-
-      if (ss.dht->measure(&ss.temperature, &ss.humidity) == true)
+      if (node.readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == node.ku8MBSuccess)
       {
-        if (ss.lastRead + ss.delayRead < millis())
+        doc["frequency"] = node.getResponseBuffer(0) / 10.0;
+      }
+      serializeJson(doc, state);
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  case PZEM_004T:
+    if (lastRead + delayRead < millis())
+    {
+      IPAddress ip(192, 168, 1, secondaryGpio);
+      lastRead = millis();
+      float v = pzem->voltage(ip);
+
+      float i = pzem->current(ip);
+
+      float p = pzem->power(ip);
+
+      float c = pzem->energy(ip);
+
+      if (tertiaryGpio != constantsConfig::noGPIO)
+      {
+        if (digitalRead(tertiaryGpio))
         {
-          ss.lastRead = millis();
-          String temperatureAsString = String(ss.temperature);
-          String humidityAsString = String(ss.humidity);
-          auto readings = String("{\"temperature\":" + temperatureAsString + ",\"humidity\":" + humidityAsString + "}");
-          publishReadings(readings, ss);
-#ifdef DEBUG_ONOFRE
-          Log.notice("%s {\"temperature\": %F ,\"humidity\": %F}" CR, tags::sensors, ss.temperature, ss.humidity);
-#endif
+          p = p * -1;
         }
       }
-    }
-    break;
-    case DS18B20:
-    {
 
-      if (ss.lastRead + ss.delayRead < millis())
+      if (v < 0.0)
       {
-        ss.dallas->begin();
-        ss.oneWireSensorsCount = ss.dallas->getDeviceCount();
-        for (int i = 0; i < ss.oneWireSensorsCount; i++)
-        {
-          StaticJsonDocument<256> doc;
-          JsonObject obj = doc.to<JsonObject>();
-          ss.dallas->requestTemperatures();
-          ss.lastRead = millis();
-          ss.temperature = ss.dallas->getTempCByIndex(i);
-          String temperatureAsString = String("temperature_") + String(i + 1);
-          obj[temperatureAsString] = ss.temperature;
-          String readings = "";
-          serializeJson(doc, readings);
-          publishReadings(readings, ss);
 #ifdef DEBUG_ONOFRE
-          Log.notice("%s %s " CR, tags::sensors, readings.c_str());
+        Log.notice("%s PZEM ERROR" CR, tags::sensors);
 #endif
-        }
       }
-    }
-
-    case PZEM_004T:
-      if (ss.lastRead + ss.delayRead < millis())
+      else
       {
-        IPAddress ip(192, 168, 1, ss.secondaryGpio);
-        ss.lastRead = millis();
-        float v = ss.pzem->voltage(ip);
-
-        float i = ss.pzem->current(ip);
-
-        float p = ss.pzem->power(ip);
-
-        float c = ss.pzem->energy(ip);
-
-        if (ss.tertiaryGpio != constantsConfig::noGPIO)
-        {
-          if (digitalRead(ss.tertiaryGpio))
-          {
-            p = p * -1;
-          }
-        }
-
-        if (v < 0.0)
-        {
-#ifdef DEBUG_ONOFRE
-          Log.notice("%s PZEM ERROR" CR, tags::sensors);
-#endif
-        }
-        else
-        {
-          auto readings = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+        state = String("{\"voltage\":" + String(v) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
 #if WITH_DISPLAY
-          printOnDisplay(v, i, p, c);
+        printOnDisplay(v, i, p, c);
 #endif
-          publishReadings(readings, ss);
+        notifyState();
 #ifdef DEBUG_ONOFRE
-          Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
+        Log.notice("%s {\"voltage\": %F,\"current\": %F,\"power\": %F \"energy\": %F }" CR, tags::sensors, v, i, p, c);
 #endif
-        }
       }
-      break;
-    case PZEM_004T_V03:
-      if (ss.lastRead + ss.delayRead < millis())
+    }
+    break;
+  case PZEM_004T_V03:
+    if (lastRead + delayRead < millis())
+    {
+      time_t rawtime;
+      struct tm *timeinfo;
+      time(&rawtime);
+      timeinfo = localtime(&rawtime);
+      char buffer[80];
+      strftime(buffer, 80, "%Y%m%d", timeinfo);
+      File file = LittleFS.open("/lastday.log", "r");
+      String lastDate = "";
+      if (file.available())
       {
-        time_t rawtime;
-        struct tm *timeinfo;
-        time(&rawtime);
-        timeinfo = localtime(&rawtime);
-        char buffer[80];
-        strftime(buffer, 80, "%Y%m%d", timeinfo);
-        File file = LittleFS.open("/lastday.log", "r");
-        String lastDate = "";
-        if (file.available())
+        lastDate = file.readString();
+        file.close();
+      }
+      if (lastDate.compareTo(String(buffer)) != 0)
+      {
+        if (pzemv03->resetEnergy())
         {
-          lastDate = file.readString();
+          file = LittleFS.open("/lastday.log", "w");
+          file.print(buffer);
           file.close();
-        }
-        if (lastDate.compareTo(String(buffer)) != 0)
-        {
-          if (ss.pzemv03->resetEnergy())
-          {
-            file = LittleFS.open("/lastday.log", "w");
-            file.print(buffer);
-            file.close();
-            continue;
-          }
-        }
-
-        ss.lastRead = millis();
-        float v = ss.pzemv03->voltage();
-        float i = ss.pzemv03->current();
-        float p = ss.pzemv03->power();
-        float c = ss.pzemv03->energy();
-        float f = ss.pzemv03->frequency();
-        float pf = ss.pzemv03->pf();
-        if (ss.tertiaryGpio != constantsConfig::noGPIO)
-        {
-          if (digitalRead(ss.tertiaryGpio))
-          {
-            p = p * -1;
-          }
-        }
-
-        if (isnan(v))
-        {
-#ifdef DEBUG_ONOFRE
-          Log.notice("%s PZEM ERROR" CR, tags::sensors);
-#endif
-        }
-        else
-        {
-          auto readings = String("{\"lastreset\":" + String(buffer) + ",\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
-#if WITH_DISPLAY
-          printOnDisplay(v, i, p, c);
-#endif
-          publishReadings(readings, ss);
-#ifdef DEBUG_ONOFRE
-          Log.notice("%s %s" CR, tags::sensors, readings.c_str());
-#endif
+          return;
         }
       }
-      break;
+
+      lastRead = millis();
+      float v = pzemv03->voltage();
+      float i = pzemv03->current();
+      float p = pzemv03->power();
+      float c = pzemv03->energy();
+      float f = pzemv03->frequency();
+      float pf = pzemv03->pf();
+      if (tertiaryGpio != constantsConfig::noGPIO)
+      {
+        if (digitalRead(tertiaryGpio))
+        {
+          p = p * -1;
+        }
+      }
+
+      if (isnan(v))
+      {
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s PZEM ERROR" CR, tags::sensors);
+#endif
+      }
+      else
+      {
+        state = String("{\"lastreset\":" + String(buffer) + ",\"voltage\":" + String(v) + ",\"frequency\":" + String(f) + ",\"pf\":" + String(pf) + ",\"current\":" + String(i) + ",\"power\":" + String(p) + ",\"energy\":" + String(c) + "}");
+#if WITH_DISPLAY
+        printOnDisplay(v, i, p, c);
+#endif
+        notifyState();
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s %s" CR, tags::sensors, state.c_str());
+#endif
+      }
     }
+    break;
   }
-  initRealTimeSensors = false;
 }

@@ -6,7 +6,8 @@ enum Template
     DUAL_LIGHT,
     COVER,
     GARAGE,
-    PZEM
+    PZEM,
+    HAN_MODULE
 };
 namespace constantsMqtt
 {
@@ -20,7 +21,6 @@ namespace constantsMqtt
 namespace constantsSensor
 {
     constexpr const char *noneClass{"none"};
-    constexpr const char *powerMeterClass{"power_meter"};
     constexpr const char *familySensor{"sensor"};
     constexpr const char *binarySensorFamily{"binary_sensor"};
 } // namespace constantsSensor
@@ -73,5 +73,5 @@ namespace constanstsCloudIO
 {
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
-    constexpr const char *configUrl { "http://cloudio.bhonofre.pt/devices/config" };
+    constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
 } // namespace constanstsCloudIO

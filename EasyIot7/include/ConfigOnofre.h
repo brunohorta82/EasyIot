@@ -15,7 +15,6 @@ public:
   int templateId = {0};
   char nodeId[32] = {};
   char chipId[32] = {};
-  int idSequence = 0;
   // MQTT
   char mqttIpDns[40];
   int mqttPort = 1883;
@@ -40,8 +39,8 @@ public:
   char accessPointPassword[64];
   char apiUser[32];
   char apiPassword[64];
-  std::vector<ActuatorT> actuatores{};
-  std::vector<SensorT> sensors{};
+  std::vector<ActuatorT> actuatores;
+  std::vector<SensorT> sensors;
   int i2cSDA = -1;
   int i2cSCL = -1;
   void json(JsonVariant &root);
@@ -53,7 +52,9 @@ public:
   void generateId(String &id, const String &name, int familyCode, size_t maxSize);
   void loadTemplate(int templateId);
   void loopSwitches();
-  String controlSwitch(const char *id, SwitchStateOrigin origin, String state);
+  void loopSensors();
+  String
+  controlSwitch(const char *id, SwitchStateOrigin origin, String state);
   void requestCloudIOSync();
   bool isCloudIOSyncRequested();
 

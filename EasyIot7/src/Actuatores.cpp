@@ -223,7 +223,7 @@ void ActuatorT::notifyState(SwitchStateOrigin origin)
   // Notify by MQTT OnofreCloud
   if (cloudIOConnected())
   {
-    notifyStateToCloudIO(readTopic, stateStr.c_str());
+    notifyStateToCloudIO(cloudIOreadTopic, stateStr.c_str());
   }
 
   // Notify by SSW Webpanel
@@ -299,5 +299,12 @@ void ConfigOnofre::loopSwitches()
     {
       button.loop();
     }
+  }
+}
+void ConfigOnofre::loopSensors()
+{
+  for (auto &s : config.sensors)
+  {
+    s.loop();
   }
 }

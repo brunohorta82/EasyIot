@@ -32,7 +32,6 @@ ConfigOnofre &ConfigOnofre::init()
   strlcpy(accessPointPassword, constantsConfig::apSecret, sizeof(accessPointPassword));
   strlcpy(apiUser, constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(apiPassword, constantsConfig::apiPassword, sizeof(apiPassword));
-
 #ifdef WIFI_SSID
   strlcpy(wifiSSID, WIFI_SSID, sizeof(wifiSSID));
 #endif
@@ -72,7 +71,6 @@ ConfigOnofre &ConfigOnofre::load()
   {
     chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
-  idSequence = doc["idSequence"];
   templateId = doc["templateId"];
   strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
 #endif
@@ -106,30 +104,45 @@ ConfigOnofre &ConfigOnofre::load()
   int s = 0;
   for (auto d : features)
   {
-    ActuatorT actuator;
-    actuator.sequence = s++;
-    strlcpy(actuator.uniqueId, d["id"] | "", sizeof(actuator.uniqueId));
-    strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
-    actuator.family = d["family"];
-    actuator.typeControl = d["typeControl"];
-    actuator.knxAddress[0] = d["area"] | 0;
-    actuator.knxAddress[1] = d["line"] | 0;
-    actuator.knxAddress[2] = d["member"] | 0;
-    actuator.state = d["state"] | 0;
-    sprintf(actuator.readTopic, "bhonofre/%s/%s/%d/state", chipId, actuator.familyToText(), actuator.uniqueId);
-    sprintf(actuator.writeTopic, "bhonofre/%s/%s/%d/set", chipId, actuator.familyToText(), actuator.uniqueId);
-    JsonArray outputs = d["outputs"];
-    for (auto out : outputs)
+    if (strcmp(d["type"] | "", "ACTUATOR") == 0)
     {
-      actuator.outputs.push_back(out);
+      ActuatorT actuator;
+      actuator.sequence = s++;
+      strlcpy(actuator.uniqueId, d["id"] | "", sizeof(actuator.uniqueId));
+      strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
+      actuator.family = d["family"];
+      actuator.typeControl = d["typeControl"];
+      actuator.knxAddress[0] = d["area"] | 0;
+      actuator.knxAddress[1] = d["line"] | 0;
+      actuator.knxAddress[2] = d["member"] | 0;
+      actuator.state = d["state"] | 0;
+      sprintf(actuator.readTopic, "bhonofre/%s/%s/%d/state", chipId, actuator.familyToText(), actuator.uniqueId);
+      sprintf(actuator.writeTopic, "bhonofre/%s/%s/%d/set", chipId, actuator.familyToText(), actuator.uniqueId);
+      JsonArray outputs = d["outputs"];
+      for (auto out : outputs)
+      {
+        actuator.outputs.push_back(out);
+      }
+      JsonArray inputs = d["inputs"];
+      for (auto in : inputs)
+      {
+        actuator.inputs.push_back(in);
+      }
+      actuator.setup();
+      actuatores.push_back(actuator);
     }
-    JsonArray inputs = d["inputs"];
-    for (auto in : inputs)
+    else if (strcmp(d["type"] | "", "SENSOR") == 0)
     {
-      actuator.inputs.push_back(in);
+      SensorT sensor;
+      strlcpy(sensor.uniqueId, d["id"] | "", sizeof(sensor.uniqueId));
+      strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
+      strlcpy(sensor.family, d["family"] | "", sizeof(sensor.family));
+      sensor.delayRead = d["delayRead"];
+      sensor.interface = d["interface"];
+      sprintf(sensor.readTopic, "bhonofre/%s/%s/%d/state", chipId, sensor.family, sensor.uniqueId);
+      sensor.setup();
+      sensors.push_back(sensor);
     }
-    actuator.setup();
-    actuatores.push_back(actuator);
   }
   file.close();
 #ifdef DEBUG_ONOFRE
@@ -147,7 +160,6 @@ ConfigOnofre &ConfigOnofre::save()
   File file = LittleFS.open(configFilenames::config, "w+");
   StaticJsonDocument<DYNAMIC_JSON_DOCUMENT_SIZE> doc;
   doc["templateId"] = templateId;
-  doc["idSequence"] = idSequence;
   if (!String(nodeId).isEmpty())
     doc["nodeId"] = nodeId;
   // MQTT
@@ -179,6 +191,7 @@ ConfigOnofre &ConfigOnofre::save()
   doc["accessPointPassword"] = accessPointPassword;
   doc["apiUser"] = apiUser;
   doc["apiPassword"] = apiPassword;
+
   JsonArray features = doc.createNestedArray("features");
   for (auto s : actuatores)
   {
@@ -203,6 +216,17 @@ ConfigOnofre &ConfigOnofre::save()
       inputs.add(in);
     }
   }
+  for (auto ss : sensors)
+  {
+    JsonObject a = features.createNestedObject();
+    a["type"] = "SENSOR";
+    a["id"] = ss.uniqueId;
+    a["name"] = ss.name;
+    a["interface"] = ss.interface;
+    a["family"] = ss.family;
+    a["delayRead"] = ss.delayRead;
+  }
+
   if (serializeJson(doc, file) == 0)
   {
 #ifdef DEBUG_ONOFRE
@@ -320,7 +344,6 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 void ConfigOnofre::json(JsonVariant &root)
 {
   root["nodeId"] = nodeId;
-  root["idSequence"] = idSequence;
   root["chipId"] = chipId;
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
@@ -371,6 +394,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
     a["state"] = s.state;
+    a["cloudiosupport"] = true;
     JsonArray outputs = a.createNestedArray("outputs");
     for (auto out : s.outputs)
     {
@@ -381,6 +405,17 @@ void ConfigOnofre::json(JsonVariant &root)
     {
       inputs.add(in);
     }
+  }
+  for (auto s : sensors)
+  {
+    JsonObject a = features.createNestedObject();
+    a["type"] = "SENSOR";
+    a["id"] = s.uniqueId;
+    a["name"] = s.name;
+    a["family"] = s.family;
+    a["cloudiosupport"] = true;
+    a["delayRead"] = s.delayRead;
+    a["interface"] = s.interface;
   }
 }
 

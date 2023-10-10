@@ -4,26 +4,35 @@
 #include "Sensors.h"
 #include "ConfigOnofre.h"
 extern ConfigOnofre config;
+void prepareHAN()
+{
+    SensorT han;
+    strlcpy(han.name, "Contador", sizeof(han.name));
+    han.primaryGpio = 13;
+    han.secondaryGpio = 14;
+    han.tertiaryGpio = constantsConfig::noGPIO;
+    han.interface = HAN;
+    han.haSupport = true;
+    han.delayRead = 5000;
+    strlcpy(han.family, "energy", sizeof(han.family));
+    String idStr;
+    config.generateId(idStr, han.name, han.interface, sizeof(han.uniqueId));
+    strlcpy(han.uniqueId, idStr.c_str(), sizeof(han.uniqueId));
+    config.sensors.push_back(han);
+}
 void preparePzem()
 {
     SensorT pzem;
-    strlcpy(pzem.name, "Consumo", sizeof(pzem.name));
-
-    strlcpy(pzem.family, constantsSensor::familySensor, sizeof(pzem.name));
-    pzem.primaryGpio = constantsConfig::noGPIO;
-    pzem.secondaryGpio = constantsConfig::noGPIO;
-    pzem.tertiaryGpio = constantsConfig::noGPIO;
-    pzem.type = PZEM_004T_V03;
+    strlcpy(pzem.name, "Energia", sizeof(pzem.name));
+    pzem.interface = PZEM_004T_V03;
     pzem.primaryGpio = 3;
     pzem.secondaryGpio = 1;
     pzem.tertiaryGpio = constantsConfig::noGPIO;
-    pzem.mqttRetain = true;
     pzem.haSupport = true;
-    pzem.cloudIOSupport = true;
     pzem.delayRead = 5000;
-    strlcpy(pzem.deviceClass, constantsSensor::powerMeterClass, sizeof(pzem.deviceClass));
+    strlcpy(pzem.family, "energy", sizeof(pzem.family));
     String idStr;
-    config.generateId(idStr, pzem.name, pzem.type, sizeof(pzem.uniqueId));
+    config.generateId(idStr, pzem.name, pzem.interface, sizeof(pzem.uniqueId));
     strlcpy(pzem.uniqueId, idStr.c_str(), sizeof(pzem.uniqueId));
     config.sensors.push_back(pzem);
 }
@@ -96,6 +105,9 @@ void templateSelect(enum Template _template)
         break;
     case PZEM:
         preparePzem();
+        break;
+    case HAN_MODULE:
+        prepareHAN();
         break;
     case Template::DUAL_LIGHT:
     {

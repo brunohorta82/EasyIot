@@ -5,7 +5,6 @@
 #include "CoreWiFi.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
-#include "HanOnofre.hpp"
 
 ConfigOnofre config;
 
@@ -95,6 +94,7 @@ void loop()
     webserverServicesLoop();
     loopMqtt();
     config.loopSwitches();
+     config.loopSensors();
     if (WiFi.status() == WL_CONNECTED)
       knx.loop();
   }
