@@ -203,14 +203,10 @@ void SensorT::loop()
         {
           buffer[i] = node.getResponseBuffer(i);
         }
-
         han_clock_t clock{.buffer = buffer};
         char strftime_buf[64];
         sprintf(strftime_buf, "%d-%02d-%02dT%02d:%02d:%02d.000", clock.year, clock.day_of_month, clock.day_of_month, clock.hour, clock.minute, clock.second);
-        auto deviation = static_cast<std::int16_t>(clock.deviation_msb) << 8 | clock.deviation_lsb;
         doc["dateTime"] = strftime_buf;
-        Log.notice("%s %d-%d-%d %d:%d:%d deviation: %d hundreds_of_second: %d clock_status: %d }" CR,
-                   tags::sensors, clock.year, clock.month, clock.day_of_month, clock.hour, clock.minute, clock.second, deviation, clock.hundreds_of_second, clock.clock_status);
       }
       if (node.readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == node.ku8MBSuccess)
       {
