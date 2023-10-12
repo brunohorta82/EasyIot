@@ -5,7 +5,6 @@
 #include "CoreWiFi.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
-
 ConfigOnofre config;
 
 void checkInternalRoutines()
@@ -73,7 +72,7 @@ void startFileSystem()
 
 void setup()
 {
-
+  setCpuFrequencyMhz(80);
 #ifdef DEBUG_ONOFRE
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
@@ -94,7 +93,7 @@ void loop()
     webserverServicesLoop();
     loopMqtt();
     config.loopSwitches();
-     config.loopSensors();
+    config.loopSensors();
     if (WiFi.status() == WL_CONNECTED)
       knx.loop();
   }

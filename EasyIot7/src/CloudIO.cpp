@@ -187,12 +187,12 @@ void connectToCloudIO()
     snprintf(config.cloudIOwriteTopic, sizeof(config.cloudIOwriteTopic), "%s/%s/config/set", config.cloudIOUsername, config.chipId);
     for (auto &sw : config.actuatores)
     {
-      snprintf(sw.cloudIOwriteTopic, sizeof(sw.cloudIOwriteTopic), "%s/%s/%s/%s/set", config.cloudIOUsername, config.chipId, sw.uniqueId, sw.familyToText());
-      snprintf(sw.cloudIOreadTopic, sizeof(sw.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, sw.uniqueId, sw.familyToText());
+      snprintf(sw.cloudIOwriteTopic, sizeof(sw.cloudIOwriteTopic), "%s/%s/%s/%s/set", config.cloudIOUsername, config.chipId, sw.familyToText(), sw.uniqueId);
+      snprintf(sw.cloudIOreadTopic, sizeof(sw.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, sw.familyToText(), sw.uniqueId);
     }
     for (auto &ss : config.sensors)
     {
-      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, ss.uniqueId, ss.family);
+      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, ss.familyToText(), ss.uniqueId);
     }
 #ifdef DEBUG_ONOFRE
     Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, config.cloudIOUsername, config.cloudIOPassword);

@@ -8,13 +8,9 @@ void prepareHAN()
 {
     SensorT han;
     strlcpy(han.name, "Contador", sizeof(han.name));
-    han.primaryGpio = 13;
-    han.secondaryGpio = 14;
-    han.tertiaryGpio = constantsConfig::noGPIO;
+    han.inputs = {13u, 14u};
     han.interface = HAN;
-    han.haSupport = true;
     han.delayRead = 5000;
-    strlcpy(han.family, "energy", sizeof(han.family));
     String idStr;
     config.generateId(idStr, han.name, han.interface, sizeof(han.uniqueId));
     strlcpy(han.uniqueId, idStr.c_str(), sizeof(han.uniqueId));
@@ -25,12 +21,8 @@ void preparePzem()
     SensorT pzem;
     strlcpy(pzem.name, "Energia", sizeof(pzem.name));
     pzem.interface = PZEM_004T_V03;
-    pzem.primaryGpio = 3;
-    pzem.secondaryGpio = 1;
-    pzem.tertiaryGpio = constantsConfig::noGPIO;
-    pzem.haSupport = true;
+    pzem.inputs = {3u, 1u};
     pzem.delayRead = 5000;
-    strlcpy(pzem.family, "energy", sizeof(pzem.family));
     String idStr;
     config.generateId(idStr, pzem.name, pzem.interface, sizeof(pzem.uniqueId));
     strlcpy(pzem.uniqueId, idStr.c_str(), sizeof(pzem.uniqueId));

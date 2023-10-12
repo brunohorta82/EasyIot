@@ -87,7 +87,7 @@ ConfigOnofre &ConfigOnofre::load()
   mqttPort = doc["mqttPort"] | 1883;
   strlcpy(mqttUsername, doc["mqttUsername"] | "", sizeof(mqttUsername));
   strlcpy(mqttPassword, doc["mqttPassword"] | "", sizeof(mqttPassword));
-  sprintf(healthTopic, "bhonofre/%s/available", chipId);
+  sprintf(healthTopic, "onofre/%s/available", chipId);
 
   // WIFI
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
@@ -116,8 +116,8 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.knxAddress[1] = d["line"] | 0;
       actuator.knxAddress[2] = d["member"] | 0;
       actuator.state = d["state"] | 0;
-      sprintf(actuator.readTopic, "bhonofre/%s/%s/%d/state", chipId, actuator.familyToText(), actuator.uniqueId);
-      sprintf(actuator.writeTopic, "bhonofre/%s/%s/%d/set", chipId, actuator.familyToText(), actuator.uniqueId);
+      sprintf(actuator.readTopic, "onofre/%s/%s/%d/state", chipId, actuator.familyToText(), actuator.uniqueId);
+      sprintf(actuator.writeTopic, "onofre/%s/%s/%d/set", chipId, actuator.familyToText(), actuator.uniqueId);
       JsonArray outputs = d["outputs"];
       for (auto out : outputs)
       {
@@ -136,14 +136,28 @@ ConfigOnofre &ConfigOnofre::load()
       SensorT sensor;
       strlcpy(sensor.uniqueId, d["id"] | "", sizeof(sensor.uniqueId));
       strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
-      strlcpy(sensor.family, d["family"] | "", sizeof(sensor.family));
       sensor.delayRead = d["delayRead"];
       sensor.interface = d["interface"];
-      sprintf(sensor.readTopic, "bhonofre/%s/%s/%d/state", chipId, sensor.family, sensor.uniqueId);
+      sprintf(sensor.readTopic, "onofre/%s/%s/%d/state", chipId, sensor.familyToText(), sensor.uniqueId);
+      JsonArray inputs = d["inputs"];
+      for (auto in : inputs)
+      {
+        sensor.inputs.push_back(in);
+      }
       sensor.setup();
       sensors.push_back(sensor);
     }
   }
+  /* SensorT temp;
+   strlcpy(temp.name, "SHT", sizeof(temp.name));
+   temp.inputs = {13u, 14u};
+   temp.interface = SHT3x_SENSOR;
+   temp.delayRead = 5000;
+   String idStr;
+   generateId(idStr, temp.name, temp.interface, sizeof(temp.uniqueId));
+   strlcpy(temp.uniqueId, idStr.c_str(), sizeof(temp.uniqueId));
+   temp.setup();
+   sensors.push_back(temp);*/
   file.close();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
@@ -223,8 +237,12 @@ ConfigOnofre &ConfigOnofre::save()
     a["id"] = ss.uniqueId;
     a["name"] = ss.name;
     a["interface"] = ss.interface;
-    a["family"] = ss.family;
     a["delayRead"] = ss.delayRead;
+    JsonArray inputs = a.createNestedArray("inputs");
+    for (auto in : ss.inputs)
+    {
+      inputs.add(in);
+    }
   }
 
   if (serializeJson(doc, file) == 0)
@@ -411,9 +429,14 @@ void ConfigOnofre::json(JsonVariant &root)
     a["type"] = "SENSOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
-    a["family"] = s.family;
+    a["family"] = s.familyToText();
     a["delayRead"] = s.delayRead;
     a["interface"] = s.interface;
+    JsonArray inputs = a.createNestedArray("inputs");
+    for (auto in : s.inputs)
+    {
+      inputs.add(in);
+    }
   }
 }
 
