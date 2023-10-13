@@ -46,22 +46,6 @@ namespace configFilenames
 } // namespace configFilenames
 namespace constantsConfig
 {
-#if GENERIC
-    constexpr const char *firmwareMode{"NO_FEATURES"};
-#endif
-#if DUAL_LIGHT
-    constexpr const char *firmwareMode{"DUAL_LIGHT"};
-#endif
-#if COVER
-    constexpr const char *firmwareMode{"COVER"};
-#endif
-#if BHPZEM
-    constexpr const char *firmwareMode{"BHPZEM"};
-#endif
-#if GATE
-    constexpr const char *firmwareMode{"GATE"};
-#endif
-    constexpr const char *newID{"NEW"};
     constexpr unsigned int noGPIO{99u};
     constexpr unsigned long storeConfigDelay{5000ul};
     constexpr const char *apSecret{"bhonofre"}; // AP PASSWORD
@@ -75,3 +59,23 @@ namespace constanstsCloudIO
     constexpr int mqttPort{1883};
     constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
 } // namespace constanstsCloudIO
+
+namespace constanstsFamilies
+{
+    constexpr const char *F_SWITCH{"SWITCH"};
+    constexpr const char *F_LIGTH{"LIGTH"};
+    constexpr const char *F_CLIMATE{"CLIMATE"};
+    constexpr const char *F_SECURITY{"SECURITY"};
+    constexpr const char *F_GENERIC{"GENERIC"};
+    constexpr const char *F_ENERGY{"ENERGY"};
+}
+
+namespace constanstsI18N
+{
+    constexpr const char *T_LIGHT_ONE{"Interruptor1"};
+    constexpr const char *T_LIGHT_TWO{"Interruptor2"};
+    constexpr const char *T_GARAGE{"Garagem"};
+    constexpr const char *T_COVER{"Estore"};
+    constexpr const char *T_HAN{"Contador"};
+    constexpr const char *T_ENERGY{"Energia"};
+}

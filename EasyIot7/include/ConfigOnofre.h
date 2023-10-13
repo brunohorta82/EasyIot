@@ -5,6 +5,7 @@
 #include "Actuatores.h"
 #include "Sensors.h"
 #include "LittleFS.h"
+#include <vector>
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif

@@ -104,13 +104,13 @@ ConfigOnofre &ConfigOnofre::load()
   int s = 0;
   for (auto d : features)
   {
-    if (strcmp(d["type"] | "", "ACTUATOR") == 0)
+    if (strcmp(d["group"] | "", "ACTUATOR") == 0)
     {
       ActuatorT actuator;
       actuator.sequence = s++;
       strlcpy(actuator.uniqueId, d["id"] | "", sizeof(actuator.uniqueId));
       strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
-      actuator.family = d["family"];
+      actuator.type = d["type"];
       actuator.typeControl = d["typeControl"];
       actuator.knxAddress[0] = d["area"] | 0;
       actuator.knxAddress[1] = d["line"] | 0;
@@ -131,13 +131,13 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.setup();
       actuatores.push_back(actuator);
     }
-    else if (strcmp(d["type"] | "", "SENSOR") == 0)
+    else if (strcmp(d["group"] | "", "SENSOR") == 0)
     {
       SensorT sensor;
       strlcpy(sensor.uniqueId, d["id"] | "", sizeof(sensor.uniqueId));
       strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
       sensor.delayRead = d["delayRead"];
-      sensor.interface = d["interface"];
+      sensor.type = d["type"];
       sprintf(sensor.readTopic, "onofre/%s/%s/%d/state", chipId, sensor.familyToText(), sensor.uniqueId);
       JsonArray inputs = d["inputs"];
       for (auto in : inputs)
@@ -210,10 +210,10 @@ ConfigOnofre &ConfigOnofre::save()
   for (auto s : actuatores)
   {
     JsonObject a = features.createNestedObject();
-    a["type"] = "ACTUATOR";
+    a["group"] = "ACTUATOR";
+    a["type"] = s.type;
     a["id"] = s.uniqueId;
     a["name"] = s.name;
-    a["family"] = s.family;
     a["typeControl"] = s.typeControl;
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
@@ -233,10 +233,10 @@ ConfigOnofre &ConfigOnofre::save()
   for (auto ss : sensors)
   {
     JsonObject a = features.createNestedObject();
-    a["type"] = "SENSOR";
+    a["group"] = "SENSOR";
     a["id"] = ss.uniqueId;
     a["name"] = ss.name;
-    a["interface"] = ss.interface;
+    a["type"] = ss.type;
     a["delayRead"] = ss.delayRead;
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : ss.inputs)
@@ -404,10 +404,11 @@ void ConfigOnofre::json(JsonVariant &root)
   for (auto s : actuatores)
   {
     JsonObject a = features.createNestedObject();
-    a["type"] = "ACTUATOR";
+    a["group"] = "ACTUATOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
-    a["family"] = s.family;
+    a["type"] = s.type;
+    a["family"] = s.familyToText();
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
@@ -426,12 +427,12 @@ void ConfigOnofre::json(JsonVariant &root)
   for (auto s : sensors)
   {
     JsonObject a = features.createNestedObject();
-    a["type"] = "SENSOR";
+    a["group"] = "SENSOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["family"] = s.familyToText();
     a["delayRead"] = s.delayRead;
-    a["interface"] = s.interface;
+    a["type"] = s.type;
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : s.inputs)
     {

@@ -27,7 +27,7 @@ public:
   // CONFIG
   char uniqueId[24]{};
   char name[24] = {0};
-  SensorType interface; // TYPE_PIR, TYPE_LDR, TYPE_DS18B20, TYPE_REED_SWITCH
+  SensorType type;
 
   // MQTT
   char readTopic[128];
@@ -51,21 +51,20 @@ public:
   unsigned long lastRead = 0ul;
   String familyToText()
   {
-    switch (interface)
+    switch (type)
     {
     case LDR:
-      return "lightness";
     case DS18B20:
     case SHT3x_SENSOR:
     case DHT_11:
     case DHT_21:
     case DHT_22:
-      return "climate";
+      return constanstsFamilies::F_CLIMATE;
     case PZEM_004T_V03:
     case HAN:
-      return "energy";
+      return constanstsFamilies::F_ENERGY;
     }
-    return "undefined";
+    return constanstsFamilies::F_GENERIC;
   };
   void setup();
   void loop();

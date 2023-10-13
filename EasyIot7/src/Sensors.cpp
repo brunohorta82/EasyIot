@@ -35,7 +35,7 @@ ModbusMaster node;
 SHT3x sensor;
 void SensorT::setup()
 {
-  switch (interface)
+  switch (type)
   {
   case SHT3x_SENSOR:
     Wire.setPins(13, 14);
@@ -44,7 +44,7 @@ void SensorT::setup()
   case DHT_11:
   case DHT_21:
   case DHT_22:
-    dht = new DHT_nonblocking(inputs[0], interface);
+    dht = new DHT_nonblocking(inputs[0], type);
     break;
   case DS18B20:
     dallas = new DallasTemperature(new OneWire(inputs[0]));
@@ -100,7 +100,7 @@ typedef union
 void SensorT::loop()
 {
 
-  switch (interface)
+  switch (type)
   {
   case LDR:
   {

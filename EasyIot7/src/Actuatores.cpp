@@ -244,7 +244,7 @@ ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, int state)
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
   Log.notice("%s State:     %d" CR, tags::actuatores, state);
   Log.notice("%s From : %d" CR, tags::actuatores, origin);
-  Log.notice("%s Family : %d" CR, tags::actuatores, family);
+  Log.notice("%s Family : %d" CR, tags::actuatores, type);
 #endif
   if (outputs.size() == 0)
   {

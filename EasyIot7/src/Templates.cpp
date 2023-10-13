@@ -7,51 +7,45 @@ extern ConfigOnofre config;
 void prepareHAN()
 {
     SensorT han;
-    strlcpy(han.name, "Contador", sizeof(han.name));
+    strlcpy(han.name, constanstsI18N::T_HAN, sizeof(han.name));
     han.inputs = {13u, 14u};
-    han.interface = HAN;
+    han.type = HAN;
     han.delayRead = 5000;
     String idStr;
-    config.generateId(idStr, han.name, han.interface, sizeof(han.uniqueId));
+    config.generateId(idStr, han.name, han.type, sizeof(han.uniqueId));
     strlcpy(han.uniqueId, idStr.c_str(), sizeof(han.uniqueId));
     config.sensors.push_back(han);
 }
 void preparePzem()
 {
     SensorT pzem;
-    strlcpy(pzem.name, "Energia", sizeof(pzem.name));
-    pzem.interface = PZEM_004T_V03;
+    strlcpy(pzem.name, constanstsI18N::T_ENERGY, sizeof(pzem.name));
+    pzem.type = PZEM_004T_V03;
     pzem.inputs = {3u, 1u};
     pzem.delayRead = 5000;
     String idStr;
-    config.generateId(idStr, pzem.name, pzem.interface, sizeof(pzem.uniqueId));
+    config.generateId(idStr, pzem.name, pzem.type, sizeof(pzem.uniqueId));
     strlcpy(pzem.uniqueId, idStr.c_str(), sizeof(pzem.uniqueId));
     config.sensors.push_back(pzem);
 }
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
     ActuatorT light;
-    light.family = LIGHT_PUSH;
+    light.type = LIGHT_PUSH;
     strncpy(light.name, name.c_str(), sizeof(light.name));
     light.typeControl = SwitchControlType::GPIO_OUTPUT;
     light.outputs.push_back(output);
     light.inputs.push_back(input);
     String idStr;
-    config.generateId(idStr, light.name, light.family, sizeof(light.uniqueId));
+    config.generateId(idStr, light.name, light.type, sizeof(light.uniqueId));
     strlcpy(light.uniqueId, idStr.c_str(), sizeof(light.uniqueId));
     config.actuatores.push_back(light);
 }
 void prepareCover()
 {
     ActuatorT cover;
-    cover.family = COVER_DUAL_PUSH;
-#ifdef CONFIG_LANG_PT
-    strlcpy(cover.name, "Estore", sizeof(cover.name));
-#elif CONFIG_LANG_EN
-    strlcpy(cover.name, "Cover", sizeof(cover.name));
-#elif CONFIG_LANG_RO
-    strlcpy(cover.name, "Cover"), sizeof(cover.name));
-#endif
+    cover.type = COVER_DUAL_PUSH;
+    strlcpy(cover.name, constanstsI18N::T_COVER, sizeof(cover.name));
     cover.typeControl = SwitchControlType::GPIO_OUTPUT;
     cover.outputs = {4u, 5u};
 #ifdef ESP8266
@@ -61,21 +55,15 @@ void prepareCover()
     cover.inputs = {13u, 14u};
 #endif
     String idStr;
-    config.generateId(idStr, cover.name, cover.family, sizeof(cover.uniqueId));
+    config.generateId(idStr, cover.name, cover.type, sizeof(cover.uniqueId));
     strlcpy(cover.uniqueId, idStr.c_str(), sizeof(cover.uniqueId));
     config.actuatores.push_back(cover);
 }
 void prepareGarage()
 {
     ActuatorT garage;
-    garage.family = GARAGE_PUSH;
-#ifdef CONFIG_LANG_PT
-    strlcpy(garage.name, "Garagem", sizeof(garage.name));
-#elif CONFIG_LANG_EN
-    strlcpy(garage.name, "Garage", sizeof(garage.name));
-#elif CONFIG_LANG_RO
-    strlcpy(garage.name, "Garage"), sizeof(garage.name));
-#endif
+    garage.type = GARAGE_PUSH;
+    strlcpy(garage.name, constanstsI18N::T_GARAGE, sizeof(garage.name));
     garage.typeControl = SwitchControlType::GPIO_OUTPUT;
     garage.outputs = {4u, 5u};
 #ifdef ESP8266
@@ -85,7 +73,7 @@ void prepareGarage()
     garage.inputs = {13u, 14u};
 #endif
     String idStr;
-    config.generateId(idStr, garage.name, garage.family, sizeof(garage.uniqueId));
+    config.generateId(idStr, garage.name, garage.type, sizeof(garage.uniqueId));
     strlcpy(garage.uniqueId, idStr.c_str(), sizeof(garage.uniqueId));
     config.actuatores.push_back(garage);
 }
@@ -103,23 +91,13 @@ void templateSelect(enum Template _template)
         break;
     case Template::DUAL_LIGHT:
     {
-#ifdef CONFIG_LANG_PT
-        String name1 = "Interruptor1";
-        String name2 = "Interruptor2";
-#elif CONFIG_LANG_EN
-        String name1 = "Switch1";
-        String name2 = "Switch2";
-#elif CONFIG_LANG_RO
-        String name1 = "Switch1";
-        String name2 = "Switch2";
-#endif
 #ifdef ESP8266
-        prepareLight(name1, 4u, 12u);
+        prepareLight(constanstsI18N::T_LIGHT_ONE, 4u, 12u);
 #endif
 #ifdef ESP32
-        prepareLight(name1, 4u, 14u);
+        prepareLight(constanstsI18N::T_LIGHT_ONE, 4u, 14u);
 #endif
-        prepareLight(name2, 5u, 13u);
+        prepareLight(constanstsI18N::T_LIGHT_TWO, 5u, 13u);
     }
     break;
     case Template::COVER:

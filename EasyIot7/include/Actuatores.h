@@ -25,7 +25,7 @@ enum SwitchStateOrigin
     WEBPANEL = 5
 };
 
-enum SwitchFamily
+enum ActuatorType
 {
     SWITCH_PUSH = 1,
     SWITCH_GENERIC = 2,
@@ -51,7 +51,7 @@ public:
     char uniqueId[24]{};
     int sequence = 0;
     char name[24] = {0};
-    SwitchFamily family = SWITCH_PUSH;
+    ActuatorType type = SWITCH_PUSH;
     SwitchControlType typeControl = VIRTUAL;
     int state = 0;
     // CLOUDIO
@@ -90,19 +90,19 @@ public:
     // METHODS
     constexpr bool isCover()
     {
-        return family == COVER_PUSH || family == COVER_DUAL_PUSH || family == COVER_DUAL_GENERIC;
+        return type == COVER_PUSH || type == COVER_DUAL_PUSH || type == COVER_DUAL_GENERIC;
     };
     constexpr bool isLight()
     {
-        return family == LIGHT_PUSH || family == LIGHT_GENERIC;
+        return type == LIGHT_PUSH || type == LIGHT_GENERIC;
     };
     constexpr bool isSwitch()
     {
-        return family == SWITCH_PUSH || family == SWITCH_GENERIC;
+        return type == SWITCH_PUSH || type == SWITCH_GENERIC;
     };
     constexpr bool isGarage()
     {
-        return family == GARAGE_PUSH;
+        return type == GARAGE_PUSH;
     };
     constexpr bool isKnxSupport()
     {
@@ -115,14 +115,14 @@ public:
     String familyToText()
     {
         if (isLight())
-            return "light";
+            return constanstsFamilies::F_LIGTH;
         if (isCover())
-            return "cover";
+            return constanstsFamilies::F_CLIMATE;
         if (isGarage())
-            return "garage";
+            return constanstsFamilies::F_SECURITY;
         if (isSwitch())
-            return "switch";
-        return "generic";
+            return constanstsFamilies::F_SWITCH;
+        return constanstsFamilies::F_GENERIC;
     };
     ActuatorT *changeState(SwitchStateOrigin origin, int state);
     void setup();
