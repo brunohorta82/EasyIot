@@ -6,7 +6,7 @@
 #include <vector>
 #include "FS.h"
 class Shutters;
-enum SwitchState
+enum ActuatorState
 {
     OFF = 0,
     ON = 1,
@@ -15,7 +15,7 @@ enum SwitchState
     STOP = 101,
     TOGGLE = 102
 };
-enum SwitchStateOrigin
+enum StateOrigin
 {
     INTERNAL = 0,
     GPIO_INPUT = 1,
@@ -25,7 +25,7 @@ enum SwitchStateOrigin
     WEBPANEL = 5
 };
 
-enum ActuatorType
+enum Actuatorype
 {
     SWITCH_PUSH = 1,
     SWITCH_GENERIC = 2,
@@ -38,21 +38,21 @@ enum ActuatorType
     GARAGE_PUSH = 9
 };
 
-enum SwitchControlType
+enum ActuatorControlType
 {
     GPIO_OUTPUT = 1,
     VIRTUAL = 2
 };
 
-class ActuatorT
+class Actuator
 {
 public:
     // CONFIG
     char uniqueId[24]{};
     int sequence = 0;
     char name[24] = {0};
-    ActuatorType type = SWITCH_PUSH;
-    SwitchControlType typeControl = VIRTUAL;
+    Actuatorype type = SWITCH_PUSH;
+    ActuatorControlType typeControl = VIRTUAL;
     int state = 0;
     // CLOUDIO
     char cloudIOwriteTopic[128]{};
@@ -115,16 +115,41 @@ public:
     String familyToText()
     {
         if (isLight())
-            return constanstsFamilies::F_LIGTH;
+            return Family::LIGTH;
         if (isCover())
-            return constanstsFamilies::F_CLIMATE;
+            return Family::CLIMATE;
         if (isGarage())
-            return constanstsFamilies::F_SECURITY;
+            return Family::SECURITY;
         if (isSwitch())
-            return constanstsFamilies::F_SWITCH;
-        return constanstsFamilies::F_GENERIC;
+            return Family::SWITCH;
+        return Family::GENERIC;
     };
-    ActuatorT *changeState(SwitchStateOrigin origin, int state);
+    String typeToText()
+    {
+        switch (type)
+        {
+        case SWITCH_PUSH:
+            return FeatureTypes::SWITCH_PUSH;
+        case SWITCH_GENERIC:
+            return FeatureTypes::SWITCH_GENERIC;
+        case COVER_PUSH:
+            return FeatureTypes::COVER_PUSH;
+        case COVER_DUAL_PUSH:
+            return FeatureTypes::COVER_DUAL_PUSH;
+        case COVER_DUAL_GENERIC:
+            return FeatureTypes::COVER_DUAL_GENERIC;
+        case LOCK_PUSH:
+            return FeatureTypes::LOCK_PUSH;
+        case LIGHT_PUSH:
+            return FeatureTypes::LIGHT_GENERIC;
+        case LIGHT_GENERIC:
+            return FeatureTypes::LIGHT_GENERIC;
+        case GARAGE_PUSH:
+            return FeatureTypes::SWITCH_PUSH;
+        }
+        return FeatureTypes::GENERIC;
+    };
+    Actuator *changeState(StateOrigin origin, int state);
     void setup();
-    void notifyState(SwitchStateOrigin origin);
+    void notifyState(StateOrigin origin);
 };

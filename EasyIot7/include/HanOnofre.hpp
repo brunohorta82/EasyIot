@@ -1,4 +1,22 @@
 #pragma once
+typedef union
+{
+    struct
+    {
+        uint16_t year;
+        uint8_t day_of_month;
+        uint8_t month;
+        uint8_t hour;
+        uint8_t week_day;
+        uint8_t second;
+        uint8_t minute;
+        int8_t deviation_lsb;
+        uint8_t hundreds_of_second;
+        uint8_t clock_status;
+        int8_t deviation_msb;
+    };
+    std::array<std::uint16_t, 6> buffer;
+} __attribute__((packed)) han_clock_t;
 enum HAN_REGISTERS
 {
     CLOCK = 0x0001,

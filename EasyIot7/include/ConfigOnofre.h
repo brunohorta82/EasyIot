@@ -4,7 +4,6 @@
 #include <ArduinoJson.h>
 #include "Actuatores.h"
 #include "Sensors.h"
-#include "LittleFS.h"
 #include <vector>
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
@@ -40,8 +39,8 @@ public:
   char accessPointPassword[64];
   char apiUser[32];
   char apiPassword[64];
-  std::vector<ActuatorT> actuatores;
-  std::vector<SensorT> sensors;
+  std::vector<Actuator> actuatores;
+  std::vector<Sensor> sensors;
   int i2cSDA = -1;
   int i2cSCL = -1;
   void json(JsonVariant &root);
@@ -49,13 +48,11 @@ public:
   ConfigOnofre &save();
   ConfigOnofre &init();
   ConfigOnofre &load();
-  ConfigOnofre &removeSwitch(const char *id);
+  ConfigOnofre &removeActuator(const char *id);
   void generateId(String &id, const String &name, int familyCode, size_t maxSize);
   void loadTemplate(int templateId);
-  void loopSwitches();
+  void loopActuators();
   void loopSensors();
-  String
-  controlSwitch(const char *id, SwitchStateOrigin origin, String state);
   void requestCloudIOSync();
   bool isCloudIOSyncRequested();
 
@@ -73,9 +70,9 @@ public:
 
   void requestReloadWifi();
   bool isReloadWifiRequested();
-  void controlFeature(SwitchStateOrigin origin, JsonObject &action, JsonVariant &result);
-  void controlFeature(SwitchStateOrigin origin, String topic, String payload);
-  void controlFeature(SwitchStateOrigin origin, String uniqueId, int state);
+  void controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result);
+  void controlFeature(StateOrigin origin, String topic, String payload);
+  void controlFeature(StateOrigin origin, String uniqueId, int state);
 
 private:
   bool reboot = false;

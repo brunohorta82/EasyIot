@@ -37,10 +37,10 @@ void performUpdate()
   WiFiClient client;
   t_httpUpdate_return ret;
 #ifdef ESP8266
-  ret = ESPhttpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
+  ret = ESPhttpUpdate.update(client, constanstsCloudIO::otaUrl, String(VERSION));
 #endif
 #ifdef ESP32
-  ret = httpUpdate.update(client, "http://update.bhonofre.pt/firmware/update", String(VERSION));
+  ret = httpUpdate.update(client, constanstsCloudIO::otaUrl, String(VERSION));
 #endif
   switch (ret)
   {
@@ -316,7 +316,7 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     JsonObject action = json.as<JsonObject>();
-    config.controlFeature(SwitchStateOrigin::WEBPANEL,action,root);
+    config.controlFeature(StateOrigin::WEBPANEL,action,root);
     response->setLength();
     request->send(response); }));
   server

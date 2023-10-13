@@ -1,15 +1,10 @@
 #pragma once
 #include <Arduino.h>
-#include "FS.h"
-#include "constants.h"
-#include <ArduinoJson.h>
 #include <vector>
-class PZEM004T;
-class PZEM004Tv30;
-class DHT_nonblocking;
-class DallasTemperature;
-class Modbus;
-enum SensorType
+#include "constants.h"
+#include <ModbusMaster.h>
+#include <Wire.h>
+enum Sensorype
 {
   LDR = 21,
   DS18B20 = 90,
@@ -21,34 +16,28 @@ enum SensorType
   HAN = 80,
 };
 
-class SensorT
+class Sensor
 {
 public:
   // CONFIG
   char uniqueId[24]{};
   char name[24] = {0};
-  SensorType type;
-
+  Sensorype type;
+  String state;
   // MQTT
   char readTopic[128];
-  String state;
+
   // CLOUDIO
   char cloudIOreadTopic[128]{};
 
   // GPIOS INPUT
   std::vector<unsigned int> inputs;
-
-  // SENSORS
-  DHT_nonblocking *dht;
-  DallasTemperature *dallas;
-  uint8_t oneWireSensorsCount = 0;
-  PZEM004Tv30 *pzemv03;
-  Modbus *pzemModbus;
-
+  ModbusMaster *modbus;
   // CONTROL VARIABLES
   bool lastBinaryState = false;
   unsigned long delayRead = 1000ul;
   unsigned long lastRead = 0ul;
+  bool initialized = false;
   String familyToText()
   {
     switch (type)
@@ -59,14 +48,45 @@ public:
     case DHT_11:
     case DHT_21:
     case DHT_22:
-      return constanstsFamilies::F_CLIMATE;
+      return Family::CLIMATE;
     case PZEM_004T_V03:
     case HAN:
-      return constanstsFamilies::F_ENERGY;
+      return Family::ENERGY;
     }
-    return constanstsFamilies::F_GENERIC;
+    return Family::GENERIC;
   };
-  void setup();
+  String typeToText()
+  {
+    switch (type)
+    {
+    case LDR:
+      return FeatureTypes::LDR;
+    case DS18B20:
+      return FeatureTypes::DS18B20;
+    case SHT3x_SENSOR:
+      return FeatureTypes::SHT3X;
+    case DHT_11:
+      return FeatureTypes::DHT_11;
+    case DHT_21:
+      return FeatureTypes::DHT_21;
+    case DHT_22:
+      return FeatureTypes::DHT_22;
+    case PZEM_004T_V03:
+      return FeatureTypes::PZEM_004T_V03;
+    case HAN:
+      return FeatureTypes::HAN;
+    }
+    return FeatureTypes::GENERIC;
+  };
+  const bool isInitialized()
+  {
+    if (!initialized)
+    {
+      initialized = true;
+      return false;
+    }
+    return initialized;
+  };
   void loop();
   void notifyState();
 };

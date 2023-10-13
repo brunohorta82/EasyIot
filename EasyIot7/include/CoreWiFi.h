@@ -1,5 +1,4 @@
-#ifndef WIFI_H
-#define WIFI_H
+#pragma once
 #include <Arduino.h>
 #ifdef ESP32
 #include "WiFi.h"
@@ -21,4 +20,3 @@ void scanNewWifiNetworks();
 void enableScan();
 bool wifiConnected();
 void refreshMDNS(const char *lastName);
-#endif

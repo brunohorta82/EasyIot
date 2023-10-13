@@ -113,7 +113,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   }
   else
   {
-    config.controlFeature(SwitchStateOrigin::CLOUDIO, topic, msg);
+    config.controlFeature(StateOrigin::CLOUDIO, topic, msg);
   }
 }
 

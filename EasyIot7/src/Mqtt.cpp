@@ -28,7 +28,7 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     }
     else
     {
-        config.controlFeature(SwitchStateOrigin::MQTT, topic, payload_as_string);
+        config.controlFeature(StateOrigin::MQTT, topic, payload_as_string);
     }
     free(payload_as_string);
 }
@@ -54,7 +54,7 @@ boolean reconnect()
         for (auto &sw : config.actuatores)
         {
             subscribeOnMqtt(sw.writeTopic);
-            sw.notifyState(SwitchStateOrigin::MQTT);
+            sw.notifyState(StateOrigin::MQTT);
         }
     }
 

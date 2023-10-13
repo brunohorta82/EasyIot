@@ -1,14 +1,10 @@
-#ifndef DISCOVERY_H
-#define DISCOVERY_H
-
+#pragma once
 #include <Arduino.h>
 #include "Sensors.h"
 #include "Actuatores.h"
-bool homeAssistantOnline(String topic, String payload) ;
+bool homeAssistantOnline(String topic, String payload);
 void initHomeAssistantDiscovery();
-void addToHomeAssistant(SensorT &ss);
-void addToHomeAssistant(ActuatorT &sw);
-void removeFromHomeAssistant(SensorT &ss);
-void removeFromHomeAssistant(ActuatorT &sw);
-
-#endif
+void addToHomeAssistant(Sensor &ss);
+void addToHomeAssistant(Actuator &sw);
+void removeFromHomeAssistant(Sensor &ss);
+void removeFromHomeAssistant(Actuator &sw);

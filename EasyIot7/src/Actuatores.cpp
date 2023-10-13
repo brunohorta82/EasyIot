@@ -9,22 +9,17 @@
 #include "CloudIO.h"
 #include "LittleFS.h"
 extern ConfigOnofre config;
-String ConfigOnofre::controlSwitch(const char *id, SwitchStateOrigin origin, String state)
-{
-  return "DONE";
-}
-
 void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte length)
 {
   for (byte i = 0; i < length; i++)
   {
-    shutters->getActuatorT()->shutterState[i] = state[i];
+    shutters->getActuator()->shutterState[i] = state[i];
   }
   config.save();
 }
 void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 {
-  if (s->getActuatorT()->outputs.size() != 2)
+  if (s->getActuator()->outputs.size() != 2)
   {
 #ifdef DEBUG_ONOFRE
     Log.error("%s No outputs configured" CR, tags::actuatores);
@@ -34,38 +29,38 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
   switch (operation)
   {
   case ShuttersOperation::UP:
-    if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
+    if (s->getActuator()->typeControl == ActuatorControlType::GPIO_OUTPUT)
     {
 #ifdef ESP32
-      writeToPIN(s->getActuatorT()->outputs[0], LOW);
+      writeToPIN(s->getActuator()->outputs[0], LOW);
       delay(1);
-      writeToPIN(s->getActuatorT()->outputs[1], HIGH);
+      writeToPIN(s->getActuator()->outputs[1], HIGH);
 #else
-      writeToPIN(s->getActuatorT()->outputs[0], HIGH);
+      writeToPIN(s->getActuator()->outputs[0], HIGH);
       delay(1);
-      writeToPIN(s->getActuatorT()->outputs[1], HIGH);
+      writeToPIN(s->getActuator()->outputs[1], HIGH);
 #endif
     }
     break;
   case ShuttersOperation::DOWN:
-    if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
+    if (s->getActuator()->typeControl == ActuatorControlType::GPIO_OUTPUT)
     {
-      writeToPIN(s->getActuatorT()->outputs[0], HIGH);
+      writeToPIN(s->getActuator()->outputs[0], HIGH);
       delay(1);
-      writeToPIN(s->getActuatorT()->outputs[1], LOW);
+      writeToPIN(s->getActuator()->outputs[1], LOW);
     }
 
     break;
   case ShuttersOperation::HALT:
-    if (s->getActuatorT()->typeControl == SwitchControlType::GPIO_OUTPUT)
+    if (s->getActuator()->typeControl == ActuatorControlType::GPIO_OUTPUT)
     {
 
 #ifdef ESP32
-      writeToPIN(s->getActuatorT()->outputs[0], LOW);
+      writeToPIN(s->getActuator()->outputs[0], LOW);
       delay(1);
-      writeToPIN(s->getActuatorT()->outputs[1], LOW);
+      writeToPIN(s->getActuator()->outputs[1], LOW);
 #else
-      writeToPIN(s->getActuatorT()->outputs[0], LOW);
+      writeToPIN(s->getActuator()->outputs[0], LOW);
 #endif
     }
     break;
@@ -81,23 +76,23 @@ void readLastShutterState(char *dest, byte length, char *value)
 
 void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
-  shutters->getActuatorT()->lastPercentage = level;
+  shutters->getActuator()->lastPercentage = level;
 
   char dump[4] = {0};
   int l = sprintf(dump, "%d", level);
   if (mqttConnected)
   {
-    publishOnMqtt(shutters->getActuatorT()->readTopic, dump, false);
+    publishOnMqtt(shutters->getActuator()->readTopic, dump, false);
   }
   if (cloudIOConnected())
   {
-    notifyStateToCloudIO(shutters->getActuatorT()->cloudIOreadTopic, dump);
+    notifyStateToCloudIO(shutters->getActuator()->cloudIOreadTopic, dump);
   }
 }
 
-void switchesCallback(message_t const &msg, void *arg)
+void actuatoresCallback(message_t const &msg, void *arg)
 {
-  auto s = static_cast<ActuatorT *>(arg);
+  auto s = static_cast<Actuator *>(arg);
   switch (msg.ct)
   {
   case KNX_CT_ADC_ANSWER:
@@ -119,7 +114,7 @@ void switchesCallback(message_t const &msg, void *arg)
   case KNX_CT_WRITE:
   {
     uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
-    s->changeState(SwitchStateOrigin::KNX, String(stateIdx).toInt());
+    s->changeState(StateOrigin::KNX, String(stateIdx).toInt());
     break;
   }
   };
@@ -130,51 +125,65 @@ void pressed(Button2 &btn)
   {
     if (a.sequence == btn.getID())
     {
-      config.controlFeature(SwitchStateOrigin::GPIO_INPUT, a.uniqueId, SwitchState::TOGGLE);
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::TOGGLE);
     }
   }
 }
 void released(Button2 &btn)
 {
-  Serial.print("released: ");
-  Serial.println(btn.wasPressedFor());
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s released %d" CR, tags::actuatores, btn.wasPressedFor());
+#endif
 }
 void changed(Button2 &btn)
 {
-  Serial.println("changed");
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Changed" CR, tags::actuatores);
+#endif
 }
 void click(Button2 &btn)
 {
-  Serial.println("click\n");
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Click" CR, tags::actuatores);
+#endif
 }
 void longClickDetected(Button2 &btn)
 {
-  Serial.println("long click detected");
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Long click detected" CR, tags::actuatores);
+#endif
 }
 void longClick(Button2 &btn)
 {
-  Serial.println("long click\n");
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Long click" CR, tags::actuatores);
+#endif
 }
 void doubleClick(Button2 &btn)
 {
-  Serial.println("double click\n");
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Double click" CR, tags::actuatores);
+#endif
 }
 void tripleClick(Button2 &btn)
 {
-  Serial.println("triple click\n");
-  Serial.println(btn.getNumberOfClicks());
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Triple Click: %d" CR, tags::actuatores, btn.getNumberOfClicks());
+#endif
 }
 void tap(Button2 &btn)
 {
-  Serial.println("tap");
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s TAP" CR, tags::actuatores);
+#endif
 }
-void ActuatorT::setup()
+void Actuator::setup()
 {
   if (isCover())
   {
     shutter = new Shutters(this);
     char storedShuttersState[shutter->getStateLength()];
-    readLastShutterState(storedShuttersState, shutter->getStateLength(), shutter->getActuatorT()->shutterState);
+    readLastShutterState(storedShuttersState, shutter->getStateLength(), shutter->getActuator()->shutterState);
     shutter->setOperationHandler(shuttersOperationHandler)
         .setWriteStateHandler(shuttersWriteStateHandler)
         .restoreState(storedShuttersState)
@@ -204,14 +213,14 @@ void ActuatorT::setup()
   {
     knx.callback_unassign(knxIdAssign);
     knx.callback_deregister(knxIdRegister);
-    knxIdRegister = knx.callback_register(String(name), switchesCallback, this);
+    knxIdRegister = knx.callback_register(String(name), actuatoresCallback, this);
     knxIdAssign = knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]));
     knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], 0));
     knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], 0, 0));
   }
 }
 
-void ActuatorT::notifyState(SwitchStateOrigin origin)
+void Actuator::notifyState(StateOrigin origin)
 {
   String stateStr = String(state);
   // Notify by MQTT/Homeassistant
@@ -230,13 +239,13 @@ void ActuatorT::notifyState(SwitchStateOrigin origin)
   sendToServerEvents(uniqueId, stateStr.c_str());
 
   // Notify by KNX
-  if (SwitchStateOrigin::INTERNAL != origin && isKnxSupport())
+  if (StateOrigin::INTERNAL != origin && isKnxSupport())
   {
     knx.write_1byte_int(knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]), state);
   }
 }
 
-ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, int state)
+Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
   if (this->state == state)
     return this;
@@ -253,7 +262,7 @@ ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, int state)
   if (isCover())
   {
     int level = state;
-    if (level == SwitchState::STOP)
+    if (level == ActuatorState::STOP)
       shutter->stop();
     else
       shutter->setLevel(max(0, min(100, level)));
@@ -266,7 +275,7 @@ ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, int state)
   }
   else if ((isLight() || isSwitch()))
   {
-    if (state == SwitchState::ON || state == SwitchState::OFF)
+    if (state == ActuatorState::ON || state == ActuatorState::OFF)
       writeToPIN(outputs[0], state ? HIGH : LOW);
     else
       return this;
@@ -280,14 +289,14 @@ ActuatorT *ActuatorT::changeState(SwitchStateOrigin origin, int state)
       if (strcmp(sw.uniqueId, uniqueId) == 0)
       {
         sw.state = state;
-        sw.notifyState(SwitchStateOrigin::INTERNAL);
+        sw.notifyState(StateOrigin::INTERNAL);
       }
     }
   }
   return this;
 }
 
-void ConfigOnofre::loopSwitches()
+void ConfigOnofre::loopActuators()
 {
   for (auto &sw : config.actuatores)
   {

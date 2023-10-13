@@ -4,6 +4,7 @@
 #include <esp-knx-ip.h>
 #include "WebServer.h"
 #include "Templates.h"
+#include "LittleFS.h"
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
   id.reserve(maxSize);
@@ -106,7 +107,7 @@ ConfigOnofre &ConfigOnofre::load()
   {
     if (strcmp(d["group"] | "", "ACTUATOR") == 0)
     {
-      ActuatorT actuator;
+      Actuator actuator;
       actuator.sequence = s++;
       strlcpy(actuator.uniqueId, d["id"] | "", sizeof(actuator.uniqueId));
       strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
@@ -133,7 +134,7 @@ ConfigOnofre &ConfigOnofre::load()
     }
     else if (strcmp(d["group"] | "", "SENSOR") == 0)
     {
-      SensorT sensor;
+      Sensor sensor;
       strlcpy(sensor.uniqueId, d["id"] | "", sizeof(sensor.uniqueId));
       strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
       sensor.delayRead = d["delayRead"];
@@ -144,20 +145,9 @@ ConfigOnofre &ConfigOnofre::load()
       {
         sensor.inputs.push_back(in);
       }
-      sensor.setup();
       sensors.push_back(sensor);
     }
   }
-  /* SensorT temp;
-   strlcpy(temp.name, "SHT", sizeof(temp.name));
-   temp.inputs = {13u, 14u};
-   temp.interface = SHT3x_SENSOR;
-   temp.delayRead = 5000;
-   String idStr;
-   generateId(idStr, temp.name, temp.interface, sizeof(temp.uniqueId));
-   strlcpy(temp.uniqueId, idStr.c_str(), sizeof(temp.uniqueId));
-   temp.setup();
-   sensors.push_back(temp);*/
   file.close();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
@@ -257,12 +247,12 @@ ConfigOnofre &ConfigOnofre::save()
 #endif
   return *this;
 }
-void ConfigOnofre::controlFeature(SwitchStateOrigin origin, JsonObject &action, JsonVariant &result)
+void ConfigOnofre::controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result)
 {
 
   controlFeature(origin, action["id"] | "0", action["state"] | 0);
 }
-void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String topic, String payload)
+void ConfigOnofre::controlFeature(StateOrigin origin, String topic, String payload)
 {
   for (auto &a : actuatores)
   {
@@ -273,21 +263,20 @@ void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String topic, String
     }
   }
 }
-void ConfigOnofre::controlFeature(SwitchStateOrigin origin, String uniqueId, int state)
+void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state)
 {
   for (auto &a : actuatores)
   {
 
     if (uniqueId.equals(a.uniqueId))
     {
-      Serial.print("IGUAL");
-      if (state == SwitchState::TOGGLE)
+      if (state == ActuatorState::TOGGLE)
       {
         if (a.isLight() || a.isSwitch())
-          state = a.state == SwitchState::ON ? SwitchState::OFF : SwitchState::ON;
+          state = a.state == ActuatorState::ON ? ActuatorState::OFF : ActuatorState::ON;
         else if (a.isCover() || a.isGarage())
         {
-          state = a.state == SwitchState::OPEN ? SwitchState::CLOSE : SwitchState::OPEN;
+          state = a.state == ActuatorState::OPEN ? ActuatorState::CLOSE : ActuatorState::OPEN;
         }
       }
       a.changeState(origin, state)->state;
@@ -343,7 +332,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   JsonArray featuresToRemove = root["featuresToRemove"];
   for (String id : featuresToRemove)
   {
-    auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const ActuatorT &item)
+    auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const Actuator &item)
                               { return id.equals(item.uniqueId); });
     actuatores.erase(match);
   }
@@ -351,9 +340,9 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   for (auto feature : features)
   {
     String id = feature["id"] | "";
-    auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const ActuatorT &item)
+    auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const Actuator &item)
                               { return id.equals(item.uniqueId); });
-    ActuatorT a = actuatores.at(match - actuatores.begin());
+    Actuator a = actuatores.at(match - actuatores.begin());
     strlcpy(a.name, feature["name"] | "", sizeof(a.name));
   }
   return this->save();
@@ -407,7 +396,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["group"] = "ACTUATOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
-    a["type"] = s.type;
+    a["type"] = s.typeToText();
     a["family"] = s.familyToText();
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
@@ -432,7 +421,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["name"] = s.name;
     a["family"] = s.familyToText();
     a["delayRead"] = s.delayRead;
-    a["type"] = s.type;
+    a["type"] = s.typeToText();
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : s.inputs)
     {

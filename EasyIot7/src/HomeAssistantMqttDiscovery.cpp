@@ -24,7 +24,7 @@ bool homeAssistantOnline(String topic, String payload)
 {
   return (topic.compareTo(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status")) == 0 || topic.compareTo(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status")) == 0) && payload.compareTo(constantsMqtt::availablePayload) == 0;
 }
-void createHaSwitch(ActuatorT &sw)
+void createHaSwitch(Actuator &sw)
 {
   if (!mqttConnected())
     return;
@@ -42,38 +42,38 @@ void createHaSwitch(ActuatorT &sw)
   if (sw.isGarage())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_open"] = SwitchState::OPEN;
-    object["payload_close"] = SwitchState::CLOSE;
-    object["payload_stop"] = SwitchState::STOP;
-    object["state_open"] = SwitchState::OPEN;
-    object["state_closed"] = SwitchState::CLOSE;
-    object["state_stopped"] = SwitchState::STOP;
+    object["payload_open"] = ActuatorState::OPEN;
+    object["payload_close"] = ActuatorState::CLOSE;
+    object["payload_stop"] = ActuatorState::STOP;
+    object["state_open"] = ActuatorState::OPEN;
+    object["state_closed"] = ActuatorState::CLOSE;
+    object["state_stopped"] = ActuatorState::STOP;
     object["device_class"] = "garage";
     family = "cover";
   }
 
   if (sw.isCover())
   {
-    object["payload_open"] = SwitchState::OPEN;
-    object["payload_close"] = SwitchState::CLOSE;
-    object["payload_stop"] = SwitchState::STOP;
+    object["payload_open"] = ActuatorState::OPEN;
+    object["payload_close"] = ActuatorState::CLOSE;
+    object["payload_stop"] = ActuatorState::STOP;
     object["device_class"] = "shutter";
-    object["position_open"] = SwitchState::OPEN;
-    object["position_closed"] = SwitchState::CLOSE;
+    object["position_open"] = ActuatorState::OPEN;
+    object["position_closed"] = ActuatorState::CLOSE;
     object["position_topic"] = sw.readTopic;
     object["set_position_topic"] = sw.writeTopic;
   }
   if (sw.isLight() || sw.isSwitch())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_on"] = SwitchState::ON;
-    object["payload_off"] = SwitchState::OFF;
+    object["payload_on"] = ActuatorState::ON;
+    object["payload_off"] = ActuatorState::OFF;
   }
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
 }
 
-void addToHomeAssistant(SensorT &s)
+void addToHomeAssistant(Sensor &s)
 {
   String chip = String(config.chipId);
   String objectStr = "";
@@ -105,18 +105,15 @@ void addToHomeAssistant(SensorT &s)
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/h" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
-    for (int i = 0; i < s.oneWireSensorsCount; i++)
-    {
-      String idx = String(i + 1);
-      object["name"] = String(s.name) + idx;
-      object["unit_of_measurement"] = "ºC";
-      object["unique_id"] = String(s.uniqueId) + idx;
-      object["device_class"] = "temperature";
-      object["value_template"] = String("{{value_json.temperature_") + idx + String("}}");
-      objectStr = "";
-      serializeJson(object, objectStr);
-      publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + String(s.uniqueId) + idx + "/config").c_str(), objectStr.c_str(), false);
-    }
+    object["name"] = String(s.name);
+    object["unit_of_measurement"] = "ºC";
+    object["unique_id"] = String(s.uniqueId);
+    object["device_class"] = "temperature";
+    object["value_template"] = "{{value_json.temperature}}";
+    objectStr = "";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
+
     break;
   case LDR:
     object["unit_of_measurement"] = "lux";
@@ -175,7 +172,7 @@ void addToHomeAssistant(SensorT &s)
     break;
   }
 }
-void addToHomeAssistant(ActuatorT &sw)
+void addToHomeAssistant(Actuator &sw)
 {
   if (!mqttConnected())
     return;
@@ -201,13 +198,13 @@ void addToHomeAssistant(ActuatorT &sw)
 #endif
 }
 
-void removeFromHomeAssistant(ActuatorT &sw)
+void removeFromHomeAssistant(Actuator &sw)
 {
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + sw.familyToText() + "/" + String(sw.uniqueId) + "/config").c_str(), "", false);
   delay(3);
 }
 
-void removeFromHomeAssistant(SensorT &s)
+void removeFromHomeAssistant(Sensor &s)
 {
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + String(s.uniqueId) + "/config").c_str(), "", false);
   delay(3);

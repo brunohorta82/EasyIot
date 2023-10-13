@@ -58,19 +58,21 @@ namespace constanstsCloudIO
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
     constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
+    constexpr const char *otaUrl{"http://update.bhonofre.pt/firmware/update"};
+
 } // namespace constanstsCloudIO
 
-namespace constanstsFamilies
+namespace Family
 {
-    constexpr const char *F_SWITCH{"SWITCH"};
-    constexpr const char *F_LIGTH{"LIGTH"};
-    constexpr const char *F_CLIMATE{"CLIMATE"};
-    constexpr const char *F_SECURITY{"SECURITY"};
-    constexpr const char *F_GENERIC{"GENERIC"};
-    constexpr const char *F_ENERGY{"ENERGY"};
+    constexpr const char *SWITCH{"SWITCH"};
+    constexpr const char *LIGTH{"LIGTH"};
+    constexpr const char *CLIMATE{"CLIMATE"};
+    constexpr const char *SECURITY{"SECURITY"};
+    constexpr const char *GENERIC{"GENERIC"};
+    constexpr const char *ENERGY{"ENERGY"};
 }
 
-namespace constanstsI18N
+namespace I18N
 {
     constexpr const char *T_LIGHT_ONE{"Interruptor1"};
     constexpr const char *T_LIGHT_TWO{"Interruptor2"};
@@ -78,4 +80,26 @@ namespace constanstsI18N
     constexpr const char *T_COVER{"Estore"};
     constexpr const char *T_HAN{"Contador"};
     constexpr const char *T_ENERGY{"Energia"};
+}
+
+namespace FeatureTypes
+{
+    constexpr const char *SWITCH_PUSH{"SWITCH_PUSH"};
+    constexpr const char *SWITCH_GENERIC{"SWITCH_GENERIC"};
+    constexpr const char *COVER_PUSH{"COVER_PUSH"};
+    constexpr const char *COVER_DUAL_PUSH{"COVER_DUAL_PUSH"};
+    constexpr const char *COVER_DUAL_GENERIC{"COVER_DUAL_GENERIC"};
+    constexpr const char *LOCK_PUSH{"LOCK_PUSH"};
+    constexpr const char *LIGHT_PUSH{"LIGHT_PUSH"};
+    constexpr const char *LIGHT_GENERIC{"LIGHT_GENERIC"};
+    constexpr const char *GARAGE_PUSH{"GARAGE_PUSH"};
+    constexpr const char *LDR{"LDR"};
+    constexpr const char *DS18B20{"DS18B20"};
+    constexpr const char *DHT_11{"DHT_11"};
+    constexpr const char *DHT_21{"DHT_21"};
+    constexpr const char *DHT_22{"DHT_22"};
+    constexpr const char *SHT3X{"SHT3X"};
+    constexpr const char *PZEM_004T_V03{"PZEM_004T_V03"};
+    constexpr const char *HAN{"HAN"};
+    constexpr const char *GENERIC{"GENERIC"};
 }
