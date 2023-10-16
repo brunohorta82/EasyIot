@@ -9,17 +9,14 @@
 #include "CloudIO.h"
 #include "LittleFS.h"
 extern ConfigOnofre config;
-void shuttersWriteStateHandler(Shutters *shutters, const char *state, byte length)
+void shuttersWriteStateHandler(Shutters *shutters)
 {
-  for (byte i = 0; i < length; i++)
-  {
-    shutters->getActuator()->shutterState[i] = state[i];
-  }
-  config.save();
 }
-void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
+void shuttersOperationHandler(Actuator *s, ShuttersOperation operation)
 {
-  if (s->getActuator()->outputs.size() != 2)
+  Serial.println("#########");
+  Serial.println(s->name);
+  if (s->outputs.size() != 2)
   {
 #ifdef DEBUG_ONOFRE
     Log.error("%s No outputs configured" CR, tags::actuatores);
@@ -29,38 +26,31 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
   switch (operation)
   {
   case ShuttersOperation::UP:
-    if (s->getActuator()->typeControl == ActuatorControlType::GPIO_OUTPUT)
-    {
 #ifdef ESP32
-      writeToPIN(s->getActuator()->outputs[0], LOW);
-      delay(1);
-      writeToPIN(s->getActuator()->outputs[1], HIGH);
+    writeToPIN(s->outputs[0], LOW);
+    delay(1);
+    writeToPIN(s->outputs[1], HIGH);
 #else
-      writeToPIN(s->getActuator()->outputs[0], HIGH);
-      delay(1);
-      writeToPIN(s->getActuator()->outputs[1], HIGH);
+    writeToPIN(s->outputs[0], HIGH);
+    delay(1);
+    writeToPIN(s->outputs[1], HIGH);
 #endif
-    }
     break;
   case ShuttersOperation::DOWN:
-    if (s->getActuator()->typeControl == ActuatorControlType::GPIO_OUTPUT)
-    {
-      writeToPIN(s->getActuator()->outputs[0], HIGH);
-      delay(1);
-      writeToPIN(s->getActuator()->outputs[1], LOW);
-    }
-
+    writeToPIN(s->outputs[0], HIGH);
+    delay(1);
+    writeToPIN(s->outputs[1], LOW);
     break;
   case ShuttersOperation::HALT:
-    if (s->getActuator()->typeControl == ActuatorControlType::GPIO_OUTPUT)
+    if (s->typeControl == ActuatorControlType::GPIO_OUTPUT)
     {
 
 #ifdef ESP32
-      writeToPIN(s->getActuator()->outputs[0], LOW);
+      writeToPIN(s->outputs[0], LOW);
       delay(1);
-      writeToPIN(s->getActuator()->outputs[1], LOW);
+      writeToPIN(s->outputs[1], LOW);
 #else
-      writeToPIN(s->getActuator()->outputs[0], LOW);
+      writeToPIN(s->outputs[0], LOW);
 #endif
     }
     break;
@@ -76,18 +66,8 @@ void readLastShutterState(char *dest, byte length, char *value)
 
 void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
-  shutters->getActuator()->lastPercentage = level;
-
-  char dump[4] = {0};
-  int l = sprintf(dump, "%d", level);
-  if (mqttConnected)
-  {
-    publishOnMqtt(shutters->getActuator()->readTopic, dump, false);
-  }
-  if (cloudIOConnected())
-  {
-    notifyStateToCloudIO(shutters->getActuator()->cloudIOreadTopic, dump);
-  }
+  shutters->getActuator()->state = level;
+  shutters->getActuator()->notifyState(StateOrigin::INTERNAL);
 }
 
 void actuatoresCallback(message_t const &msg, void *arg)
@@ -182,15 +162,14 @@ void Actuator::setup()
   if (isCover())
   {
     shutter = new Shutters(this);
-    char storedShuttersState[shutter->getStateLength()];
-    readLastShutterState(storedShuttersState, shutter->getStateLength(), shutter->getActuator()->shutterState);
     shutter->setOperationHandler(shuttersOperationHandler)
         .setWriteStateHandler(shuttersWriteStateHandler)
-        .restoreState(storedShuttersState)
+        .restoreState()
         .setCourseTime(upCourseTime, downCourseTime)
         .onLevelReached(onShuttersLevelReached)
         .begin();
   }
+
   for (auto output : outputs)
   {
     configPIN(output, OUTPUT);
@@ -275,7 +254,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   }
   else if ((isLight() || isSwitch()))
   {
-    if (state == ActuatorState::ON || state == ActuatorState::OFF)
+    if (state == ActuatorState::ON_CLOSE || state == ActuatorState::OFF_OPEN)
       writeToPIN(outputs[0], state ? HIGH : LOW);
     else
       return this;

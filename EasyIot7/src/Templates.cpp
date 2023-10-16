@@ -7,22 +7,34 @@ extern ConfigOnofre config;
 void prepareHAN()
 {
     Sensor han;
-    strlcpy(han.name, I18N::T_HAN, sizeof(han.name));
-    han.inputs = {13u, 14u};
+    strlcpy(han.name, I18N::HAN, sizeof(han.name));
+    han.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
     han.type = HAN;
-    han.delayRead = 5000;
+    han.delayRead = constantsConfig::energyReadDelay;
     String idStr;
     config.generateId(idStr, han.name, han.type, sizeof(han.uniqueId));
     strlcpy(han.uniqueId, idStr.c_str(), sizeof(han.uniqueId));
     config.sensors.push_back(han);
 }
+void prepareSHT3X()
+{
+    Sensor sht;
+    strlcpy(sht.name, I18N::CLIMATIZATION, sizeof(sht.name));
+    sht.inputs = {constantsConfig::SDA, constantsConfig::SCL};
+    sht.type = SHT3x_SENSOR;
+    sht.delayRead = constantsConfig::climateReadDelay;
+    String idStr;
+    config.generateId(idStr, sht.name, sht.type, sizeof(sht.uniqueId));
+    strlcpy(sht.uniqueId, idStr.c_str(), sizeof(sht.uniqueId));
+    config.sensors.push_back(sht);
+}
 void preparePzem()
 {
     Sensor pzem;
-    strlcpy(pzem.name, I18N::T_ENERGY, sizeof(pzem.name));
+    strlcpy(pzem.name, I18N::ENERGY, sizeof(pzem.name));
     pzem.type = PZEM_004T_V03;
-    pzem.inputs = {3u, 1u};
-    pzem.delayRead = 5000;
+    pzem.inputs = {constantsConfig::PZEM_RX, constantsConfig::PZEM_TX};
+    pzem.delayRead = constantsConfig::energyReadDelay;
     String idStr;
     config.generateId(idStr, pzem.name, pzem.type, sizeof(pzem.uniqueId));
     strlcpy(pzem.uniqueId, idStr.c_str(), sizeof(pzem.uniqueId));
@@ -45,15 +57,10 @@ void prepareCover()
 {
     Actuator cover;
     cover.type = COVER_DUAL_PUSH;
-    strlcpy(cover.name, I18N::T_COVER, sizeof(cover.name));
+    strlcpy(cover.name, I18N::COVER, sizeof(cover.name));
     cover.typeControl = ActuatorControlType::GPIO_OUTPUT;
-    cover.outputs = {4u, 5u};
-#ifdef ESP8266
-    cover.inputs = {12u, 13u};
-#endif
-#ifdef ESP32
-    cover.inputs = {13u, 14u};
-#endif
+    cover.outputs = {constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO};
+    cover.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
     String idStr;
     config.generateId(idStr, cover.name, cover.type, sizeof(cover.uniqueId));
     strlcpy(cover.uniqueId, idStr.c_str(), sizeof(cover.uniqueId));
@@ -63,15 +70,10 @@ void prepareGarage()
 {
     Actuator garage;
     garage.type = GARAGE_PUSH;
-    strlcpy(garage.name, I18N::T_GARAGE, sizeof(garage.name));
+    strlcpy(garage.name, I18N::GARAGE, sizeof(garage.name));
     garage.typeControl = ActuatorControlType::GPIO_OUTPUT;
-    garage.outputs = {4u, 5u};
-#ifdef ESP8266
-    garage.inputs = {12u, 13u};
-#endif
-#ifdef ESP32
-    garage.inputs = {13u, 14u};
-#endif
+    garage.outputs = {constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO};
+    garage.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
     String idStr;
     config.generateId(idStr, garage.name, garage.type, sizeof(garage.uniqueId));
     strlcpy(garage.uniqueId, idStr.c_str(), sizeof(garage.uniqueId));
@@ -83,6 +85,9 @@ void templateSelect(enum Template _template)
     {
     case Template::NO_TEMPLATE:
         break;
+    case Template::SHT3X_CLIMATE:
+        prepareSHT3X();
+        break;
     case PZEM:
         preparePzem();
         break;
@@ -91,13 +96,8 @@ void templateSelect(enum Template _template)
         break;
     case Template::DUAL_LIGHT:
     {
-#ifdef ESP8266
-        prepareLight(I18N::T_LIGHT_ONE, 4u, 12u);
-#endif
-#ifdef ESP32
-        prepareLight(I18N::T_LIGHT_ONE, 4u, 14u);
-#endif
-        prepareLight(I18N::T_LIGHT_TWO, 5u, 13u);
+        prepareLight(I18N::LIGHT_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE);
+        prepareLight(I18N::LIGHT_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO);
     }
     break;
     case Template::COVER:

@@ -4,7 +4,6 @@
 #include "Actuatores.h"
 #include "ShuttersOperation.hpp"
 #include <vector>
-#include "Shutters/StoredState.hpp"
 
 // #define DEBUG_ONOFRE
 #ifdef DEBUG_ONOFRE
@@ -36,8 +35,8 @@ namespace ShuttersInternal
     DIRECTION_UP
   };
 
-  typedef void (*OperationHandler)(::Shutters *s, ::ShuttersOperation operation);
-  typedef void (*WriteStateHandler)(::Shutters *s, const char *state, uint8_t length);
+  typedef void (*OperationHandler)(::Actuator *s, ::ShuttersOperation operation);
+  typedef void (*WriteStateHandler)(::Shutters *s);
   typedef void (*LevelReachedCallback)(::Shutters *s, uint8_t level);
 } // namespace ShuttersInternal
 
@@ -56,9 +55,6 @@ private:
   ShuttersInternal::State _state;
   uint32_t _stateTime;
   ShuttersInternal::Direction _direction;
-
-  ShuttersInternal::StoredState _storedState;
-
   uint8_t _currentLevel;
   uint8_t _targetLevel;
 
@@ -85,7 +81,7 @@ public:
   uint32_t getDownCourseTime();
   Shutters &setOperationHandler(ShuttersInternal::OperationHandler handler);
   uint8_t getStateLength();
-  Shutters &restoreState(const char *state);
+  Shutters &restoreState();
   Shutters &setWriteStateHandler(ShuttersInternal::WriteStateHandler handler);
   Shutters &setCourseTime(uint32_t upCourseTime, uint32_t downCourseTime = 0);
   float getCalibrationRatio();

@@ -8,10 +8,8 @@
 class Shutters;
 enum ActuatorState
 {
-    OFF = 0,
-    ON = 1,
-    OPEN = 0,
-    CLOSE = 100,
+    OFF_OPEN = 0,
+    ON_CLOSE = 100,
     STOP = 101,
     TOGGLE = 102
 };
@@ -74,7 +72,6 @@ public:
     // CONTROL VARIABLES
     int lastInputEvent = 0;
     int currentInputEvent = 0;
-    int lastPercentage = 0;
     bool lastPrimaryGpioState = true;
     bool lastSecondaryGpioState = true;
     bool lastPrimaryStateGpioState = true;
@@ -82,10 +79,8 @@ public:
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
-    unsigned long upCourseTime = 25 * 1000;
-    unsigned long downCourseTime = 25 * 1000;
-    float calibrationRatio = 0.1;
-    char shutterState[21] = {0};
+    unsigned long upCourseTime = 5 * 1000;
+    unsigned long downCourseTime = 5 * 1000;
 
     // METHODS
     constexpr bool isCover()

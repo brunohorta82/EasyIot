@@ -44,7 +44,40 @@ ConfigOnofre &ConfigOnofre::init()
 #endif
   return save();
 }
-
+bool ConfigOnofre::isSensorExists(Sensorype type)
+{
+  for (auto f : sensors)
+  {
+    if (f.type == type)
+      return true;
+  }
+  return false;
+}
+void ConfigOnofre::i2cDiscovery()
+{
+  Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
+  byte serror, address;
+  int nDevices;
+  nDevices = 0;
+  for (address = 1; address < 127; address++)
+  {
+    Wire.beginTransmission(address);
+    serror = Wire.endTransmission();
+    if (serror == 0)
+    {
+      if (address == Discovery::I2C_SHT3X_ADDRESS)
+      {
+        if (!isSensorExists(Sensorype::SHT3x_SENSOR))
+          templateSelect(SHT3X_CLIMATE);
+      }
+    }
+  }
+}
+ConfigOnofre &ConfigOnofre::pauseFeatures()
+{
+  pauseFeaturesLoop = true;
+  return *this;
+}
 ConfigOnofre &ConfigOnofre::load()
 {
 
@@ -93,7 +126,7 @@ ConfigOnofre &ConfigOnofre::load()
   // WIFI
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
-  dhcp = doc["dhcp"] | false;
+  dhcp = doc["dhcp"] | true;
   strlcpy(wifiIp, doc["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, doc["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, doc["wifiGw"] | "", sizeof(wifiGw));
@@ -184,7 +217,7 @@ ConfigOnofre &ConfigOnofre::save()
     doc["wifiSSID"] = wifiSSID;
   if (!String(wifiSecret).isEmpty())
     doc["wifiSecret"] = wifiSecret;
-  doc["dhcp"] = dhcp;
+  doc["dhcp"] = dhcp | true;
   if (!String(wifiIp).isEmpty())
     doc["wifiIp"] = wifiIp;
   if (!String(wifiMask).isEmpty())
@@ -273,10 +306,10 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
       if (state == ActuatorState::TOGGLE)
       {
         if (a.isLight() || a.isSwitch())
-          state = a.state == ActuatorState::ON ? ActuatorState::OFF : ActuatorState::ON;
+          state = a.state == ActuatorState::ON_CLOSE ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
         else if (a.isCover() || a.isGarage())
         {
-          state = a.state == ActuatorState::OPEN ? ActuatorState::CLOSE : ActuatorState::OPEN;
+          state = a.state == ActuatorState::OFF_OPEN ? ActuatorState::ON_CLOSE : ActuatorState::OFF_OPEN;
         }
       }
       a.changeState(origin, state)->state;
@@ -310,7 +343,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
-  dhcp = root["dhcp"];
+  dhcp = root["dhcp"] | true;
   strlcpy(apiPassword, root["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
   strlcpy(apiUser, root["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(accessPointPassword, root["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));

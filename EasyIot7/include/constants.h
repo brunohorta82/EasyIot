@@ -7,7 +7,8 @@ enum Template
     COVER,
     GARAGE,
     PZEM,
-    HAN_MODULE
+    HAN_MODULE,
+    SHT3X_CLIMATE
 };
 namespace constantsMqtt
 {
@@ -46,7 +47,22 @@ namespace configFilenames
 } // namespace configFilenames
 namespace constantsConfig
 {
+#ifdef ESP8266
+    constexpr unsigned int INPUT_ONE{12u};
+#endif
+#ifdef ESP32
+    constexpr unsigned int INPUT_ONE{14u};
+#endif
+    constexpr unsigned int INPUT_TWO{13u};
+    constexpr unsigned int OUTPUT_ONE{4u};
+    constexpr unsigned int OUTPUT_TWO{5u};
+    constexpr unsigned int PZEM_TX{5u};
+    constexpr unsigned int PZEM_RX{5u};
     constexpr unsigned int noGPIO{99u};
+    constexpr unsigned int SDA{32u};
+    constexpr unsigned int SCL{33u};
+    constexpr unsigned long energyReadDelay{5000l};
+    constexpr unsigned long climateReadDelay{60000l};
     constexpr unsigned long storeConfigDelay{5000ul};
     constexpr const char *apSecret{"bhonofre"}; // AP PASSWORD
     constexpr const char *apiUser{"admin"};     // API USER
@@ -61,11 +77,14 @@ namespace constanstsCloudIO
     constexpr const char *otaUrl{"http://update.bhonofre.pt/firmware/update"};
 
 } // namespace constanstsCloudIO
-
+namespace Discovery
+{
+    constexpr int I2C_SHT3X_ADDRESS{0x44};
+}
 namespace Family
 {
     constexpr const char *SWITCH{"SWITCH"};
-    constexpr const char *LIGTH{"LIGTH"};
+    constexpr const char *LIGTH{"LIGHT"};
     constexpr const char *CLIMATE{"CLIMATE"};
     constexpr const char *SECURITY{"SECURITY"};
     constexpr const char *GENERIC{"GENERIC"};
@@ -74,12 +93,13 @@ namespace Family
 
 namespace I18N
 {
-    constexpr const char *T_LIGHT_ONE{"Interruptor1"};
-    constexpr const char *T_LIGHT_TWO{"Interruptor2"};
-    constexpr const char *T_GARAGE{"Garagem"};
-    constexpr const char *T_COVER{"Estore"};
-    constexpr const char *T_HAN{"Contador"};
-    constexpr const char *T_ENERGY{"Energia"};
+    constexpr const char *LIGHT_ONE{"Interruptor1"};
+    constexpr const char *LIGHT_TWO{"Interruptor2"};
+    constexpr const char *GARAGE{"Garagem"};
+    constexpr const char *COVER{"Estore"};
+    constexpr const char *HAN{"Contador"};
+    constexpr const char *ENERGY{"Energia"};
+    constexpr const char *CLIMATIZATION{"Climatização"};
 }
 
 namespace FeatureTypes

@@ -48,7 +48,9 @@ public:
   ConfigOnofre &save();
   ConfigOnofre &init();
   ConfigOnofre &load();
-  ConfigOnofre &removeActuator(const char *id);
+  ConfigOnofre &pauseFeatures();
+  void i2cDiscovery();
+  bool isSensorExists(Sensorype type);
   void generateId(String &id, const String &name, int familyCode, size_t maxSize);
   void loadTemplate(int templateId);
   void loopActuators();
@@ -68,6 +70,11 @@ public:
   void requestLoadDefaults();
   bool isLoadDefaultsRequested();
 
+  constexpr bool isLoopFeaturesPaused()
+  {
+    return pauseFeaturesLoop;
+  }
+
   void requestReloadWifi();
   bool isReloadWifiRequested();
   void controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result);
@@ -81,4 +88,5 @@ private:
   bool wifiReload = false;
   bool cloudIOSync = false;
   bool wifiScan = false;
+  bool pauseFeaturesLoop = false;
 };

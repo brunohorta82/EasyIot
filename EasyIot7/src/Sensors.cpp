@@ -89,12 +89,6 @@ void Sensor::loop()
       SHT3x sensor;
       if (!isInitialized())
       {
-#ifdef ESP32
-        Wire.setPins(inputs[0], inputs[1]);
-#endif
-#ifdef ESP8266
-        Wire.pins(inputs[0], inputs[1]);
-#endif
         sensor.Begin();
       }
       sensor.UpdateData();

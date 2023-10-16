@@ -156,6 +156,7 @@ function deleteFeature(e){
     if(!config.featuresToRemove)config.featuresToRemove = [];
     config.featuresToRemove.push(e.featureId)
     console.log(config)
+    saveConfig();
     toggleActive("devices");
 }
 function getValue(id, f) {
@@ -166,7 +167,7 @@ function getValue(id, f) {
 function toggleSwitch(arg) {
     const action = {
         id: arg.id,
-        state: arg.checked ? 1 : 0
+        state: arg.checked ? 100 : 0
     };
     fetch(baseUrl + "/control-feature", {
         method: "POST",

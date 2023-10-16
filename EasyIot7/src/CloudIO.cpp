@@ -65,8 +65,8 @@ void onMqttConnect(bool sessionPresent)
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
   for (auto &sw : config.actuatores)
   {
-    //  subscribeOnMqttCloudIO(sw.cloudIOwriteTopic);
-    // notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
+    subscribeOnMqttCloudIO(sw.cloudIOwriteTopic);
+    notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
   }
 }
 
@@ -96,10 +96,10 @@ void onMqttUnsubscribe(uint16_t packetId)
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
   char msg[len + 1];
-#ifdef DEBUG_ONOFRE
-  Log.warning("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, payload);
-#endif
   strlcpy(msg, payload, sizeof(msg));
+#ifdef DEBUG_ONOFRE
+  Log.info("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, msg);
+#endif
   if (strcmp(topic, config.cloudIOwriteTopic) == 0)
   {
     if (strcmp(msg, "REBOOT") == 0)
@@ -187,12 +187,16 @@ void connectToCloudIO()
     snprintf(config.cloudIOwriteTopic, sizeof(config.cloudIOwriteTopic), "%s/%s/config/set", config.cloudIOUsername, config.chipId);
     for (auto &sw : config.actuatores)
     {
-      snprintf(sw.cloudIOwriteTopic, sizeof(sw.cloudIOwriteTopic), "%s/%s/%s/%s/set", config.cloudIOUsername, config.chipId, sw.familyToText(), sw.uniqueId);
-      snprintf(sw.cloudIOreadTopic, sizeof(sw.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, sw.familyToText(), sw.uniqueId);
+      String family = sw.familyToText();
+      family.toLowerCase();
+      snprintf(sw.cloudIOwriteTopic, sizeof(sw.cloudIOwriteTopic), "%s/%s/%s/%s/set", config.cloudIOUsername, config.chipId, family, sw.uniqueId);
+      snprintf(sw.cloudIOreadTopic, sizeof(sw.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, family, sw.uniqueId);
     }
     for (auto &ss : config.sensors)
     {
-      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, ss.familyToText(), ss.uniqueId);
+      String family = ss.familyToText();
+      family.toLowerCase();
+      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, family, ss.uniqueId);
     }
 #ifdef DEBUG_ONOFRE
     Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, config.cloudIOUsername, config.cloudIOPassword);

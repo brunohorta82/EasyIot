@@ -84,6 +84,7 @@ void setup()
 #endif
   startFileSystem();
   config.load();
+  config.i2cDiscovery();
   setupWiFi();
   setupCors();
   setupMQTT();
@@ -97,8 +98,11 @@ void loop()
   {
     webserverServicesLoop();
     loopMqtt();
-    config.loopActuators();
-    config.loopSensors();
+    if (!config.isLoopFeaturesPaused())
+    {
+      config.loopActuators();
+      config.loopSensors();
+    }
     if (WiFi.status() == WL_CONNECTED)
       knx.loop();
   }

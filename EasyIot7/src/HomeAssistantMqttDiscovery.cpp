@@ -42,11 +42,11 @@ void createHaSwitch(Actuator &sw)
   if (sw.isGarage())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_open"] = ActuatorState::OPEN;
-    object["payload_close"] = ActuatorState::CLOSE;
+    object["payload_open"] = ActuatorState::OFF_OPEN;
+    object["payload_close"] = ActuatorState::ON_CLOSE;
     object["payload_stop"] = ActuatorState::STOP;
-    object["state_open"] = ActuatorState::OPEN;
-    object["state_closed"] = ActuatorState::CLOSE;
+    object["state_open"] = ActuatorState::OFF_OPEN;
+    object["state_closed"] = ActuatorState::ON_CLOSE;
     object["state_stopped"] = ActuatorState::STOP;
     object["device_class"] = "garage";
     family = "cover";
@@ -54,20 +54,20 @@ void createHaSwitch(Actuator &sw)
 
   if (sw.isCover())
   {
-    object["payload_open"] = ActuatorState::OPEN;
-    object["payload_close"] = ActuatorState::CLOSE;
+    object["payload_open"] = ActuatorState::OFF_OPEN;
+    object["payload_close"] = ActuatorState::ON_CLOSE;
     object["payload_stop"] = ActuatorState::STOP;
     object["device_class"] = "shutter";
-    object["position_open"] = ActuatorState::OPEN;
-    object["position_closed"] = ActuatorState::CLOSE;
+    object["position_open"] = ActuatorState::OFF_OPEN;
+    object["position_closed"] = ActuatorState::ON_CLOSE;
     object["position_topic"] = sw.readTopic;
     object["set_position_topic"] = sw.writeTopic;
   }
   if (sw.isLight() || sw.isSwitch())
   {
     object["stat_t"] = sw.readTopic;
-    object["payload_on"] = ActuatorState::ON;
-    object["payload_off"] = ActuatorState::OFF;
+    object["payload_on"] = ActuatorState::ON_CLOSE;
+    object["payload_off"] = ActuatorState::OFF_OPEN;
   }
   serializeJson(object, objectStr);
   publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);

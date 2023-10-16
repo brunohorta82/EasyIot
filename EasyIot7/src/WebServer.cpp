@@ -95,6 +95,7 @@ public:
       String n_name = config.chipId;
       if (request->hasArg("t"))
       {
+        config.pauseFeatures();
         n_name = String(request->arg("i"));
         normalize(n_name);
         if (n_name.isEmpty())
