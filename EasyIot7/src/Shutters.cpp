@@ -7,6 +7,8 @@ Shutters::Shutters(Actuator *s)
     : _upCourseTime(0), _downCourseTime(0), _calibrationRatio(0.1), _state(STATE_IDLE), _stateTime(0), _direction(DIRECTION_UP), _currentLevel(LEVEL_NONE), _targetLevel(LEVEL_NONE), _safetyDelay(false), _safetyDelayTime(0), _reset(true), _operationHandler(nullptr), _writeStateHandler(nullptr), _levelReachedCallback(nullptr)
 {
   actuator = s;
+  downPin = s->outputs[0];
+  upPin = s->outputs[1];
 }
 Actuator *Shutters::getActuator()
 {
@@ -15,19 +17,19 @@ Actuator *Shutters::getActuator()
 void Shutters::_up()
 {
   DPRINTLN(F("Shutters: going up"));
-  _operationHandler(actuator, ShuttersOperation::UP);
+  _operationHandler(this, ShuttersOperation::UP);
 }
 
 void Shutters::_down()
 {
   DPRINTLN(F("Shutters: going down"));
-  _operationHandler(actuator, ShuttersOperation::DOWN);
+  _operationHandler(this, ShuttersOperation::DOWN);
 }
 
 void Shutters::_halt()
 {
   DPRINTLN(F("Shutters: halting"));
-  _operationHandler(actuator, ShuttersOperation::HALT);
+  _operationHandler(this, ShuttersOperation::HALT);
   _setSafetyDelay();
 }
 

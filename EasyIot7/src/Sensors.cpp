@@ -32,7 +32,7 @@ void Sensor::notifyState()
 void Sensor::loop()
 {
 
-  switch (type)
+  switch (driver)
   {
   case LDR:
   {
@@ -60,7 +60,7 @@ void Sensor::loop()
       DHT_nonblocking *dht;
       if (!isInitialized())
       {
-        dht = new DHT_nonblocking(inputs[0], type);
+        dht = new DHT_nonblocking(inputs[0], driver);
       }
       float temperature;
       float humidity;

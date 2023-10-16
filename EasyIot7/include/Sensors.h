@@ -4,7 +4,7 @@
 #include "constants.h"
 #include <ModbusMaster.h>
 #include <Wire.h>
-enum Sensorype
+enum SensorDriver
 {
   LDR = 21,
   DS18B20 = 90,
@@ -22,7 +22,7 @@ public:
   // CONFIG
   char uniqueId[24]{};
   char name[24] = {0};
-  Sensorype type;
+  SensorDriver driver;
   String state;
   // MQTT
   char readTopic[128];
@@ -40,7 +40,7 @@ public:
   bool initialized = false;
   String familyToText()
   {
-    switch (type)
+    switch (driver)
     {
     case LDR:
     case DS18B20:
@@ -53,30 +53,30 @@ public:
     case HAN:
       return Family::ENERGY;
     }
-    return Family::GENERIC;
+    return Family::NONE;
   };
-  String typeToText()
+  String driverToText()
   {
-    switch (type)
+    switch (driver)
     {
     case LDR:
-      return FeatureTypes::LDR;
+      return FeatureDrivers::LDR;
     case DS18B20:
-      return FeatureTypes::DS18B20;
+      return FeatureDrivers::DS18B20;
     case SHT3x_SENSOR:
-      return FeatureTypes::SHT3X;
+      return FeatureDrivers::SHT3X;
     case DHT_11:
-      return FeatureTypes::DHT_11;
+      return FeatureDrivers::DHT_11;
     case DHT_21:
-      return FeatureTypes::DHT_21;
+      return FeatureDrivers::DHT_21;
     case DHT_22:
-      return FeatureTypes::DHT_22;
+      return FeatureDrivers::DHT_22;
     case PZEM_004T_V03:
-      return FeatureTypes::PZEM_004T_V03;
+      return FeatureDrivers::PZEM_004T_V03;
     case HAN:
-      return FeatureTypes::HAN;
+      return FeatureDrivers::HAN;
     }
-    return FeatureTypes::GENERIC;
+    return FeatureDrivers::GENERIC;
   };
   const bool isInitialized()
   {

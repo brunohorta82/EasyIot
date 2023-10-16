@@ -5,6 +5,7 @@
 #include "WebServer.h"
 #include "Templates.h"
 #include "LittleFS.h"
+#include "Wire.h"
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
   id.reserve(maxSize);
@@ -44,18 +45,18 @@ ConfigOnofre &ConfigOnofre::init()
 #endif
   return save();
 }
-bool ConfigOnofre::isSensorExists(Sensorype type)
+bool ConfigOnofre::isSensorExists(SensorDriver driver)
 {
   for (auto f : sensors)
   {
-    if (f.type == type)
+    if (f.driver == driver)
       return true;
   }
   return false;
 }
 void ConfigOnofre::i2cDiscovery()
 {
-  Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
+   Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
   byte serror, address;
   int nDevices;
   nDevices = 0;
@@ -67,7 +68,7 @@ void ConfigOnofre::i2cDiscovery()
     {
       if (address == Discovery::I2C_SHT3X_ADDRESS)
       {
-        if (!isSensorExists(Sensorype::SHT3x_SENSOR))
+        if (!isSensorExists(SensorDriver::SHT3x_SENSOR))
           templateSelect(SHT3X_CLIMATE);
       }
     }
@@ -144,7 +145,7 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.sequence = s++;
       strlcpy(actuator.uniqueId, d["id"] | "", sizeof(actuator.uniqueId));
       strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
-      actuator.type = d["type"];
+      actuator.driver = d["driver"];
       actuator.typeControl = d["typeControl"];
       actuator.knxAddress[0] = d["area"] | 0;
       actuator.knxAddress[1] = d["line"] | 0;
@@ -171,7 +172,7 @@ ConfigOnofre &ConfigOnofre::load()
       strlcpy(sensor.uniqueId, d["id"] | "", sizeof(sensor.uniqueId));
       strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
       sensor.delayRead = d["delayRead"];
-      sensor.type = d["type"];
+      sensor.driver = d["driver"];
       sprintf(sensor.readTopic, "onofre/%s/%s/%d/state", chipId, sensor.familyToText(), sensor.uniqueId);
       JsonArray inputs = d["inputs"];
       for (auto in : inputs)
@@ -234,7 +235,7 @@ ConfigOnofre &ConfigOnofre::save()
   {
     JsonObject a = features.createNestedObject();
     a["group"] = "ACTUATOR";
-    a["type"] = s.type;
+    a["driver"] = s.driver;
     a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["typeControl"] = s.typeControl;
@@ -259,7 +260,7 @@ ConfigOnofre &ConfigOnofre::save()
     a["group"] = "SENSOR";
     a["id"] = ss.uniqueId;
     a["name"] = ss.name;
-    a["type"] = ss.type;
+    a["driver"] = ss.driver;
     a["delayRead"] = ss.delayRead;
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : ss.inputs)
@@ -429,7 +430,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["group"] = "ACTUATOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
-    a["type"] = s.typeToText();
+    a["driver"] = s.driverToText();
     a["family"] = s.familyToText();
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
@@ -454,7 +455,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["name"] = s.name;
     a["family"] = s.familyToText();
     a["delayRead"] = s.delayRead;
-    a["type"] = s.typeToText();
+    a["driver"] = s.driverToText();
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : s.inputs)
     {

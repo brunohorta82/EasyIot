@@ -35,7 +35,7 @@ namespace ShuttersInternal
     DIRECTION_UP
   };
 
-  typedef void (*OperationHandler)(::Actuator *s, ::ShuttersOperation operation);
+  typedef void (*OperationHandler)(::Shutters *s, ::ShuttersOperation operation);
   typedef void (*WriteStateHandler)(::Shutters *s);
   typedef void (*LevelReachedCallback)(::Shutters *s, uint8_t level);
 } // namespace ShuttersInternal
@@ -77,6 +77,8 @@ private:
 
 public:
   Shutters(Actuator *s);
+  unsigned int downPin;
+  unsigned int upPin;
   uint32_t getUpCourseTime();
   uint32_t getDownCourseTime();
   Shutters &setOperationHandler(ShuttersInternal::OperationHandler handler);
