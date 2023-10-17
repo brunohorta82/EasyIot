@@ -33,7 +33,7 @@ void Sensor::loop()
 {
   if (error)
     return;
-  switch (type)
+  switch (driver)
   {
   case LDR:
   {

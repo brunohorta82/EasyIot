@@ -9,10 +9,10 @@ void prepareHAN()
     Sensor sensor;
     strlcpy(sensor.name, I18N::HAN, sizeof(sensor.name));
     sensor.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
-    sensor.type = HAN;
+    sensor.driver = HAN;
     sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.type, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
@@ -21,10 +21,10 @@ void prepareSHT3X()
     Sensor sensor;
     strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
     sensor.inputs = {constantsConfig::SDA, constantsConfig::SCL};
-    sensor.type = SHT3x_SENSOR;
+    sensor.driver = SHT3x_SENSOR;
     sensor.delayRead = constantsConfig::climateReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.type, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
@@ -32,11 +32,11 @@ void preparePzem()
 {
     Sensor sensor;
     strlcpy(sensor.name, I18N::ENERGY, sizeof(sensor.name));
-    sensor.type = PZEM_004T_V03;
+    sensor.driver = PZEM_004T_V03;
     sensor.inputs = {constantsConfig::PZEM_TX, constantsConfig::PZEM_RX};
     sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.type, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
