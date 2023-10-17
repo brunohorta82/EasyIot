@@ -23,7 +23,7 @@ enum StateOrigin
     WEBPANEL = 5
 };
 
-enum Actuatorype
+enum ActuatoDriver
 {
     SWITCH_PUSH = 1,
     SWITCH_GENERIC = 2,
@@ -49,7 +49,7 @@ public:
     char uniqueId[24]{};
     int sequence = 0;
     char name[24] = {0};
-    Actuatorype type = SWITCH_PUSH;
+    ActuatoDriver driver = SWITCH_PUSH;
     ActuatorControlType typeControl = VIRTUAL;
     int state = 0;
     // CLOUDIO
@@ -85,19 +85,19 @@ public:
     // METHODS
     constexpr bool isCover()
     {
-        return type == COVER_PUSH || type == COVER_DUAL_PUSH || type == COVER_DUAL_GENERIC;
+        return driver == COVER_PUSH || driver == COVER_DUAL_PUSH || driver == COVER_DUAL_GENERIC;
     };
     constexpr bool isLight()
     {
-        return type == LIGHT_PUSH || type == LIGHT_GENERIC;
+        return driver == LIGHT_PUSH || driver == LIGHT_GENERIC;
     };
     constexpr bool isSwitch()
     {
-        return type == SWITCH_PUSH || type == SWITCH_GENERIC;
+        return driver == SWITCH_PUSH || driver == SWITCH_GENERIC;
     };
     constexpr bool isGarage()
     {
-        return type == GARAGE_PUSH;
+        return driver == GARAGE_PUSH;
     };
     constexpr bool isKnxSupport()
     {
@@ -117,32 +117,32 @@ public:
             return Family::SECURITY;
         if (isSwitch())
             return Family::SWITCH;
-        return Family::GENERIC;
+        return Family::NONE;
     };
-    String typeToText()
+    String driverToText()
     {
-        switch (type)
+        switch (driver)
         {
         case SWITCH_PUSH:
-            return FeatureTypes::SWITCH_PUSH;
+            return FeatureDrivers::SWITCH_PUSH;
         case SWITCH_GENERIC:
-            return FeatureTypes::SWITCH_GENERIC;
+            return FeatureDrivers::SWITCH_GENERIC;
         case COVER_PUSH:
-            return FeatureTypes::COVER_PUSH;
+            return FeatureDrivers::COVER_PUSH;
         case COVER_DUAL_PUSH:
-            return FeatureTypes::COVER_DUAL_PUSH;
+            return FeatureDrivers::COVER_DUAL_PUSH;
         case COVER_DUAL_GENERIC:
-            return FeatureTypes::COVER_DUAL_GENERIC;
+            return FeatureDrivers::COVER_DUAL_GENERIC;
         case LOCK_PUSH:
-            return FeatureTypes::LOCK_PUSH;
+            return FeatureDrivers::LOCK_PUSH;
         case LIGHT_PUSH:
-            return FeatureTypes::LIGHT_GENERIC;
+            return FeatureDrivers::LIGHT_GENERIC;
         case LIGHT_GENERIC:
-            return FeatureTypes::LIGHT_GENERIC;
+            return FeatureDrivers::LIGHT_GENERIC;
         case GARAGE_PUSH:
-            return FeatureTypes::SWITCH_PUSH;
+            return FeatureDrivers::SWITCH_PUSH;
         }
-        return FeatureTypes::GENERIC;
+        return FeatureDrivers::GENERIC;
     };
     Actuator *changeState(StateOrigin origin, int state);
     void setup();

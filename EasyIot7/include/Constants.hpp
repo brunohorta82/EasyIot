@@ -59,8 +59,8 @@ namespace constantsConfig
     constexpr unsigned int PZEM_TX{26u};
     constexpr unsigned int PZEM_RX{25u};
     constexpr unsigned int noGPIO{99u};
-    constexpr unsigned int SDA{32u};
-    constexpr unsigned int SCL{33u};
+    constexpr int SDA{32};
+    constexpr int SCL{33};
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
     constexpr unsigned long storeConfigDelay{5000ul};
@@ -87,7 +87,7 @@ namespace Family
     constexpr const char *LIGTH{"LIGHT"};
     constexpr const char *CLIMATE{"CLIMATE"};
     constexpr const char *SECURITY{"SECURITY"};
-    constexpr const char *GENERIC{"GENERIC"};
+    constexpr const char *NONE{"NONE"};
     constexpr const char *ENERGY{"ENERGY"};
 }
 
@@ -102,7 +102,7 @@ namespace I18N
     constexpr const char *CLIMATIZATION{"Climatização"};
 }
 
-namespace FeatureTypes
+namespace FeatureDrivers
 {
     constexpr const char *SWITCH_PUSH{"SWITCH_PUSH"};
     constexpr const char *SWITCH_GENERIC{"SWITCH_GENERIC"};

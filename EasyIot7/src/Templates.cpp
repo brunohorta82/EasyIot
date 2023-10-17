@@ -43,39 +43,39 @@ void preparePzem()
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
     Actuator light;
-    light.type = LIGHT_PUSH;
+    light.driver = LIGHT_PUSH;
     strncpy(light.name, name.c_str(), sizeof(light.name));
     light.typeControl = ActuatorControlType::GPIO_OUTPUT;
     light.outputs.push_back(output);
     light.inputs.push_back(input);
     String idStr;
-    config.generateId(idStr, light.name, light.type, sizeof(light.uniqueId));
+    config.generateId(idStr, light.name, light.driver, sizeof(light.uniqueId));
     strlcpy(light.uniqueId, idStr.c_str(), sizeof(light.uniqueId));
     config.actuatores.push_back(light);
 }
 void prepareCover()
 {
     Actuator cover;
-    cover.type = COVER_DUAL_PUSH;
+    cover.driver = COVER_DUAL_PUSH;
     strlcpy(cover.name, I18N::COVER, sizeof(cover.name));
     cover.typeControl = ActuatorControlType::GPIO_OUTPUT;
     cover.outputs = {constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO};
     cover.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
     String idStr;
-    config.generateId(idStr, cover.name, cover.type, sizeof(cover.uniqueId));
+    config.generateId(idStr, cover.name, cover.driver, sizeof(cover.uniqueId));
     strlcpy(cover.uniqueId, idStr.c_str(), sizeof(cover.uniqueId));
     config.actuatores.push_back(cover);
 }
 void prepareGarage()
 {
     Actuator garage;
-    garage.type = GARAGE_PUSH;
+    garage.driver = GARAGE_PUSH;
     strlcpy(garage.name, I18N::GARAGE, sizeof(garage.name));
     garage.typeControl = ActuatorControlType::GPIO_OUTPUT;
     garage.outputs = {constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO};
     garage.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
     String idStr;
-    config.generateId(idStr, garage.name, garage.type, sizeof(garage.uniqueId));
+    config.generateId(idStr, garage.name, garage.driver, sizeof(garage.uniqueId));
     strlcpy(garage.uniqueId, idStr.c_str(), sizeof(garage.uniqueId));
     config.actuatores.push_back(garage);
 }

@@ -84,7 +84,7 @@ void addToHomeAssistant(Sensor &s)
   object["unique_id"] = s.uniqueId;
   object["stat_t"] = s.readTopic;
   object["avty_t"] = config.healthTopic;
-  switch (s.type)
+  switch (s.driver)
   {
   case DHT_11:
   case DHT_21:

@@ -50,7 +50,7 @@ public:
   ConfigOnofre &load();
   ConfigOnofre &pauseFeatures();
   void i2cDiscovery();
-  bool isSensorExists(Sensorype type);
+  bool isSensorExists(SensorDriver driver);
   void generateId(String &id, const String &name, int familyCode, size_t maxSize);
   void loadTemplate(int templateId);
   void loopActuators();

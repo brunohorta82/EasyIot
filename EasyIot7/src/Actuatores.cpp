@@ -12,49 +12,49 @@ extern ConfigOnofre config;
 void shuttersWriteStateHandler(Shutters *shutters)
 {
 }
-void shuttersOperationHandler(Actuator *s, ShuttersOperation operation)
+void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 {
-  Serial.println("#########");
-  Serial.println(s->name);
-  if (s->outputs.size() != 2)
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s No outputs configured" CR, tags::actuatores);
-#endif
-    return;
-  }
   switch (operation)
   {
   case ShuttersOperation::UP:
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Operation:      %s" CR, tags::actuatores, "UP");
+#endif
 #ifdef ESP32
-    writeToPIN(s->outputs[0], LOW);
+    writeToPIN(s->downPin, LOW);
     delay(1);
-    writeToPIN(s->outputs[1], HIGH);
+    writeToPIN(s->upPin, HIGH);
 #else
-    writeToPIN(s->outputs[0], HIGH);
+    writeToPIN(s->downPin, HIGH);
     delay(1);
-    writeToPIN(s->outputs[1], HIGH);
+    writeToPIN(s->upPin, HIGH);
 #endif
     break;
   case ShuttersOperation::DOWN:
-    writeToPIN(s->outputs[0], HIGH);
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Operation:      %s" CR, tags::actuatores, "DOWN");
+#endif
+    writeToPIN(s->upPin, HIGH);
     delay(1);
-    writeToPIN(s->outputs[1], LOW);
+    writeToPIN(s->downPin, LOW);
     break;
   case ShuttersOperation::HALT:
-    if (s->typeControl == ActuatorControlType::GPIO_OUTPUT)
-    {
-
-#ifdef ESP32
-      writeToPIN(s->outputs[0], LOW);
-      delay(1);
-      writeToPIN(s->outputs[1], LOW);
-#else
-      writeToPIN(s->outputs[0], LOW);
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Operation:      %s" CR, tags::actuatores, "STOP");
 #endif
-    }
+#ifdef ESP32
+    writeToPIN(s->downPin, LOW);
+    delay(1);
+    writeToPIN(s->upPin, LOW);
+#else
+    writeToPIN(s->downPin, LOW);
+#endif
     break;
   }
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s upPin:          %d" CR, tags::actuatores, s->upPin);
+  Log.notice("%s downPin :       %d" CR, tags::actuatores, s->downPin);
+#endif
 }
 void readLastShutterState(char *dest, byte length, char *value)
 {
@@ -232,7 +232,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
   Log.notice("%s State:     %d" CR, tags::actuatores, state);
   Log.notice("%s From : %d" CR, tags::actuatores, origin);
-  Log.notice("%s Family : %d" CR, tags::actuatores, type);
+  Log.notice("%s Family : %d" CR, tags::actuatores, driver);
 #endif
   if (outputs.size() == 0)
   {
