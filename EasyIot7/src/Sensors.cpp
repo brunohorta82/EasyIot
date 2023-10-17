@@ -221,7 +221,7 @@ void Sensor::loop()
 #if defined(ESP8266)
       if (!isInitialized())
       {
-        SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
+        static SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
         pzemv03 = new PZEM004Tv30(softwareSerial);
       }
 #endif

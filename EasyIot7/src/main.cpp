@@ -85,7 +85,9 @@ void setup()
 #endif
   startFileSystem();
   config.load();
+#ifdef ESP32
   config.i2cDiscovery();
+#endif
   setupWiFi();
   setupCors();
   setupMQTT();

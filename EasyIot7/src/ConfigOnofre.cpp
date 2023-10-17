@@ -56,7 +56,7 @@ bool ConfigOnofre::isSensorExists(SensorDriver driver)
 }
 void ConfigOnofre::i2cDiscovery()
 {
-   Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
+  Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
   byte serror, address;
   int nDevices;
   nDevices = 0;
