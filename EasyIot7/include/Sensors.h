@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
-#include "constants.h"
+#include "Constants.hpp"
 #include <ModbusMaster.h>
 #include <Wire.h>
 enum Sensorype
@@ -32,12 +32,13 @@ public:
 
   // GPIOS INPUT
   std::vector<unsigned int> inputs;
-  ModbusMaster *modbus;
+
   // CONTROL VARIABLES
   bool lastBinaryState = false;
   unsigned long delayRead = 1000ul;
   unsigned long lastRead = 0ul;
   bool initialized = false;
+  bool error = false;
   String familyToText()
   {
     switch (type)

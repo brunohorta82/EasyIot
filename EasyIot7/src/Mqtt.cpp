@@ -3,7 +3,7 @@
 #include <PubSubClient.h>
 #include "Actuatores.h"
 #include "CoreWiFi.h"
-#include "constants.h"
+#include "Constants.hpp"
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
 extern ConfigOnofre config;

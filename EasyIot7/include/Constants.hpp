@@ -56,8 +56,8 @@ namespace constantsConfig
     constexpr unsigned int INPUT_TWO{13u};
     constexpr unsigned int OUTPUT_ONE{4u};
     constexpr unsigned int OUTPUT_TWO{5u};
-    constexpr unsigned int PZEM_TX{5u};
-    constexpr unsigned int PZEM_RX{5u};
+    constexpr unsigned int PZEM_TX{26u};
+    constexpr unsigned int PZEM_RX{25u};
     constexpr unsigned int noGPIO{99u};
     constexpr unsigned int SDA{32u};
     constexpr unsigned int SCL{33u};

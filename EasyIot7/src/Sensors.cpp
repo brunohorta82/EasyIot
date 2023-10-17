@@ -31,7 +31,8 @@ void Sensor::notifyState()
 
 void Sensor::loop()
 {
-
+  if (error)
+    return;
   switch (type)
   {
   case LDR:
@@ -137,6 +138,7 @@ void Sensor::loop()
     {
 
 #ifdef ESP32
+      static ModbusMaster *modbus;
       if (!isInitialized())
       {
         modbus = new ModbusMaster();
@@ -216,7 +218,7 @@ void Sensor::loop()
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
     {
-      PZEM004Tv30 *pzemv03;
+      static PZEM004Tv30 *pzemv03;
 #if defined(ESP8266)
       if (!isInitialized())
       {
@@ -227,10 +229,9 @@ void Sensor::loop()
 #if defined(ESP32)
       if (!isInitialized())
       {
-        pzemv03 = new PZEM004Tv30(Serial2, inputs[0], inputs[1]);
+        pzemv03 = new PZEM004Tv30(Serial1, inputs[0], inputs[1]);
       }
 #endif
-
       lastRead = millis();
       StaticJsonDocument<256> doc;
       JsonObject obj = doc.to<JsonObject>();
@@ -238,7 +239,10 @@ void Sensor::loop()
       lastRead = millis();
       float v = pzemv03->voltage();
       if (isnan(v))
+      {
+        error = true;
         return;
+      }
       obj["voltage"] = v;
       obj["frequency"] = pzemv03->frequency();
       obj["powerFactor"] = pzemv03->pf();

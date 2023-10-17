@@ -1,6 +1,6 @@
 #pragma once
 #include "Arduino.h"
-#include "constants.h"
+#include "Constants.hpp"
 #include <Button2.h>
 #include "ArduinoJson.h"
 #include <vector>
@@ -79,8 +79,8 @@ public:
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
-    unsigned long upCourseTime = 5 * 1000;
-    unsigned long downCourseTime = 5 * 1000;
+    unsigned long upCourseTime = 25 * 1000;
+    unsigned long downCourseTime = 25 * 1000;
 
     // METHODS
     constexpr bool isCover()

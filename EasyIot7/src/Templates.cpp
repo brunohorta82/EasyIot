@@ -6,39 +6,39 @@
 extern ConfigOnofre config;
 void prepareHAN()
 {
-    Sensor han;
-    strlcpy(han.name, I18N::HAN, sizeof(han.name));
-    han.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
-    han.type = HAN;
-    han.delayRead = constantsConfig::energyReadDelay;
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::HAN, sizeof(sensor.name));
+    sensor.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
+    sensor.type = HAN;
+    sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
-    config.generateId(idStr, han.name, han.type, sizeof(han.uniqueId));
-    strlcpy(han.uniqueId, idStr.c_str(), sizeof(han.uniqueId));
-    config.sensors.push_back(han);
+    config.generateId(idStr, sensor.name, sensor.type, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
 }
 void prepareSHT3X()
 {
-    Sensor sht;
-    strlcpy(sht.name, I18N::CLIMATIZATION, sizeof(sht.name));
-    sht.inputs = {constantsConfig::SDA, constantsConfig::SCL};
-    sht.type = SHT3x_SENSOR;
-    sht.delayRead = constantsConfig::climateReadDelay;
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
+    sensor.inputs = {constantsConfig::SDA, constantsConfig::SCL};
+    sensor.type = SHT3x_SENSOR;
+    sensor.delayRead = constantsConfig::climateReadDelay;
     String idStr;
-    config.generateId(idStr, sht.name, sht.type, sizeof(sht.uniqueId));
-    strlcpy(sht.uniqueId, idStr.c_str(), sizeof(sht.uniqueId));
-    config.sensors.push_back(sht);
+    config.generateId(idStr, sensor.name, sensor.type, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
 }
 void preparePzem()
 {
-    Sensor pzem;
-    strlcpy(pzem.name, I18N::ENERGY, sizeof(pzem.name));
-    pzem.type = PZEM_004T_V03;
-    pzem.inputs = {constantsConfig::PZEM_RX, constantsConfig::PZEM_TX};
-    pzem.delayRead = constantsConfig::energyReadDelay;
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::ENERGY, sizeof(sensor.name));
+    sensor.type = PZEM_004T_V03;
+    sensor.inputs = {constantsConfig::PZEM_TX, constantsConfig::PZEM_RX};
+    sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
-    config.generateId(idStr, pzem.name, pzem.type, sizeof(pzem.uniqueId));
-    strlcpy(pzem.uniqueId, idStr.c_str(), sizeof(pzem.uniqueId));
-    config.sensors.push_back(pzem);
+    config.generateId(idStr, sensor.name, sensor.type, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
 }
 void prepareLight(String name, unsigned int output, unsigned int input)
 {
