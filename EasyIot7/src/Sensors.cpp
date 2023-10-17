@@ -111,7 +111,7 @@ void Sensor::loop()
   {
     if (lastRead + delayRead < millis())
     {
-      DallasTemperature *dallas;
+      static DallasTemperature *dallas;
       if (!isInitialized())
       {
         dallas = new DallasTemperature(new OneWire(inputs[0]));
@@ -136,9 +136,8 @@ void Sensor::loop()
 
     if (lastRead + delayRead < millis())
     {
-
-#ifdef ESP32
       static ModbusMaster *modbus;
+#ifdef ESP32
       if (!isInitialized())
       {
         modbus = new ModbusMaster();
@@ -170,45 +169,45 @@ void Sensor::loop()
         han_clock_t clock{.buffer = buffer};
         char strftime_buf[64];
         sprintf(strftime_buf, "%d-%02d-%02dT%02d:%02d:%02d.000", clock.year, clock.day_of_month, clock.day_of_month, clock.hour, clock.minute, clock.second);
-        doc["dateTime"] = strftime_buf;
+        obj["dateTime"] = strftime_buf;
       }
       if (modbus->readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == modbus->ku8MBSuccess)
       {
-        doc["voltage"] = modbus->getResponseBuffer(0) / 10.0;
-        doc["current"] = modbus->getResponseBuffer(1) / 10.0;
+        obj["voltage"] = modbus->getResponseBuffer(0) / 10.0;
+        obj["current"] = modbus->getResponseBuffer(1) / 10.0;
       }
       if (modbus->readInputRegisters(ACTIVE_ENERGY_IMPORT_PLUS_A, 2) == modbus->ku8MBSuccess)
       {
-        doc["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-        doc["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+        obj["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+        obj["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
       }
       if (modbus->readInputRegisters(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3) == modbus->ku8MBSuccess)
       {
-        doc["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-        doc["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-        doc["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+        obj["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+        obj["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+        obj["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
       }
       if (modbus->readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3) == modbus->ku8MBSuccess)
       {
-        doc["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
-        doc["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
-        doc["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
+        obj["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
+        obj["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
+        obj["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
       }
       if (modbus->readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == modbus->ku8MBSuccess)
       {
-        doc["frequency"] = modbus->getResponseBuffer(0) / 10.0;
+        obj["frequency"] = modbus->getResponseBuffer(0) / 10.0;
       }
       if (modbus->readInputRegisters(CURRENTLY_ACTIVE_TARIFF, 1) == modbus->ku8MBSuccess)
       {
-        doc["tarif"] = modbus->getResponseBuffer(0) >> 8;
+        obj["tarif"] = modbus->getResponseBuffer(0) >> 8;
       }
       if (modbus->readInputRegisters(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3) == modbus->ku8MBSuccess)
       {
-        doc["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-        doc["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-        doc["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+        obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+        obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+        obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
       }
-      serializeJson(doc, state);
+      serializeJson(obj, state);
       notifyState();
 #ifdef DEBUG_ONOFRE
       Log.notice("%s %s " CR, tags::sensors, state.c_str());

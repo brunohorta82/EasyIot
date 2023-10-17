@@ -56,8 +56,14 @@ namespace constantsConfig
     constexpr unsigned int INPUT_TWO{13u};
     constexpr unsigned int OUTPUT_ONE{4u};
     constexpr unsigned int OUTPUT_TWO{5u};
+#ifdef ESP32
+    constexpr unsigned int PZEM_TX{3u};
+    constexpr unsigned int PZEM_RX{1u};
+#endif
+#ifdef ESP8266
     constexpr unsigned int PZEM_TX{26u};
     constexpr unsigned int PZEM_RX{25u};
+#endif
     constexpr unsigned int noGPIO{99u};
     constexpr int SDA{32};
     constexpr int SCL{33};
