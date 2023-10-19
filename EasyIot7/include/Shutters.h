@@ -36,7 +36,6 @@ namespace ShuttersInternal
   };
 
   typedef void (*OperationHandler)(::Shutters *s, ::ShuttersOperation operation);
-  typedef void (*WriteStateHandler)(::Shutters *s);
   typedef void (*LevelReachedCallback)(::Shutters *s, uint8_t level);
 } // namespace ShuttersInternal
 
@@ -65,8 +64,6 @@ private:
   bool _reset;
 
   ShuttersInternal::OperationHandler _operationHandler;
-  ShuttersInternal::WriteStateHandler _writeStateHandler;
-
   ShuttersInternal::LevelReachedCallback _levelReachedCallback;
 
   void _up();
@@ -84,7 +81,6 @@ public:
   Shutters &setOperationHandler(ShuttersInternal::OperationHandler handler);
   uint8_t getStateLength();
   Shutters &restoreState();
-  Shutters &setWriteStateHandler(ShuttersInternal::WriteStateHandler handler);
   Shutters &setCourseTime(uint32_t upCourseTime, uint32_t downCourseTime = 0);
   float getCalibrationRatio();
   Shutters &setCalibrationRatio(float calibrationRatio);

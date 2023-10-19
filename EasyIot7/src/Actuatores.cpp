@@ -9,9 +9,7 @@
 #include "CloudIO.h"
 #include "LittleFS.h"
 extern ConfigOnofre config;
-void shuttersWriteStateHandler(Shutters *shutters)
-{
-}
+
 void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 {
   switch (operation)
@@ -56,13 +54,6 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
   Log.notice("%s downPin :       %d" CR, tags::actuatores, s->downPin);
 #endif
 }
-void readLastShutterState(char *dest, byte length, char *value)
-{
-  for (byte i = 0; i < length; i++)
-  {
-    dest[i] = value[i];
-  }
-}
 
 void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
@@ -99,7 +90,7 @@ void actuatoresCallback(message_t const &msg, void *arg)
   }
   };
 }
-void pressed(Button2 &btn)
+void toogle(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
@@ -163,7 +154,6 @@ void Actuator::setup()
   {
     shutter = new Shutters(this);
     shutter->setOperationHandler(shuttersOperationHandler)
-        .setWriteStateHandler(shuttersWriteStateHandler)
         .restoreState()
         .setCourseTime(upCourseTime, downCourseTime)
         .onLevelReached(onShuttersLevelReached)
@@ -183,9 +173,22 @@ void Actuator::setup()
     Button2 button;
     button.begin(input);
     button.setID(sequence);
-    button.setPressedHandler(pressed);
-    button.setClickHandler(click);
-    button.setDoubleClickHandler(doubleClick);
+    switch (driver)
+    {
+    case ActuatoDriver::LIGHT_PUSH:
+    case ActuatoDriver::SWITCH_PUSH:
+    case ActuatoDriver::GARAGE_PUSH:
+    case ActuatoDriver::LOCK_PUSH:
+      button.setPressedHandler(toogle);
+      break;
+    case ActuatoDriver::LIGHT_GENERIC:
+    case ActuatoDriver::SWITCH_GENERIC:
+    case ActuatoDriver::COVER_DUAL_GENERIC:
+      button.setChangedHandler(changed);
+    default:
+      button.setPressedHandler(toogle);
+      break;
+    }
     buttons.push_back(button);
   }
   if (isKnxSupport())

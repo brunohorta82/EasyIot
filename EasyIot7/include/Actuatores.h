@@ -27,7 +27,6 @@ enum ActuatoDriver
 {
     SWITCH_PUSH = 1,
     SWITCH_GENERIC = 2,
-    COVER_PUSH = 3,
     COVER_DUAL_PUSH = 4,
     COVER_DUAL_GENERIC = 5,
     LOCK_PUSH = 6,

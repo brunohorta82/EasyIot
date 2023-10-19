@@ -4,7 +4,7 @@
 using namespace ShuttersInternal;
 
 Shutters::Shutters(Actuator *s)
-    : _upCourseTime(0), _downCourseTime(0), _calibrationRatio(0.1), _state(STATE_IDLE), _stateTime(0), _direction(DIRECTION_UP), _currentLevel(LEVEL_NONE), _targetLevel(LEVEL_NONE), _safetyDelay(false), _safetyDelayTime(0), _reset(true), _operationHandler(nullptr), _writeStateHandler(nullptr), _levelReachedCallback(nullptr)
+    : _upCourseTime(0), _downCourseTime(0), _calibrationRatio(0.1), _state(STATE_IDLE), _stateTime(0), _direction(DIRECTION_UP), _currentLevel(LEVEL_NONE), _targetLevel(LEVEL_NONE), _safetyDelay(false), _safetyDelayTime(0), _reset(true), _operationHandler(nullptr), _levelReachedCallback(nullptr)
 {
   actuator = s;
   downPin = s->outputs[0];
@@ -78,21 +78,9 @@ Shutters &Shutters::restoreState()
   return *this;
 }
 
-Shutters &Shutters::setWriteStateHandler(ShuttersInternal::WriteStateHandler handler)
-{
-  _writeStateHandler = handler;
-
-  return *this;
-}
-
 Shutters &Shutters::setCourseTime(uint32_t upCourseTime, uint32_t downCourseTime)
 {
   if (!_reset)
-  {
-    return *this;
-  }
-
-  if (!_writeStateHandler)
   {
     return *this;
   }
