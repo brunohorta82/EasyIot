@@ -84,7 +84,7 @@ public:
     // METHODS
     constexpr bool isCover()
     {
-        return driver == COVER_PUSH || driver == COVER_DUAL_PUSH || driver == COVER_DUAL_GENERIC;
+        return  driver == COVER_DUAL_PUSH || driver == COVER_DUAL_GENERIC;
     };
     constexpr bool isLight()
     {
@@ -126,8 +126,6 @@ public:
             return FeatureDrivers::SWITCH_PUSH;
         case SWITCH_GENERIC:
             return FeatureDrivers::SWITCH_GENERIC;
-        case COVER_PUSH:
-            return FeatureDrivers::COVER_PUSH;
         case COVER_DUAL_PUSH:
             return FeatureDrivers::COVER_DUAL_PUSH;
         case COVER_DUAL_GENERIC:
