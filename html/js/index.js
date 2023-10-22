@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.122.134"
+let baseUrl = "http://192.168.187.161"
 var config;
 let source = null;
 var WORDS_PT = {

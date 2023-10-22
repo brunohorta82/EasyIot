@@ -84,7 +84,7 @@ public:
     // METHODS
     constexpr bool isCover()
     {
-        return  driver == COVER_DUAL_PUSH || driver == COVER_DUAL_GENERIC;
+        return driver == COVER_DUAL_PUSH || driver == COVER_DUAL_GENERIC;
     };
     constexpr bool isLight()
     {
@@ -133,11 +133,11 @@ public:
         case LOCK_PUSH:
             return FeatureDrivers::LOCK_PUSH;
         case LIGHT_PUSH:
-            return FeatureDrivers::LIGHT_GENERIC;
+            return FeatureDrivers::LIGHT_PUSH;
         case LIGHT_GENERIC:
             return FeatureDrivers::LIGHT_GENERIC;
         case GARAGE_PUSH:
-            return FeatureDrivers::SWITCH_PUSH;
+            return FeatureDrivers::GARAGE_PUSH;
         }
         return FeatureDrivers::GENERIC;
     };

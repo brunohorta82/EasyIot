@@ -100,6 +100,18 @@ void toogle(Button2 &btn)
     }
   }
 }
+void garageNotify(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+
+      a.state = digitalRead(btn.getPin()) ? OFF_OPEN : ON_CLOSE;
+      a.notifyState(StateOrigin::GPIO_INPUT);
+    }
+  }
+}
 void released(Button2 &btn)
 {
 #ifdef DEBUG_ONOFRE
@@ -168,29 +180,38 @@ void Actuator::setup()
       writeToPIN(output, state);
     }
   }
-  for (auto input : inputs)
+  if (isLight() || isSwitch())
+  {
+    for (auto input : inputs)
+    {
+      Button2 button;
+      button.begin(input);
+      button.setID(sequence);
+      switch (driver)
+      {
+      case ActuatoDriver::LIGHT_PUSH:
+      case ActuatoDriver::SWITCH_PUSH:
+        button.setPressedHandler(toogle);
+        break;
+      case ActuatoDriver::LIGHT_GENERIC:
+      case ActuatoDriver::SWITCH_GENERIC:
+      case ActuatoDriver::COVER_DUAL_GENERIC:
+        button.setChangedHandler(changed);
+      default:
+        break;
+      }
+      buttons.push_back(button);
+    }
+  }
+  else if (isGarage())
   {
     Button2 button;
-    button.begin(input);
+    button.begin(inputs[0]);
     button.setID(sequence);
-    switch (driver)
-    {
-    case ActuatoDriver::LIGHT_PUSH:
-    case ActuatoDriver::SWITCH_PUSH:
-    case ActuatoDriver::GARAGE_PUSH:
-    case ActuatoDriver::LOCK_PUSH:
-      button.setPressedHandler(toogle);
-      break;
-    case ActuatoDriver::LIGHT_GENERIC:
-    case ActuatoDriver::SWITCH_GENERIC:
-    case ActuatoDriver::COVER_DUAL_GENERIC:
-      button.setChangedHandler(changed);
-    default:
-      button.setPressedHandler(toogle);
-      break;
-    }
+    button.setChangedHandler(garageNotify);
     buttons.push_back(button);
   }
+
   if (isKnxSupport())
   {
     knx.callback_unassign(knxIdAssign);
@@ -229,7 +250,7 @@ void Actuator::notifyState(StateOrigin origin)
 
 Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
-  if (this->state == state)
+  if (!isGarage() && this->state == state)
     return this;
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
