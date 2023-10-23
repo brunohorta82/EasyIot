@@ -118,7 +118,6 @@ namespace FeatureDrivers
 {
     constexpr const char *SWITCH_PUSH{"SWITCH_PUSH"};
     constexpr const char *SWITCH_GENERIC{"SWITCH_GENERIC"};
-    constexpr const char *COVER_PUSH{"COVER_PUSH"};
     constexpr const char *COVER_DUAL_PUSH{"COVER_DUAL_PUSH"};
     constexpr const char *COVER_DUAL_GENERIC{"COVER_DUAL_GENERIC"};
     constexpr const char *LOCK_PUSH{"LOCK_PUSH"};
@@ -132,6 +131,6 @@ namespace FeatureDrivers
     constexpr const char *DHT_22{"DHT_22"};
     constexpr const char *SHT3X{"SHT3X"};
     constexpr const char *PZEM_004T_V03{"PZEM_004T_V03"};
-    constexpr const char *HAN{"HAN"};
+    constexpr const char *HAN{"HAN_MODBUS"};
     constexpr const char *GENERIC{"GENERIC"};
 }
