@@ -65,8 +65,14 @@ namespace constantsConfig
     constexpr unsigned int PZEM_RX{1u};
 #endif
     constexpr unsigned int noGPIO{99u};
+#ifdef ESP32
     constexpr int SDA{32};
     constexpr int SCL{33};
+#endif
+#ifdef ESP8266
+    constexpr int SDA{2};
+    constexpr int SCL{13};
+#endif
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
     constexpr unsigned long storeConfigDelay{5000ul};
