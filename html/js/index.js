@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.161"
+let baseUrl = "http://192.168.122.134"
 var config;
 let source = null;
 var WORDS_PT = {
@@ -52,6 +52,7 @@ function toggleActive(menu) {
     });
 
 }
+
 function findByClass(c) {
     return document.getElementsByClassName(c).item(0);
 }
@@ -104,15 +105,15 @@ async function loadConfig() {
 
 function detectLang() {
     let lang = "PT";
-   /* if (/^en/.test(navigator.language)) {
-        lang = "EN";
-    } else if (/^ro/.test(navigator.language)) {
-        lang = "RO";
-    }*/
+    /* if (/^en/.test(navigator.language)) {
+         lang = "EN";
+     } else if (/^ro/.test(navigator.language)) {
+         lang = "RO";
+     }*/
     return window['WORDS_' + lang];
 }
 
-function applyNodeChanges(){
+function applyNodeChanges() {
     config.nodeId = getValue("nodeId", config.nodeId).trim();
     config.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
     config.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
@@ -126,8 +127,8 @@ function applyNodeChanges(){
     config.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
     config.apiPassword = getValue("apiPassword", config.apiPassword).trim();
     config.apiUser = getValue("apiUser", config.apiUser).trim();
-
 }
+
 function saveConfig() {
     fetch(baseUrl + "/save-config", {
         method: "POST",
@@ -140,25 +141,32 @@ function saveConfig() {
     );
 
 }
-function  applyFeatureChanges(e){
+
+function applyFeatureChanges(e) {
+    console.log(e.featureId)
     const index = config.features
         .indexOf(config.features
             .filter(f => f.id === e.featureId)[0]);
     console.log(index)
-    config.features[index].name = "XPOTO";
+    if (index < 0) return;
+    let feature = config.features[index];
+    feature.name = getValue("f-name", feature.name).trim();
+    saveConfig();
     toggleActive("devices");
 }
-function deleteFeature(e){
+
+function deleteFeature(e) {
     const index = config.features
         .indexOf(config.features
             .filter(f => f.id === e.featureId)[0]);
     config.features.splice(index, 1);
-    if(!config.featuresToRemove)config.featuresToRemove = [];
+    if (!config.featuresToRemove) config.featuresToRemove = [];
     config.featuresToRemove.push(e.featureId)
     console.log(config)
     saveConfig();
     toggleActive("devices");
 }
+
 function getValue(id, f) {
     let v = document.getElementById(id);
     return v ? v.value : f;
@@ -185,7 +193,7 @@ function fillDevices() {
     const modal = document.getElementById("modal");
     for (const f of config.features) {
         a = document.importNode(item, true);
-        a.id = "f-"+f.id;
+        a.id = "f-" + f.id;
         a.getElementsByClassName("feature-name").item(0).textContent = f.name;
         a.getElementsByTagName("svg").item(0).classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
         a.getElementsByTagName("input").item(0).checked = f.state > 0;
@@ -201,11 +209,10 @@ function fillDevices() {
             document.getElementById("f-light-generic").checked = f.family === 8;
             document.getElementById("f-light-push").checked = f.family === 7;
             document.getElementById("btn-delete").featureId = f.id;
-
-
+            document.getElementById("btn-update").featureId = f.id;
         }
         source.addEventListener(f.id, (s) => {
-            const box = document.getElementById("f-"+f.id);
+            const box = document.getElementById("f-" + f.id);
             box.getElementsByTagName("svg").item(0).classList.remove("feature-icon-on");
             box.getElementsByTagName("svg").item(0).classList.remove("feature-icon-off");
             box.getElementsByTagName("svg").item(0).classList.add(s.data > 0 ? "feature-icon-on" : "feature-icon-off");
