@@ -208,6 +208,7 @@ void Actuator::setup()
     Button2 button;
     button.begin(inputs[0]);
     button.setID(sequence);
+    button.setDebounceTime(1000);
     button.setChangedHandler(garageNotify);
     buttons.push_back(button);
   }
