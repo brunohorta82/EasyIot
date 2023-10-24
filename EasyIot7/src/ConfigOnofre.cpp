@@ -374,10 +374,11 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   for (auto feature : features)
   {
     String id = feature["id"] | "";
-    auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const Actuator &item)
-                              { return id.equals(item.uniqueId); });
-    Actuator a = actuatores.at(match - actuatores.begin());
+   for (auto &a : actuatores){
+   if(strcmp( a.uniqueId,id.c_str()) == 0){
     strlcpy(a.name, feature["name"] | "", sizeof(a.name));
+   }
+    }
   }
   return this->save();
 }
