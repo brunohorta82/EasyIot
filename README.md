@@ -23,7 +23,7 @@ O projeto BH Easy Iot, é o firmware oficial para todas as boards BH, no entanto
 
 ## Hardware <a name="id2"></a>
 * OnOfre V6
-![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/v9.png)
+![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/v6.png)
 * OnOfre Programador
 ![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/prog.png)
 
