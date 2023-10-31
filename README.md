@@ -1,18 +1,10 @@
-# BH OnOfre
- 
-* [Intro](#id1)
-* [BH ONOFRE BOARD](https://github.com/brunohorta82/BH_OnOfre)
-* [BH PZEM BOARD](https://github.com/brunohorta82/BH_PZEM_ESP8266)
-* [Binários](https://github.com/brunohorta82/EasyIot/tree/master/FIRMWARE_VERSIONS)
+![logo](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/logo.png)
 * [Video Tutoriais - YouTube](https://www.youtube.com/watch?v=OZenBfHWtak&list=PLxDLawCWayzDqAgOpIDJ-DHFAXYd_S-pr)
 * [Donativos](#id6)
 * [Site Oficial](http://onofre.store/)
 
-## AP Password
-EasyIot@
-
 ## Intro <a name="id1"></a>
-O projeto BH Easy Iot, é o firmware oficial para todas as boards BH, no entanto tambem é compativel com todas as boards baseadas em ESP8266/ESP32 tem  o objetivo de tornar a automação domiciliar muito mais simples, de forma aberta e sem restrições. Todo o código fonte é aberto.
+O projeto EasyIot, é o firmware oficial para todas as boards BH, no entanto tambem é compativel com todas as boards baseadas em ESP8266/ESP32 tem o objetivo de tornar a automação domiciliar muito mais simples, de forma aberta e sem restrições. Todo o código fonte é aberto.
 
 
 ## Painel de Controlo <a name="id3"></a>
@@ -23,9 +15,11 @@ O projeto BH Easy Iot, é o firmware oficial para todas as boards BH, no entanto
 
 ## Hardware <a name="id2"></a>
 * OnOfre V6
-![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/v6.jpeg)
+ ##
+![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/v6.png)
 * OnOfre Programador
-![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/prog.png)
+ ##
+![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/prog-usbc.png)
 
 ## Software necessário <a name="id3"></a>
 
