@@ -22,13 +22,17 @@ void reloadWiFiConfig()
   jw.setHostname(config.nodeId);
   jw.cleanNetworks();
   jw.setSoftAP(getApName().c_str(), config.accessPointPassword);
-  if (!config.dhcp)
+
+  if (strlen(config.wifiSecret) > 0)
   {
-    jw.addNetwork(config.wifiSSID, config.wifiSecret, config.wifiIp, config.wifiGw, config.wifiMask, config.wifiGw, true);
-  }
-  else if (strlen(config.wifiSecret) > 0)
-  {
-    jw.addNetwork(config.wifiSSID, config.wifiSecret);
+    if (config.dhcp)
+    {
+      jw.addNetwork(config.wifiSSID, config.wifiSecret);
+    }
+    else
+    {
+      jw.addNetwork(config.wifiSSID, config.wifiSecret, config.wifiIp, config.wifiGw, config.wifiMask, config.wifiGw, true);
+    }
   }
   else
   {

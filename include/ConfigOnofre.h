@@ -8,7 +8,8 @@
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
-
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 class ConfigOnofre
 {
 public:
@@ -43,6 +44,7 @@ public:
   std::vector<Sensor> sensors;
   int i2cSDA = -1;
   int i2cSCL = -1;
+  Adafruit_SSD1306 *display = NULL;
   void json(JsonVariant &root);
   ConfigOnofre &update(JsonObject &root);
   ConfigOnofre &save();

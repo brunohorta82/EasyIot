@@ -328,7 +328,7 @@ input:checked + .slider:before {
 
 .modal-content {
     background-color: #333;
-    margin: 30px auto;
+    margin: 80px auto;
     color: white;
     border: 1px solid #474646;
     border-radius: 10px;
@@ -342,12 +342,12 @@ input:checked + .slider:before {
 }
 .modal-form{
     display: flex;
-    padding: 4px 10px 4px 10px;
+    padding: 8px 10px 8px 10px;
     flex-direction: column;
 }
 .modal-form-row{
     display: flex;
-    padding: 4px 10px 4px 10px;
+    padding: 10px;
     gap: 20px;
     flex-direction: row;
 }
@@ -377,6 +377,7 @@ input:checked + .slider:before {
 }
 .hide{
     display: none;
+    visibility: hidden;
 }
 .btn-delete{
     background-color: transparent;

@@ -42,7 +42,6 @@ namespace ShuttersInternal
 class Shutters
 {
 private:
-  Actuator *actuator;
   uint32_t _upCourseTime;
   uint32_t _downCourseTime;
   float _calibrationRatio;
@@ -73,14 +72,15 @@ private:
   void _notifyLevel();
 
 public:
-  Shutters(Actuator *s);
+  Shutters(unsigned int downPin, unsigned int upPin, int actuatorId);
   unsigned int downPin;
   unsigned int upPin;
+  int actuatorId;
   uint32_t getUpCourseTime();
   uint32_t getDownCourseTime();
   Shutters &setOperationHandler(ShuttersInternal::OperationHandler handler);
   uint8_t getStateLength();
-  Shutters &restoreState();
+  Shutters &restoreState(uint8_t state, uint32_t downCourseTime, uint32_t upCourseTime);
   Shutters &setCourseTime(uint32_t upCourseTime, uint32_t downCourseTime = 0);
   float getCalibrationRatio();
   Shutters &setCalibrationRatio(float calibrationRatio);
@@ -93,6 +93,5 @@ public:
   bool isCalibration();
   uint8_t getCurrentLevel();
   Shutters &reset();
-  Actuator *getActuator();
   bool isReset();
 };

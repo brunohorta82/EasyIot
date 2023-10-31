@@ -40,19 +40,20 @@ void preparePzem()
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
-void prepareLight(String name, unsigned int output, unsigned int input)
+void prepareActuator(String name, unsigned int output, unsigned int input, ActuatoDriver driver)
 {
-    Actuator light;
-    light.driver = LIGHT_PUSH;
-    strncpy(light.name, name.c_str(), sizeof(light.name));
-    light.typeControl = ActuatorControlType::GPIO_OUTPUT;
-    light.outputs.push_back(output);
-    light.inputs.push_back(input);
+    Actuator actuator;
+    actuator.driver = driver;
+    strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
+    actuator.typeControl = ActuatorControlType::GPIO_OUTPUT;
+    actuator.outputs.push_back(output);
+    actuator.inputs.push_back(input);
     String idStr;
-    config.generateId(idStr, light.name, light.driver, sizeof(light.uniqueId));
-    strlcpy(light.uniqueId, idStr.c_str(), sizeof(light.uniqueId));
-    config.actuatores.push_back(light);
+    config.generateId(idStr, actuator.name, actuator.driver, sizeof(actuator.uniqueId));
+    strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
+    config.actuatores.push_back(actuator);
 }
+
 void prepareCover()
 {
     Actuator cover;
@@ -84,6 +85,8 @@ void templateSelect(enum Template _template)
     switch (_template)
     {
     case Template::NO_TEMPLATE:
+        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatoDriver::SWITCH_PUSH);
+        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatoDriver::SWITCH_PUSH);
         break;
     case Template::SHT3X_CLIMATE:
         prepareSHT3X();
@@ -96,8 +99,8 @@ void templateSelect(enum Template _template)
         break;
     case Template::DUAL_LIGHT:
     {
-        prepareLight(I18N::LIGHT_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE);
-        prepareLight(I18N::LIGHT_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO);
+        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatoDriver::LIGHT_PUSH);
+        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatoDriver::LIGHT_PUSH);
     }
     break;
     case Template::COVER:

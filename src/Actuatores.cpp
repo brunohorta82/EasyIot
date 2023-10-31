@@ -32,9 +32,9 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Operation:      %s" CR, tags::actuatores, "DOWN");
 #endif
-    writeToPIN(s->upPin, HIGH);
+    writeToPIN(s->downPin, HIGH);
     delay(1);
-    writeToPIN(s->downPin, LOW);
+    writeToPIN(s->upPin, LOW);
     break;
   case ShuttersOperation::HALT:
 #ifdef DEBUG_ONOFRE
@@ -57,10 +57,15 @@ void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 
 void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
-  shutters->getActuator()->state = level;
-  shutters->getActuator()->notifyState(StateOrigin::INTERNAL);
+  for (auto &a : config.actuatores)
+  {
+    if (a.sequence == shutters->actuatorId)
+    {
+      a.state = level;
+      a.notifyState(StateOrigin::INTERNAL);
+    }
+  }
 }
-
 void actuatoresCallback(message_t const &msg, void *arg)
 {
   auto s = static_cast<Actuator *>(arg);
@@ -162,11 +167,11 @@ void tap(Button2 &btn)
 }
 void Actuator::setup()
 {
-  if (isCover())
+  if (isCover() && outputs.size() == 2)
   {
-    shutter = new Shutters(this);
+    shutter = new Shutters(outputs[0], outputs[1], sequence);
     shutter->setOperationHandler(shuttersOperationHandler)
-        .restoreState()
+        .restoreState(state, upCourseTime, downCourseTime)
         .setCourseTime(upCourseTime, downCourseTime)
         .onLevelReached(onShuttersLevelReached)
         .begin();

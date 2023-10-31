@@ -92,6 +92,7 @@ namespace constanstsCloudIO
 namespace Discovery
 {
     constexpr int I2C_SHT3X_ADDRESS{0x44};
+    constexpr int I2C_SSD1306_ADDRESS{0x3C};
 }
 namespace Family
 {
@@ -105,8 +106,8 @@ namespace Family
 
 namespace I18N
 {
-    constexpr const char *LIGHT_ONE{"Interruptor1"};
-    constexpr const char *LIGHT_TWO{"Interruptor2"};
+    constexpr const char *SWICTH_ONE{"Interruptor1"};
+    constexpr const char *SWICTH_TWO{"Interruptor2"};
     constexpr const char *GARAGE{"Garagem"};
     constexpr const char *COVER{"Estore"};
     constexpr const char *HAN{"Contador"};

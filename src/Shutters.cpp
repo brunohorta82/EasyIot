@@ -3,17 +3,15 @@
 #define LEVEL_NONE 255
 using namespace ShuttersInternal;
 
-Shutters::Shutters(Actuator *s)
+Shutters::Shutters(unsigned int downPin, unsigned int upPin, int actuatorId)
     : _upCourseTime(0), _downCourseTime(0), _calibrationRatio(0.1), _state(STATE_IDLE), _stateTime(0), _direction(DIRECTION_UP), _currentLevel(LEVEL_NONE), _targetLevel(LEVEL_NONE), _safetyDelay(false), _safetyDelayTime(0), _reset(true), _operationHandler(nullptr), _levelReachedCallback(nullptr)
 {
-  actuator = s;
-  downPin = s->outputs[0];
-  upPin = s->outputs[1];
+
+  this->downPin = downPin;
+  this->upPin = upPin;
+  this->actuatorId = actuatorId;
 }
-Actuator *Shutters::getActuator()
-{
-  return actuator;
-}
+
 void Shutters::_up()
 {
   DPRINTLN(F("Shutters: going up"));
@@ -64,15 +62,15 @@ Shutters &Shutters::setOperationHandler(ShuttersInternal::OperationHandler handl
   return *this;
 }
 
-Shutters &Shutters::restoreState()
+Shutters &Shutters::restoreState(uint8_t state, uint32_t downCourseTime, uint32_t upCourseTime)
 {
   if (!_reset)
   {
     return *this;
   }
-  _currentLevel = actuator->state;
-  _downCourseTime = actuator->downCourseTime;
-  _upCourseTime = actuator->upCourseTime;
+  _currentLevel = state;
+  _downCourseTime = downCourseTime;
+  _upCourseTime = upCourseTime;
   _notifyLevel();
 
   return *this;
@@ -93,7 +91,7 @@ Shutters &Shutters::setCourseTime(uint32_t upCourseTime, uint32_t downCourseTime
   if (downCourseTime > 67108864UL)
     return *this; // max value for 26 bits
 
-  if (upCourseTime != actuator->upCourseTime || downCourseTime != actuator->downCourseTime)
+  if (upCourseTime != _upCourseTime || downCourseTime != _downCourseTime)
   {
     DPRINTLN(F("Shutters: course time is not the same, invalidating stored state"));
     _currentLevel = LEVEL_NONE;

@@ -221,6 +221,8 @@ void Sensor::loop()
 #if defined(ESP8266)
       if (!isInitialized())
       {
+        config.i2cDiscovery();
+        delay(1000);
         static SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
         pzemv03 = new PZEM004Tv30(softwareSerial);
       }
@@ -236,18 +238,44 @@ void Sensor::loop()
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       lastRead = millis();
-      float v = pzemv03->voltage();
+      float v, f, c, p, pf, e = 0.0;
+      v = pzemv03->voltage();
       if (isnan(v))
       {
         error = true;
         return;
       }
+      f = pzemv03->frequency();
+      pf = pzemv03->pf();
+      c = pzemv03->current();
+      p = pzemv03->power();
+      e = pzemv03->energy();
       obj["voltage"] = v;
-      obj["frequency"] = pzemv03->frequency();
-      obj["powerFactor"] = pzemv03->pf();
-      obj["current"] = pzemv03->current();
-      obj["power"] = pzemv03->power();
-      obj["energy"] = pzemv03->energy();
+      obj["frequency"] = f;
+      obj["powerFactor"] = pf;
+      obj["current"] = c;
+      obj["power"] = p;
+      obj["energy"] = e;
+      if (config.display != NULL)
+      {
+        config.display->clearDisplay();
+        config.display->setTextSize(1);              // Normal 1:1 pixel scale
+        config.display->setTextColor(SSD1306_WHITE); // Draw white text
+        config.display->setCursor(0, 0);
+        config.display->printf("%0.fV %0.fA %0.2fPF %0.fHz", v, c, pf, f);
+        config.display->setCursor(0, 46);
+        config.display->printf("%.0fKwh", e);
+        config.display->setTextSize(2);
+        int16_t x1;
+        int16_t y1;
+        uint16_t width;
+        uint16_t height;
+        String power = String(p) + "W";
+        config.display->getTextBounds(power.c_str(), 0, 0, &x1, &y1, &width, &height);
+        config.display->setCursor((128 - width) / 2, ((64 - height) / 2) - 4);
+        config.display->println(power.c_str());
+        config.display->display();
+      }
       serializeJson(doc, state);
       notifyState();
 #ifdef DEBUG_ONOFRE

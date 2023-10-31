@@ -1,6 +1,7 @@
-let baseUrl = "http://192.168.122.134"
+let baseUrl = "http://192.168.187.135"
 var config;
 let source = null;
+var currentPage = "node"
 var WORDS_PT = {
     "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
     "config_save_ok": "Configuração Guardada",
@@ -18,6 +19,7 @@ function stringToHTML(text) {
 }
 
 function toggleActive(menu) {
+    currentPage = menu;
     if (menu === "devices") {
         applyNodeChanges();
     }
@@ -130,6 +132,9 @@ function applyNodeChanges() {
 }
 
 function saveConfig() {
+    if (currentPage === "node") {
+    applyNodeChanges();
+    }
     fetch(baseUrl + "/save-config", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -185,7 +190,14 @@ function toggleSwitch(arg) {
         showMessage("control_state_error")
     );
 }
-
+function appendSvgPath(node,d,strokeColor){
+    let a = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+    a.setAttribute("d",d);
+    a.setAttribute("stroke",strokeColor);
+    a.setAttribute("stroke-linejoin","round");
+    a.setAttribute("stroke-linecap","round");
+    node.appendChild(a)
+}
 function fillDevices() {
     let temp, item, a;
     temp = document.getElementsByTagName("template")[0];
@@ -195,21 +207,43 @@ function fillDevices() {
         a = document.importNode(item, true);
         a.id = "f-" + f.id;
         a.getElementsByClassName("feature-name").item(0).textContent = f.name;
-        a.getElementsByTagName("svg").item(0).classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
+        let icon = a.getElementsByTagName("svg").item(0);
+        icon.classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
+        a.getElementsByTagName("svg").item(0).id = 'i-'+f.id;
         a.getElementsByTagName("input").item(0).checked = f.state > 0;
         a.getElementsByTagName("input").item(0).id = f.id;
         document.getElementById("devices_config").appendChild(a);
+        icon = document.getElementById('i-' + f.id);
+        if("SWITCH" === f.family){
+            appendSvgPath(icon,"M20 12C22.7614 12 25 14.2386 25 17L25 24C25 26.7614 22.7614 29 20 29C17.2386 29 15 26.7614 15 24L15 17C15 14.2386 17.2386 12 20 12Z");
+            let b = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+            b.setAttribute("cx","20");
+            b.setAttribute("cy","24");
+            b.setAttribute("r","3");
+            b.setAttribute("fill","#1D1D1D");
+            icon.appendChild(b)
+        }else if("LIGHT" === f.family){
+            appendSvgPath(icon,"M 6.5292969 2.515625 A 1 1 0 0 0 5.8085938 2.8085938 A 1 1 0 0 0 5.8085938 4.2226562 A 1 1 0 0 0 7.2226562 4.2226562 A 1 1 0 0 0 7.2226562 2.8085938 A 1 1 0 0 0 6.5292969 2.515625 z M 23.5 2.515625 A 1 1 0 0 0 22.777344 2.8085938 A 1 1 0 0 0 22.777344 4.2226562 A 1 1 0 0 0 24.191406 4.2226562 A 1 1 0 0 0 24.191406 2.8085938 A 1 1 0 0 0 23.5 2.515625 z M 15 3 C 10.029 3 6 7.029 6 12 C 6 17 10 19 12 23 L 18 23 C 20 19 24 17 24 12 C 24 7.029 19.971 3 15 3 z M 15 6 L 15 11 L 19 11 L 15 18 L 15 13 L 11 13 L 15 6 z M 3 11 A 1 1 0 0 0 2 12 A 1 1 0 0 0 3 13 A 1 1 0 0 0 4 12 A 1 1 0 0 0 3 11 z M 27 11 A 1 1 0 0 0 26 12 A 1 1 0 0 0 27 13 A 1 1 0 0 0 28 12 A 1 1 0 0 0 27 11 z M 6.5292969 19.484375 A 1 1 0 0 0 5.8066406 19.777344 A 1 1 0 0 0 5.8066406 21.191406 A 1 1 0 0 0 7.2226562 21.191406 A 1 1 0 0 0 7.2226562 19.777344 A 1 1 0 0 0 6.5292969 19.484375 z M 23.498047 19.486328 A 1 1 0 0 0 22.777344 19.777344 A 1 1 0 0 0 22.777344 21.193359 A 1 1 0 0 0 24.191406 21.193359 A 1 1 0 0 0 24.191406 19.777344 A 1 1 0 0 0 23.498047 19.486328 z M 12 25 L 12 26 C 12 27.105 12.895 28 14 28 A 1 1 0 0 0 15 29 A 1 1 0 0 0 16 28 C 17.105 28 18 27.105 18 26 L 18 25 L 12 25 z");
+        }
+        else if("SECURITY" === f.family){
+            appendSvgPath(icon,"M16.3357 25.9353H22.1166M16.3357 25.9353C16.3357 26.7471 15.6886 27.4052 14.8905 27.4052C14.0923 27.4052 13.4452 26.7471 13.4452 25.9353M16.3357 25.9353C16.3357 25.1234 15.6886 24.4654 14.8905 24.4654C14.0923 24.4654 13.4452 25.1234 13.4452 25.9353M22.1166 25.9353C22.1166 26.7471 22.7636 27.4052 23.5618 27.4052C24.36 27.4052 25.007 26.7471 25.007 25.9353M22.1166 25.9353C22.1166 25.1234 22.7636 24.4654 23.5618 24.4654C24.36 24.4654 25.007 25.1234 25.007 25.9353M13.4452 25.9353H13.1562C12.7515 25.9353 12.5491 25.9353 12.3946 25.8552C12.2586 25.7847 12.148 25.6723 12.0788 25.534C12 25.3768 12 25.171 12 24.7593V23.8774C12 23.0542 12 22.6425 12.1575 22.3281C12.2961 22.0515 12.5172 21.8266 12.7891 21.6857C13.0983 21.5255 13.503 21.5255 14.3124 21.5255H22.9837C23.5208 21.5255 23.7893 21.5255 24.0139 21.5617C25.2508 21.7609 26.2208 22.7475 26.4167 24.0055C26.4523 24.234 26.4523 24.5071 26.4523 25.0533C26.4523 25.1899 26.4523 25.2582 26.4434 25.3153C26.3944 25.6298 26.1519 25.8764 25.8427 25.9262C25.7865 25.9353 25.7194 25.9353 25.5851 25.9353H25.007M17.7809 17.1158V21.5255M13.4452 21.5255L13.6848 20.0636C13.8564 19.0163 13.9422 18.4927 14.1991 18.0997C14.4256 17.7533 14.7438 17.4792 15.117 17.3089C15.5403 17.1158 16.0622 17.1158 17.1061 17.1158H19.5376C20.2163 17.1158 20.5557 17.1158 20.8637 17.2109C21.1364 17.2951 21.3901 17.4332 21.6102 17.6173C21.859 17.8252 22.0472 18.1123 22.4237 18.6867L24.2844 21.5255","#1D1D1D");
+            appendSvgPath(icon,"M30.065 21.2316V16.48C30.065 14.558 28.5069 13 26.585 13H22.8389");
+        }
+        else if("CLIMATE" === f.family){
+            appendSvgPath(icon,"M27 18L13 18","#fff");
+            appendSvgPath(icon,"M27 15L13 15","#fff");
+            appendSvgPath(icon,"M20 21L20 24","#fff");
+            appendSvgPath(icon,"M13.5 21.5H26.5V24C26.5 24.8284 25.8284 25.5 25 25.5H15C14.1716 25.5 13.5 24.8284 13.5 24V21.5Z","#fff");
+        }
         a.getElementsByClassName("feature-name").item(0).onclick = function () {
             modal.style.display = "block";
             modal.getElementsByClassName("f-name").item(0).textContent = f.name;
             modal.getElementsByClassName("f-name").item(1).value = f.name;
-            document.getElementById("f-area").value = f.area;
-            document.getElementById("f-line").value = f.line;
-            document.getElementById("f-member").value = f.member;
             document.getElementById("f-light-generic").checked = f.family === 8;
             document.getElementById("f-light-push").checked = f.family === 7;
             document.getElementById("btn-delete").featureId = f.id;
             document.getElementById("btn-update").featureId = f.id;
+
         }
         source.addEventListener(f.id, (s) => {
             const box = document.getElementById("f-" + f.id);

@@ -6,6 +6,8 @@
 #include "Templates.h"
 #include "LittleFS.h"
 #include "Wire.h"
+#include "Images.hpp"
+
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
   id.reserve(maxSize);
@@ -54,22 +56,38 @@ bool ConfigOnofre::isSensorExists(SensorDriver driver)
   }
   return false;
 }
+
 void ConfigOnofre::i2cDiscovery()
 {
   Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
-  byte serror, address;
-  int nDevices;
-  nDevices = 0;
+  byte error, address;
   for (address = 1; address < 127; address++)
   {
     Wire.beginTransmission(address);
-    serror = Wire.endTransmission();
-    if (serror == 0)
+    error = Wire.endTransmission();
+    if (error == 0)
     {
       if (address == Discovery::I2C_SHT3X_ADDRESS)
       {
         if (!isSensorExists(SensorDriver::SHT3x_SENSOR))
           templateSelect(SHT3X_CLIMATE);
+      }
+      if (address == Discovery::I2C_SSD1306_ADDRESS)
+      {
+        display = new Adafruit_SSD1306(128, 64, &Wire, -1);
+        if (display->begin(SSD1306_SWITCHCAPVCC, Discovery::I2C_SSD1306_ADDRESS))
+        {
+          display->clearDisplay();
+          display->drawBitmap(
+              (display->width() - LOGO_WIDTH) / 2,
+              0,
+              logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+          display->setTextSize(2);
+          display->setTextColor(SSD1306_WHITE);
+          display->setCursor(30, LOGO_HEIGHT);
+          display->println(F("ONOFRE"));
+          display->display();
+        }
       }
     }
   }
@@ -151,8 +169,10 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.knxAddress[1] = d["line"] | 0;
       actuator.knxAddress[2] = d["member"] | 0;
       actuator.state = d["state"] | 0;
-      sprintf(actuator.readTopic, "onofre/%s/%s/%d/state", chipId, actuator.familyToText(), actuator.uniqueId);
-      sprintf(actuator.writeTopic, "onofre/%s/%s/%d/set", chipId, actuator.familyToText(), actuator.uniqueId);
+      String family = actuator.familyToText();
+      family.toLowerCase();
+      sprintf(actuator.readTopic, "onofre/%s/%s/%s/state", chipId, family, actuator.uniqueId);
+      sprintf(actuator.writeTopic, "onofre/%s/%s/%s/set", chipId, family, actuator.uniqueId);
       JsonArray outputs = d["outputs"];
       for (auto out : outputs)
       {
@@ -196,7 +216,7 @@ void ConfigOnofre::loadTemplate(int templateId)
 ConfigOnofre &ConfigOnofre::save()
 {
   File file = LittleFS.open(configFilenames::config, "w+");
-  StaticJsonDocument<DYNAMIC_JSON_DOCUMENT_SIZE> doc;
+  DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
   doc["templateId"] = templateId;
   if (!String(nodeId).isEmpty())
     doc["nodeId"] = nodeId;
@@ -279,6 +299,7 @@ ConfigOnofre &ConfigOnofre::save()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s ConfigOnofre stored." CR, tags::config);
 #endif
+  doc.clear();
   return *this;
 }
 void ConfigOnofre::controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result)
@@ -322,16 +343,37 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
 
 ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
+  bool reloadMdns = strncmp(nodeId, root["nodeId"] | "", sizeof(nodeId)) != 0;
 
-  bool reloadMdns = strcmp(nodeId, root["nodeId"] | "") != 0;
-  char lastNodeId[sizeof(nodeId)] = {};
+  char lastNodeId[32] = {};
   if (reloadMdns)
   {
     strlcpy(lastNodeId, nodeId, sizeof(lastNodeId));
   }
-  bool reloadWifi = dhcp != root["dhcp"] || strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0 || strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
-  bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
+  bool reloadWifi = dhcp != (root["dhcp"] | true);
+#ifdef DEBUG_ONOFRE
+  if (reloadWifi)
+    Log.notice("%sWiFi Reloaded because DHCP configuration changed." CR, tags::config);
+#endif
+  dhcp = root["dhcp"] | true;
+  if (!dhcp && !reloadWifi)
+  {
+    reloadWifi = strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0;
+#ifdef DEBUG_ONOFRE
+    if (reloadWifi)
+      Log.notice("%sWiFi Reloaded because Network configuration changed." CR, tags::config);
+#endif
+  }
+  if (!reloadWifi)
+  {
+    reloadWifi = strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
+#ifdef DEBUG_ONOFRE
+    if (reloadWifi)
+      Log.notice("%sWiFi Reloaded because SSID or Password changed." CR, tags::config);
+#endif
+  }
 
+  bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
   String n_name = root["nodeId"] | chipId;
   normalize(n_name);
   strlcpy(nodeId, n_name.c_str(), sizeof(nodeId));
@@ -344,7 +386,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
-  dhcp = root["dhcp"] | true;
+
   strlcpy(apiPassword, root["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
   strlcpy(apiUser, root["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(accessPointPassword, root["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));
@@ -374,12 +416,15 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   for (auto feature : features)
   {
     String id = feature["id"] | "";
-   for (auto &a : actuatores){
-   if(strcmp( a.uniqueId,id.c_str()) == 0){
-    strlcpy(a.name, feature["name"] | "", sizeof(a.name));
-   }
+    for (auto &a : actuatores)
+    {
+      if (strcmp(a.uniqueId, id.c_str()) == 0)
+      {
+        strlcpy(a.name, feature["name"] | "", sizeof(a.name));
+      }
     }
   }
+  root.clear();
   return this->save();
 }
 

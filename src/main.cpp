@@ -106,7 +106,7 @@ void loop()
       config.loopActuators();
       config.loopSensors();
     }
-    if (WiFi.status() == WL_CONNECTED)
+    if (wifiConnected())
       knx.loop();
   }
 }
