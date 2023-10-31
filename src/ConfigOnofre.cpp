@@ -421,6 +421,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
       if (strcmp(a.uniqueId, id.c_str()) == 0)
       {
         strlcpy(a.name, feature["name"] | "", sizeof(a.name));
+        a.driver = feature["driver"] | a.driver;
       }
     }
   }

@@ -148,14 +148,13 @@ function saveConfig() {
 }
 
 function applyFeatureChanges(e) {
-    console.log(e.featureId)
     const index = config.features
         .indexOf(config.features
             .filter(f => f.id === e.featureId)[0]);
-    console.log(index)
     if (index < 0) return;
     let feature = config.features[index];
     feature.name = getValue("f-name", feature.name).trim();
+    feature.driver = parseInt(document.querySelector('input[name="f-driver"]:checked').value);
     saveConfig();
     toggleActive("devices");
 }
@@ -167,7 +166,6 @@ function deleteFeature(e) {
     config.features.splice(index, 1);
     if (!config.featuresToRemove) config.featuresToRemove = [];
     config.featuresToRemove.push(e.featureId)
-    console.log(config)
     saveConfig();
     toggleActive("devices");
 }
@@ -239,8 +237,8 @@ function fillDevices() {
             modal.style.display = "block";
             modal.getElementsByClassName("f-name").item(0).textContent = f.name;
             modal.getElementsByClassName("f-name").item(1).value = f.name;
-            document.getElementById("f-light-generic").checked = f.family === 8;
-            document.getElementById("f-light-push").checked = f.family === 7;
+            document.getElementById("f-light-generic").checked = f.driver.includes("GENERIC");
+            document.getElementById("f-light-push").checked = f.driver.includes("PUSH");
             document.getElementById("btn-delete").featureId = f.id;
             document.getElementById("btn-update").featureId = f.id;
 
