@@ -17,8 +17,8 @@ O projeto BH Easy Iot, é o firmware oficial para todas as boards BH, no entanto
 
 ## Painel de Controlo <a name="id3"></a>
 
-![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/node.png)
-![devices](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/devices.png)
+![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/node.png)
+![devices](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/devices.png)
 
 
 ## Hardware <a name="id2"></a>
