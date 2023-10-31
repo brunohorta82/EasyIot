@@ -19,9 +19,7 @@ O projeto BH Easy Iot, é o firmware oficial para todas as boards BH, no entanto
 
 ![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/node.png)
 ![devices](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/devices.png)
-![wifi](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/wifi.png)
-![mqtt](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/mqtt.png)
-![update](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/update.png)
+
 
 ## Hardware <a name="id2"></a>
 * BH OnOfre Dev Board 3.4
@@ -30,9 +28,9 @@ O projeto BH Easy Iot, é o firmware oficial para todas as boards BH, no entanto
 
 ## Software necessário <a name="id3"></a>
 
-- Arduino Ide (caso seja para alterar o codigo fonte)
-- Upload do Firmware para o ESP8266 (dentro de cada projeto o firmware está dentro da pasta binarios)
-- Aceder ao AP `SSID:BH_ONFFRE_NODE_ID` e configurar a Rede Wi-Fi
+- Visual Studio Code e PlatformIO (caso seja para alterar o codigo fonte)
+- Upload do Firmware para o ESP12(8266) / ESP32 o (dentro de cada projeto o firmware está dentro da pasta binarios)
+- Aceder ao AP `SSID:ONFFRE_xxxx_xxx` password `bhonofre` e configurar a Rede Wi-Fi
 - Navegar até  `http://<bh-onofre name>.local` ou `http://<bh-onofre IP address>` ou `http://192.168.4.1` ligado directamente ao módulo
 - Configurar o `Wi-Fi broker`, `MQTT broker` entre outras coisas como integração automática com `Home Assistant`
 - E tá feito, agora é só curtir :) 
