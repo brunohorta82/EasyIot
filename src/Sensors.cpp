@@ -133,7 +133,12 @@ void Sensor::loop()
   }
   case HAN:
   {
+#ifdef ESP32
     static uint32_t serialConf = SERIAL_8N1;
+#endif
+#ifdef ESP8266
+    static SerialConfig serialConf = SERIAL_8N1;
+#endif
     if (lastRead + delayRead < millis())
     {
       static ModbusMaster *modbus;
