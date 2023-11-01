@@ -198,7 +198,7 @@ function appendSvgPath(node,d,strokeColor){
 }
 function fillDevices() {
     let temp, item, a;
-    temp = document.getElementsByTagName("template")[0];
+    temp = document.getElementById("t-actuator");
     item = temp.content.querySelector("div");
     const modal = document.getElementById("modal");
     for (const f of config.features) {

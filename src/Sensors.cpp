@@ -133,7 +133,7 @@ void Sensor::loop()
   }
   case HAN:
   {
-    static SerialConfig serialConf = SERIAL_8N1;
+    static uint32_t serialConf = SERIAL_8N1;
     if (lastRead + delayRead < millis())
     {
       static ModbusMaster *modbus;
