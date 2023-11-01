@@ -35,7 +35,7 @@ public:
 
   // CONTROL VARIABLES
   bool lastBinaryState = false;
-  unsigned long delayRead = 1000ul;
+  unsigned long delayRead = 5000ul;
   unsigned long lastRead = 0ul;
   bool initialized = false;
   bool error = false;
@@ -87,6 +87,10 @@ public:
       return false;
     }
     return initialized;
+  };
+  const void reInit()
+  {
+    initialized = false;
   };
   void loop();
   void notifyState();

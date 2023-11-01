@@ -73,6 +73,14 @@ namespace constantsConfig
     constexpr int SDA{2};
     constexpr int SCL{13};
 #endif
+#ifdef ESP32
+    constexpr int HAN_TX{14};
+    constexpr int HAN_RX{13};
+#endif
+#ifdef ESP8266
+    constexpr int HAN_TX{1};
+    constexpr int HAN_RX{3};
+#endif
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
     constexpr unsigned long storeConfigDelay{5000ul};

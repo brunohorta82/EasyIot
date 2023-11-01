@@ -8,7 +8,7 @@ void prepareHAN()
 {
     Sensor sensor;
     strlcpy(sensor.name, I18N::HAN, sizeof(sensor.name));
-    sensor.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
+    sensor.inputs = {constantsConfig::HAN_RX, constantsConfig::HAN_TX};
     sensor.driver = HAN;
     sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;

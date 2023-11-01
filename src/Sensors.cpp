@@ -133,7 +133,7 @@ void Sensor::loop()
   }
   case HAN:
   {
-
+    static SerialConfig serialConf = SERIAL_8N1;
     if (lastRead + delayRead < millis())
     {
       static ModbusMaster *modbus;
@@ -141,7 +141,7 @@ void Sensor::loop()
       if (!isInitialized())
       {
         modbus = new ModbusMaster();
-        Serial1.begin(9600, SERIAL_8N2, inputs[0], inputs[1]);
+        Serial1.begin(9600, serialConf, inputs[0], inputs[1]);
         modbus->begin(1, Serial1);
       }
 #endif
@@ -149,7 +149,7 @@ void Sensor::loop()
       if (!isInitialized())
       {
         modbus = new ModbusMaster();
-        Serial.begin(9600, SERIAL_8N2);
+        Serial.begin(9600, serialConf);
         Serial.pins(inputs[0], inputs[1]);
         modbus->begin(1, Serial);
       }
@@ -206,6 +206,26 @@ void Sensor::loop()
         obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
         obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
         obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+      }
+      if (obj.size() == 0)
+      {
+        if (serialConf == SERIAL_8N1)
+        {
+          serialConf = SERIAL_8N2;
+          Serial1.end();
+          reInit();
+#ifdef DEBUG_ONOFRE
+          Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
+#endif
+        }
+        else
+        {
+          error = true;
+#ifdef DEBUG_ONOFRE
+          Log.error("%s HAN read error please check the connections and try again. " CR, tags::sensors);
+#endif
+        }
+        return;
       }
       serializeJson(obj, state);
       notifyState();
