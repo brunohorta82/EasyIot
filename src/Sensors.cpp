@@ -217,7 +217,12 @@ void Sensor::loop()
         if (serialConf == SERIAL_8N1)
         {
           serialConf = SERIAL_8N2;
+#ifdef ESP8266
+          Serial.end();
+#endif
+#ifdef ESP32
           Serial1.end();
+#endif
           reInit();
 #ifdef DEBUG_ONOFRE
           Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
