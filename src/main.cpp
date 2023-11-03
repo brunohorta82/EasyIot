@@ -6,7 +6,9 @@
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
 #include "LittleFS.h"
-
+#ifdef ESP32
+#include "driver/adc.h"
+#endif
 ConfigOnofre config;
 
 void checkInternalRoutines()
@@ -77,6 +79,7 @@ void setup()
 #ifdef LOW_POWER
 #ifdef ESP32
   setCpuFrequencyMhz(80);
+  adc_power_off();
 #endif
 #endif
 #ifdef DEBUG_ONOFRE

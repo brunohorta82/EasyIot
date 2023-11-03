@@ -32,26 +32,20 @@ void Sensor::notifyState()
 void Sensor::loop()
 {
   if (error)
-    return;
-  switch (driver)
   {
-  case LDR:
-  {
-    if (lastRead + delayRead < millis())
+    if (lastErrorTimestamp + constantsSensor::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())
     {
-      StaticJsonDocument<256> doc;
-      JsonObject obj = doc.to<JsonObject>();
-      state.clear();
-      lastRead = millis();
-      obj["illuminance"] = analogRead(inputs[0]);
-      serializeJson(doc, state);
-      notifyState();
+      error = false;
+      reInit();
 #ifdef DEBUG_ONOFRE
-      Log.notice("%s LDR %s}" CR, tags::sensors, state);
+      Log.info("%s Error automatically removed. System will try again." CR, tags::sensors);
 #endif
     }
+    return;
   }
-  break;
+
+  switch (driver)
+  {
   case DHT_11:
   case DHT_21:
   case DHT_22:
@@ -130,6 +124,7 @@ void Sensor::loop()
       Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
     }
+    break;
   }
   case HAN:
   {
@@ -227,15 +222,17 @@ void Sensor::loop()
 #ifdef DEBUG_ONOFRE
           Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
 #endif
+          return;
         }
         else
         {
-          error = true;
+          serialConf = SERIAL_8N1;
+          setError();
 #ifdef DEBUG_ONOFRE
           Log.error("%s HAN read error please check the connections and try again. " CR, tags::sensors);
 #endif
+          obj["error"] = true;
         }
-        return;
       }
       serializeJson(obj, state);
       notifyState();
@@ -243,6 +240,7 @@ void Sensor::loop()
       Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
     }
+    break;
   }
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
@@ -272,39 +270,50 @@ void Sensor::loop()
       v = pzemv03->voltage();
       if (isnan(v))
       {
-        error = true;
-        return;
+        setError();
+        obj["error"] = true;
       }
-      f = pzemv03->frequency();
-      pf = pzemv03->pf();
-      c = pzemv03->current();
-      p = pzemv03->power();
-      e = pzemv03->energy();
-      obj["voltage"] = v;
-      obj["frequency"] = f;
-      obj["powerFactor"] = pf;
-      obj["current"] = c;
-      obj["power"] = p;
-      obj["energy"] = e;
+      else
+      {
+        f = pzemv03->frequency();
+        pf = pzemv03->pf();
+        c = pzemv03->current();
+        p = pzemv03->power();
+        e = pzemv03->energy();
+        obj["voltage"] = v;
+        obj["frequency"] = f;
+        obj["powerFactor"] = pf;
+        obj["current"] = c;
+        obj["power"] = p;
+        obj["energy"] = e;
+      }
       if (config.display != NULL)
       {
         config.display->clearDisplay();
         config.display->setTextSize(1);              // Normal 1:1 pixel scale
         config.display->setTextColor(SSD1306_WHITE); // Draw white text
         config.display->setCursor(0, 0);
-        config.display->printf("%0.fV %0.fA %0.2fPF %0.fHz", v, c, pf, f);
-        config.display->setCursor(0, 46);
-        config.display->printf("%.0fKwh", e);
-        config.display->setTextSize(2);
-        int16_t x1;
-        int16_t y1;
-        uint16_t width;
-        uint16_t height;
-        String power = String(p) + "W";
-        config.display->getTextBounds(power.c_str(), 0, 0, &x1, &y1, &width, &height);
-        config.display->setCursor((128 - width) / 2, ((64 - height) / 2) - 4);
-        config.display->println(power.c_str());
-        config.display->display();
+        if (error)
+        {
+          config.display->printf("ERROR");
+          config.display->display();
+        }
+        else
+        {
+          config.display->printf("%0.fV %0.fA %0.2fPF %0.fHz", v, c, pf, f);
+          config.display->setCursor(0, 46);
+          config.display->printf("%.0fKwh", e);
+          config.display->setTextSize(2);
+          int16_t x1;
+          int16_t y1;
+          uint16_t width;
+          uint16_t height;
+          String power = String(p) + "W";
+          config.display->getTextBounds(power.c_str(), 0, 0, &x1, &y1, &width, &height);
+          config.display->setCursor((128 - width) / 2, ((64 - height) / 2) - 4);
+          config.display->println(power.c_str());
+          config.display->display();
+        }
       }
       serializeJson(doc, state);
       notifyState();

@@ -196,7 +196,7 @@ void connectToCloudIO()
     {
       String family = ss.familyToText();
       family.toLowerCase();
-      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, family, ss.uniqueId);
+      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/metrics", config.cloudIOUsername, config.chipId, family, ss.uniqueId);
     }
 #ifdef DEBUG_ONOFRE
     Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, config.cloudIOUsername, config.cloudIOPassword);

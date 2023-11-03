@@ -78,8 +78,8 @@ public:
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
-    unsigned long upCourseTime = 25 * 1000;
-    unsigned long downCourseTime = 25 * 1000;
+    unsigned long upCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
+    unsigned long downCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
 
     // METHODS
     constexpr bool isCover()

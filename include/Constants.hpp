@@ -24,6 +24,7 @@ namespace constantsSensor
     constexpr const char *noneClass{"none"};
     constexpr const char *familySensor{"sensor"};
     constexpr const char *binarySensorFamily{"binary_sensor"};
+    constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{60000};
 } // namespace constantsSensor
 namespace tags
 {
@@ -81,6 +82,7 @@ namespace constantsConfig
     constexpr int HAN_TX{1};
     constexpr int HAN_RX{3};
 #endif
+    constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME{25 * 1000};
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
     constexpr unsigned long storeConfigDelay{5000ul};

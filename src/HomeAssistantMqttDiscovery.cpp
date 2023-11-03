@@ -115,13 +115,6 @@ void addToHomeAssistant(Sensor &s)
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
 
     break;
-  case LDR:
-    object["unit_of_measurement"] = "lux";
-    object["device_class"] = "illuminance";
-    object["value_template"] = "{{value_json.illuminance}}";
-    serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + String(s.uniqueId) + "/config").c_str(), objectStr.c_str(), false);
-    break;
   case PZEM_004T_V03:
     object["name"] = String(s.name) + " Power";
     object["unique_id"] = "p" + String(s.uniqueId);

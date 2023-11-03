@@ -6,7 +6,6 @@
 #include <Wire.h>
 enum SensorDriver
 {
-  LDR = 21,
   DS18B20 = 90,
   DHT_11 = 0,
   DHT_21 = 1,
@@ -23,7 +22,7 @@ public:
   char uniqueId[24]{};
   char name[24] = {0};
   SensorDriver driver;
-  String state;
+  String state = "";
   // MQTT
   char readTopic[128];
 
@@ -39,11 +38,12 @@ public:
   unsigned long lastRead = 0ul;
   bool initialized = false;
   bool error = false;
-  String familyToText()
+  unsigned long lastErrorTimestamp = 0ul;
+  String
+  familyToText()
   {
     switch (driver)
     {
-    case LDR:
     case DS18B20:
     case SHT3x_SENSOR:
     case DHT_11:
@@ -60,8 +60,6 @@ public:
   {
     switch (driver)
     {
-    case LDR:
-      return FeatureDrivers::LDR;
     case DS18B20:
       return FeatureDrivers::DS18B20;
     case SHT3x_SENSOR:
@@ -91,6 +89,17 @@ public:
   const void reInit()
   {
     initialized = false;
+  };
+
+  const void clearError()
+  {
+    error = false;
+    lastErrorTimestamp = 0ul;
+  };
+  const void setError()
+  {
+    error = true;
+    lastErrorTimestamp = millis();
   };
   void loop();
   void notifyState();

@@ -45,6 +45,9 @@ ConfigOnofre &ConfigOnofre::init()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Default config loaded." CR, tags::config);
 #endif
+#ifdef TEST_TEMPLATE
+  templateSelect(Template::NO_TEMPLATE);
+#endif
   return save();
 }
 bool ConfigOnofre::isSensorExists(SensorDriver driver)
@@ -168,6 +171,8 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.knxAddress[0] = d["area"] | 0;
       actuator.knxAddress[1] = d["line"] | 0;
       actuator.knxAddress[2] = d["member"] | 0;
+      actuator.upCourseTime = d["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
+      actuator.downCourseTime = d["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
       actuator.state = d["state"] | 0;
       String family = actuator.familyToText();
       family.toLowerCase();
@@ -193,7 +198,9 @@ ConfigOnofre &ConfigOnofre::load()
       strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
       sensor.delayRead = d["delayRead"];
       sensor.driver = d["driver"];
-      sprintf(sensor.readTopic, "onofre/%s/%s/%d/state", chipId, sensor.familyToText(), sensor.uniqueId);
+      String family = sensor.familyToText();
+      family.toLowerCase();
+      sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family, sensor.uniqueId);
       JsonArray inputs = d["inputs"];
       for (auto in : inputs)
       {
@@ -416,12 +423,14 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   for (auto feature : features)
   {
     String id = feature["id"] | "";
-    for (auto &a : actuatores)
+    for (auto &actuator : actuatores)
     {
-      if (strcmp(a.uniqueId, id.c_str()) == 0)
+      if (strcmp(actuator.uniqueId, id.c_str()) == 0)
       {
-        strlcpy(a.name, feature["name"] | "", sizeof(a.name));
-        a.driver = feature["driver"] | a.driver;
+        strlcpy(actuator.name, feature["name"] | "", sizeof(actuator.name));
+        actuator.driver = feature["driver"] | actuator.driver;
+        actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
+        actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
       }
     }
   }

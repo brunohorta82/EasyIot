@@ -223,7 +223,13 @@ void mdnsCallback(justwifi_messages_t code, char *parameter)
 }
 void setupWiFi()
 {
+#ifdef LOW_POWER
+#ifdef ESP32
+  WiFi.setSleep(true);
+#endif
+#else
   WiFi.setSleep(false);
+#endif
   jw.setHostname(config.nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
