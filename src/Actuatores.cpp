@@ -107,11 +107,11 @@ void toogle(Button2 &btn)
 }
 void garageNotify(Button2 &btn)
 {
-  for (auto a : config.actuatores)
+  for (auto &a : config.actuatores)
   {
     if (a.sequence == btn.getID())
     {
-
+      config.save();
       a.state = digitalRead(btn.getPin()) ? OFF_OPEN : ON_CLOSE;
       a.notifyState(StateOrigin::GPIO_INPUT);
     }
@@ -128,6 +128,13 @@ void changed(Button2 &btn)
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Changed" CR, tags::actuatores);
 #endif
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::TOGGLE);
+    }
+  }
 }
 void click(Button2 &btn)
 {
@@ -183,6 +190,10 @@ void Actuator::setup()
     if (isLight() || isSwitch())
     {
       writeToPIN(output, state);
+    }
+    else if (isGarage())
+    {
+      writeToPIN(output, LOW);
     }
   }
   if (isLight() || isSwitch())

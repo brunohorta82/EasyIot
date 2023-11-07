@@ -59,7 +59,7 @@ namespace constantsConfig
     constexpr unsigned int OUTPUT_TWO{5u};
 #ifdef ESP32
     constexpr unsigned int PZEM_TX{26u};
-    constexpr unsigned int PZEM_RX{25u};
+    constexpr unsigned int PZEM_RX{27u};
 #endif
 #ifdef ESP8266
     constexpr unsigned int PZEM_TX{3u};
@@ -103,6 +103,7 @@ namespace Discovery
 {
     constexpr int I2C_SHT3X_ADDRESS{0x44};
     constexpr int I2C_SSD1306_ADDRESS{0x3C};
+    constexpr int MODBUS_PZEM_ADDRESS_START{0x10};
 }
 namespace Family
 {
@@ -121,7 +122,7 @@ namespace I18N
     constexpr const char *GARAGE{"Garagem"};
     constexpr const char *COVER{"Estore"};
     constexpr const char *HAN{"Contador"};
-    constexpr const char *ENERGY{"Energia"};
+    constexpr const char *ENERGY{"Energia "};
     constexpr const char *CLIMATIZATION{"Climatização"};
 }
 

@@ -5,6 +5,9 @@
 #include <AsyncTCP.h>
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
+#if defined(ESP32) && !defined(LEGACY_PROVISON)
+#include "WiFiProv.h"
+#endif
 #elif defined(ESP8266)
 #include "ESP8266WiFi.h"
 #include <ESP8266mDNS.h>

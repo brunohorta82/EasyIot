@@ -7,6 +7,7 @@
 #include "LittleFS.h"
 #include "Wire.h"
 #include "Images.hpp"
+#include <PZEM004Tv30.h>
 
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
@@ -50,16 +51,51 @@ ConfigOnofre &ConfigOnofre::init()
 #endif
   return save();
 }
-bool ConfigOnofre::isSensorExists(SensorDriver driver)
+bool ConfigOnofre::isSensorExists(int hwAddress)
 {
   for (auto f : sensors)
   {
-    if (f.driver == driver)
+    if (f.hwAddress == hwAddress)
       return true;
   }
   return false;
 }
-
+#ifdef ESP32
+void ConfigOnofre::pzemDiscovery()
+{
+  bool found = false;
+  for (int i = 0; i < 3; i++)
+  {
+    PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, Discovery::MODBUS_PZEM_ADDRESS_START + i);
+    delay(200);
+    float voltageOne = pzem.voltage();
+    if (!isnan(voltageOne))
+    {
+#ifdef DEBUG_ONOFRE
+      Log.info("%sPzem found with address: 0x%x " CR, tags::discovery, pzem.getAddress());
+#endif
+      found = true;
+      if (!isSensorExists(pzem.getAddress()))
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+    }
+  }
+  if (!found)
+  {
+    PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX);
+    delay(100);
+    float voltageOne = pzem.voltage();
+    if (!isnan(voltageOne))
+    {
+#ifdef DEBUG_ONOFRE
+      Log.info("%sPzem found with default address: 0x%x " CR, tags::discovery, pzem.getAddress());
+#endif
+      found = true;
+      if (!isSensorExists(pzem.getAddress()))
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+    }
+  }
+}
+#endif
 void ConfigOnofre::i2cDiscovery()
 {
   Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
@@ -72,8 +108,8 @@ void ConfigOnofre::i2cDiscovery()
     {
       if (address == Discovery::I2C_SHT3X_ADDRESS)
       {
-        if (!isSensorExists(SensorDriver::SHT3x_SENSOR))
-          templateSelect(SHT3X_CLIMATE);
+        if (!isSensorExists(address))
+          prepareSHT3X(address);
       }
       if (address == Discovery::I2C_SSD1306_ADDRESS)
       {
@@ -198,6 +234,8 @@ ConfigOnofre &ConfigOnofre::load()
       strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
       sensor.delayRead = d["delayRead"];
       sensor.driver = d["driver"];
+      sensor.hwAddress = d["hwAddress"] | 0x10;
+      sensor.sequence = s++;
       String family = sensor.familyToText();
       family.toLowerCase();
       sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family, sensor.uniqueId);
@@ -288,6 +326,7 @@ ConfigOnofre &ConfigOnofre::save()
     a["id"] = ss.uniqueId;
     a["name"] = ss.name;
     a["driver"] = ss.driver;
+    a["hwAddress"] = ss.hwAddress;
     a["delayRead"] = ss.delayRead;
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : ss.inputs)
@@ -509,6 +548,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["group"] = "SENSOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
+    a["hwAddress"] = s.hwAddress;
     a["family"] = s.familyToText();
     a["delayRead"] = s.delayRead;
     a["driver"] = s.driverToText();

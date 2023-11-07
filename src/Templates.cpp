@@ -16,24 +16,26 @@ void prepareHAN()
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
-void prepareSHT3X()
+void prepareSHT3X(int hwAddress)
 {
     Sensor sensor;
     strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
     sensor.inputs = {constantsConfig::SDA, constantsConfig::SCL};
     sensor.driver = SHT3x_SENSOR;
+    sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::climateReadDelay;
     String idStr;
     config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
-void preparePzem()
+void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress)
 {
     Sensor sensor;
-    strlcpy(sensor.name, I18N::ENERGY, sizeof(sensor.name));
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
     sensor.driver = PZEM_004T_V03;
-    sensor.inputs = {constantsConfig::PZEM_TX, constantsConfig::PZEM_RX};
+    sensor.inputs = {tx, rx};
+    sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
     config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
@@ -87,12 +89,6 @@ void templateSelect(enum Template _template)
     case Template::NO_TEMPLATE:
         prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatoDriver::SWITCH_PUSH);
         prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatoDriver::SWITCH_PUSH);
-        break;
-    case Template::SHT3X_CLIMATE:
-        prepareSHT3X();
-        break;
-    case PZEM:
-        preparePzem();
         break;
     case HAN_MODULE:
         prepareHAN();

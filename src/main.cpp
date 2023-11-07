@@ -73,7 +73,20 @@ void startFileSystem()
     }
   }
 }
-
+#ifdef ESP32
+void featuresTask(void *pvParameters)
+{
+  for (;;)
+  {
+    if (!config.isLoopFeaturesPaused())
+    {
+      config.loopActuators();
+      config.loopSensors();
+    }
+    vTaskDelay(1);
+  }
+}
+#endif
 void setup()
 {
 #ifdef LOW_POWER
@@ -90,10 +103,14 @@ void setup()
   config.load();
 #ifdef ESP32
   config.i2cDiscovery();
+  config.pzemDiscovery();
 #endif
   setupWiFi();
   setupCors();
   setupMQTT();
+#ifdef ESP32
+  xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
+#endif
 }
 
 void loop()
@@ -104,12 +121,14 @@ void loop()
   {
     webserverServicesLoop();
     loopMqtt();
+#ifdef ESP8266
     if (!config.isLoopFeaturesPaused())
     {
       config.loopActuators();
       config.loopSensors();
     }
-    if (wifiConnected())
-      knx.loop();
+#endif
+    // if (wifiConnected())
+    //  knx.loop();
   }
 }
