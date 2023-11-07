@@ -198,6 +198,7 @@ void Actuator::setup()
   }
   if (isLight() || isSwitch())
   {
+    buttons.clear();
     for (auto input : inputs)
     {
       Button2 button;

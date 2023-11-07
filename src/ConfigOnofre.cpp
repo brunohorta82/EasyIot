@@ -470,6 +470,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
         actuator.driver = feature["driver"] | actuator.driver;
         actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
         actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
+        actuator.setup();
       }
     }
   }

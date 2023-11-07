@@ -80,7 +80,6 @@ void featuresTask(void *pvParameters)
   {
     if (!config.isLoopFeaturesPaused())
     {
-      config.loopActuators();
       config.loopSensors();
     }
     vTaskDelay(1);
@@ -121,14 +120,18 @@ void loop()
   {
     webserverServicesLoop();
     loopMqtt();
-#ifdef ESP8266
     if (!config.isLoopFeaturesPaused())
     {
       config.loopActuators();
+    }
+#ifdef ESP8266
+    if (!config.isLoopFeaturesPaused())
+    {
       config.loopSensors();
     }
 #endif
-    // if (wifiConnected())
-    //  knx.loop();
+
+    if (wifiConnected())
+      knx.loop();
   }
 }
