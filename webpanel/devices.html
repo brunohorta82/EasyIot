@@ -1,14 +1,20 @@
 <div class="box-body">
+
     <div class="features" id="devices_config">
+
         <template id="ACTUATOR">
+            <div>
+            <svg width="30px" height="30px"  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+            </svg>
             <div class="feature-box">
-                <svg  viewBox="0 0 30 30">
-                </svg>
+                <?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
                 <label><span class="feature-name"></span></label>
-                <label class="switch">
+                <label class=" switch">
                     <input onchange="toggleSwitch(this)" type="checkbox">
                     <span class="slider round"></span>
                 </label>
+                <input onchange="shutterPercentage(this)" class="shutter-slider" min="0" max="100" type="range"  />
+            </div>
             </div>
         </template>
         <template id="SENSOR">
@@ -32,16 +38,29 @@
                 class="f-name form-control" maxlength="30" type="text" name="f-name" id="f-name"
                 placeholder="ex: kitchen" required/>
         </div>
-        <div class="modal-form">
+        <div class="f-ac modal-form">
                 <label>Tipo de Interruptor</label>
             <div class="modal-form-row">
                 <div>
-                    <input type="radio" id="f-light-generic" name="f-driver"  value=2  />
-                    <label for="f-light-generic">Normal</label>
+                    <input type="radio" id="f-in-mode-push" name="f-in-mode"  value="0" />
+                    <label for=f-in-mode-push>Pulsador</label>
                 </div>
                 <div>
-                    <input type="radio" id="f-light-push" name="f-driver"  value=1 />
-                    <label for="f-light-push">Pulsador</label>
+                    <input type="radio" id="f-in-mode-latch" name="f-in-mode"  value="1"  />
+                    <label for="f-in-mode-latch">Normal</label>
+                </div>
+            </div>
+        </div>
+        <div id="f-calibration" class="f-ac hide modal-form">
+            <label>Calibração</label>
+            <div class="modal-form-row ">
+                <div>
+                    <input type="number" id="f-up" value="0" />
+                    <label class="label-hit" for=f-up>segundos para subir</label>
+                </div>
+                <div>
+                    <input type="number" id="f-down" value="1"  />
+                    <label class="label-hit" for="f-down">segundos para descer</label>
                 </div>
             </div>
         </div>

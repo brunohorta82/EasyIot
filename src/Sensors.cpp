@@ -245,21 +245,20 @@ void Sensor::loop()
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
     {
-      static PZEM004Tv30 *pzemv03;
+      static int pzemCount = 0;
 #if defined(ESP8266)
       if (!isInitialized())
       {
         config.i2cDiscovery();
-        delay(1000);
-        static SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
-        pzemv03 = new PZEM004Tv30(softwareSerial);
       }
+      static SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
+      PZEM004Tv30 pzemv03(softwareSerial);
 #endif
 #if defined(ESP32)
       if (!isInitialized())
       {
-        pzemv03 = new PZEM004Tv30(Serial1, inputs[0], inputs[1]);
       }
+      PZEM004Tv30 pzemv03(Serial1, inputs[0], inputs[1], hwAddress);
 #endif
       lastRead = millis();
       StaticJsonDocument<256> doc;
@@ -267,7 +266,7 @@ void Sensor::loop()
       state.clear();
       lastRead = millis();
       float v, f, c, p, pf, e = 0.0;
-      v = pzemv03->voltage();
+      v = pzemv03.voltage();
       if (isnan(v))
       {
         setError();
@@ -275,11 +274,12 @@ void Sensor::loop()
       }
       else
       {
-        f = pzemv03->frequency();
-        pf = pzemv03->pf();
-        c = pzemv03->current();
-        p = pzemv03->power();
-        e = pzemv03->energy();
+        f = pzemv03.frequency();
+        pf = pzemv03.pf();
+        c = pzemv03.current();
+        p = pzemv03.power();
+        e = pzemv03.energy();
+        obj["addr"] = pzemv03.getAddress();
         obj["voltage"] = v;
         obj["frequency"] = f;
         obj["powerFactor"] = pf;
@@ -287,6 +287,9 @@ void Sensor::loop()
         obj["power"] = p;
         obj["energy"] = e;
       }
+      serializeJson(doc, state);
+      notifyState();
+      doc.clear();
       if (config.display != NULL)
       {
         config.display->clearDisplay();
@@ -300,23 +303,72 @@ void Sensor::loop()
         }
         else
         {
-          config.display->printf("%0.fV %0.fA %0.2fPF %0.fHz", v, c, pf, f);
-          config.display->setCursor(0, 46);
-          config.display->printf("%.0fKwh", e);
-          config.display->setTextSize(2);
-          int16_t x1;
-          int16_t y1;
-          uint16_t width;
-          uint16_t height;
-          String power = String(p) + "W";
-          config.display->getTextBounds(power.c_str(), 0, 0, &x1, &y1, &width, &height);
-          config.display->setCursor((128 - width) / 2, ((64 - height) / 2) - 4);
-          config.display->println(power.c_str());
-          config.display->display();
+
+          if (pzemCount == 0 || pzemCount > 1)
+          {
+            int cl = 16;
+            int offset = 56 - cl;
+            config.display->setCursor(0, 9);
+            config.display->print("V");
+            config.display->setCursor(0, 18);
+            config.display->print("A");
+            config.display->setCursor(0, 27);
+            config.display->print("W ");
+            config.display->setCursor(0, 36);
+            config.display->print("PF");
+            config.display->setCursor(0, 45);
+            config.display->print("Hz");
+            config.display->setCursor(0, 54);
+            config.display->print("E");
+            for (auto s : config.sensors)
+            {
+              if (s.driver != SensorDriver::PZEM_004T_V03)
+                continue;
+              pzemCount++;
+              DeserializationError error = deserializeJson(doc, s.state);
+              if (error != DeserializationError::Ok)
+                continue;
+              if (!(doc["error"] | false))
+              {
+                config.display->setCursor(cl, 0);
+                config.display->printf("CT%d", doc["addr"] | 0);
+                config.display->setCursor(cl, 9);
+                config.display->printf("%0.f", doc["voltage"] | 0.0);
+                config.display->setCursor(cl, 18);
+                config.display->printf("%0.f", doc["current"] | 0.0);
+                config.display->setCursor(cl, 27);
+                config.display->printf("%.0f ", doc["power"] | 0.0);
+                config.display->setCursor(cl, 36);
+                config.display->printf("%0.2f", doc["powerFactor"] | 0.0);
+                config.display->setCursor(cl, 45);
+                config.display->printf("%0.f", doc["frequency"] | 0.0);
+                config.display->setCursor(cl, 54);
+                config.display->printf("%.0f", doc["energy"] | 0.0);
+              }
+              cl = cl + offset;
+            }
+            config.display->display();
+            doc.clear();
+          }
+          else
+          {
+            config.display->printf("%0.fV %0.fA %0.2fPF %0.fHz", v, c, pf, f);
+            config.display->setCursor(0, 46);
+            config.display->printf("%.0fKwh", e);
+            config.display->setTextSize(2);
+            int16_t x1;
+            int16_t y1;
+            uint16_t width;
+            uint16_t height;
+            String power = String(p) + "W";
+            config.display->getTextBounds(power.c_str(), 0, 0, &x1, &y1, &width, &height);
+            config.display->setCursor((128 - width) / 2, ((64 - height) / 2) - 4);
+            config.display->println(power.c_str());
+            config.display->display();
+          }
         }
       }
-      serializeJson(doc, state);
-      notifyState();
+
 #ifdef DEBUG_ONOFRE
       Log.notice("%s %s" CR, tags::sensors, state.c_str());
 #endif

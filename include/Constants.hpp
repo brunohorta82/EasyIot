@@ -59,7 +59,7 @@ namespace constantsConfig
     constexpr unsigned int OUTPUT_TWO{5u};
 #ifdef ESP32
     constexpr unsigned int PZEM_TX{26u};
-    constexpr unsigned int PZEM_RX{25u};
+    constexpr unsigned int PZEM_RX{27u};
 #endif
 #ifdef ESP8266
     constexpr unsigned int PZEM_TX{3u};
@@ -82,7 +82,7 @@ namespace constantsConfig
     constexpr int HAN_TX{1};
     constexpr int HAN_RX{3};
 #endif
-    constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME{25 * 1000};
+    constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME_SECONS{25};
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
     constexpr unsigned long storeConfigDelay{5000ul};
@@ -103,6 +103,7 @@ namespace Discovery
 {
     constexpr int I2C_SHT3X_ADDRESS{0x44};
     constexpr int I2C_SSD1306_ADDRESS{0x3C};
+    constexpr int MODBUS_PZEM_ADDRESS_START{0x10};
 }
 namespace Family
 {
@@ -121,19 +122,21 @@ namespace I18N
     constexpr const char *GARAGE{"Garagem"};
     constexpr const char *COVER{"Estore"};
     constexpr const char *HAN{"Contador"};
-    constexpr const char *ENERGY{"Energia"};
+    constexpr const char *ENERGY{"Energia "};
     constexpr const char *CLIMATIZATION{"Climatização"};
+    constexpr const char *NO_NAME{"Sem Nome"};
+
 }
 
 namespace FeatureDrivers
 {
     constexpr const char *SWITCH_PUSH{"SWITCH_PUSH"};
-    constexpr const char *SWITCH_GENERIC{"SWITCH_GENERIC"};
+    constexpr const char *SWITCH_LATCH{"SWITCH_LATCH"};
     constexpr const char *COVER_DUAL_PUSH{"COVER_DUAL_PUSH"};
-    constexpr const char *COVER_DUAL_GENERIC{"COVER_DUAL_GENERIC"};
+    constexpr const char *COVER_DUAL_LATCH{"COVER_DUAL_LATCH"};
     constexpr const char *LOCK_PUSH{"LOCK_PUSH"};
     constexpr const char *LIGHT_PUSH{"LIGHT_PUSH"};
-    constexpr const char *LIGHT_GENERIC{"LIGHT_GENERIC"};
+    constexpr const char *LIGHT_LATCH{"LIGHT_LATCH"};
     constexpr const char *GARAGE_PUSH{"GARAGE_PUSH"};
     constexpr const char *LDR{"LDR"};
     constexpr const char *DS18B20{"DS18B20"};

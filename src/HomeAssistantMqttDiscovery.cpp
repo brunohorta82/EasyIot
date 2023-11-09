@@ -2,24 +2,7 @@
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 extern ConfigOnofre config;
-void initHomeAssistantDiscovery()
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Init HomeAssistant Discovery" CR, tags::homeassistant);
-#endif
-  for (auto &sw : config.actuatores)
-  {
-    if (!mqttConnected())
-      return;
-    publishOnMqtt(sw.readTopic, String(sw.state).c_str(), true);
-    addToHomeAssistant(sw);
-  }
-  for (auto &ss : config.sensors)
-  {
-    publishOnMqtt(ss.readTopic, String(ss.state).c_str(), true);
-    addToHomeAssistant(ss);
-  }
-}
+
 bool homeAssistantOnline(String topic, String payload)
 {
   return (topic.compareTo(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status")) == 0 || topic.compareTo(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status")) == 0) && payload.compareTo(constantsMqtt::availablePayload) == 0;
@@ -29,7 +12,7 @@ void createHaSwitch(Actuator &sw)
   if (!mqttConnected())
     return;
   String objectStr = "";
-  String uniqueId = String(sw.uniqueId) + String(config.chipId);
+  String uniqueId = String(sw.uniqueId);
   const size_t capacity = JSON_OBJECT_SIZE(8) + 300;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
@@ -39,6 +22,7 @@ void createHaSwitch(Actuator &sw)
 
   object["avty_t"] = config.healthTopic;
   String family = sw.familyToText();
+  family.toLowerCase();
   if (sw.isGarage())
   {
     object["stat_t"] = sw.readTopic;
@@ -191,14 +175,27 @@ void addToHomeAssistant(Actuator &sw)
 #endif
 }
 
-void removeFromHomeAssistant(Actuator &sw)
+void removeFromHomeAssistant(String family, String uniqueId)
 {
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + sw.familyToText() + "/" + String(sw.uniqueId) + "/config").c_str(), "", false);
-  delay(3);
+  if (!mqttConnected())
+    return;
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), "", false);
 }
-
-void removeFromHomeAssistant(Sensor &s)
+void initHomeAssistantDiscovery()
 {
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + String(s.uniqueId) + "/config").c_str(), "", false);
-  delay(3);
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Init HomeAssistant Discovery" CR, tags::homeassistant);
+#endif
+  for (auto &sw : config.actuatores)
+  {
+    if (!mqttConnected())
+      return;
+    publishOnMqtt(sw.readTopic, String(sw.state).c_str(), true);
+    addToHomeAssistant(sw);
+  }
+  for (auto &ss : config.sensors)
+  {
+    publishOnMqtt(ss.readTopic, String(ss.state).c_str(), true);
+    addToHomeAssistant(ss);
+  }
 }

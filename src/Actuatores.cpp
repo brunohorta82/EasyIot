@@ -105,6 +105,69 @@ void toogle(Button2 &btn)
     }
   }
 }
+void openShutter(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::OFF_OPEN);
+    }
+  }
+}
+void openShutterLatch(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::OFF_OPEN);
+    }
+  }
+}
+void stopShutterLatch(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      if ((digitalRead(a.inputs[0]) && digitalRead(a.inputs[1])))
+      {
+        config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::STOP);
+      }
+    }
+  }
+}
+void closeShutterLatch(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
+    }
+  }
+}
+void closeShutter(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
+    }
+  }
+}
+void stopShutter(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::STOP);
+    }
+  }
+}
 void garageNotify(Button2 &btn)
 {
   for (auto a : config.actuatores)
@@ -117,62 +180,16 @@ void garageNotify(Button2 &btn)
     }
   }
 }
-void released(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s released %d" CR, tags::actuatores, btn.wasPressedFor());
-#endif
-}
-void changed(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Changed" CR, tags::actuatores);
-#endif
-}
-void click(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Click" CR, tags::actuatores);
-#endif
-}
-void longClickDetected(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Long click detected" CR, tags::actuatores);
-#endif
-}
-void longClick(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Long click" CR, tags::actuatores);
-#endif
-}
-void doubleClick(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Double click" CR, tags::actuatores);
-#endif
-}
-void tripleClick(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s Triple Click: %d" CR, tags::actuatores, btn.getNumberOfClicks());
-#endif
-}
-void tap(Button2 &btn)
-{
-#ifdef DEBUG_ONOFRE
-  Log.notice("%s TAP" CR, tags::actuatores);
-#endif
-}
+
 void Actuator::setup()
 {
+  buttons.clear();
   if (isCover() && outputs.size() == 2)
   {
     shutter = new Shutters(outputs[0], outputs[1], sequence);
     shutter->setOperationHandler(shuttersOperationHandler)
-        .restoreState(state, upCourseTime, downCourseTime)
-        .setCourseTime(upCourseTime, downCourseTime)
+        .restoreState(state, upCourseTime * 1000, downCourseTime * 1000)
+        .setCourseTime(upCourseTime * 1000, downCourseTime * 1000)
         .onLevelReached(onShuttersLevelReached)
         .begin();
   }
@@ -194,16 +211,13 @@ void Actuator::setup()
       button.setID(sequence);
       switch (driver)
       {
-      case ActuatoDriver::LIGHT_PUSH:
-      case ActuatoDriver::SWITCH_PUSH:
+      case ActuatorDriver::LIGHT_PUSH:
+      case ActuatorDriver::SWITCH_PUSH:
         button.setPressedHandler(toogle);
         break;
-      case ActuatoDriver::LIGHT_GENERIC:
-      case ActuatoDriver::SWITCH_GENERIC:
-      case ActuatoDriver::COVER_DUAL_GENERIC:
-        button.setChangedHandler(changed);
-      default:
-        break;
+      case ActuatorDriver::LIGHT_LATCH:
+      case ActuatorDriver::SWITCH_LATCH:
+        button.setChangedHandler(toogle);
       }
       buttons.push_back(button);
     }
@@ -216,6 +230,45 @@ void Actuator::setup()
     button.setDebounceTime(1000);
     button.setChangedHandler(garageNotify);
     buttons.push_back(button);
+  }
+  else if (isCover())
+  {
+    if (inputs.size() == 2)
+    {
+      Button2 buttonOpen;
+      buttonOpen.begin(inputs[0]);
+      buttonOpen.setID(sequence);
+      if (ActuatorDriver::COVER_DUAL_PUSH == driver)
+      {
+        buttonOpen.setPressedHandler(openShutter);
+        buttonOpen.setLongClickTime(500);
+        buttonOpen.setLongClickDetectedHandler(stopShutter);
+        buttonOpen.setDoubleClickHandler(stopShutter);
+      }
+      else if (ActuatorDriver::COVER_DUAL_LATCH == driver)
+      {
+        buttonOpen.setChangedHandler(stopShutterLatch);
+        buttonOpen.setPressedHandler(openShutter);
+      }
+
+      buttons.push_back(buttonOpen);
+      Button2 buttonClose;
+      buttonClose.begin(inputs[1]);
+      buttonClose.setID(sequence);
+      if (ActuatorDriver::COVER_DUAL_PUSH == driver)
+      {
+        buttonClose.setLongClickTime(500);
+        buttonClose.setLongClickDetectedHandler(stopShutter);
+        buttonClose.setDoubleClickHandler(stopShutter);
+        buttonClose.setPressedHandler(closeShutter);
+      }
+      else if (ActuatorDriver::COVER_DUAL_LATCH == driver)
+      {
+        buttonClose.setChangedHandler(stopShutterLatch);
+        buttonClose.setPressedHandler(closeShutter);
+      }
+      buttons.push_back(buttonClose);
+    }
   }
 
   if (isKnxSupport())
@@ -235,7 +288,7 @@ void Actuator::notifyState(StateOrigin origin)
   // Notify by MQTT/Homeassistant
   if (mqttConnected())
   {
-    publishOnMqtt(readTopic, stateStr, false);
+    publishOnMqtt(readTopic, stateStr, true);
   }
 
   // Notify by MQTT OnofreCloud

@@ -26,6 +26,7 @@ public:
   // CLOUDIO
   char cloudIOUsername[40];
   char cloudIOPassword[64];
+  bool cloudIOReady{false};
   char cloudIOhealthTopic[64];
   char cloudIOwriteTopic[64];
   char cloudIOreadTopic[64];
@@ -52,7 +53,8 @@ public:
   ConfigOnofre &load();
   ConfigOnofre &pauseFeatures();
   void i2cDiscovery();
-  bool isSensorExists(SensorDriver driver);
+  void pzemDiscovery();
+  bool isSensorExists(int hwAddress);
   void generateId(String &id, const String &name, int familyCode, size_t maxSize);
   void loadTemplate(int templateId);
   void loopActuators();

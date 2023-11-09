@@ -22,16 +22,19 @@ enum StateOrigin
     CLOUDIO = 4,
     WEBPANEL = 5
 };
-
-enum ActuatoDriver
+enum ActuatorInputMode
+{
+    PUSH = 0,
+    LATCH = 1,
+};
+enum ActuatorDriver
 {
     SWITCH_PUSH = 1,
-    SWITCH_GENERIC = 2,
+    SWITCH_LATCH = 2,
     COVER_DUAL_PUSH = 4,
-    COVER_DUAL_GENERIC = 5,
-    LOCK_PUSH = 6,
+    COVER_DUAL_LATCH = 5,
     LIGHT_PUSH = 7,
-    LIGHT_GENERIC = 8,
+    LIGHT_LATCH = 8,
     GARAGE_PUSH = 9
 };
 
@@ -48,7 +51,7 @@ public:
     char uniqueId[24]{};
     int sequence = 0;
     char name[24] = {0};
-    ActuatoDriver driver = SWITCH_PUSH;
+    ActuatorDriver driver = SWITCH_PUSH;
     ActuatorControlType typeControl = VIRTUAL;
     int state = 0;
     // CLOUDIO
@@ -78,21 +81,21 @@ public:
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
-    unsigned long upCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
-    unsigned long downCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
+    unsigned long upCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+    unsigned long downCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
 
     // METHODS
     constexpr bool isCover()
     {
-        return driver == COVER_DUAL_PUSH || driver == COVER_DUAL_GENERIC;
+        return driver == COVER_DUAL_PUSH || driver == COVER_DUAL_LATCH;
     };
     constexpr bool isLight()
     {
-        return driver == LIGHT_PUSH || driver == LIGHT_GENERIC;
+        return driver == LIGHT_PUSH || driver == LIGHT_LATCH;
     };
     constexpr bool isSwitch()
     {
-        return driver == SWITCH_PUSH || driver == SWITCH_GENERIC;
+        return driver == SWITCH_PUSH || driver == SWITCH_LATCH;
     };
     constexpr bool isGarage()
     {
@@ -124,24 +127,77 @@ public:
         {
         case SWITCH_PUSH:
             return FeatureDrivers::SWITCH_PUSH;
-        case SWITCH_GENERIC:
-            return FeatureDrivers::SWITCH_GENERIC;
+        case SWITCH_LATCH:
+            return FeatureDrivers::SWITCH_LATCH;
         case COVER_DUAL_PUSH:
             return FeatureDrivers::COVER_DUAL_PUSH;
-        case COVER_DUAL_GENERIC:
-            return FeatureDrivers::COVER_DUAL_GENERIC;
-        case LOCK_PUSH:
-            return FeatureDrivers::LOCK_PUSH;
+        case COVER_DUAL_LATCH:
+            return FeatureDrivers::COVER_DUAL_LATCH;
         case LIGHT_PUSH:
             return FeatureDrivers::LIGHT_PUSH;
-        case LIGHT_GENERIC:
-            return FeatureDrivers::LIGHT_GENERIC;
+        case LIGHT_LATCH:
+            return FeatureDrivers::LIGHT_LATCH;
         case GARAGE_PUSH:
             return FeatureDrivers::GARAGE_PUSH;
         }
         return FeatureDrivers::GENERIC;
     };
-    Actuator *changeState(StateOrigin origin, int state);
+    ActuatorInputMode driverToInputMode()
+    {
+        switch (driver)
+        {
+        case SWITCH_PUSH:
+        case COVER_DUAL_PUSH:
+        case GARAGE_PUSH:
+            return ActuatorInputMode::PUSH;
+        case SWITCH_LATCH:
+        case LIGHT_LATCH:
+        case COVER_DUAL_LATCH:
+            return ActuatorInputMode::LATCH;
+        default:
+            return ActuatorInputMode::PUSH;
+        }
+    };
+    ActuatorDriver findDriver(ActuatorInputMode inputMode)
+    {
+        switch (inputMode)
+        {
+        case PUSH:
+            if (isLight())
+            {
+                return LIGHT_PUSH;
+            }
+            if (isSwitch())
+            {
+                return SWITCH_PUSH;
+            }
+            if (isGarage())
+            {
+                return GARAGE_PUSH;
+            }
+            if (isCover())
+            {
+                return COVER_DUAL_PUSH;
+            }
+        case LATCH:
+            if (isLight())
+            {
+                return LIGHT_LATCH;
+            }
+            if (isSwitch())
+            {
+                return SWITCH_LATCH;
+            }
+            if (isCover())
+            {
+                return COVER_DUAL_LATCH;
+            }
+        }
+        return driver;
+    };
+
+    Actuator *
+    changeState(StateOrigin origin, int state);
     void setup();
     void notifyState(StateOrigin origin);
 };

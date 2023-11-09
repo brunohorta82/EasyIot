@@ -41,20 +41,26 @@ body {
 }
 .feature-icon-off {
     fill: #fff;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 32px;
     float: left;
+    position: absolute;
+    margin-top: 20px;
+    margin-left: 10px;
 }
 
 .feature-icon-on {
     fill: #FFBF1F;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 32px;
+    position: absolute;
+    margin-top: 20px;
+    margin-left: 10px;
 }
 .feature-name {
     color: white;
     line-height: 40px;
-    margin-left: 10px;
+    margin-left: 30px;
     float: left;
     width: 270px;
 }
@@ -69,6 +75,10 @@ body {
     padding: 12px;
     margin: 10px;
     flex-direction: row;
+}
+
+.feature-box > div {
+    flex-grow: 1;
 }
 .vertical-center {
     margin: 0;
@@ -391,3 +401,66 @@ input:checked + .slider:before {
     color: #40DF86;
     cursor: pointer;
 }
+input[type=number] {
+    width: 60px;
+}
+.label-hit{
+    font-size: 10px;
+}
+.shutter-slider{
+    appearance: slider-vertical;
+    height: 80px;
+    transform: rotate(-90deg);
+}
+
+    input[type='range'] {
+        overflow: hidden;
+        width: 80px;
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        background-color: #434343;
+        border-radius: 3px;
+    }
+
+    input[type='range']::-webkit-slider-runnable-track {
+        height: 10px;
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        color: rgba(64, 224, 129, 0.24);
+        margin-top: -1px;
+    }
+
+    input[type='range']::-webkit-slider-thumb {
+        width: 4px;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        height: 100%;
+        cursor: pointer;
+        background: #434343;
+        box-shadow: -80px 0 0 80px rgba(64, 224, 129, 0.24);
+    }
+/** FF*/
+input[type="range"]::-moz-range-progress {
+    background-color: rgba(64, 224, 129, 0.24);
+    accent-color: #222222;
+}
+input[type='range']::-moz-range-thumb {
+    width: 4px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    height: 100%;
+    cursor: pointer;
+    background: #434343;
+    box-shadow: -80px 0 0 80px rgba(64, 224, 129, 0.24);
+}
+input[type="range"]::-moz-range-track {
+    width: 30px;
+}
+/* IE*/
+input[type="range"]::-ms-fill-lower {
+    background-color: rgba(64, 224, 129, 0.24);
+}
+input[type="range"]::-ms-fill-upper {
+    background-color: #434343;
+}
+

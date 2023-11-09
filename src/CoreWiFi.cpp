@@ -1,12 +1,69 @@
 #include "CoreWiFi.h"
 #include "Constants.hpp"
+#if defined(ESP8266) || defined(LEGACY_PROVISON)
 #include <JustWifi.h>
+#endif
 #include "ConfigOnofre.h"
 #include "WebServer.h"
 #include <esp-knx-ip.h>
 int retryCount = 0;
 unsigned long connectedOn = 0ul;
 extern ConfigOnofre config;
+#if defined(ESP32) && !defined(LEGACY_PROVISON)
+const char *pop = "abcd1234";           // Proof of possession - otherwise called a PIN - string provided by the device, entered by user in the phone app
+const char *service_name = "ONOFRE_13"; // Name of your device (the Espressif apps expects by default device name starting with "Prov_")
+const char *service_key = NULL;         // Password used for SofAP method (NULL = no password needed)
+bool reset_provisioned = true;          // When true the library will automatically delete previously provisioned data.
+void SysProvEvent(arduino_event_t *sys_event)
+{
+  switch (sys_event->event_id)
+  {
+  case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+    Serial.print("\nConnected IP address : ");
+    Serial.println(IPAddress(sys_event->event_info.got_ip.ip_info.ip.addr));
+    setupWebPanel();
+    startWebserver();
+    knx.start();
+    config.requestCloudIOSync();
+    break;
+  case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+    Serial.println("\nDisconnected. Connecting to the AP again... ");
+    break;
+  case ARDUINO_EVENT_PROV_START:
+    Serial.println("\nProvisioning started\nGive Credentials of your access point using smartphone app");
+    break;
+  case ARDUINO_EVENT_PROV_CRED_RECV:
+  {
+    Serial.println("\nReceived Wi-Fi credentials");
+    Serial.print("\tSSID : ");
+    Serial.println((const char *)sys_event->event_info.prov_cred_recv.ssid);
+    Serial.print("\tPassword : ");
+    Serial.println((char const *)sys_event->event_info.prov_cred_recv.password);
+    // strlcpy(config.wifiSSID, (const char *)sys_event->event_info.prov_cred_recv.ssid, sizeof(config.wifiSSID));
+    // strlcpy(config.wifiSecret, (char const *)sys_event->event_info.prov_cred_recv.password, sizeof(config.wifiSecret));
+    break;
+  }
+  case ARDUINO_EVENT_PROV_CRED_FAIL:
+  {
+    Serial.println("\nProvisioning failed!\nPlease reset to factory and retry provisioning\n");
+    if (sys_event->event_info.prov_fail_reason == WIFI_PROV_STA_AUTH_ERROR)
+      Serial.println("\nWi-Fi AP password incorrect");
+    else
+      Serial.println("\nWi-Fi AP not found....Add API \" nvs_flash_erase() \" before beginProvision()");
+    break;
+  }
+  case ARDUINO_EVENT_PROV_CRED_SUCCESS:
+    Serial.println("\nProvisioning Successful");
+    // config.save();
+    break;
+  case ARDUINO_EVENT_PROV_END:
+    Serial.println("\nProvisioning Ends");
+    break;
+  default:
+    break;
+  }
+}
+#endif
 String getApName()
 {
   String version = String(VERSION, 3);
@@ -15,7 +72,54 @@ String getApName()
     return "OnOfre-" + String(config.chipId) + "-" + version;
   return String(config.nodeId) + "-" + version;
 }
+void scanNewWifiNetworks()
+{
 
+  unsigned char result = WiFi.scanNetworks();
+  if (result == WIFI_SCAN_FAILED)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Scan Failed" CR, tags::wifi);
+#endif
+  }
+  else if (result == 0)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s No networks found " CR, tags::wifi);
+#endif
+  }
+  else
+  {
+    const size_t CAPACITY = JSON_ARRAY_SIZE(result) + 200;
+    DynamicJsonDocument doc(CAPACITY);
+    JsonArray object = doc.to<JsonArray>();
+    for (int8_t i = 0; i < result; ++i)
+    {
+      String ssid_scan;
+      int32_t rssi_scan;
+      uint8_t sec_scan;
+      uint8_t *BSSID_scan;
+      int32_t chan_scan;
+      bool hidden_scan;
+#ifdef ESP32
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
+#endif
+#ifdef ESP8266
+      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
+#endif
+      object.add(ssid_scan);
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s Network found %s" CR, tags::wifi, ssid_scan.c_str());
+#endif
+    }
+    String networks = "";
+    serializeJson(doc, networks);
+    sendToServerEvents("wifi-networks", networks.c_str());
+  }
+  WiFi.scanDelete();
+}
+
+#if defined(ESP8266) || defined(LEGACY_PROVISON)
 void reloadWiFiConfig()
 {
   jw.disconnect();
@@ -71,59 +175,12 @@ void infoWifi()
 #endif
   }
 }
+
 void enableScan()
 {
   jw.enableScan(true);
 }
-void scanNewWifiNetworks()
-{
 
-  unsigned char result = WiFi.scanNetworks();
-  if (result == WIFI_SCAN_FAILED)
-  {
-#ifdef DEBUG_ONOFRE
-    Log.notice("%s Scan Failed" CR, tags::wifi);
-#endif
-  }
-  else if (result == 0)
-  {
-#ifdef DEBUG_ONOFRE
-    Log.notice("%s No networks found " CR, tags::wifi);
-#endif
-  }
-  else
-  {
-    const size_t CAPACITY = JSON_ARRAY_SIZE(result) + 200;
-    DynamicJsonDocument doc(CAPACITY);
-    JsonArray object = doc.to<JsonArray>();
-    for (int8_t i = 0; i < result; ++i)
-    {
-      String ssid_scan;
-      int32_t rssi_scan;
-      uint8_t sec_scan;
-      uint8_t *BSSID_scan;
-      int32_t chan_scan;
-      bool hidden_scan;
-#ifdef ESP32
-      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
-#endif
-#ifdef ESP32
-      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan);
-#endif
-#ifdef ESP8266
-      WiFi.getNetworkInfo(i, ssid_scan, sec_scan, rssi_scan, BSSID_scan, chan_scan, hidden_scan);
-#endif
-      object.add(ssid_scan);
-#ifdef DEBUG_ONOFRE
-      Log.notice("%s Network found %s" CR, tags::wifi, ssid_scan.c_str());
-#endif
-    }
-    String networks = "";
-    serializeJson(doc, networks);
-    sendToServerEvents("wifi-networks", networks.c_str());
-  }
-  WiFi.scanDelete();
-}
 void dissableAP()
 {
   jw.enableAP(false);
@@ -176,6 +233,15 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
   }
 }
+void mdnsCallback(justwifi_messages_t code, char *parameter)
+{
+
+  if (code == MESSAGE_CONNECTED)
+  {
+    refreshMDNS(config.nodeId);
+  }
+}
+#endif
 bool wifiConnected()
 {
   return WiFi.status() == WL_CONNECTED;
@@ -213,14 +279,7 @@ void refreshMDNS(const char *lastName)
 #endif
   }
 }
-void mdnsCallback(justwifi_messages_t code, char *parameter)
-{
 
-  if (code == MESSAGE_CONNECTED)
-  {
-    refreshMDNS(config.nodeId);
-  }
-}
 void setupWiFi()
 {
 #ifdef LOW_POWER
@@ -230,10 +289,22 @@ void setupWiFi()
 #else
   WiFi.setSleep(false);
 #endif
+#if defined(ESP8266) || defined(LEGACY_PROVISON)
   jw.setHostname(config.nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
-
+#endif
+#if defined(ESP32) && !defined(LEGACY_PROVISON)
+  WiFi.onEvent(SysProvEvent);
+  Serial.println("Begin Provisioning using BLE");
+  // Sample uuid that user can pass during provisioning using BLE
+  uint8_t uuid[16] = {0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
+                      0xea, 0x4a, 0x82, 0x03, 0x04, 0x90, 0x1a, 0x02};
+  WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM, WIFI_PROV_SECURITY_1, pop, service_name, service_key, uuid, true);
+  log_d("ble qr");
+  WiFiProv.printQR(service_name, pop, "ble");
+#endif
+#if defined(ESP8266) || defined(LEGACY_PROVISON)
 #if JUSTWIFI_ENABLE_SMARTCONFIG
   if (strlen(config.wifiSSID) == 0)
     jw.startSmartConfig();
@@ -243,16 +314,20 @@ void setupWiFi()
   jw.enableAPFallback(true);
   jw.enableSTA(true);
   reloadWiFiConfig();
+#endif
 }
 
 void loopWiFi()
 {
+
+#if defined(ESP8266) || defined(LEGACY_PROVISON)
   if ((WiFi.getMode() & WIFI_AP) && WiFi.isConnected() && connectedOn + 60000 < millis())
   {
     dissableAP();
   }
   jw.loop();
-#ifdef ESP8266
+#if defined(ESP8266)
   MDNS.update();
+#endif
 #endif
 }

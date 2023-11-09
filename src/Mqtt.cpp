@@ -56,6 +56,7 @@ boolean reconnect()
             subscribeOnMqtt(sw.writeTopic);
             sw.notifyState(StateOrigin::MQTT);
         }
+        initHomeAssistantDiscovery();
     }
 
     return mqttConnected();

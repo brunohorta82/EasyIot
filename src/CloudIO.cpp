@@ -15,10 +15,6 @@
 extern ConfigOnofre config;
 AsyncMqttClient mqttClient;
 HTTPClient http;
-Ticker mqttReconnectTimer;
-Ticker cloudIOReconnectTimer;
-
-int reconectCount = 0;
 
 void disconnectToClounIOMqtt()
 {
@@ -27,7 +23,7 @@ void disconnectToClounIOMqtt()
 #endif
   mqttClient.disconnect();
 }
-void connectToClounIOMqtt()
+void connectToCloudIOMqtt()
 {
 #ifdef DEBUG_ONOFRE
   Log.error("%s Connecting to MQTT..." CR, tags::cloudIO);
@@ -78,19 +74,12 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 #endif
   if (WiFi.isConnected())
   {
-    mqttReconnectTimer.once(2, connectToClounIOMqtt);
+    connectToCloudIOMqtt();
   }
 }
 bool cloudIOConnected()
 {
   return mqttClient.connected();
-}
-void onMqttSubscribe(uint16_t packetId, uint8_t qos)
-{
-}
-
-void onMqttUnsubscribe(uint16_t packetId)
-{
 }
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
@@ -117,49 +106,44 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   }
 }
 
-void setupCloudIO()
+void setupMqttCloudIO()
 {
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
-  mqttClient.onSubscribe(onMqttSubscribe);
-  mqttClient.onUnsubscribe(onMqttUnsubscribe);
   mqttClient.onMessage(onMqttMessage);
   mqttClient.setCleanSession(true);
   mqttClient.setWill(config.cloudIOhealthTopic, 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(config.chipId);
   mqttClient.setCredentials(config.cloudIOUsername, config.cloudIOPassword);
-  connectToClounIOMqtt();
+  connectToCloudIOMqtt();
 }
-bool tryCloudConnection()
+bool tryMqttCloudConnection()
 {
+  if (mqttClient.connected())
+  {
+    mqttClient.disconnect();
+  }
   if (strlen(config.cloudIOUsername) > 0 && strlen(config.cloudIOPassword) > 0)
   {
 #ifdef DEBUG_ONOFRE
     Log.error("%s Ready to try..." CR, tags::cloudIO);
 #endif
-    setupCloudIO();
+    setupMqttCloudIO();
   }
   return true;
 }
 
-void cloudIoKeepAlive()
-{
-  config.requestCloudIOSync();
-}
-
 void connectToCloudIO()
 {
-  cloudIOReconnectTimer.detach();
-  if (!wifiConnected() || reconectCount > 3)
+  if (!wifiConnected())
   {
 #ifdef DEBUG_ONOFRE
-    Log.error("%s [HTTP] reconectCount %d" CR, tags::cloudIO, reconectCount);
+    Log.error("%s WIFI DISCONECTED" CR, tags::cloudIO);
 #endif
     return;
   }
   WiFiClient client;
-  reconectCount++;
   String payload = "";
   DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
   JsonVariant root = doc.to<JsonVariant>();
@@ -168,21 +152,23 @@ void connectToCloudIO()
   http.begin(client, constanstsCloudIO::configUrl);
   http.addHeader("Content-Type", "application/json");
   int httpCode = http.POST(payload.c_str());
+  doc.clear();
+  config.cloudIOReady = false;
 #ifdef DEBUG_ONOFRE
-  Log.error("%s [HTTP] POST... code: %d" CR, tags::cloudIO, httpCode);
+  Log.info("%s [HTTP] CloudIO Request result: %d" CR, tags::cloudIO, httpCode);
 #endif
-  if (httpCode == HTTP_CODE_NO_CONTENT || httpCode == HTTP_CODE_BAD_REQUEST)
+  if (httpCode != HTTP_CODE_OK)
   {
-    reconectCount = 0;
     return;
   }
   else if (httpCode == HTTP_CODE_OK)
   {
-    const String &payload = http.getString();
+    String payload = http.getString();
     StaticJsonDocument<200> resp;
     DeserializationError error = deserializeJson(doc, payload);
     strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
     strlcpy(config.cloudIOPassword, doc["password"] | "", sizeof(config.cloudIOPassword));
+    config.cloudIOReady = true;
     snprintf(config.cloudIOhealthTopic, sizeof(config.cloudIOhealthTopic), "%s/%s/available", config.cloudIOUsername, config.chipId);
     snprintf(config.cloudIOwriteTopic, sizeof(config.cloudIOwriteTopic), "%s/%s/config/set", config.cloudIOUsername, config.chipId);
     for (auto &sw : config.actuatores)
@@ -198,36 +184,13 @@ void connectToCloudIO()
       family.toLowerCase();
       snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/metrics", config.cloudIOUsername, config.chipId, family, ss.uniqueId);
     }
-#ifdef DEBUG_ONOFRE
-    Log.error("%s USER: %s PASSWORD: %s" CR, tags::cloudIO, config.cloudIOUsername, config.cloudIOPassword);
-#endif
+    resp.clear();
     if (!error && strlen(config.cloudIOUsername) > 0 && strlen(config.cloudIOPassword) > 0)
     {
 #ifdef DEBUG_ONOFRE
-      Log.error("%s SETUP MQTT CLOUD" CR, tags::cloudIO);
+      Log.info("%s SETUP MQTT CLOUD" CR, tags::cloudIO);
 #endif
-      if (mqttClient.connected())
-      {
-        mqttClient.disconnect();
-      }
-      reconectCount = 0;
-      tryCloudConnection();
+      tryMqttCloudConnection();
     }
-    else
-    {
-#ifdef DEBUG_ONOFRE
-      Log.error("%s NO USER FOUND" CR, tags::cloudIO);
-#endif
-    }
-#ifdef DEBUG_ONOFRE
-    Log.error("%s [HTTP] POST... Result: %s" CR, tags::cloudIO, payload.c_str());
-#endif
-  }
-  else
-  {
-#ifdef DEBUG_ONOFRE
-    Log.error("%s [HTTP] POST... failed, error: %s" CR, tags::cloudIO, http.errorToString(httpCode).c_str());
-#endif
-    cloudIOReconnectTimer.once(10, cloudIoKeepAlive);
   }
 }

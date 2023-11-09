@@ -7,6 +7,8 @@
 #include "LittleFS.h"
 #include "Wire.h"
 #include "Images.hpp"
+#include <PZEM004Tv30.h>
+#include "HomeAssistantMqttDiscovery.h"
 
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
@@ -50,16 +52,51 @@ ConfigOnofre &ConfigOnofre::init()
 #endif
   return save();
 }
-bool ConfigOnofre::isSensorExists(SensorDriver driver)
+bool ConfigOnofre::isSensorExists(int hwAddress)
 {
   for (auto f : sensors)
   {
-    if (f.driver == driver)
+    if (f.hwAddress == hwAddress)
       return true;
   }
   return false;
 }
-
+#ifdef ESP32
+void ConfigOnofre::pzemDiscovery()
+{
+  bool found = false;
+  for (int i = 0; i < 3; i++)
+  {
+    PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, Discovery::MODBUS_PZEM_ADDRESS_START + i);
+    delay(200);
+    float voltageOne = pzem.voltage();
+    if (!isnan(voltageOne))
+    {
+#ifdef DEBUG_ONOFRE
+      Log.info("%sPzem found with address: 0x%x " CR, tags::discovery, pzem.getAddress());
+#endif
+      found = true;
+      if (!isSensorExists(pzem.getAddress()))
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+    }
+  }
+  if (!found)
+  {
+    PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX);
+    delay(100);
+    float voltageOne = pzem.voltage();
+    if (!isnan(voltageOne))
+    {
+#ifdef DEBUG_ONOFRE
+      Log.info("%sPzem found with default address: 0x%x " CR, tags::discovery, pzem.getAddress());
+#endif
+      found = true;
+      if (!isSensorExists(pzem.getAddress()))
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+    }
+  }
+}
+#endif
 void ConfigOnofre::i2cDiscovery()
 {
   Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
@@ -72,8 +109,8 @@ void ConfigOnofre::i2cDiscovery()
     {
       if (address == Discovery::I2C_SHT3X_ADDRESS)
       {
-        if (!isSensorExists(SensorDriver::SHT3x_SENSOR))
-          templateSelect(SHT3X_CLIMATE);
+        if (!isSensorExists(address))
+          prepareSHT3X(address);
       }
       if (address == Discovery::I2C_SSD1306_ADDRESS)
       {
@@ -171,8 +208,8 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.knxAddress[0] = d["area"] | 0;
       actuator.knxAddress[1] = d["line"] | 0;
       actuator.knxAddress[2] = d["member"] | 0;
-      actuator.upCourseTime = d["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
-      actuator.downCourseTime = d["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
+      actuator.upCourseTime = d["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+      actuator.downCourseTime = d["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
       actuator.state = d["state"] | 0;
       String family = actuator.familyToText();
       family.toLowerCase();
@@ -198,6 +235,8 @@ ConfigOnofre &ConfigOnofre::load()
       strlcpy(sensor.name, d["name"] | "", sizeof(sensor.name));
       sensor.delayRead = d["delayRead"];
       sensor.driver = d["driver"];
+      sensor.hwAddress = d["hwAddress"] | 0x10;
+      sensor.sequence = s++;
       String family = sensor.familyToText();
       family.toLowerCase();
       sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family, sensor.uniqueId);
@@ -266,9 +305,8 @@ ConfigOnofre &ConfigOnofre::save()
     a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["typeControl"] = s.typeControl;
-    a["area"] = s.knxAddress[0];
-    a["line"] = s.knxAddress[1];
-    a["member"] = s.knxAddress[2];
+    a["upCourseTime"] = s.upCourseTime;
+    a["downCourseTime"] = s.downCourseTime;
     a["state"] = s.state;
     JsonArray outputs = a.createNestedArray("outputs");
     for (auto out : s.outputs)
@@ -288,6 +326,7 @@ ConfigOnofre &ConfigOnofre::save()
     a["id"] = ss.uniqueId;
     a["name"] = ss.name;
     a["driver"] = ss.driver;
+    a["hwAddress"] = ss.hwAddress;
     a["delayRead"] = ss.delayRead;
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : ss.inputs)
@@ -311,7 +350,6 @@ ConfigOnofre &ConfigOnofre::save()
 }
 void ConfigOnofre::controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result)
 {
-
   controlFeature(origin, action["id"] | "0", action["state"] | 0);
 }
 void ConfigOnofre::controlFeature(StateOrigin origin, String topic, String payload)
@@ -393,47 +431,72 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
-
   strlcpy(apiPassword, root["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
   strlcpy(apiUser, root["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(accessPointPassword, root["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));
 
-  if (reloadMdns)
-    refreshMDNS(lastNodeId);
-  if (reloadMqtt)
-  {
-    setupMQTT();
-  }
-  if (reloadWifi)
-  {
-    requestReloadWifi();
-  }
-  if (reloadMqtt)
-  {
-    setupMQTT();
-  }
   JsonArray featuresToRemove = root["featuresToRemove"];
   for (String id : featuresToRemove)
   {
     auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const Actuator &item)
                               { return id.equals(item.uniqueId); });
-    actuatores.erase(match);
+    if (match != actuatores.end())
+    {
+      removeFromHomeAssistant("light", id);
+      removeFromHomeAssistant("switch", id);
+      removeFromHomeAssistant("cover", id);
+      actuatores.erase(match);
+    }
+
+    else
+    {
+      auto match = std::find_if(sensors.begin(), sensors.end(), [id](const Sensor &item)
+                                { return id.equals(item.uniqueId); });
+      if (match != sensors.end())
+      {
+        sensors.erase(match);
+        removeFromHomeAssistant("sensor", id);
+      }
+    }
   }
   JsonArray features = root["features"];
   for (auto feature : features)
   {
     String id = feature["id"] | "";
-    for (auto &actuator : actuatores)
+    if (String("ACTUATOR").equals(feature["group"] | ""))
     {
-      if (strcmp(actuator.uniqueId, id.c_str()) == 0)
+      for (auto &actuator : actuatores)
       {
-        strlcpy(actuator.name, feature["name"] | "", sizeof(actuator.name));
-        actuator.driver = feature["driver"] | actuator.driver;
-        actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
-        actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME;
+        if (strcmp(actuator.uniqueId, id.c_str()) == 0)
+        {
+          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+            strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
+          actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
+          actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+          actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+          actuator.setup();
+        }
+      }
+    }
+    if (String("SENSOR").equals(feature["group"] | ""))
+    {
+      for (auto &sensor : sensors)
+      {
+        if (strcmp(sensor.uniqueId, id.c_str()) == 0)
+        {
+          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+            strlcpy(sensor.name, feature["name"] | I18N::NO_NAME, sizeof(sensor.name));
+        }
       }
     }
   }
+  if (reloadMdns)
+    refreshMDNS(lastNodeId);
+  if (reloadWifi)
+  {
+    requestReloadWifi();
+  }
+  setupMQTT();
   root.clear();
   return this->save();
 }
@@ -486,11 +549,11 @@ void ConfigOnofre::json(JsonVariant &root)
     a["group"] = "ACTUATOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
-    a["driver"] = s.driverToText();
+    a["inputMode"] = s.driverToInputMode();
     a["family"] = s.familyToText();
-    a["area"] = s.knxAddress[0];
-    a["line"] = s.knxAddress[1];
-    a["member"] = s.knxAddress[2];
+    a["driver"] = s.driverToText();
+    a["upCourseTime"] = s.upCourseTime;
+    a["downCourseTime"] = s.downCourseTime;
     a["state"] = s.state;
     JsonArray outputs = a.createNestedArray("outputs");
     for (auto out : s.outputs)
@@ -509,6 +572,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["group"] = "SENSOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
+    a["hwAddress"] = s.hwAddress;
     a["family"] = s.familyToText();
     a["delayRead"] = s.delayRead;
     a["driver"] = s.driverToText();
