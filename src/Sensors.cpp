@@ -18,7 +18,7 @@ void Sensor::notifyState()
   // Notify by MQTT/Homeassistant
   if (mqttConnected())
   {
-    publishOnMqtt(readTopic, state, false);
+    publishOnMqtt(readTopic, state.c_str(), false);
   }
   // Notify by MQTT OnofreCloud
   if (cloudIOConnected())

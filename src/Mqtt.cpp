@@ -106,15 +106,8 @@ void loopMqtt()
     }
 }
 
-void publishOnMqtt(const char *topic, String payload, bool retain)
+void publishOnMqtt(const char *topic, const char *payload, bool retain)
 {
-    if (strlen(config.mqttIpDns) == 0)
-    {
-#ifdef DEBUG_ONOFRE
-        Log.warning("%s Setup required to publish messages" CR, tags::mqtt);
-#endif
-        return;
-    }
     if (!mqttConnected())
     {
 #ifdef DEBUG_ONOFRE
@@ -122,24 +115,19 @@ void publishOnMqtt(const char *topic, String payload, bool retain)
 #endif
         return;
     }
-    static unsigned int retries = 0;
-    while (!mqttClient.publish(topic, payload.c_str(), retain) && retries < 3)
+    if (mqttClient.publish(topic, payload, retain))
     {
-        retries++;
+#ifdef DEBUG_ONOFRE
+        Log.error("%s Message %s published to the topic %s successfully" CR, tags::mqtt, payload, topic);
+#endif
     }
 #ifdef DEBUG_ONOFRE
-    if (retries < 3)
-    {
-
-        Log.error("%s Message %s published to the topic %s successfully" CR, tags::mqtt, payload, topic);
-    }
     else
     {
 
         Log.error("%s Error on try publish to the topic %s with message %s" CR, tags::mqtt, topic, payload);
     }
 #endif
-    retries = 0;
 }
 bool mqttConnected()
 {

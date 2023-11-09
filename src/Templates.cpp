@@ -6,8 +6,7 @@
 extern ConfigOnofre config;
 void prepareHAN()
 {
-    config.actuatores.clear();
-    config.sensors.clear();
+
     Sensor sensor;
     strlcpy(sensor.name, I18N::HAN, sizeof(sensor.name));
     sensor.inputs = {constantsConfig::HAN_RX, constantsConfig::HAN_TX};
@@ -86,6 +85,8 @@ void prepareGarage()
 }
 void templateSelect(enum Template _template)
 {
+    config.actuatores.clear();
+    config.sensors.clear();
     switch (_template)
     {
     case Template::NO_TEMPLATE:

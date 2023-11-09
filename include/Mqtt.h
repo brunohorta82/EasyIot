@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-void publishOnMqtt(const char *topic, String payload, bool retain);
+void publishOnMqtt(const char *topic, const char *payload, bool retain);
 void subscribeOnMqtt(const char *topic);
 void setupMQTT();
 void loopMqtt();

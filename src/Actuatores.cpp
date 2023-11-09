@@ -288,7 +288,7 @@ void Actuator::notifyState(StateOrigin origin)
   // Notify by MQTT/Homeassistant
   if (mqttConnected())
   {
-    publishOnMqtt(readTopic, stateStr, true);
+    publishOnMqtt(readTopic, stateStr.c_str(), true);
   }
 
   // Notify by MQTT OnofreCloud

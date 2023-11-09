@@ -89,6 +89,7 @@ namespace constantsConfig
     constexpr const char *apSecret{"bhonofre"}; // AP PASSWORD
     constexpr const char *apiUser{"admin"};     // API USER
     constexpr const char *apiPassword{"xpto"};  // API PASSWORD
+    constexpr const char *PW_HIDE{"******"};
 } // namespace constantsConfig
 
 namespace constanstsCloudIO

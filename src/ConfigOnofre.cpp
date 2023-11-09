@@ -48,7 +48,7 @@ ConfigOnofre &ConfigOnofre::init()
   Log.notice("%s Default config loaded." CR, tags::config);
 #endif
 #ifdef TEST_TEMPLATE
-  templateSelect(Template::NO_TEMPLATE);
+  templateSelect(Template::DUAL_LIGHT);
 #endif
   return save();
 }
@@ -65,6 +65,7 @@ bool ConfigOnofre::isSensorExists(int hwAddress)
 void ConfigOnofre::pzemDiscovery()
 {
   bool found = false;
+  bool needsSave = false;
   for (int i = 0; i < 3; i++)
   {
     PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, Discovery::MODBUS_PZEM_ADDRESS_START + i);
@@ -77,7 +78,10 @@ void ConfigOnofre::pzemDiscovery()
 #endif
       found = true;
       if (!isSensorExists(pzem.getAddress()))
+      {
         preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+        needsSave = true;
+      }
     }
   }
   if (!found)
@@ -92,8 +96,15 @@ void ConfigOnofre::pzemDiscovery()
 #endif
       found = true;
       if (!isSensorExists(pzem.getAddress()))
+      {
         preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+        needsSave = true;
+      }
     }
+  }
+  if (needsSave)
+  {
+    save();
   }
 }
 #endif
@@ -389,19 +400,38 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
 ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
   bool reloadMdns = strncmp(nodeId, root["nodeId"] | "", sizeof(nodeId)) != 0;
+  bool reloadWifi = dhcp != (root["dhcp"] | true);
+  
+  String mqttPasswordStr = root["mqttPassword"] | "";
+  if (mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+    strlcpy(mqttPassword, mqttPasswordStr.c_str(), sizeof(mqttPassword));
+
+  String wifiSecretStr = root["wifiSecret"] | "";
+  if (wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  {
+    strlcpy(wifiSecret, wifiSecretStr.c_str(), sizeof(wifiSecret));
+    reloadWifi = true;
+  }
+
+  String accessPointPasswordStr = root["accessPointPassword"] | constantsConfig::apSecret;
+  if (!accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+    strlcpy(accessPointPassword, accessPointPasswordStr.c_str(), sizeof(accessPointPassword));
+
+  String apiPasswordStr = root["apiPassword"] | constantsConfig::apiPassword;
+  if (apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+    strlcpy(apiPassword, apiPasswordStr.c_str(), sizeof(apiPassword));
 
   char lastNodeId[32] = {};
   if (reloadMdns)
   {
     strlcpy(lastNodeId, nodeId, sizeof(lastNodeId));
   }
-  bool reloadWifi = dhcp != (root["dhcp"] | true);
+
 #ifdef DEBUG_ONOFRE
   if (reloadWifi)
     Log.notice("%sWiFi Reloaded because DHCP configuration changed." CR, tags::config);
 #endif
-  dhcp = root["dhcp"] | true;
-  if (!dhcp && !reloadWifi)
+  if (!reloadWifi)
   {
     reloadWifi = strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0;
 #ifdef DEBUG_ONOFRE
@@ -411,30 +441,24 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
   if (!reloadWifi)
   {
-    reloadWifi = strcmp(wifiSSID, root["wifiSSID"] | "") != 0 || strcmp(wifiSecret, root["wifiSecret"] | "") != 0;
+    reloadWifi = strcmp(wifiSSID, root["wifiSSID"] | "") != 0;
 #ifdef DEBUG_ONOFRE
     if (reloadWifi)
       Log.notice("%sWiFi Reloaded because SSID or Password changed." CR, tags::config);
 #endif
   }
 
-  bool reloadMqtt = strcmp(mqttIpDns, root["mqttIpDns"] | "") != 0 || strcmp(mqttUsername, root["mqttUsername"] | "") != 0 || strcmp(mqttPassword, root["mqttPassword"] | "") != 0 || mqttPort != (root["mqttPort"] | constantsMqtt::defaultPort);
   String n_name = root["nodeId"] | chipId;
   normalize(n_name);
   strlcpy(nodeId, n_name.c_str(), sizeof(nodeId));
   strlcpy(mqttIpDns, root["mqttIpDns"] | "", sizeof(mqttIpDns));
   mqttPort = root["mqttPort"] | constantsMqtt::defaultPort;
   strlcpy(mqttUsername, root["mqttUsername"] | "", sizeof(mqttUsername));
-  strlcpy(mqttPassword, root["mqttPassword"] | "", sizeof(mqttPassword));
   strlcpy(wifiSSID, root["wifiSSID"] | "", sizeof(wifiSSID));
-  strlcpy(wifiSecret, root["wifiSecret"] | "", sizeof(wifiSecret));
   strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
-  strlcpy(apiPassword, root["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
   strlcpy(apiUser, root["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
-  strlcpy(accessPointPassword, root["accessPointPassword"] | constantsConfig::apSecret, sizeof(accessPointPassword));
-
   JsonArray featuresToRemove = root["featuresToRemove"];
   for (String id : featuresToRemove)
   {
@@ -508,12 +532,12 @@ void ConfigOnofre::json(JsonVariant &root)
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
-  root["mqttPassword"] = mqttPassword;
-  root["accessPointPassword"] = accessPointPassword;
+  root["mqttPassword"] = constantsConfig::PW_HIDE;
+  root["accessPointPassword"] = constantsConfig::PW_HIDE;
   root["apiUser"] = apiUser;
-  root["apiPassword"] = apiPassword;
+  root["apiPassword"] = constantsConfig::PW_HIDE;
   root["wifiSSID"] = wifiSSID;
-  root["wifiSecret"] = wifiSecret;
+  root["wifiSecret"] = constantsConfig::PW_HIDE;
   root["dhcp"] = dhcp;
   // DYNAMIC VALUES
   root["mqttConnected"] = mqttConnected();
