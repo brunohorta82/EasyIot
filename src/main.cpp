@@ -54,7 +54,9 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Loading wifi configuration...", tags::system);
 #endif
+#if defined(ESP8266) || defined(LEGACY_PROVISON)
     reloadWiFiConfig();
+#endif
   }
 }
 

@@ -295,6 +295,7 @@ void setupWiFi()
   jw.subscribe(mdnsCallback);
 #endif
 #if defined(ESP32) && !defined(LEGACY_PROVISON)
+  WiFi.setSleep(true);
   WiFi.onEvent(SysProvEvent);
   Serial.println("Begin Provisioning using BLE");
   // Sample uuid that user can pass during provisioning using BLE
