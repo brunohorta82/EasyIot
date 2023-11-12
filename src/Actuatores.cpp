@@ -230,6 +230,7 @@ void Actuator::setup()
     button.setDebounceTime(1000);
     button.setChangedHandler(garageNotify);
     buttons.push_back(button);
+    state = digitalRead(inputs[0]) ? OFF_OPEN : ON_CLOSE;
   }
   else if (isCover())
   {

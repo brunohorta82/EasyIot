@@ -13,7 +13,7 @@ void createHaSwitch(Actuator &sw)
     return;
   String objectStr = "";
   String uniqueId = String(sw.uniqueId);
-  const size_t capacity = JSON_OBJECT_SIZE(8) + 300;
+  const size_t capacity = JSON_OBJECT_SIZE(8) + 400;
   DynamicJsonDocument doc(capacity);
   JsonObject object = doc.to<JsonObject>();
   object["name"] = sw.name;
@@ -26,8 +26,7 @@ void createHaSwitch(Actuator &sw)
   device["mdl"] = config.chipId;
   device["mf"] = "OnOfre Portugal";
   object["avty_t"] = config.healthTopic;
-  String family = sw.familyToText();
-  family.toLowerCase();
+
   if (sw.isGarage())
   {
     object["stat_t"] = sw.readTopic;
@@ -38,10 +37,10 @@ void createHaSwitch(Actuator &sw)
     object["stat_clsd"] = ActuatorState::ON_CLOSE;
     object["stat_stopped"] = ActuatorState::STOP;
     object["dev_cla"] = "garage";
-    family = "cover";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/cover/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
   }
-
-  if (sw.isCover())
+  else if (sw.isCover())
   {
     object["pl_open"] = ActuatorState::OFF_OPEN;
     object["pl_cls"] = ActuatorState::ON_CLOSE;
@@ -50,16 +49,21 @@ void createHaSwitch(Actuator &sw)
     object["pos_open"] = ActuatorState::OFF_OPEN;
     object["pos_clsd"] = ActuatorState::ON_CLOSE;
     object["pos_t"] = sw.readTopic;
-    object["set_position_topic"] = sw.writeTopic;
+    object["set_pos_t"] = sw.writeTopic;
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/cover/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
   }
-  if (sw.isLight() || sw.isSwitch())
+  else if (sw.isLight() || sw.isSwitch())
   {
     object["stat_t"] = sw.readTopic;
     object["pl_on"] = ActuatorState::ON_CLOSE;
     object["pl_off"] = ActuatorState::OFF_OPEN;
+    String family = sw.familyToText();
+    family.toLowerCase();
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
   }
-  serializeJson(object, objectStr);
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+  doc.clear();
 }
 
 void addToHomeAssistant(Sensor &s)
@@ -234,6 +238,7 @@ void addToHomeAssistant(Sensor &s)
   default:
     break;
   }
+  doc.clear();
 }
 void addToHomeAssistant(Actuator &sw)
 {
