@@ -5,9 +5,11 @@
 #include "Constants.hpp"
 #include "ConfigOnofre.h"
 #include "Mqtt.h"
+#include "CoreWiFi.h"
 #include <esp-knx-ip.h>
 #include "CloudIO.h"
 #include "LittleFS.h"
+#include <time.h>
 extern ConfigOnofre config;
 
 void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
@@ -68,32 +70,43 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 }
 void actuatoresCallback(message_t const &msg, void *arg)
 {
-  auto s = static_cast<Actuator *>(arg);
-  switch (msg.ct)
+  int id = *(int *)arg;
+  for (auto &s : config.actuatores)
   {
-  case KNX_CT_ADC_ANSWER:
-  case KNX_CT_ADC_READ:
-  case KNX_CT_ANSWER:
-  case KNX_CT_ESCAPE:
-  case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
-  case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
-  case KNX_CT_INDIVIDUAL_ADDR_WRITE:
-  case KNX_CT_MASK_VERSION_READ:
-  case KNX_CT_MASK_VERSION_RESPONSE:
-  case KNX_CT_MEM_ANSWER:
-  case KNX_CT_MEM_READ:
-  case KNX_CT_MEM_WRITE:
-  case KNX_CT_READ:
-  case KNX_CT_RESTART:
-    break;
-
-  case KNX_CT_WRITE:
-  {
-    uint16_t stateIdx = msg.data[1] | (msg.data[0] << 8);
-    s->changeState(StateOrigin::KNX, String(stateIdx).toInt());
-    break;
+    if (s.sequence == id)
+    {
+      switch (msg.ct)
+      {
+      case KNX_CT_ADC_ANSWER:
+      case KNX_CT_ADC_READ:
+      case KNX_CT_ESCAPE:
+      case KNX_CT_INDIVIDUAL_ADDR_REQUEST:
+      case KNX_CT_INDIVIDUAL_ADDR_RESPONSE:
+      case KNX_CT_INDIVIDUAL_ADDR_WRITE:
+      case KNX_CT_MASK_VERSION_READ:
+      case KNX_CT_MASK_VERSION_RESPONSE:
+      case KNX_CT_MEM_ANSWER:
+      case KNX_CT_MEM_READ:
+      case KNX_CT_MEM_WRITE:
+      case KNX_CT_READ:
+        knx.answer_1byte_int(msg.received_on, s.state);
+        break;
+      case KNX_CT_RESTART:
+        break;
+      case KNX_CT_ANSWER:
+      case KNX_CT_WRITE:
+      {
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s KNX %s" CR, tags::actuatores, KNX_CT_ANSWER == msg.ct ? "SYNC" : "WRITE");
+#endif
+        int stateIdx = knx.data_to_1byte_int(msg.data);
+        s.changeState(StateOrigin::KNX, stateIdx);
+        config.save();
+        break;
+      }
+      };
+    }
   }
-  };
 }
 void toogle(Button2 &btn)
 {
@@ -276,7 +289,8 @@ void Actuator::setup()
   {
     knx.callback_unassign(knxIdAssign);
     knx.callback_deregister(knxIdRegister);
-    knxIdRegister = knx.callback_register(String(name), actuatoresCallback, this);
+    static int ids = sequence;
+    knxIdRegister = knx.callback_register(String(name), actuatoresCallback, &ids);
     knxIdAssign = knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]));
     knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], 0));
     knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], 0, 0));
@@ -302,7 +316,7 @@ void Actuator::notifyState(StateOrigin origin)
   sendToServerEvents(uniqueId, stateStr.c_str());
 
   // Notify by KNX
-  if (StateOrigin::INTERNAL != origin && isKnxSupport())
+  if (StateOrigin::INTERNAL != origin && StateOrigin::KNX != origin && isKnxSupport())
   {
     knx.write_1byte_int(knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]), state);
   }
@@ -370,6 +384,18 @@ void ConfigOnofre::loopActuators()
     for (auto &button : sw.buttons)
     {
       button.loop();
+    }
+    if (wifiConnected() && sw.isKnxSupport())
+    {
+      knx.loop();
+      if (sw.knxSync == 3)
+      {
+        knx.send_1byte_int(knx.GA_to_address(sw.knxAddress[0], sw.knxAddress[1], sw.knxAddress[2]), KNX_CT_READ, 0);
+      }
+      if (sw.knxSync < 4)
+      {
+        sw.knxSync++;
+      }
     }
   }
 }

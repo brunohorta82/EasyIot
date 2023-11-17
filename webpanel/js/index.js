@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.247"
+let baseUrl = "http://192.168.187.134"
 var config;
 let source = null;
 var currentPage = "node"
@@ -158,6 +158,9 @@ function applyFeatureChanges(e) {
         feature.inputMode = parseInt(document.querySelector('input[name="f-in-mode"]:checked').value);
         feature.upCourseTime = parseInt(getValue("f-up", feature.upCourseTime).trim());
         feature.downCourseTime = parseInt(getValue("f-down", feature.downCourseTime).trim());
+        feature.area = parseInt(getValue("f-area", feature.area).trim());
+        feature.line = parseInt(getValue("f-line", feature.line).trim());
+        feature.member = parseInt(getValue("f-member", feature.member).trim());
     }
     saveConfig();
     toggleActive("devices");
@@ -279,6 +282,9 @@ function fillDevices() {
             }
             document.getElementById("f-up").value = f.upCourseTime;
             document.getElementById("f-down").value = f.downCourseTime;
+            document.getElementById("f-area").value = f.area;
+            document.getElementById("f-line").value = f.line;
+            document.getElementById("f-member").value = f.member;
             document.getElementById("f-in-mode-push").checked = f.inputMode === 0;
             document.getElementById("f-in-mode-latch").checked = f.inputMode === 1;
             document.getElementById("btn-delete").featureId = f.id;

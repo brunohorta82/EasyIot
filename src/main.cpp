@@ -113,7 +113,7 @@ void setup()
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
 #endif
 }
-
+bool a = true;
 void loop()
 {
   checkInternalRoutines();
@@ -133,7 +133,6 @@ void loop()
     }
 #endif
 
-    if (wifiConnected())
-      knx.loop();
+  
   }
 }

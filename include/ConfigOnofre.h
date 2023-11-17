@@ -43,8 +43,6 @@ public:
   char apiPassword[64];
   std::vector<Actuator> actuatores;
   std::vector<Sensor> sensors;
-  int i2cSDA = -1;
-  int i2cSCL = -1;
   Adafruit_SSD1306 *display = NULL;
   void json(JsonVariant &root);
   ConfigOnofre &update(JsonObject &root);
@@ -78,7 +76,6 @@ public:
   {
     return pauseFeaturesLoop;
   }
-
   void requestReloadWifi();
   bool isReloadWifiRequested();
   void controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result);

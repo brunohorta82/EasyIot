@@ -61,6 +61,7 @@ public:
     uint8_t knxAddress[3] = {0, 0, 0};
     uint8_t knxIdRegister = 0;
     uint8_t knxIdAssign = 0;
+    int knxSync{0};
     // MQTT
     char writeTopic[128]{};
     char readTopic[128]{};

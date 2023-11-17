@@ -318,6 +318,9 @@ ConfigOnofre &ConfigOnofre::save()
     a["typeControl"] = s.typeControl;
     a["upCourseTime"] = s.upCourseTime;
     a["downCourseTime"] = s.downCourseTime;
+    a["area"] = s.knxAddress[0];
+    a["line"] = s.knxAddress[1];
+    a["member"] = s.knxAddress[2];
     a["state"] = s.state;
     JsonArray outputs = a.createNestedArray("outputs");
     for (auto out : s.outputs)
@@ -401,7 +404,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
   bool reloadMdns = strncmp(nodeId, root["nodeId"] | "", sizeof(nodeId)) != 0;
   bool reloadWifi = dhcp != (root["dhcp"] | true);
-  
+
   String mqttPasswordStr = root["mqttPassword"] | "";
   if (mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
     strlcpy(mqttPassword, mqttPasswordStr.c_str(), sizeof(mqttPassword));
@@ -498,6 +501,9 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
           actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
           actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
           actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+          actuator.knxAddress[0] = feature["area"] | 0;
+          actuator.knxAddress[1] = feature["line"] | 0;
+          actuator.knxAddress[2] = feature["member"] | 0;
           actuator.setup();
         }
       }
@@ -579,6 +585,9 @@ void ConfigOnofre::json(JsonVariant &root)
     a["upCourseTime"] = s.upCourseTime;
     a["downCourseTime"] = s.downCourseTime;
     a["state"] = s.state;
+    a["area"] = s.knxAddress[0];
+    a["line"] = s.knxAddress[1];
+    a["member"] = s.knxAddress[2];
     JsonArray outputs = a.createNestedArray("outputs");
     for (auto out : s.outputs)
     {
