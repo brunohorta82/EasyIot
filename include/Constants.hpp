@@ -4,11 +4,10 @@ enum Template
 {
     NO_TEMPLATE,
     DUAL_LIGHT,
+    DUAL_SWITCH,
     COVER,
     GARAGE,
-    PZEM,
-    HAN_MODULE,
-    SHT3X_CLIMATE
+    HAN_MODULE
 };
 namespace constantsMqtt
 {
@@ -75,8 +74,8 @@ namespace constantsConfig
     constexpr int SCL{13};
 #endif
 #ifdef ESP32
-    constexpr int HAN_TX{14};
-    constexpr int HAN_RX{13};
+    constexpr int HAN_TX{13};
+    constexpr int HAN_RX{14};
 #endif
 #ifdef ESP8266
     constexpr int HAN_TX{1};
@@ -85,12 +84,13 @@ namespace constantsConfig
     constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME_SECONS{25};
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
+    constexpr unsigned long illuminanceReadDelay{5000l};
     constexpr unsigned long storeConfigDelay{5000ul};
     constexpr const char *apSecret{"bhonofre"}; // AP PASSWORD
     constexpr const char *apiUser{"admin"};     // API USER
     constexpr const char *apiPassword{"xpto"};  // API PASSWORD
     constexpr const char *PW_HIDE{"******"};
-} // namespace constantsConfig
+}
 
 namespace constanstsCloudIO
 {
@@ -99,21 +99,26 @@ namespace constanstsCloudIO
     constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
     constexpr const char *otaUrl{"http://update.bhonofre.pt/firmware/update"};
 
-} // namespace constanstsCloudIO
+}
+
 namespace Discovery
 {
-    constexpr int I2C_SHT3X_ADDRESS{0x44};
-    constexpr int I2C_SSD1306_ADDRESS{0x3C};
-    constexpr int MODBUS_PZEM_ADDRESS_START{0x10};
+    constexpr int I2C_SHT4X_ADDRESS{0x44};         // TEMPERATURE/HUMIDITY
+    constexpr int I2C_LTR303_ADDRESS{0x29};        // ILLUMINANCE
+    constexpr int I2C_SSD1306_ADDRESS{0x3C};       // DISPLAY
+    constexpr int MODBUS_PZEM_ADDRESS_START{0x10}; // POWER METER
 }
+
 namespace Family
 {
     constexpr const char *SWITCH{"SWITCH"};
     constexpr const char *LIGTH{"LIGHT"};
     constexpr const char *CLIMATE{"CLIMATE"};
     constexpr const char *SECURITY{"SECURITY"};
-    constexpr const char *NONE{"NONE"};
     constexpr const char *ENERGY{"ENERGY"};
+    constexpr const char *LEVEL_METER{"LEVEL_METER"};
+    constexpr const char *NONE{"NONE"};
+
 }
 
 namespace I18N
@@ -124,6 +129,7 @@ namespace I18N
     constexpr const char *COVER{"Estore"};
     constexpr const char *HAN{"Contador"};
     constexpr const char *ENERGY{"Energia "};
+    constexpr const char *ILLUMINANCE{"Iluminação "};
     constexpr const char *CLIMATIZATION{"Climatização"};
     constexpr const char *NO_NAME{"Sem Nome"};
 
@@ -139,12 +145,12 @@ namespace FeatureDrivers
     constexpr const char *LIGHT_PUSH{"LIGHT_PUSH"};
     constexpr const char *LIGHT_LATCH{"LIGHT_LATCH"};
     constexpr const char *GARAGE_PUSH{"GARAGE_PUSH"};
-    constexpr const char *LDR{"LDR"};
+    constexpr const char *LTR303{"LTR303"};
     constexpr const char *DS18B20{"DS18B20"};
     constexpr const char *DHT_11{"DHT_11"};
     constexpr const char *DHT_21{"DHT_21"};
     constexpr const char *DHT_22{"DHT_22"};
-    constexpr const char *SHT3X{"SHT3X"};
+    constexpr const char *SHT4X{"SHT4X"};
     constexpr const char *PZEM_004T_V03{"PZEM_004T_V03"};
     constexpr const char *HAN{"HAN_MODBUS"};
     constexpr const char *GENERIC{"GENERIC"};

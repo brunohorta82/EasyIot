@@ -231,8 +231,9 @@ function fillDevices() {
         document.getElementById("devices_config").appendChild(a);
         icon = document.getElementById('i-' + f.id);
         if("SENSOR" === f.group){
-
+            document.getElementById("f-knx").classList.add("hide")
         }if("ACTUATOR" === f.group) {
+            document.getElementById("f-knx").classList.remove("hide")
             a.getElementsByTagName("input").item(0).checked = f.state > 0;
             a.getElementsByTagName("input").item(0).id = f.id;
             a.getElementsByTagName("input").item(1).value =Math.abs(parseInt(f.state)-100); ;

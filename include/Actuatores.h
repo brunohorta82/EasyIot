@@ -31,11 +31,13 @@ enum ActuatorDriver
 {
     SWITCH_PUSH = 1,
     SWITCH_LATCH = 2,
+    COVER_SINGLE_PUSH = 3,
     COVER_DUAL_PUSH = 4,
     COVER_DUAL_LATCH = 5,
     LIGHT_PUSH = 7,
     LIGHT_LATCH = 8,
-    GARAGE_PUSH = 9
+    GARAGE_PUSH = 9,
+    INVALID = 999
 };
 
 enum ActuatorControlType

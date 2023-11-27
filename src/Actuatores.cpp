@@ -210,6 +210,7 @@ void Actuator::setup()
   for (auto output : outputs)
   {
     configPIN(output, OUTPUT);
+    writeToPIN(output, 0);
     if (isLight() || isSwitch())
     {
       writeToPIN(output, state);
@@ -220,16 +221,20 @@ void Actuator::setup()
     for (auto input : inputs)
     {
       Button2 button;
-      button.begin(input);
-      button.setID(sequence);
+
       switch (driver)
       {
       case ActuatorDriver::LIGHT_PUSH:
       case ActuatorDriver::SWITCH_PUSH:
+      case ActuatorDriver::COVER_SINGLE_PUSH:
+        button.begin(input);
+        button.setID(sequence);
         button.setPressedHandler(toogle);
         break;
       case ActuatorDriver::LIGHT_LATCH:
       case ActuatorDriver::SWITCH_LATCH:
+        button.begin(input, INPUT_PULLUP, state);
+        button.setID(sequence);
         button.setChangedHandler(toogle);
       }
       buttons.push_back(button);
@@ -332,44 +337,50 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   Log.notice("%s From : %d" CR, tags::actuatores, origin);
   Log.notice("%s Family : %d" CR, tags::actuatores, driver);
 #endif
-  if (outputs.size() == 0)
+  if (typeControl == ActuatorControlType::GPIO_OUTPUT && outputs.size() > 0)
+  {
+    if (isCover())
+    {
+      int level = state;
+      if (level == ActuatorState::STOP)
+        shutter->stop();
+      else
+        shutter->setLevel(max(0, min(100, level)));
+    }
+    else if (isGarage())
+    {
+      writeToPIN(outputs[0], HIGH);
+      delay(1000);
+      writeToPIN(outputs[0], LOW);
+    }
+    else if ((isLight() || isSwitch()))
+    {
+      if (state == ActuatorState::ON_CLOSE || state == ActuatorState::OFF_OPEN)
+        writeToPIN(outputs[0], state ? HIGH : LOW);
+      else
+        return this;
+    }
+  }
+  else if (typeControl == ActuatorControlType::VIRTUAL)
+  {
+  }
+  else
   {
     return this;
   }
-  if (isCover())
-  {
-    int level = state;
-    if (level == ActuatorState::STOP)
-      shutter->stop();
-    else
-      shutter->setLevel(max(0, min(100, level)));
-  }
-  else if (isGarage())
-  {
-    writeToPIN(outputs[0], HIGH);
-    delay(1000);
-    writeToPIN(outputs[0], LOW);
-  }
-  else if ((isLight() || isSwitch()))
-  {
-    if (state == ActuatorState::ON_CLOSE || state == ActuatorState::OFF_OPEN)
-      writeToPIN(outputs[0], state ? HIGH : LOW);
-    else
-      return this;
-  }
   this->state = state;
   this->notifyState(origin);
-  if (isKnxGroup())
-  {
-    for (auto &sw : config.actuatores)
-    {
-      if (strcmp(sw.uniqueId, uniqueId) == 0)
-      {
-        sw.state = state;
-        sw.notifyState(StateOrigin::INTERNAL);
-      }
-    }
-  }
+  /*TODO if (isKnxGroup())
+   {
+     for (auto &sw : config.actuatores)
+     {
+       if (strcmp(sw.uniqueId, uniqueId) != 0 && (sw.knxAddress[0] == knxAddress[0] || (sw.knxAddress[0] == knxAddress[0] && sw.knxAddress[1] == knxAddress[1])))
+       {
+         sw.state = state;
+         sw.notifyState(StateOrigin::INTERNAL);
+       }
+     }
+   }*/
   return this;
 }
 

@@ -11,7 +11,8 @@
 #include <DallasTemperature.h>
 #include <dht_nonblocking.h>
 #include "HanOnofre.hpp"
-#include <SHT3x.h>
+#include <SensirionI2CSht4x.h>
+#include <LTR303.h>
 extern ConfigOnofre config;
 void Sensor::notifyState()
 {
@@ -76,28 +77,79 @@ void Sensor::loop()
     }
   }
   break;
-  case SHT3x_SENSOR:
+  case SHT4X:
   {
 
     if (lastRead + delayRead < millis())
     {
-      SHT3x sensor;
+
+      static SensirionI2CSht4x sensor;
       if (!isInitialized())
       {
-        sensor.Begin();
+        sensor.begin(Wire, Discovery::I2C_SHT4X_ADDRESS);
+        sensor.softReset();
+        lastRead = millis();
+        return;
       }
-      sensor.UpdateData();
-      StaticJsonDocument<256> doc;
-      JsonObject obj = doc.to<JsonObject>();
-      state.clear();
-      lastRead = millis();
-      obj["temperature"] = sensor.GetTemperature();
-      obj["humidity"] = sensor.GetRelHumidity();
-      serializeJson(doc, state);
-      notifyState();
+      float temperature = 0.0;
+      float humidity = 0.0;
+      if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
+      {
+        StaticJsonDocument<256> doc;
+        JsonObject obj = doc.to<JsonObject>();
+        state.clear();
+        obj["temperature"] = temperature;
+        obj["humidity"] = humidity;
+        serializeJson(doc, state);
+        notifyState();
+        lastRead = millis();
 #ifdef DEBUG_ONOFRE
-      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+        Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
+      }
+    }
+  }
+  case LTR303X:
+  {
+    if (lastRead + delayRead < millis())
+    {
+      lastRead = millis();
+      static LTR303 light;
+      if (!isInitialized())
+      {
+        light.begin();
+        light.setControl(0, false, false);
+        light.setMeasurementRate(1, 3);
+        light.setPowerUp();
+        return;
+      }
+
+      unsigned int data0, data1;
+      double lux;
+      if (light.getData(data0, data1))
+      {
+        if (light.getLux(0, 0, data0, data1, lux))
+        {
+          if (millis() < 25000)
+          {
+#ifdef DEBUG_ONOFRE
+            Log.notice("%s LTR303 Calibration " CR, tags::sensors);
+#endif
+            return;
+          }
+          StaticJsonDocument<256> doc;
+          JsonObject obj = doc.to<JsonObject>();
+          state.clear();
+          obj["ch0"] = data0;
+          obj["ch1"] = data1;
+          obj["lux"] = lux;
+          serializeJson(doc, state);
+          notifyState();
+#ifdef DEBUG_ONOFRE
+          Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+        }
+      }
     }
   }
   break;

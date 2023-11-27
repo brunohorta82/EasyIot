@@ -14,6 +14,7 @@
 #endif
 extern ConfigOnofre config;
 AsyncMqttClient mqttClient;
+Ticker checkCloudIOWatchdog;
 HTTPClient http;
 
 void disconnectToClounIOMqtt()
@@ -112,6 +113,7 @@ void setupMqttCloudIO()
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onMessage(onMqttMessage);
   mqttClient.setCleanSession(true);
+  mqttClient.setKeepAlive(36);
   mqttClient.setWill(config.cloudIOhealthTopic, 0, true, "0\0");
   mqttClient.setServer(constanstsCloudIO::mqttDns, constanstsCloudIO::mqttPort);
   mqttClient.setClientId(config.chipId);
@@ -133,9 +135,19 @@ bool tryMqttCloudConnection()
   }
   return true;
 }
-
+void checkCloudIOHealth()
+{
+#ifdef DEBUG_ONOFRE
+  Log.error("%s CloudIO Watchdog running." CR, tags::cloudIO);
+#endif
+  if (!wifiConnected() || mqttClient.connected())
+    return;
+  connectToCloudIO();
+}
 void connectToCloudIO()
 {
+
+  checkCloudIOWatchdog.attach_ms(60000, checkCloudIOHealth);
   if (!wifiConnected())
   {
 #ifdef DEBUG_ONOFRE

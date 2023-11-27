@@ -61,11 +61,12 @@ bool ConfigOnofre::isSensorExists(int hwAddress)
   }
   return false;
 }
-#ifdef ESP32
+
 void ConfigOnofre::pzemDiscovery()
 {
   bool found = false;
   bool needsSave = false;
+#ifdef ESP32
   for (int i = 0; i < 3; i++)
   {
     PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, Discovery::MODBUS_PZEM_ADDRESS_START + i);
@@ -76,26 +77,33 @@ void ConfigOnofre::pzemDiscovery()
 #ifdef DEBUG_ONOFRE
       Log.info("%sPzem found with address: 0x%x " CR, tags::discovery, pzem.getAddress());
 #endif
-      found = true;
-      if (!isSensorExists(pzem.getAddress()))
+      found = voltageOne > 0;
+      if (found && !isSensorExists(pzem.getAddress()))
       {
         preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
         needsSave = true;
       }
     }
   }
+#endif
   if (!found)
   {
+#ifdef ESP8266
+    SoftwareSerial softwareSerial = SoftwareSerial(constantsConfig::PZEM_TX, constantsConfig::PZEM_RX);
+    PZEM004Tv30 pzem(softwareSerial);
+#endif
+#ifdef ESP32
     PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX);
-    delay(100);
+#endif
+    delay(200);
     float voltageOne = pzem.voltage();
     if (!isnan(voltageOne))
     {
 #ifdef DEBUG_ONOFRE
       Log.info("%sPzem found with default address: 0x%x " CR, tags::discovery, pzem.getAddress());
 #endif
-      found = true;
-      if (!isSensorExists(pzem.getAddress()))
+      found = voltageOne > 0;
+      if (found && !isSensorExists(pzem.getAddress()))
       {
         preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
         needsSave = true;
@@ -107,10 +115,14 @@ void ConfigOnofre::pzemDiscovery()
     save();
   }
 }
-#endif
+
 void ConfigOnofre::i2cDiscovery()
 {
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Smart Bus Started." CR, tags::config);
+#endif
   Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
+
   byte error, address;
   for (address = 1; address < 127; address++)
   {
@@ -118,12 +130,18 @@ void ConfigOnofre::i2cDiscovery()
     error = Wire.endTransmission();
     if (error == 0)
     {
-      if (address == Discovery::I2C_SHT3X_ADDRESS)
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s Device Found. 0x%x" CR, tags::config, address);
+#endif
+      if (address == Discovery::I2C_SHT4X_ADDRESS)
       {
         if (!isSensorExists(address))
-          prepareSHT3X(address);
+        {
+          prepareSHT4X(address);
+          save();
+        }
       }
-      if (address == Discovery::I2C_SSD1306_ADDRESS)
+      else if (address == Discovery::I2C_SSD1306_ADDRESS)
       {
         display = new Adafruit_SSD1306(128, 64, &Wire, -1);
         if (display->begin(SSD1306_SWITCHCAPVCC, Discovery::I2C_SSD1306_ADDRESS))
@@ -138,6 +156,14 @@ void ConfigOnofre::i2cDiscovery()
           display->setCursor(30, LOGO_HEIGHT);
           display->println(F("ONOFRE"));
           display->display();
+        }
+      }
+      else if (address == Discovery::I2C_LTR303_ADDRESS)
+      {
+        if (!isSensorExists(address))
+        {
+          prepareLTR303(address);
+          save();
         }
       }
     }
@@ -474,7 +500,6 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
       removeFromHomeAssistant("cover", id);
       actuatores.erase(match);
     }
-
     else
     {
       auto match = std::find_if(sensors.begin(), sensors.end(), [id](const Sensor &item)
@@ -492,19 +517,38 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
     String id = feature["id"] | "";
     if (String("ACTUATOR").equals(feature["group"] | ""))
     {
-      for (auto &actuator : actuatores)
+      if (strcmp("new", id.c_str()) == 0)
       {
-        if (strcmp(actuator.uniqueId, id.c_str()) == 0)
+        ActuatorDriver driver = feature["driver"] | ActuatorDriver::INVALID;
+        if (driver == SWITCH_PUSH || driver == SWITCH_LATCH || driver == LIGHT_PUSH || driver == LIGHT_LATCH)
         {
-          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
-            strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
-          actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
-          actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-          actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-          actuator.knxAddress[0] = feature["area"] | 0;
-          actuator.knxAddress[1] = feature["line"] | 0;
-          actuator.knxAddress[2] = feature["member"] | 0;
-          actuator.setup();
+          prepareActuator(feature["name"] | I18N::NO_NAME, feature["o1"], feature["i1"], driver, feature["type"] | ActuatorControlType::VIRTUAL);
+        }
+        else if (driver == COVER_SINGLE_PUSH || driver == COVER_DUAL_PUSH || driver == COVER_DUAL_LATCH)
+        {
+          prepareCover(feature["name"] | I18N::NO_NAME, feature["outDown"] | 0, feature["outUp"] | 0, feature["inDown"] | 0, feature["inUp"] | 0, driver, feature["type"] | ActuatorControlType::VIRTUAL);
+        }
+        else if (driver == GARAGE_PUSH)
+        {
+          prepareGarage(feature["name"] | I18N::NO_NAME, feature["gateOne"], feature["gateTwo"], feature["sensor"], feature["switch"], driver, feature["type"] | ActuatorControlType::VIRTUAL);
+        }
+      }
+      else
+      {
+        for (auto &actuator : actuatores)
+        {
+          if (strcmp(actuator.uniqueId, id.c_str()) == 0)
+          {
+            if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+              strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
+            actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
+            actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+            actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+            actuator.knxAddress[0] = feature["area"] | 0;
+            actuator.knxAddress[1] = feature["line"] | 0;
+            actuator.knxAddress[2] = feature["member"] | 0;
+            actuator.setup();
+          }
         }
       }
     }

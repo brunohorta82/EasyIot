@@ -88,13 +88,28 @@ void addToHomeAssistant(Sensor &s)
   case DHT_11:
   case DHT_21:
   case DHT_22:
-  case SHT3x_SENSOR:
+  case SHT4X:
     object["uniq_id"] = uniqueId + "t";
     object["unit_of_meas"] = "º";
     object["dev_cla"] = "temperature";
     object["val_tpl"] = "{{value_json.temperature}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    objectStr = "";
+    object["uniq_id"] = uniqueId + "h";
+    object["unit_of_meas"] = "%";
+    object["dev_cla"] = "humidity";
+    object["val_tpl"] = "{{value_json.humidity}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/h" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    break;
+  case LTR303X:
+    object["uniq_id"] = uniqueId + "lx";
+    object["unit_of_meas"] = "lx";
+    object["dev_cla"] = "illuminance";
+    object["val_tpl"] = "{{value_json.lux}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/tx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     objectStr = "";
     object["uniq_id"] = uniqueId + "h";
     object["unit_of_meas"] = "%";

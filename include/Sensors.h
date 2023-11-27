@@ -10,7 +10,8 @@ enum SensorDriver
   DHT_11 = 0,
   DHT_21 = 1,
   DHT_22 = 2,
-  SHT3x_SENSOR = 91,
+  SHT4X = 91,
+  LTR303X = 81,
   PZEM_004T_V03 = 71,
   HAN = 80,
 };
@@ -47,7 +48,7 @@ public:
     switch (driver)
     {
     case DS18B20:
-    case SHT3x_SENSOR:
+    case SHT4X:
     case DHT_11:
     case DHT_21:
     case DHT_22:
@@ -55,6 +56,8 @@ public:
     case PZEM_004T_V03:
     case HAN:
       return Family::ENERGY;
+    case LTR303X:
+      return Family::LEVEL_METER;
     }
     return Family::NONE;
   };
@@ -64,8 +67,10 @@ public:
     {
     case DS18B20:
       return FeatureDrivers::DS18B20;
-    case SHT3x_SENSOR:
-      return FeatureDrivers::SHT3X;
+    case LTR303X:
+      return FeatureDrivers::LTR303;
+    case SHT4X:
+      return FeatureDrivers::SHT4X;
     case DHT_11:
       return FeatureDrivers::DHT_11;
     case DHT_21:

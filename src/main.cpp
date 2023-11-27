@@ -104,8 +104,8 @@ void setup()
   config.load();
 #ifdef ESP32
   config.i2cDiscovery();
-  config.pzemDiscovery();
 #endif
+  config.pzemDiscovery();
   setupWiFi();
   setupCors();
   setupMQTT();
@@ -113,7 +113,7 @@ void setup()
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
 #endif
 }
-bool a = true;
+
 void loop()
 {
   checkInternalRoutines();
@@ -132,7 +132,5 @@ void loop()
       config.loopSensors();
     }
 #endif
-
-  
   }
 }

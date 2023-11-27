@@ -17,14 +17,27 @@ void prepareHAN()
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
-void prepareSHT3X(int hwAddress)
+void prepareSHT4X(int hwAddress)
 {
     Sensor sensor;
     strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
     sensor.inputs = {constantsConfig::SDA, constantsConfig::SCL};
-    sensor.driver = SHT3x_SENSOR;
+    sensor.driver = SHT4X;
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::climateReadDelay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
+void prepareLTR303(int hwAddress)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::ILLUMINANCE, sizeof(sensor.name));
+    sensor.inputs = {constantsConfig::SDA, constantsConfig::SCL};
+    sensor.driver = LTR303X;
+    sensor.hwAddress = hwAddress;
+    sensor.delayRead = constantsConfig::illuminanceReadDelay;
     String idStr;
     config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
@@ -43,12 +56,12 @@ void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress)
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
-void prepareActuator(String name, unsigned int output, unsigned int input, ActuatorDriver driver)
+void prepareActuator(String name, unsigned int output, unsigned int input, ActuatorDriver driver, ActuatorControlType type)
 {
     Actuator actuator;
     actuator.driver = driver;
     strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
-    actuator.typeControl = ActuatorControlType::GPIO_OUTPUT;
+    actuator.typeControl = type;
     actuator.outputs.push_back(output);
     actuator.inputs.push_back(input);
     String idStr;
@@ -57,27 +70,27 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
     config.actuatores.push_back(actuator);
 }
 
-void prepareCover()
+void prepareCover(String name, unsigned int outputDown, unsigned int outputUp, unsigned int inputDown, unsigned int inputUp, ActuatorDriver driver, ActuatorControlType type)
 {
     Actuator cover;
-    cover.driver = COVER_DUAL_PUSH;
-    strlcpy(cover.name, I18N::COVER, sizeof(cover.name));
-    cover.typeControl = ActuatorControlType::GPIO_OUTPUT;
-    cover.outputs = {constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO};
-    cover.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
+    cover.driver = driver;
+    strlcpy(cover.name, name.c_str(), sizeof(cover.name));
+    cover.typeControl = type;
+    cover.outputs = {outputDown, outputUp};
+    cover.inputs = {inputDown, inputUp};
     String idStr;
     config.generateId(idStr, cover.name, cover.driver, sizeof(cover.uniqueId));
     strlcpy(cover.uniqueId, idStr.c_str(), sizeof(cover.uniqueId));
     config.actuatores.push_back(cover);
 }
-void prepareGarage()
+void prepareGarage(String name, unsigned int gateOne, unsigned int gateTwo, unsigned int openCloseSensor, unsigned int pushSwitch, ActuatorDriver driver, ActuatorControlType type)
 {
     Actuator garage;
-    garage.driver = GARAGE_PUSH;
-    strlcpy(garage.name, I18N::GARAGE, sizeof(garage.name));
-    garage.typeControl = ActuatorControlType::GPIO_OUTPUT;
-    garage.outputs = {constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO};
-    garage.inputs = {constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE};
+    garage.driver = driver;
+    strlcpy(garage.name, name.c_str(), sizeof(garage.name));
+    garage.typeControl = type;
+    garage.outputs = {gateOne, gateTwo};
+    garage.inputs = {openCloseSensor, pushSwitch};
     String idStr;
     config.generateId(idStr, garage.name, garage.driver, sizeof(garage.uniqueId));
     strlcpy(garage.uniqueId, idStr.c_str(), sizeof(garage.uniqueId));
@@ -90,23 +103,26 @@ void templateSelect(enum Template _template)
     switch (_template)
     {
     case Template::NO_TEMPLATE:
-        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatorDriver::SWITCH_PUSH);
-        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatorDriver::SWITCH_PUSH);
-        break;
-    case HAN_MODULE:
-        prepareHAN();
         break;
     case Template::DUAL_LIGHT:
     {
-        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatorDriver::LIGHT_PUSH);
-        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatorDriver::LIGHT_PUSH);
+        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatorDriver::LIGHT_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatorDriver::LIGHT_PUSH, ActuatorControlType::GPIO_OUTPUT);
+    }
+    case Template::DUAL_SWITCH:
+    {
+        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatorDriver::SWITCH_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatorDriver::SWITCH_PUSH, ActuatorControlType::GPIO_OUTPUT);
     }
     break;
     case Template::COVER:
-        prepareCover();
+        prepareCover(I18N::COVER, constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE, COVER_DUAL_PUSH, ActuatorControlType::GPIO_OUTPUT);
         break;
     case Template::GARAGE:
-        prepareGarage();
+        prepareGarage(I18N::GARAGE, constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE, GARAGE_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        break;
+    case HAN_MODULE:
+        prepareHAN();
         break;
     default:
         return;
