@@ -53,7 +53,7 @@ void Sensor::loop()
   {
     if (lastRead + delayRead < millis())
     {
-      DHT_nonblocking *dht;
+      static DHT_nonblocking *dht;
       if (!isInitialized())
       {
         dht = new DHT_nonblocking(inputs[0], driver);
@@ -114,11 +114,12 @@ void Sensor::loop()
     if (lastRead + delayRead < millis())
     {
       lastRead = millis();
+      static int gain = 3;
       static LTR303 light;
       if (!isInitialized())
       {
         light.begin();
-        light.setControl(0, false, false);
+        light.setControl(gain, false, false);
         light.setMeasurementRate(1, 3);
         light.setPowerUp();
         return;
@@ -128,7 +129,7 @@ void Sensor::loop()
       double lux;
       if (light.getData(data0, data1))
       {
-        if (light.getLux(0, 0, data0, data1, lux))
+        if (light.getLux(gain, 0, data0, data1, lux))
         {
           if (millis() < 25000)
           {
@@ -140,6 +141,7 @@ void Sensor::loop()
           StaticJsonDocument<256> doc;
           JsonObject obj = doc.to<JsonObject>();
           state.clear();
+          obj["gain"] = gain;
           obj["ch0"] = data0;
           obj["ch1"] = data1;
           obj["lux"] = lux;

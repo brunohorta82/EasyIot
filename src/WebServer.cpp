@@ -4,7 +4,7 @@
 #include <ESPAsyncWebServer.h>
 
 #include <ConfigOnofre.h>
-
+#include "Templates.h"
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
 #include "DevicesHtml.h"
@@ -332,7 +332,20 @@ void loadAPI()
     response->setLength();
     request->send(response);
     config.requestRestart(); });
-
+  server
+      .on("/change-template", HTTP_GET, [](AsyncWebServerRequest *request)
+          {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["result"] = "Template changed";
+    response->setLength();
+    request->send(response);
+    templateSelect((Template)request->getParam("t")->value().toInt());
+    config.save(); });
   server
       .on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request)
           {

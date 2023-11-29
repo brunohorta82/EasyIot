@@ -109,14 +109,7 @@ void addToHomeAssistant(Sensor &s)
     object["dev_cla"] = "illuminance";
     object["val_tpl"] = "{{value_json.lux}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/tx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
-    objectStr = "";
-    object["uniq_id"] = uniqueId + "h";
-    object["unit_of_meas"] = "%";
-    object["dev_cla"] = "humidity";
-    object["val_tpl"] = "{{value_json.humidity}}";
-    serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/h" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
     object["name"] = String(s.name);

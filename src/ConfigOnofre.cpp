@@ -289,6 +289,8 @@ ConfigOnofre &ConfigOnofre::load()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
+  // prepareVirtualSwitch("VIRTUAL", 27, ActuatorDriver::LIGHT_PUSH);
+  // this->save();
   return *this;
 }
 void ConfigOnofre::loadTemplate(int templateId)
@@ -407,19 +409,28 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
 {
   for (auto &a : actuatores)
   {
-
-    if (uniqueId.equals(a.uniqueId))
+    if (a.ready && uniqueId.equals(a.uniqueId))
     {
       if (state == ActuatorState::TOGGLE)
       {
         if (a.isLight() || a.isSwitch())
+        {
           state = a.state == ActuatorState::ON_CLOSE ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
+        }
         else if (a.isCover() || a.isGarage())
         {
-          state = a.state == ActuatorState::OFF_OPEN ? ActuatorState::ON_CLOSE : ActuatorState::OFF_OPEN;
+          if (a.lastState == ActuatorState::OFF_OPEN)
+          {
+            state = ActuatorState::ON_CLOSE;
+          }
+          else if (a.lastState == ActuatorState::ON_CLOSE)
+          {
+            state = ActuatorState::OFF_OPEN;
+          }
+          a.lastState = state;
         }
       }
-      a.changeState(origin, state)->state;
+      a.changeState(origin, state);
       this->save();
       return;
     }
@@ -582,12 +593,8 @@ void ConfigOnofre::json(JsonVariant &root)
   root["mqttIpDns"] = mqttIpDns;
   root["mqttPort"] = mqttPort;
   root["mqttUsername"] = mqttUsername;
-  root["mqttPassword"] = constantsConfig::PW_HIDE;
-  root["accessPointPassword"] = constantsConfig::PW_HIDE;
   root["apiUser"] = apiUser;
-  root["apiPassword"] = constantsConfig::PW_HIDE;
   root["wifiSSID"] = wifiSSID;
-  root["wifiSecret"] = constantsConfig::PW_HIDE;
   root["dhcp"] = dhcp;
   // DYNAMIC VALUES
   root["mqttConnected"] = mqttConnected();
@@ -595,6 +602,12 @@ void ConfigOnofre::json(JsonVariant &root)
   root["wifiMask"] = WiFi.subnetMask().toString();
   root["wifiGw"] = WiFi.gatewayIP().toString();
   root["firmware"] = String(VERSION);
+#ifdef ESP32
+  root["mcu"] = "ESP32";
+#endif
+#ifdef ESP8266
+  root["mcu"] = "ESP8266";
+#endif
   root["mac"] = WiFi.macAddress();
   root["wifiStatus"] = WiFi.isConnected();
   root["signal"] = WiFi.RSSI();

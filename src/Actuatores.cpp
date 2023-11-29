@@ -171,6 +171,16 @@ void closeShutter(Button2 &btn)
     }
   }
 }
+void rotateShutter(Button2 &btn)
+{
+  for (auto a : config.actuatores)
+  {
+    if (a.sequence == btn.getID())
+    {
+      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
+    }
+  }
+}
 void stopShutter(Button2 &btn)
 {
   for (auto a : config.actuatores)
@@ -221,22 +231,19 @@ void Actuator::setup()
     for (auto input : inputs)
     {
       Button2 button;
-
+      button.begin(input);
+      button.setID(sequence);
       switch (driver)
       {
       case ActuatorDriver::LIGHT_PUSH:
       case ActuatorDriver::SWITCH_PUSH:
-      case ActuatorDriver::COVER_SINGLE_PUSH:
-        button.begin(input);
-        button.setID(sequence);
         button.setPressedHandler(toogle);
         break;
       case ActuatorDriver::LIGHT_LATCH:
       case ActuatorDriver::SWITCH_LATCH:
-        button.begin(input, INPUT_PULLUP, state);
-        button.setID(sequence);
         button.setChangedHandler(toogle);
       }
+      button.loop();
       buttons.push_back(button);
     }
   }
@@ -247,35 +254,26 @@ void Actuator::setup()
     button.setID(sequence);
     button.setDebounceTime(1000);
     button.setChangedHandler(garageNotify);
+    button.loop();
     buttons.push_back(button);
     state = digitalRead(inputs[0]) ? OFF_OPEN : ON_CLOSE;
   }
   else if (isCover())
   {
-    if (inputs.size() == 2)
+    if ((ActuatorDriver::COVER_DUAL_PUSH == driver || ActuatorDriver::COVER_DUAL_LATCH == driver) && inputs.size() == 2)
     {
       Button2 buttonOpen;
       buttonOpen.begin(inputs[0]);
       buttonOpen.setID(sequence);
+      Button2 buttonClose;
+      buttonClose.begin(inputs[1]);
+      buttonClose.setID(sequence);
       if (ActuatorDriver::COVER_DUAL_PUSH == driver)
       {
         buttonOpen.setPressedHandler(openShutter);
         buttonOpen.setLongClickTime(500);
         buttonOpen.setLongClickDetectedHandler(stopShutter);
         buttonOpen.setDoubleClickHandler(stopShutter);
-      }
-      else if (ActuatorDriver::COVER_DUAL_LATCH == driver)
-      {
-        buttonOpen.setChangedHandler(stopShutterLatch);
-        buttonOpen.setPressedHandler(openShutter);
-      }
-
-      buttons.push_back(buttonOpen);
-      Button2 buttonClose;
-      buttonClose.begin(inputs[1]);
-      buttonClose.setID(sequence);
-      if (ActuatorDriver::COVER_DUAL_PUSH == driver)
-      {
         buttonClose.setLongClickTime(500);
         buttonClose.setLongClickDetectedHandler(stopShutter);
         buttonClose.setDoubleClickHandler(stopShutter);
@@ -283,10 +281,28 @@ void Actuator::setup()
       }
       else if (ActuatorDriver::COVER_DUAL_LATCH == driver)
       {
+        buttonOpen.setChangedHandler(stopShutterLatch);
+        buttonOpen.setPressedHandler(openShutter);
         buttonClose.setChangedHandler(stopShutterLatch);
         buttonClose.setPressedHandler(closeShutter);
       }
+      buttonOpen.loop();
+      buttonClose.loop();
+      buttons.push_back(buttonOpen);
       buttons.push_back(buttonClose);
+    }
+    else if (ActuatorDriver::COVER_SINGLE_PUSH == driver && inputs.size() > 0)
+    {
+      Button2 buttonRotate;
+      buttonRotate.begin(inputs[0]);
+      buttonRotate.setDebounceTime(50);
+      buttonRotate.setID(sequence);
+      buttonRotate.setLongClickTime(500);
+      buttonRotate.setLongClickDetectedHandler(stopShutter);
+      buttonRotate.setClickHandler(toogle);
+      buttonRotate.setDoubleClickHandler(stopShutter);
+      buttonRotate.loop();
+      buttons.push_back(buttonRotate);
     }
   }
 
@@ -300,26 +316,29 @@ void Actuator::setup()
     knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], 0));
     knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], 0, 0));
   }
+  ready = true;
 }
 
 void Actuator::notifyState(StateOrigin origin)
 {
-  String stateStr = String(state);
-  // Notify by MQTT/Homeassistant
-  if (mqttConnected())
+  if (state <= 100)
   {
-    publishOnMqtt(readTopic, stateStr.c_str(), true);
+    String stateStr = String(state);
+    // Notify by MQTT/Homeassistant
+    if (mqttConnected())
+    {
+      publishOnMqtt(readTopic, stateStr.c_str(), true);
+    }
+
+    // Notify by MQTT OnofreCloud
+    if (cloudIOConnected())
+    {
+      notifyStateToCloudIO(cloudIOreadTopic, stateStr.c_str());
+    }
+
+    // Notify by SSW Webpanel
+    sendToServerEvents(uniqueId, stateStr.c_str());
   }
-
-  // Notify by MQTT OnofreCloud
-  if (cloudIOConnected())
-  {
-    notifyStateToCloudIO(cloudIOreadTopic, stateStr.c_str());
-  }
-
-  // Notify by SSW Webpanel
-  sendToServerEvents(uniqueId, stateStr.c_str());
-
   // Notify by KNX
   if (StateOrigin::INTERNAL != origin && StateOrigin::KNX != origin && isKnxSupport())
   {
@@ -329,8 +348,7 @@ void Actuator::notifyState(StateOrigin origin)
 
 Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
-  if (!isGarage() && this->state == state)
-    return this;
+
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
   Log.notice("%s State:     %d" CR, tags::actuatores, state);
@@ -339,6 +357,8 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
 #endif
   if (typeControl == ActuatorControlType::GPIO_OUTPUT && outputs.size() > 0)
   {
+    if (!isGarage() && this->state == state)
+      return this;
     if (isCover())
     {
       int level = state;
@@ -363,6 +383,9 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   }
   else if (typeControl == ActuatorControlType::VIRTUAL)
   {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Virtual Switch triggered: %s" CR, tags::actuatores, name);
+#endif
   }
   else
   {
@@ -370,17 +393,20 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   }
   this->state = state;
   this->notifyState(origin);
-  /*TODO if (isKnxGroup())
-   {
-     for (auto &sw : config.actuatores)
-     {
-       if (strcmp(sw.uniqueId, uniqueId) != 0 && (sw.knxAddress[0] == knxAddress[0] || (sw.knxAddress[0] == knxAddress[0] && sw.knxAddress[1] == knxAddress[1])))
-       {
-         sw.state = state;
-         sw.notifyState(StateOrigin::INTERNAL);
-       }
-     }
-   }*/
+  if (isKnxGroup())
+  {
+    for (auto &sw : config.actuatores)
+    {
+      if (strcmp(sw.uniqueId, uniqueId) != 0)
+      {
+        if (sw.knxAddress[0] == knxAddress[0] && (knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0))
+        {
+          sw.state = state;
+          sw.notifyState(StateOrigin::INTERNAL);
+        }
+      }
+    }
+  }
   return this;
 }
 

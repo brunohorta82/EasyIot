@@ -97,8 +97,7 @@ namespace constanstsCloudIO
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
     constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
-    constexpr const char *otaUrl{"http://update.bhonofre.pt/firmware/update"};
-
+    constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest"};
 }
 
 namespace Discovery
@@ -140,6 +139,7 @@ namespace FeatureDrivers
     constexpr const char *SWITCH_PUSH{"SWITCH_PUSH"};
     constexpr const char *SWITCH_LATCH{"SWITCH_LATCH"};
     constexpr const char *COVER_DUAL_PUSH{"COVER_DUAL_PUSH"};
+    constexpr const char *COVER_SINGLE_PUSH{"COVER_SINGLE_PUSH"};
     constexpr const char *COVER_DUAL_LATCH{"COVER_DUAL_LATCH"};
     constexpr const char *LOCK_PUSH{"LOCK_PUSH"};
     constexpr const char *LIGHT_PUSH{"LIGHT_PUSH"};
@@ -153,5 +153,5 @@ namespace FeatureDrivers
     constexpr const char *SHT4X{"SHT4X"};
     constexpr const char *PZEM_004T_V03{"PZEM_004T_V03"};
     constexpr const char *HAN{"HAN_MODBUS"};
-    constexpr const char *GENERIC{"GENERIC"};
+    constexpr const char *INVALID{"INVALID"};
 }

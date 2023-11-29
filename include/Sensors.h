@@ -82,7 +82,7 @@ public:
     case HAN:
       return FeatureDrivers::HAN;
     }
-    return FeatureDrivers::GENERIC;
+    return FeatureDrivers::INVALID;
   };
   const bool isInitialized()
   {

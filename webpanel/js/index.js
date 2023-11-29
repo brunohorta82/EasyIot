@@ -3,6 +3,10 @@ var config;
 let source = null;
 var currentPage = "node"
 var WORDS_PT = {
+    "dual_push":"Pulsador Duplo",
+    "dual_latch":"Normal Duplo",
+    "single_latch":"Normal",
+    "single_push":"Pulsador",
     "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
     "config_save_ok": "Configuração Guardada",
     "device_reboot_ok": "O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.",
@@ -11,7 +15,9 @@ var WORDS_PT = {
     "defaults_error": "Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
 }
 
-
+function  getI18n(key){
+    return WORDS_PT[key];
+}
 function stringToHTML(text) {
     let parser = new DOMParser();
     let doc = parser.parseFromString(text, 'text/html');
@@ -88,16 +94,14 @@ function fillConfig() {
     findById("mqttUsername").value = config.mqttUsername;
     findById("mqttPassword").value = config.mqttPassword;
     findById("wifiSSID").value = config.wifiSSID;
-    findById("wifiSecret").value = config.wifiSecret;
     findById("wifiIp").value = config.wifiIp;
     findById("wifiMask").value = config.wifiMask;
     findById("wifiGw").value = config.wifiGw;
-    findById("accessPointPassword").value = config.accessPointPassword;
-    findById("apiPassword").value = config.apiPassword;
     findById("apiUser").value = config.apiUser;
     findById("wifiIp").value = config.wifiIp;
-
-
+    findById("wifiSecret").value = "******";
+    findById("accessPointPassword").value = "******";
+    findById("apiPassword").value = "******";
 }
 
 async function loadConfig() {
@@ -216,6 +220,40 @@ function appendSvgPath(node,d,strokeColor){
     a.setAttribute("stroke-linecap","round");
     node.appendChild(a)
 }
+
+function createModal(a, modal, f) {
+    a.getElementsByClassName("feature-name").item(0).onclick = function () {
+        modal.style.display = "block";
+        modal.getElementsByClassName("f-name").item(0).textContent = f.name;
+        modal.getElementsByClassName("f-name").item(1).value = f.name;
+        if (f.driver.includes("COVER")) {
+            document.getElementById("f-calibration").classList.remove("hide")
+            document.getElementById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
+            document.getElementById("f-in-mode-latch-lbl").outerHTML = getI18n("dual_latch");
+            document.getElementById("f-in-mode-push-toggle-lbl").classList.remove("hide");
+            document.getElementById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
+        }else {
+            document.getElementById("f-in-mode-push-toggle-lbl").classList.add("hide");
+            document.getElementById("f-in-mode-push-lbl").outerHTML = getI18n("single_push");
+            document.getElementById("f-in-mode-latch-lbl").outerHTML = getI18n("single_latch");
+        }
+        if (f.group === "SENSOR")
+            for (let i = 0; i < modal.getElementsByClassName("f-ac").length; i++) {
+                modal.getElementsByClassName("f-ac").item(i).classList.add("hide");
+            }
+        document.getElementById("f-up").value = f.upCourseTime;
+        document.getElementById("f-down").value = f.downCourseTime;
+        document.getElementById("f-area").value = f.area;
+        document.getElementById("f-line").value = f.line;
+        document.getElementById("f-member").value = f.member;
+        document.getElementById("f-in-mode-push").checked = f.inputMode === 0;
+        document.getElementById("f-in-mode-latch").checked = f.inputMode === 1;
+        document.getElementById("f-in-mode-push-toggle").checked = f.inputMode === 2;
+        document.getElementById("btn-delete").featureId = f.id;
+        document.getElementById("btn-update").featureId = f.id;
+    }
+}
+
 function fillDevices() {
     let temp, item, a;
     const modal = document.getElementById("modal");
@@ -270,34 +308,11 @@ function fillDevices() {
                 box.getElementsByTagName("input").item(1).value =Math.abs(parseInt(s.data)-100);
             })
         }
-        a.getElementsByClassName("feature-name").item(0).onclick = function () {
-            modal.style.display = "block";
-            modal.getElementsByClassName("f-name").item(0).textContent = f.name;
-            modal.getElementsByClassName("f-name").item(1).value = f.name;
-            if(f.driver.includes("COVER")) {
-                document.getElementById("f-calibration").classList.remove("hide")
-            }
-            if(f.group === "SENSOR")
-            for (let i = 0; i < modal.getElementsByClassName("f-ac").length; i++){
-                modal.getElementsByClassName("f-ac").item(i).classList.add("hide");
-            }
-            document.getElementById("f-up").value = f.upCourseTime;
-            document.getElementById("f-down").value = f.downCourseTime;
-            document.getElementById("f-area").value = f.area;
-            document.getElementById("f-line").value = f.line;
-            document.getElementById("f-member").value = f.member;
-            document.getElementById("f-in-mode-push").checked = f.inputMode === 0;
-            document.getElementById("f-in-mode-latch").checked = f.inputMode === 1;
-            document.getElementById("btn-delete").featureId = f.id;
-            document.getElementById("btn-update").featureId = f.id;
-
-        }
-
+        createModal(a, modal, f);
     }
     const span = document.getElementsByClassName("close")[0];
     span.onclick = function () {
         modal.style.display = "none";
-
     }
     window.onclick = function (event) {
         if (event.target === modal) {

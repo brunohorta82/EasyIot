@@ -26,6 +26,7 @@ enum ActuatorInputMode
 {
     PUSH = 0,
     LATCH = 1,
+    ROTATE = 2,
 };
 enum ActuatorDriver
 {
@@ -56,6 +57,7 @@ public:
     ActuatorDriver driver = SWITCH_PUSH;
     ActuatorControlType typeControl = VIRTUAL;
     int state = 0;
+    int lastState = 0;
     // CLOUDIO
     char cloudIOwriteTopic[128]{};
     char cloudIOreadTopic[128]{};
@@ -75,12 +77,7 @@ public:
     std::vector<unsigned int> outputs;
 
     // CONTROL VARIABLES
-    int lastInputEvent = 0;
-    int currentInputEvent = 0;
-    bool lastPrimaryGpioState = true;
-    bool lastSecondaryGpioState = true;
-    bool lastPrimaryStateGpioState = true;
-    bool lastSecondaryStateGpioState = true;
+    bool ready{false};
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
@@ -90,7 +87,7 @@ public:
     // METHODS
     constexpr bool isCover()
     {
-        return driver == COVER_DUAL_PUSH || driver == COVER_DUAL_LATCH;
+        return driver == COVER_DUAL_PUSH || driver == COVER_DUAL_LATCH || driver == COVER_SINGLE_PUSH;
     };
     constexpr bool isLight()
     {
@@ -134,6 +131,8 @@ public:
             return FeatureDrivers::SWITCH_LATCH;
         case COVER_DUAL_PUSH:
             return FeatureDrivers::COVER_DUAL_PUSH;
+        case COVER_SINGLE_PUSH:
+            return FeatureDrivers::COVER_SINGLE_PUSH;
         case COVER_DUAL_LATCH:
             return FeatureDrivers::COVER_DUAL_LATCH;
         case LIGHT_PUSH:
@@ -143,7 +142,7 @@ public:
         case GARAGE_PUSH:
             return FeatureDrivers::GARAGE_PUSH;
         }
-        return FeatureDrivers::GENERIC;
+        return FeatureDrivers::INVALID;
     };
     ActuatorInputMode driverToInputMode()
     {
@@ -157,6 +156,8 @@ public:
         case LIGHT_LATCH:
         case COVER_DUAL_LATCH:
             return ActuatorInputMode::LATCH;
+        case COVER_SINGLE_PUSH:
+            return ActuatorInputMode::ROTATE;
         default:
             return ActuatorInputMode::PUSH;
         }
@@ -194,6 +195,23 @@ public:
             if (isCover())
             {
                 return COVER_DUAL_LATCH;
+            }
+        case ROTATE:
+            if (isLight())
+            {
+                return LIGHT_PUSH;
+            }
+            if (isSwitch())
+            {
+                return SWITCH_PUSH;
+            }
+            if (isCover())
+            {
+                return COVER_SINGLE_PUSH;
+            }
+            if (isGarage())
+            {
+                return GARAGE_PUSH;
             }
         }
         return driver;

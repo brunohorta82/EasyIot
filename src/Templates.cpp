@@ -69,7 +69,19 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
     strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
     config.actuatores.push_back(actuator);
 }
-
+void prepareVirtualSwitch(String name, unsigned int input, ActuatorDriver driver)
+{
+    Actuator actuator;
+    actuator.driver = driver;
+    strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
+    actuator.typeControl = ActuatorControlType::VIRTUAL;
+    actuator.outputs.clear();
+    actuator.inputs.push_back(input);
+    String idStr;
+    config.generateId(idStr, actuator.name, actuator.driver, sizeof(actuator.uniqueId));
+    strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
+    config.actuatores.push_back(actuator);
+}
 void prepareCover(String name, unsigned int outputDown, unsigned int outputUp, unsigned int inputDown, unsigned int inputUp, ActuatorDriver driver, ActuatorControlType type)
 {
     Actuator cover;
