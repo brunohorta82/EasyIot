@@ -439,52 +439,40 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
 
 ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
-  bool reloadMdns = strncmp(nodeId, root["nodeId"] | "", sizeof(nodeId)) != 0;
-  bool reloadWifi = dhcp != (root["dhcp"] | true);
-
+  dhcp = root["dhcp"] | true;
   String mqttPasswordStr = root["mqttPassword"] | "";
-  if (mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root.containsKey("mqttPassword") && mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  {
     strlcpy(mqttPassword, mqttPasswordStr.c_str(), sizeof(mqttPassword));
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Mqtt Password changed: %s" CR, tags::config, mqttPassword);
+#endif
+  }
 
   String wifiSecretStr = root["wifiSecret"] | "";
-  if (wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root.containsKey("wifiSecret") && wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(wifiSecret, wifiSecretStr.c_str(), sizeof(wifiSecret));
-    reloadWifi = true;
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Wifi Password changed: %s" CR, tags::config, wifiSecret);
+#endif
   }
 
   String accessPointPasswordStr = root["accessPointPassword"] | constantsConfig::apSecret;
-  if (!accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root.containsKey("accessPointPassword") && accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  {
     strlcpy(accessPointPassword, accessPointPasswordStr.c_str(), sizeof(accessPointPassword));
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Access Point Password changed: %s" CR, tags::config, accessPointPassword);
+#endif
+  }
 
   String apiPasswordStr = root["apiPassword"] | constantsConfig::apiPassword;
-  if (apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root.containsKey("apiPassword") && apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  {
     strlcpy(apiPassword, apiPasswordStr.c_str(), sizeof(apiPassword));
-
-  char lastNodeId[32] = {};
-  if (reloadMdns)
-  {
-    strlcpy(lastNodeId, nodeId, sizeof(lastNodeId));
-  }
-
 #ifdef DEBUG_ONOFRE
-  if (reloadWifi)
-    Log.notice("%sWiFi Reloaded because DHCP configuration changed." CR, tags::config);
-#endif
-  if (!reloadWifi)
-  {
-    reloadWifi = strcmp(wifiIp, root["wifiIp"] | "") != 0 || strcmp(wifiMask, root["wifiMask"] | "") != 0 || strcmp(wifiGw, root["wifiGw"] | "") != 0;
-#ifdef DEBUG_ONOFRE
-    if (reloadWifi)
-      Log.notice("%sWiFi Reloaded because Network configuration changed." CR, tags::config);
-#endif
-  }
-  if (!reloadWifi)
-  {
-    reloadWifi = strcmp(wifiSSID, root["wifiSSID"] | "") != 0;
-#ifdef DEBUG_ONOFRE
-    if (reloadWifi)
-      Log.notice("%sWiFi Reloaded because SSID or Password changed." CR, tags::config);
+    Log.notice("%s Api Password changed: %s" CR, tags::config, apiPassword);
 #endif
   }
 
@@ -574,12 +562,6 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
         }
       }
     }
-  }
-  if (reloadMdns)
-    refreshMDNS(lastNodeId);
-  if (reloadWifi)
-  {
-    requestReloadWifi();
   }
   setupMQTT();
   root.clear();

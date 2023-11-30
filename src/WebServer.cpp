@@ -363,8 +363,10 @@ void loadAPI()
   server
       .on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request)
           {
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
+#if WEB_SECURE_ON
+       if (!request->authenticate(config.apiUser, config.apiPassword,REALM))
+       return request->requestAuthentication(REALM);
+#endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["result"] = "Auto-Update started";

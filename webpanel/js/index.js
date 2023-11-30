@@ -1,5 +1,6 @@
-let baseUrl = "http://192.168.187.134"
+let baseUrl = "http://192.168.122.134"
 var config;
+var lastVersion = 0.0;
 let source = null;
 var currentPage = "node"
 var WORDS_PT = {
@@ -7,12 +8,13 @@ var WORDS_PT = {
     "dual_latch":"Normal Duplo",
     "single_latch":"Normal",
     "single_push":"Pulsador",
+    "update_to":"Atualizar automáticamente para a versão",
     "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
     "config_save_ok": "Configuração Guardada",
     "device_reboot_ok": "O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.",
-    "device_reboot_error": "Não foi possivel reiniciar o dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
+    "device_error": "Não foi possivel finalizar a acção, verifique se está correctamente ligado à rede. Se o problema persistir tente desligar da energia e voltar a ligar.",
+    "device_update_ok": "O dispositivo está a atualizar, ficará disponivel dentro de 20 segundos.",
     "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
-    "defaults_error": "Não foi possivel carregar a configuração de fábrica no dispositivo, verifica se está correctamente ligado à rede. Se o problema persistir tenta desligar da energia e voltar a ligar.",
 }
 
 function  getI18n(key){
@@ -92,7 +94,7 @@ function fillConfig() {
     findById("nodeId").value = config.nodeId;
     findById("mqttIpDns").value = config.mqttIpDns;
     findById("mqttUsername").value = config.mqttUsername;
-    findById("mqttPassword").value = config.mqttPassword;
+
     findById("wifiSSID").value = config.wifiSSID;
     findById("wifiIp").value = config.wifiIp;
     findById("wifiMask").value = config.wifiMask;
@@ -102,11 +104,21 @@ function fillConfig() {
     findById("wifiSecret").value = "******";
     findById("accessPointPassword").value = "******";
     findById("apiPassword").value = "******";
+    findById("mqttPassword").value = "******";
+    if(lastVersion > parseFloat( config.firmware)) {
+        document.getElementById("btn-auto-update").classList.remove("hide");
+        document.getElementById("btn-auto-update").textContent = getI18n("update_to") + " " + lastVersion;
+    }
 }
 
 async function loadConfig() {
     const response = await fetch(baseUrl + "/config");
     config = await response.json();
+    const vR = await fetch(  "https://update.bhonofre.pt/firmware/latest-version/"+config.mcu,{
+        mode: "cors"});
+    lastVersion = parseFloat(await vR.text());
+
+
 }
 
 function detectLang() {
@@ -335,8 +347,9 @@ function reboot() {
         }
     }).then(response => response.status === 200 ?
         showMessage("device_reboot_ok")
-        : showMessage("device_reboot_error"))
+        : showMessage("device_error"))
 }
+
 
 function loadDefaults() {
     fetch(baseUrl + "/load-defaults", {
@@ -346,9 +359,18 @@ function loadDefaults() {
         }
     }).then(response => response.status === 200 ?
         showMessage("defaults_ok")
-        : showMessage("defaults_error"))
+        : showMessage("device_error"))
 }
-
+function requestUpdate(){
+    fetch(baseUrl + "/auto-update", {
+        headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Accept': 'application/json'
+        }
+    }).then(response => response.status === 200 ?
+        showMessage("device_update_ok")
+        : showMessage("device_error"))
+}
 document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('features-btn').onclick = function (e) {

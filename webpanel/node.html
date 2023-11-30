@@ -105,6 +105,7 @@
     </form>
     <div class="box-header "><h3 class="box-title"><span class="lang-new-file">Atualização de Firmware</span>
     </h3></div>
+    <button type="button" onclick="requestUpdate()" id="btn-auto-update" class="btn btn-primary hide"></button>
     <form role="form" method="POST" action="/update" enctype="multipart/form-data">
         <div class="box-body">
             <input id="firmwareInputFile" name="update" type="file"/>
