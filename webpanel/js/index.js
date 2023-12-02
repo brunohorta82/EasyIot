@@ -1,14 +1,14 @@
-let baseUrl = "http://192.168.122.134"
+let baseUrl = "http://192.168.187.134"
 var config;
 var lastVersion = 0.0;
 let source = null;
 var currentPage = "node"
 var WORDS_PT = {
-    "dual_push":"Pulsador Duplo",
-    "dual_latch":"Normal Duplo",
-    "single_latch":"Normal",
-    "single_push":"Pulsador",
-    "update_to":"Atualizar automáticamente para a versão",
+    "dual_push": "Pulsador Duplo",
+    "dual_latch": "Normal Duplo",
+    "single_latch": "Normal",
+    "single_push": "Pulsador",
+    "update_to": "Atualizar automáticamente para a versão",
     "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
     "config_save_ok": "Configuração Guardada",
     "device_reboot_ok": "O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.",
@@ -17,7 +17,7 @@ var WORDS_PT = {
     "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
 }
 
-function  getI18n(key){
+function getI18n(key) {
     return WORDS_PT[key];
 }
 function stringToHTML(text) {
@@ -105,7 +105,7 @@ function fillConfig() {
     findById("accessPointPassword").value = "******";
     findById("apiPassword").value = "******";
     findById("mqttPassword").value = "******";
-    if(lastVersion > parseFloat( config.firmware)) {
+    if (lastVersion > parseFloat(config.firmware)) {
         document.getElementById("btn-auto-update").classList.remove("hide");
         document.getElementById("btn-auto-update").textContent = getI18n("update_to") + " " + lastVersion;
     }
@@ -114,8 +114,9 @@ function fillConfig() {
 async function loadConfig() {
     const response = await fetch(baseUrl + "/config");
     config = await response.json();
-    const vR = await fetch(  "https://update.bhonofre.pt/firmware/latest-version/"+config.mcu,{
-        mode: "cors"});
+    const vR = await fetch("https://update.bhonofre.pt/firmware/latest-version/" + config.mcu, {
+        mode: "cors"
+    });
     lastVersion = parseFloat(await vR.text());
 
 
@@ -149,7 +150,7 @@ function applyNodeChanges() {
 
 function saveConfig() {
     if (currentPage === "node") {
-    applyNodeChanges();
+        applyNodeChanges();
     }
     fetch(baseUrl + "/save-config", {
         method: "POST",
@@ -170,7 +171,7 @@ function applyFeatureChanges(e) {
     if (index < 0) return;
     let feature = config.features[index];
     feature.name = getValue("f-name", feature.name).trim();
-    if("ACTUATOR" === feature.group) {
+    if ("ACTUATOR" === feature.group) {
         feature.inputMode = parseInt(document.querySelector('input[name="f-in-mode"]:checked').value);
         feature.upCourseTime = parseInt(getValue("f-up", feature.upCourseTime).trim());
         feature.downCourseTime = parseInt(getValue("f-down", feature.downCourseTime).trim());
@@ -200,8 +201,8 @@ function getValue(id, f) {
 function shutterPercentage(arg) {
     console.log(arg)
     const action = {
-        id:  arg.id,
-        state: Math.abs(parseInt(arg.value)-100)
+        id: arg.id,
+        state: Math.abs(parseInt(arg.value) - 100)
     };
     fetch(baseUrl + "/control-feature", {
         method: "POST",
@@ -224,12 +225,12 @@ function toggleSwitch(arg) {
         showMessage("control_state_error")
     );
 }
-function appendSvgPath(node,d,strokeColor){
+function appendSvgPath(node, d, strokeColor) {
     let a = document.createElementNS("http://www.w3.org/2000/svg", 'path');
-    a.setAttribute("d",d);
-    a.setAttribute("stroke",strokeColor);
-    a.setAttribute("stroke-linejoin","round");
-    a.setAttribute("stroke-linecap","round");
+    a.setAttribute("d", d);
+    a.setAttribute("stroke", strokeColor);
+    a.setAttribute("stroke-linejoin", "round");
+    a.setAttribute("stroke-linecap", "round");
     node.appendChild(a)
 }
 
@@ -244,10 +245,8 @@ function createModal(a, modal, f) {
             document.getElementById("f-in-mode-latch-lbl").outerHTML = getI18n("dual_latch");
             document.getElementById("f-in-mode-push-toggle-lbl").classList.remove("hide");
             document.getElementById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
-        }else {
-            document.getElementById("f-in-mode-push-toggle-lbl").classList.add("hide");
-            document.getElementById("f-in-mode-push-lbl").outerHTML = getI18n("single_push");
-            document.getElementById("f-in-mode-latch-lbl").outerHTML = getI18n("single_latch");
+        } else {
+            document.getElementById("f-push-t").classList.add("hide");
         }
         if (f.group === "SENSOR")
             for (let i = 0; i < modal.getElementsByClassName("f-ac").length; i++) {
@@ -277,16 +276,16 @@ function fillDevices() {
         a.getElementsByClassName("feature-name").item(0).textContent = f.name;
         let icon = a.getElementsByTagName("svg").item(0);
         icon.classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
-        a.getElementsByTagName("svg").item(0).id = 'i-'+f.id;
+        a.getElementsByTagName("svg").item(0).id = 'i-' + f.id;
         document.getElementById("devices_config").appendChild(a);
         icon = document.getElementById('i-' + f.id);
-        if("SENSOR" === f.group){
+        if ("SENSOR" === f.group) {
             document.getElementById("f-knx").classList.add("hide")
-        }if("ACTUATOR" === f.group) {
+        } if ("ACTUATOR" === f.group) {
             document.getElementById("f-knx").classList.remove("hide")
             a.getElementsByTagName("input").item(0).checked = f.state > 0;
             a.getElementsByTagName("input").item(0).id = f.id;
-            a.getElementsByTagName("input").item(1).value =Math.abs(parseInt(f.state)-100); ;
+            a.getElementsByTagName("input").item(1).value = Math.abs(parseInt(f.state) - 100);;
             a.getElementsByTagName("input").item(1).id = f.id;
             if ("SWITCH" === f.family) {
                 a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
@@ -317,7 +316,7 @@ function fillDevices() {
                 box.getElementsByTagName("svg").item(0).classList.remove("feature-icon-off");
                 box.getElementsByTagName("svg").item(0).classList.add(s.data > 0 ? "feature-icon-on" : "feature-icon-off");
                 box.getElementsByTagName("input").item(0).checked = s.data > 0;
-                box.getElementsByTagName("input").item(1).value =Math.abs(parseInt(s.data)-100);
+                box.getElementsByTagName("input").item(1).value = Math.abs(parseInt(s.data) - 100);
             })
         }
         createModal(a, modal, f);
@@ -361,7 +360,7 @@ function loadDefaults() {
         showMessage("defaults_ok")
         : showMessage("device_error"))
 }
-function requestUpdate(){
+function requestUpdate() {
     fetch(baseUrl + "/auto-update", {
         headers: {
             'Content-Type': 'text/plain; charset=utf-8',
