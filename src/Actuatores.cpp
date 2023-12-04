@@ -70,10 +70,18 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 }
 void actuatoresCallback(message_t const &msg, void *arg)
 {
-  int id = *(int *)arg;
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s KNX PA %d.%d.%d" CR, tags::actuatores, msg.received_on.pa.area, msg.received_on.pa.line, msg.received_on.pa.member);
+  Log.notice("%s KNX GA %d.%d.%d" CR, tags::actuatores, msg.received_on.ga.area, msg.received_on.ga.line, msg.received_on.ga.member);
+#endif
+
   for (auto &s : config.actuatores)
   {
-    if (s.sequence == id)
+    if (!s.isKnxSupport())
+    {
+      continue;
+    }
+    if (s.knxAddress[0] == msg.received_on.ga.area && s.knxAddress[1] == msg.received_on.ga.line && s.knxAddress[2] == msg.received_on.ga.member)
     {
       switch (msg.ct)
       {
@@ -308,13 +316,9 @@ void Actuator::setup()
 
   if (isKnxSupport())
   {
-    knx.callback_unassign(knxIdAssign);
-    knx.callback_deregister(knxIdRegister);
-    static int ids = sequence;
-    knxIdRegister = knx.callback_register(String(name), actuatoresCallback, &ids);
-    knxIdAssign = knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]));
-    knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], 0));
-    knx.callback_assign(knxIdRegister, knx.GA_to_address(knxAddress[0], 0, 0));
+    knx.callback_assign(config.knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]));
+    knx.callback_assign(config.knxIdRegister, knx.GA_to_address(knxAddress[0], knxAddress[1], 0));
+    knx.callback_assign(config.knxIdRegister, knx.GA_to_address(knxAddress[0], 0, 0));
   }
   ready = true;
 }

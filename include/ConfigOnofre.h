@@ -22,7 +22,8 @@ public:
   char mqttUsername[32];
   char mqttPassword[64];
   char healthTopic[64];
-
+  // KNX
+  uint8_t knxIdRegister = 0;
   // CLOUDIO
   char cloudIOUsername[40];
   char cloudIOPassword[64];

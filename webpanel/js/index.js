@@ -27,10 +27,10 @@ function stringToHTML(text) {
 }
 
 function toggleActive(menu) {
-    currentPage = menu;
-    if (menu === "devices") {
+    if (currentPage ===  "node" && menu === "devices") {
         applyNodeChanges();
     }
+    currentPage = menu;
     findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.remove("active")
     findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.remove("active")
     fetch(menu + ".html").then(function (response) {
@@ -79,7 +79,7 @@ function fillConfig() {
     document.title = 'BH OnOfre ' + config.nodeId;
     let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
     findById("wifi-signal").textContent = percentage + "%";
-    findById("version_lbl").textContent = config.firmware;
+    findById("version_lbl").textContent = config.firmware+" - "+config.mcu;
     findById("lbl-chip").textContent = "ID: " + config.chipId;
     findById("lbl-mac").textContent = "MAC: " + config.mac;
     findById("ssid_lbl").textContent = config.wifiSSID;
@@ -106,8 +106,8 @@ function fillConfig() {
     findById("apiPassword").value = "******";
     findById("mqttPassword").value = "******";
     if (lastVersion > parseFloat(config.firmware)) {
-        document.getElementById("btn-auto-update").classList.remove("hide");
-        document.getElementById("btn-auto-update").textContent = getI18n("update_to") + " " + lastVersion;
+        findById("btn-auto-update").classList.remove("hide");
+        findById("btn-auto-update").textContent = getI18n("update_to") + " " + lastVersion;
     }
 }
 
@@ -195,11 +195,10 @@ function deleteFeature(e) {
 }
 
 function getValue(id, f) {
-    let v = document.getElementById(id);
+    let v = findById(id);
     return v ? v.value : f;
 }
 function shutterPercentage(arg) {
-    console.log(arg)
     const action = {
         id: arg.id,
         state: Math.abs(parseInt(arg.value) - 100)
@@ -240,36 +239,36 @@ function createModal(a, modal, f) {
         modal.getElementsByClassName("f-name").item(0).textContent = f.name;
         modal.getElementsByClassName("f-name").item(1).value = f.name;
         if (f.driver.includes("COVER")) {
-            document.getElementById("f-calibration").classList.remove("hide")
-            document.getElementById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
-            document.getElementById("f-in-mode-latch-lbl").outerHTML = getI18n("dual_latch");
-            document.getElementById("f-in-mode-push-toggle-lbl").classList.remove("hide");
-            document.getElementById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
+            findById("f-calibration").classList.remove("hide")
+            findById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
+            findById("f-in-mode-latch-lbl").outerHTML = getI18n("dual_latch");
+            findById("f-in-mode-push-toggle-lbl").classList.remove("hide");
+            findById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
         } else {
-            document.getElementById("f-push-t").classList.add("hide");
+            findById("f-push-t").classList.add("hide");
         }
         if (f.group === "SENSOR")
             for (let i = 0; i < modal.getElementsByClassName("f-ac").length; i++) {
                 modal.getElementsByClassName("f-ac").item(i).classList.add("hide");
             }
-        document.getElementById("f-up").value = f.upCourseTime;
-        document.getElementById("f-down").value = f.downCourseTime;
-        document.getElementById("f-area").value = f.area;
-        document.getElementById("f-line").value = f.line;
-        document.getElementById("f-member").value = f.member;
-        document.getElementById("f-in-mode-push").checked = f.inputMode === 0;
-        document.getElementById("f-in-mode-latch").checked = f.inputMode === 1;
-        document.getElementById("f-in-mode-push-toggle").checked = f.inputMode === 2;
-        document.getElementById("btn-delete").featureId = f.id;
-        document.getElementById("btn-update").featureId = f.id;
+        findById("f-up").value = f.upCourseTime;
+        findById("f-down").value = f.downCourseTime;
+        findById("f-area").value = f.area;
+        findById("f-line").value = f.line;
+        findById("f-member").value = f.member;
+        findById("f-in-mode-push").checked = f.inputMode === 0;
+        findById("f-in-mode-latch").checked = f.inputMode === 1;
+        findById("f-in-mode-push-toggle").checked = f.inputMode === 2;
+        findById("btn-delete").featureId = f.id;
+        findById("btn-update").featureId = f.id;
     }
 }
 
 function fillDevices() {
     let temp, item, a;
-    const modal = document.getElementById("modal");
+    const modal = findById("modal");
     for (const f of config.features) {
-        temp = document.getElementById(f.group);
+        temp = findById(f.group);
         item = temp.content.querySelector("div");
         a = document.importNode(item, true);
         a.id = "f-" + f.id;
@@ -277,12 +276,12 @@ function fillDevices() {
         let icon = a.getElementsByTagName("svg").item(0);
         icon.classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
         a.getElementsByTagName("svg").item(0).id = 'i-' + f.id;
-        document.getElementById("devices_config").appendChild(a);
-        icon = document.getElementById('i-' + f.id);
+        findById("devices_config").appendChild(a);
+        icon = findById('i-' + f.id);
         if ("SENSOR" === f.group) {
-            document.getElementById("f-knx").classList.add("hide")
+            findById("f-knx").classList.add("hide")
         } if ("ACTUATOR" === f.group) {
-            document.getElementById("f-knx").classList.remove("hide")
+            findById("f-knx").classList.remove("hide")
             a.getElementsByTagName("input").item(0).checked = f.state > 0;
             a.getElementsByTagName("input").item(0).id = f.id;
             a.getElementsByTagName("input").item(1).value = Math.abs(parseInt(f.state) - 100);;
@@ -311,7 +310,7 @@ function fillDevices() {
                 appendSvgPath(icon, "M13.5 21.5H26.5V24C26.5 24.8284 25.8284 25.5 25 25.5H15C14.1716 25.5 13.5 24.8284 13.5 24V21.5Z", "#fff");
             }
             source.addEventListener(f.id, (s) => {
-                const box = document.getElementById("f-" + f.id);
+                const box = findById("f-" + f.id);
                 box.getElementsByTagName("svg").item(0).classList.remove("feature-icon-on");
                 box.getElementsByTagName("svg").item(0).classList.remove("feature-icon-off");
                 box.getElementsByTagName("svg").item(0).classList.add(s.data > 0 ? "feature-icon-on" : "feature-icon-off");
@@ -372,10 +371,10 @@ function requestUpdate() {
 }
 document.addEventListener("DOMContentLoaded", () => {
 
-    document.getElementById('features-btn').onclick = function (e) {
+    findById('features-btn').onclick = function (e) {
         toggleActive("devices");
     };
-    document.getElementById('node-btn').onclick = function (e) {
+    findById('node-btn').onclick = function (e) {
         toggleActive("node");
     }
     loadConfig().then(() => toggleActive("node"));

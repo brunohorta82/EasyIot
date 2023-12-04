@@ -9,7 +9,7 @@
 #include "Images.hpp"
 #include <PZEM004Tv30.h>
 #include "HomeAssistantMqttDiscovery.h"
-
+void actuatoresCallback(message_t const &msg, void *arg);
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
 {
   id.reserve(maxSize);
@@ -176,7 +176,7 @@ ConfigOnofre &ConfigOnofre::pauseFeatures()
 }
 ConfigOnofre &ConfigOnofre::load()
 {
-
+  knxIdRegister = knx.callback_register("Actuatores", actuatoresCallback);
   if (!LittleFS.exists(configFilenames::config))
   {
     return init();
@@ -583,7 +583,7 @@ void ConfigOnofre::json(JsonVariant &root)
   root["wifiIp"] = WiFi.localIP().toString();
   root["wifiMask"] = WiFi.subnetMask().toString();
   root["wifiGw"] = WiFi.gatewayIP().toString();
-  root["firmware"] = String(VERSION);
+  root["firmware"] = String(VERSION, 3);
 #ifdef ESP32
   root["mcu"] = "ESP32";
 #endif
