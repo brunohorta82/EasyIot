@@ -282,13 +282,6 @@ void refreshMDNS(const char *lastName)
 
 void setupWiFi()
 {
-#ifdef LOW_POWER
-#ifdef ESP32
-  WiFi.setSleep(true);
-#endif
-#else
-  WiFi.setSleep(false);
-#endif
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
   jw.setHostname(config.nodeId);
   jw.subscribe(infoCallback);

@@ -93,9 +93,8 @@ public:
     if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0 && request->arg("t").length() > 0)
     {
       String n_name = config.chipId;
-      if (request->hasArg("t"))
+      if (request->hasArg("i"))
       {
-        config.pauseFeatures();
         n_name = String(request->arg("i"));
         normalize(n_name);
         if (n_name.isEmpty())
@@ -106,6 +105,7 @@ public:
       strlcpy(config.wifiSSID, request->arg("s").c_str(), sizeof(config.wifiSSID));
       if (request->hasArg("t"))
       {
+        config.pauseFeatures();
         config.loadTemplate(request->arg("t").toInt());
       }
 
@@ -192,7 +192,7 @@ public:
     {
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);
-      if (config.templateId == 0)
+      if (config.templateId == Template::NO_TEMPLATE)
       {
         form.replace("class='hide'", "");
       }
@@ -280,6 +280,7 @@ void loadWebPanel()
 
 void loadAPI()
 {
+  /*GET CONFIG*/
   server
       .on("/config", HTTP_GET, [](AsyncWebServerRequest *request)
           {
@@ -293,8 +294,9 @@ void loadAPI()
     response->setLength();
     request->send(response); });
 
+  /*SAVE CONFIG*/
   server
-      .addHandler(new AsyncCallbackJsonWebHandler("/save-config", [](AsyncWebServerRequest *request, JsonVariant json)
+      .addHandler(new AsyncCallbackJsonWebHandler("/config", [](AsyncWebServerRequest *request, JsonVariant json)
                                                   {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
@@ -306,8 +308,33 @@ void loadAPI()
     config.update(configJson).json(root);
     response->setLength();
     request->send(response); }));
+
+  /*CREATE NEW VIRTUAL SENSOR*/
   server
-      .addHandler(new AsyncCallbackJsonWebHandler("/control-feature", [](AsyncWebServerRequest *request, JsonVariant json)
+      .addHandler(new AsyncCallbackJsonWebHandler("/switches/virtual", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    JsonObject actuatorJson = json.as<JsonObject>();
+    if (actuatorJson.containsKey("name") && actuatorJson.containsKey("input") && actuatorJson.containsKey("driver"))
+    {
+    prepareVirtualSwitch(actuatorJson["name"] | "", actuatorJson["input"] | 0, actuatorJson["driver"] | ActuatorDriver::INVALID);
+    config.save().json(root);
+  
+    }else {
+      response->setCode(400);
+      root["result"] = "Invalid Parameters";
+    } 
+    response->setLength();
+    request->send(response); }));
+
+  /*CONTROL ACTUATOR*/
+  server
+      .addHandler(new AsyncCallbackJsonWebHandler("/actuators/control", [](AsyncWebServerRequest *request, JsonVariant json)
                                                   {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
@@ -319,6 +346,8 @@ void loadAPI()
     config.controlFeature(StateOrigin::WEBPANEL,action,root);
     response->setLength();
     request->send(response); }));
+
+  /*REBOOT DEVICE*/
   server
       .on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
           {
@@ -332,8 +361,10 @@ void loadAPI()
     response->setLength();
     request->send(response);
     config.requestRestart(); });
+
+  /*CHANGE FEATURES TEMPLATE*/
   server
-      .on("/change-template", HTTP_GET, [](AsyncWebServerRequest *request)
+      .on("/templates/change", HTTP_GET, [](AsyncWebServerRequest *request)
           {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
@@ -346,6 +377,7 @@ void loadAPI()
     request->send(response);
     templateSelect((Template)request->getParam("t")->value().toInt());
     config.save(); });
+
   server
       .on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request)
           {

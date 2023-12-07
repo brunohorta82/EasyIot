@@ -34,7 +34,7 @@ public:
   // WIFI
   char wifiSSID[32];
   char wifiSecret[64];
-  bool dhcp = true;
+  bool dhcp = 1;
   char wifiIp[24];
   char wifiMask[24];
   char wifiGw[24];

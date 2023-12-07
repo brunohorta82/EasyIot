@@ -142,7 +142,7 @@ function applyNodeChanges() {
     config.wifiIp = getValue("wifiIp", config.wifiIp).trim();
     config.wifiMask = getValue("wifiMask", config.wifiMask).trim();
     config.wifiGw = getValue("wifiGw", config.wifiGw).trim();
-    config.dhcp = getValue("dhcp", config.dhcp) === "true";
+    config.dhcp = findById("dhcp", config.dhcp).checked;
     config.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
     config.apiPassword = getValue("apiPassword", config.apiPassword).trim();
     config.apiUser = getValue("apiUser", config.apiUser).trim();
@@ -152,7 +152,7 @@ function saveConfig() {
     if (currentPage === "node") {
         applyNodeChanges();
     }
-    fetch(baseUrl + "/save-config", {
+    fetch(baseUrl + "/config", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(config)
@@ -203,7 +203,7 @@ function shutterPercentage(arg) {
         id: arg.id,
         state: Math.abs(parseInt(arg.value) - 100)
     };
-    fetch(baseUrl + "/control-feature", {
+    fetch(baseUrl + "/actuators/control", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(action)
@@ -216,7 +216,7 @@ function toggleSwitch(arg) {
         id: arg.id,
         state: arg.checked ? 100 : 0
     };
-    fetch(baseUrl + "/control-feature", {
+    fetch(baseUrl + "/actuators/control", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(action)

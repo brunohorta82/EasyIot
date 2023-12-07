@@ -33,12 +33,10 @@ namespace tags
     constexpr const char *wifi{"[WIFI]"};
     constexpr const char *discovery{"[DISCOVERY]"};
     constexpr const char *sensors{"[SENSORS]"};
-    constexpr const char *actuatores{"[ACTUATORES]"};
-    constexpr const char *alexa{"[ALEXA]"};
+    constexpr const char *actuatores{"[ACTUATORS]"};
     constexpr const char *webserver{"[WEBSERVER]"};
-    constexpr const char *emoncms{"[EMONCMS]"};
     constexpr const char *cloudIO{"[CLOUDIO]"};
-    constexpr const char *homeassistant{"[homeassistant]"};
+    constexpr const char *homeassistant{"[HOMEASSISTANT]"};
 
 } // namespace tags
 namespace configFilenames
@@ -66,20 +64,20 @@ namespace constantsConfig
 #endif
     constexpr unsigned int noGPIO{99u};
 #ifdef ESP32
-    constexpr int SDA{32};
-    constexpr int SCL{33};
+    constexpr int SDA{32u};
+    constexpr int SCL{33u};
 #endif
 #ifdef ESP8266
-    constexpr int SDA{2};
-    constexpr int SCL{13};
+    constexpr int SDA{2u};
+    constexpr int SCL{13u};
 #endif
 #ifdef ESP32
-    constexpr int HAN_TX{13};
-    constexpr int HAN_RX{14};
+    constexpr int HAN_TX{13u};
+    constexpr int HAN_RX{14u};
 #endif
 #ifdef ESP8266
-    constexpr int HAN_TX{1};
-    constexpr int HAN_RX{3};
+    constexpr int HAN_TX{14u};
+    constexpr int HAN_RX{12u};
 #endif
     constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME_SECONS{25};
     constexpr unsigned long energyReadDelay{5000l};

@@ -22,9 +22,15 @@ void createHaSwitch(Actuator &sw)
   object["dev"] = config.healthTopic;
   JsonObject device = object.createNestedObject("dev");
   device["ids"] = "OnOfre-" + String(config.chipId);
-  device["name"] = "OnOfre " + String(config.nodeId);
-  device["mdl"] = config.chipId;
+  device["name"] = config.nodeId;
+#ifdef ESP32
+  device["mdl"] = "V6 - " + String(config.chipId);
+#endif
+#ifdef ESP8266
+  device["mdl"] = "V5 - " + String(config.chipId);
+#endif
   device["mf"] = "OnOfre Portugal";
+  device["sw"] = String(VERSION, 3);
   object["avty_t"] = config.healthTopic;
 
   if (sw.isGarage())
@@ -79,9 +85,15 @@ void addToHomeAssistant(Sensor &s)
   object["avty_t"] = config.healthTopic;
   JsonObject device = object.createNestedObject("dev");
   device["ids"] = "OnOfre-" + String(config.chipId);
-  device["name"] = "OnOfre " + String(config.nodeId);
-  device["mdl"] = config.chipId;
+  device["name"] = config.nodeId;
+#ifdef ESP32
+  device["mdl"] = "V6 - " + String(config.chipId);
+#endif
+#ifdef ESP8266
+  device["mdl"] = "V5 - " + String(config.chipId);
+#endif
   device["mf"] = "OnOfre Portugal";
+  device["sw"] = String(VERSION, 3);
   String uniqueId = String(s.uniqueId);
   switch (s.driver)
   {
@@ -92,14 +104,14 @@ void addToHomeAssistant(Sensor &s)
     object["uniq_id"] = uniqueId + "t";
     object["unit_of_meas"] = "º";
     object["dev_cla"] = "temperature";
-    object["val_tpl"] = "{{value_json.temperature}}";
+    object["val_tpl"] = "{{value_json.temperature | round(2)}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     objectStr = "";
     object["uniq_id"] = uniqueId + "h";
     object["unit_of_meas"] = "%";
     object["dev_cla"] = "humidity";
-    object["val_tpl"] = "{{value_json.humidity}}";
+    object["val_tpl"] = "{{value_json.humidity | round(2) }}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/h" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
@@ -116,7 +128,7 @@ void addToHomeAssistant(Sensor &s)
     object["unit_of_meas"] = "ºC";
     object["uniq_id"] = uniqueId;
     object["dev_cla"] = "temperature";
-    object["val_tpl"] = "{{value_json.temperature}}";
+    object["val_tpl"] = "{{value_json.temperature | round(2)}}";
     objectStr = "";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
@@ -128,7 +140,7 @@ void addToHomeAssistant(Sensor &s)
     object["unit_of_meas"] = "W";
     object["dev_cla"] = "power";
     object["stat_cla"] = "measurement";
-    object["val_tpl"] = "{{value_json.power}}";
+    object["val_tpl"] = "{{value_json.power | round(2)}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/p" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     object["name"] = String(s.name) + " Current";
@@ -136,7 +148,7 @@ void addToHomeAssistant(Sensor &s)
     object["unit_of_meas"] = "A";
     object["stat_cla"] = "measurement";
     object["dev_cla"] = "current";
-    object["val_tpl"] = "{{value_json.current}}";
+    object["val_tpl"] = "{{value_json.current | round(2)}}";
     objectStr.clear();
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/c" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
@@ -145,7 +157,7 @@ void addToHomeAssistant(Sensor &s)
     object["unit_of_meas"] = "V";
     object["dev_cla"] = "voltage";
     object["stat_cla"] = "measurement";
-    object["val_tpl"] = "{{value_json.voltage}}";
+    object["val_tpl"] = "{{value_json.voltage | round(2)}}";
     objectStr.clear();
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/v" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
@@ -154,7 +166,7 @@ void addToHomeAssistant(Sensor &s)
     object["dev_cla"] = "power_factor";
     object["stat_cla"] = "measurement";
     object["uniq_id"] = "pf" + uniqueId;
-    object["val_tpl"] = "{{value_json.powerFactor}}";
+    object["val_tpl"] = "{{value_json.powerFactor | round(2)}}";
     objectStr.clear();
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/pf" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
@@ -174,7 +186,7 @@ void addToHomeAssistant(Sensor &s)
     object["unit_of_meas"] = "kWh";
     object["dev_cla"] = "energy";
     object["stat_cla"] = "total_increasing";
-    object["val_tpl"] = "{{value_json.energy}}";
+    object["val_tpl"] = "{{value_json.energy | round(2)}}";
     objectStr.clear();
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/e" + uniqueId + "/config").c_str(), objectStr.c_str(), false);

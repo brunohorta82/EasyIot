@@ -90,12 +90,6 @@ void featuresTask(void *pvParameters)
 #endif
 void setup()
 {
-#ifdef LOW_POWER
-#ifdef ESP32
-  setCpuFrequencyMhz(80);
-  adc_power_off();
-#endif
-#endif
 #ifdef DEBUG_ONOFRE
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
@@ -105,7 +99,18 @@ void setup()
 #ifdef ESP32
   config.i2cDiscovery();
 #endif
+#ifdef DEBUG_ONOFRE
+#ifdef ESP8266
+  Serial.end();
+#endif
+#endif
   config.pzemDiscovery();
+#ifdef DEBUG_ONOFRE
+#ifdef ESP8266
+  Serial.begin(115200);
+  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
+#endif
+#endif
   setupWiFi();
   setupCors();
   setupMQTT();

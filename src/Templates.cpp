@@ -110,6 +110,11 @@ void prepareGarage(String name, unsigned int gateOne, unsigned int gateTwo, unsi
 }
 void templateSelect(enum Template _template)
 {
+    if (config.templateId != Template::NO_TEMPLATE)
+        return;
+#ifdef DEBUG_ONOFRE
+    Log.info("%s Template selected: %d" CR, tags::webserver, _template);
+#endif
     config.actuatores.clear();
     config.sensors.clear();
     switch (_template)

@@ -32,6 +32,7 @@ void Sensor::notifyState()
 
 void Sensor::loop()
 {
+  //  if(!wifiConnected())rerun
   if (error)
   {
     if (lastErrorTimestamp + constantsSensor::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())
@@ -39,7 +40,7 @@ void Sensor::loop()
       error = false;
       reInit();
 #ifdef DEBUG_ONOFRE
-      Log.info("%s Error automatically removed. System will try again." CR, tags::sensors);
+      Log.info("%s Error automatically cleaned. System will try again." CR, tags::sensors);
 #endif
     }
     return;
@@ -186,7 +187,7 @@ void Sensor::loop()
     static uint32_t serialConf = SERIAL_8N1;
 #endif
 #ifdef ESP8266
-    static SerialConfig serialConf = SERIAL_8N1;
+    static Config serialConf = SWSERIAL_8N1;
 #endif
     if (lastRead + delayRead < millis())
     {
@@ -194,18 +195,19 @@ void Sensor::loop()
 #ifdef ESP32
       if (!isInitialized())
       {
+        setCpuFrequencyMhz(80);
         modbus = new ModbusMaster();
         Serial1.begin(9600, serialConf, inputs[0], inputs[1]);
         modbus->begin(1, Serial1);
       }
 #endif
 #ifdef ESP8266
+      static SoftwareSerial softwareSerial = SoftwareSerial(inputs[1], inputs[0]);
       if (!isInitialized())
       {
         modbus = new ModbusMaster();
-        Serial.begin(9600, serialConf);
-        Serial.pins(inputs[0], inputs[1]);
-        modbus->begin(1, Serial);
+        softwareSerial.begin(9600, serialConf);
+        modbus->begin(1, softwareSerial);
       }
 #endif
       lastRead = millis();
@@ -263,39 +265,47 @@ void Sensor::loop()
       }
       if (obj.size() == 0)
       {
-        if (serialConf == SERIAL_8N1)
-        {
-          serialConf = SERIAL_8N2;
 #ifdef ESP8266
-          Serial.end();
+        if (serialConf == SWSERIAL_8N1)
+        {
+          serialConf = SWSERIAL_8N2;
+          softwareSerial.end();
 #endif
 #ifdef ESP32
-          Serial1.end();
+          if (serialConf == SERIAL_8N1)
+          {
+            serialConf = SERIAL_8N2;
+            Serial1.end();
 #endif
-          reInit();
+            reInit();
 #ifdef DEBUG_ONOFRE
-          Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
+            Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
 #endif
-          return;
-        }
-        else
-        {
-          serialConf = SERIAL_8N1;
-          setError();
+            return;
+          }
+          else
+          {
+#ifdef ESP8266
+            serialConf = SWSERIAL_8N1;
+#endif
+#ifdef ESP32
+            serialConf = SERIAL_8N1;
+#endif
+            setError();
 #ifdef DEBUG_ONOFRE
-          Log.error("%s HAN read error please check the connections and try again. " CR, tags::sensors);
+            Log.error("%s HAN read error please check the connections and try again. " CR, tags::sensors);
 #endif
-          obj["error"] = true;
+            obj["error"] = true;
+          }
         }
+        serializeJson(obj, state);
+        notifyState();
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
       }
-      serializeJson(obj, state);
-      notifyState();
-#ifdef DEBUG_ONOFRE
-      Log.notice("%s %s " CR, tags::sensors, state.c_str());
-#endif
+      break;
     }
-    break;
-  }
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
     {
@@ -429,4 +439,4 @@ void Sensor::loop()
     }
     break;
   }
-}
+  }

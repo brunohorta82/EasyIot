@@ -99,9 +99,6 @@ void ConfigOnofre::pzemDiscovery()
     float voltageOne = pzem.voltage();
     if (!isnan(voltageOne))
     {
-#ifdef DEBUG_ONOFRE
-      Log.info("%sPzem found with default address: 0x%x " CR, tags::discovery, pzem.getAddress());
-#endif
       found = voltageOne > 0;
       if (found && !isSensorExists(pzem.getAddress()))
       {
@@ -109,7 +106,11 @@ void ConfigOnofre::pzemDiscovery()
         needsSave = true;
       }
     }
+#ifdef ESP8266
+    softwareSerial.end();
+#endif
   }
+
   if (needsSave)
   {
     save();
@@ -323,7 +324,7 @@ ConfigOnofre &ConfigOnofre::save()
     doc["wifiSSID"] = wifiSSID;
   if (!String(wifiSecret).isEmpty())
     doc["wifiSecret"] = wifiSecret;
-  doc["dhcp"] = dhcp | true;
+  doc["dhcp"] = dhcp;
   if (!String(wifiIp).isEmpty())
     doc["wifiIp"] = wifiIp;
   if (!String(wifiMask).isEmpty())
@@ -618,20 +619,24 @@ void ConfigOnofre::json(JsonVariant &root)
     a["group"] = "ACTUATOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
+    a["typeControl"] = s.typeControl;
+    if (s.typeControl == ActuatorControlType::GPIO_OUTPUT)
+    {
+      a["upCourseTime"] = s.upCourseTime;
+      a["downCourseTime"] = s.downCourseTime;
+      JsonArray outputs = a.createNestedArray("outputs");
+      for (auto out : s.outputs)
+      {
+        outputs.add(out);
+      }
+    }
     a["inputMode"] = s.driverToInputMode();
     a["family"] = s.familyToText();
     a["driver"] = s.driverToText();
-    a["upCourseTime"] = s.upCourseTime;
-    a["downCourseTime"] = s.downCourseTime;
     a["state"] = s.state;
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
-    JsonArray outputs = a.createNestedArray("outputs");
-    for (auto out : s.outputs)
-    {
-      outputs.add(out);
-    }
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : s.inputs)
     {
