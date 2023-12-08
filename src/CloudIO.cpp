@@ -15,7 +15,6 @@
 extern ConfigOnofre config;
 AsyncMqttClient mqttClient;
 Ticker checkCloudIOWatchdog;
-HTTPClient http;
 
 void disconnectToClounIOMqtt()
 {
@@ -69,7 +68,6 @@ void onMqttConnect(bool sessionPresent)
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
-
 #ifdef DEBUG_ONOFRE
   Log.warning("%s Disconnected from MQTT." CR, tags::cloudIO);
 #endif
@@ -135,19 +133,30 @@ bool tryMqttCloudConnection()
   }
   return true;
 }
-void checkCloudIOHealth()
+void watchdogTimer()
 {
 #ifdef DEBUG_ONOFRE
   Log.error("%s CloudIO Watchdog running." CR, tags::cloudIO);
 #endif
   if (!wifiConnected() || mqttClient.connected())
+  {
+#ifdef DEBUG_ONOFRE
+    Log.error("%s CloudIO OK." CR, tags::cloudIO);
+#endif
     return;
-  connectToCloudIO();
+  }
+#ifdef DEBUG_ONOFRE
+  Log.error("%s CloudIO Reconnect." CR, tags::cloudIO);
+#endif
+  config.requestCloudIOSync();
+}
+void startCloudIOWatchdog()
+{
+  checkCloudIOWatchdog.attach_ms(60000, watchdogTimer);
 }
 void connectToCloudIO()
 {
 
-  checkCloudIOWatchdog.attach_ms(60000, checkCloudIOHealth);
   if (!wifiConnected())
   {
 #ifdef DEBUG_ONOFRE
@@ -155,6 +164,7 @@ void connectToCloudIO()
 #endif
     return;
   }
+  HTTPClient http;
   WiFiClient client;
   String payload = "";
   DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
@@ -205,4 +215,6 @@ void connectToCloudIO()
       tryMqttCloudConnection();
     }
   }
+  client.stop();
+  http.end();
 }

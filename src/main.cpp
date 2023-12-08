@@ -23,6 +23,9 @@ void checkInternalRoutines()
 
   if (config.isWifiScanRequested())
   {
+#ifdef DEBUG_ONOFREs
+    Log.notice("%sScan Network.", tags::system);
+#endif
     scanNewWifiNetworks();
   }
 
@@ -46,6 +49,9 @@ void checkInternalRoutines()
 
   if (config.isAutoUpdateRequested())
   {
+#ifdef DEBUG_ONOFREs
+    Log.notice("%sAuto Update Request.", tags::system);
+#endif
     performUpdate();
   }
 
@@ -114,6 +120,7 @@ void setup()
   setupWiFi();
   setupCors();
   setupMQTT();
+  startCloudIOWatchdog();
 #ifdef ESP32
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
 #endif
@@ -121,6 +128,7 @@ void setup()
 
 void loop()
 {
+
   checkInternalRoutines();
   loopWiFi();
   if (!config.isAutoUpdateRequested())
