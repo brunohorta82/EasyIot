@@ -69,7 +69,7 @@ void ConfigOnofre::pzemDiscovery()
 #ifdef ESP32
   for (int i = 0; i < 3; i++)
   {
-    PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, Discovery::MODBUS_PZEM_ADDRESS_START + i);
+    PZEM004Tv30 pzem(Serial1, DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, Discovery::MODBUS_PZEM_ADDRESS_START + i);
     delay(200);
     float voltageOne = pzem.voltage();
     if (!isnan(voltageOne))
@@ -80,7 +80,7 @@ void ConfigOnofre::pzemDiscovery()
       found = voltageOne > 0;
       if (found && !isSensorExists(pzem.getAddress()))
       {
-        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, pzem.getAddress());
         needsSave = true;
       }
     }
@@ -89,11 +89,11 @@ void ConfigOnofre::pzemDiscovery()
   if (!found)
   {
 #ifdef ESP8266
-    SoftwareSerial softwareSerial = SoftwareSerial(constantsConfig::PZEM_TX, constantsConfig::PZEM_RX);
+    SoftwareSerial softwareSerial = SoftwareSerial(DefaultPins::PZEM_TX, DefaultPins::PZEM_RX);
     PZEM004Tv30 pzem(softwareSerial);
 #endif
 #ifdef ESP32
-    PZEM004Tv30 pzem(Serial1, constantsConfig::PZEM_TX, constantsConfig::PZEM_RX);
+    PZEM004Tv30 pzem(Serial1, DefaultPins::PZEM_TX, DefaultPins::PZEM_RX);
 #endif
     delay(200);
     float voltageOne = pzem.voltage();
@@ -102,7 +102,7 @@ void ConfigOnofre::pzemDiscovery()
       found = voltageOne > 0;
       if (found && !isSensorExists(pzem.getAddress()))
       {
-        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), constantsConfig::PZEM_TX, constantsConfig::PZEM_RX, pzem.getAddress());
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, pzem.getAddress());
         needsSave = true;
       }
     }
@@ -122,7 +122,7 @@ void ConfigOnofre::i2cDiscovery()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Smart Bus Started." CR, tags::config);
 #endif
-  Wire.begin(constantsConfig::SDA, constantsConfig::SCL);
+  Wire.begin(DefaultPins::SDA, DefaultPins::SCL);
 
   byte error, address;
   for (address = 1; address < 127; address++)
@@ -595,12 +595,12 @@ void ConfigOnofre::json(JsonVariant &root)
   root["wifiStatus"] = WiFi.isConnected();
   root["signal"] = WiFi.RSSI();
   JsonVariant outInPins = root.createNestedArray("outInPins");
-  JsonVariant inPins = root.createNestedArray("inPins");
 #ifdef ESP8266
-  std::vector<int> outputInput = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
+  std::vector<int> outputInput = {0, 1, 3, 14, 15, 16};
 #endif
 #ifdef ESP32
-  std::vector<int> outputInput = {4, 5, 7, 8, 13, 14, 19, 20, 21, 22, 25, 26, 27, 32, 33};
+  JsonVariant inPins = root.createNestedArray("inPins");
+  std::vector<int> outputInput = {7, 8, 19, 20, 21, 22, 25};
   std::vector<int> intputOnly = {34, 35, 36, 37, 38};
   for (auto p : intputOnly)
   {

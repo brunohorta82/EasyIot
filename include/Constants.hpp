@@ -42,43 +42,10 @@ namespace tags
 namespace configFilenames
 {
     constexpr const char *config = "/config.json";
-} // namespace configFilenames
+}
+
 namespace constantsConfig
 {
-#ifdef ESP8266
-    constexpr unsigned int INPUT_ONE{12u};
-#endif
-#ifdef ESP32
-    constexpr unsigned int INPUT_ONE{14u};
-#endif
-    constexpr unsigned int INPUT_TWO{13u};
-    constexpr unsigned int OUTPUT_ONE{4u};
-    constexpr unsigned int OUTPUT_TWO{5u};
-#ifdef ESP32
-    constexpr unsigned int PZEM_TX{26u};
-    constexpr unsigned int PZEM_RX{27u};
-#endif
-#ifdef ESP8266
-    constexpr unsigned int PZEM_TX{3u};
-    constexpr unsigned int PZEM_RX{1u};
-#endif
-    constexpr unsigned int noGPIO{99u};
-#ifdef ESP32
-    constexpr int SDA{32u};
-    constexpr int SCL{33u};
-#endif
-#ifdef ESP8266
-    constexpr int SDA{2u};
-    constexpr int SCL{13u};
-#endif
-#ifdef ESP32
-    constexpr int HAN_TX{13u};
-    constexpr int HAN_RX{14u};
-#endif
-#ifdef ESP8266
-    constexpr int HAN_TX{14u};
-    constexpr int HAN_RX{12u};
-#endif
     constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME_SECONS{25};
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
@@ -89,7 +56,40 @@ namespace constantsConfig
     constexpr const char *apiPassword{"xpto"};  // API PASSWORD
     constexpr const char *PW_HIDE{"******"};
 }
-
+#ifdef ESP32
+namespace DefaultPins
+{
+    // ESP32 DEFAULT PINS
+    constexpr unsigned int INPUT_ONE{14u};
+    constexpr unsigned int INPUT_TWO{13u};
+    constexpr unsigned int OUTPUT_ONE{4u};
+    constexpr unsigned int OUTPUT_TWO{5u};
+    constexpr unsigned int PZEM_TX{26u};
+    constexpr unsigned int PZEM_RX{27u};
+    constexpr int SDA{32u};
+    constexpr int SCL{33u};
+    constexpr int HAN_TX{13u};
+    constexpr int HAN_RX{14u};
+    constexpr unsigned int noGPIO{99u};
+}
+#endif
+#ifdef ESP8266
+namespace DefaultPins
+{
+    // ESP8266 DEFAULT PINS
+    constexpr unsigned int INPUT_ONE{12u};
+    constexpr unsigned int INPUT_TWO{13u};
+    constexpr unsigned int OUTPUT_ONE{4u};
+    constexpr unsigned int OUTPUT_TWO{5u};
+    constexpr unsigned int PZEM_TX{3u};
+    constexpr unsigned int PZEM_RX{1u};
+    constexpr int SDA{2u};
+    constexpr int SCL{13u};
+    constexpr int HAN_TX{14u};
+    constexpr int HAN_RX{12u};
+    constexpr unsigned int noGPIO{99u};
+}
+#endif
 namespace constanstsCloudIO
 {
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};

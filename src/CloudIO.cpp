@@ -177,8 +177,16 @@ void connectToCloudIO()
   doc.clear();
   config.cloudIOReady = false;
 #ifdef DEBUG_ONOFRE
-  Log.info("%s [HTTP] CloudIO Request result: %d" CR, tags::cloudIO, httpCode);
+  Log.info("%s [HTTP]  Request result: %d" CR, tags::cloudIO, httpCode);
 #endif
+  if (httpCode == HTTP_CODE_NO_CONTENT)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.info("%s [HTTP] Device not adopted" CR, tags::cloudIO);
+#endif
+    checkCloudIOWatchdog.detach();
+    return;
+  }
   if (httpCode != HTTP_CODE_OK)
   {
     return;

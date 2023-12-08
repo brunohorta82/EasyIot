@@ -10,7 +10,7 @@ void configPIN(uint8_t pin, uint8_t mode)
         }
     }
 #endif
-    if (pin == constantsConfig::noGPIO)
+    if (pin == DefaultPins::noGPIO)
     {
         return;
     }
@@ -19,7 +19,7 @@ void configPIN(uint8_t pin, uint8_t mode)
 
 void writeToPIN(uint8_t pin, uint8_t val)
 {
-    if (pin == constantsConfig::noGPIO)
+    if (pin == DefaultPins::noGPIO)
     {
         return;
     }
@@ -28,7 +28,7 @@ void writeToPIN(uint8_t pin, uint8_t val)
 
 bool readPIN(uint8_t pin)
 {
-    if (pin == constantsConfig::noGPIO)
+    if (pin == DefaultPins::noGPIO)
     {
         return true;
     }

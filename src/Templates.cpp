@@ -9,7 +9,7 @@ void prepareHAN()
 
     Sensor sensor;
     strlcpy(sensor.name, I18N::HAN, sizeof(sensor.name));
-    sensor.inputs = {constantsConfig::HAN_RX, constantsConfig::HAN_TX};
+    sensor.inputs = {DefaultPins::HAN_RX, DefaultPins::HAN_TX};
     sensor.driver = HAN;
     sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
@@ -21,7 +21,7 @@ void prepareSHT4X(int hwAddress)
 {
     Sensor sensor;
     strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
-    sensor.inputs = {constantsConfig::SDA, constantsConfig::SCL};
+    sensor.inputs = {DefaultPins::SDA, DefaultPins::SCL};
     sensor.driver = SHT4X;
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::climateReadDelay;
@@ -34,7 +34,7 @@ void prepareLTR303(int hwAddress)
 {
     Sensor sensor;
     strlcpy(sensor.name, I18N::ILLUMINANCE, sizeof(sensor.name));
-    sensor.inputs = {constantsConfig::SDA, constantsConfig::SCL};
+    sensor.inputs = {DefaultPins::SDA, DefaultPins::SCL};
     sensor.driver = LTR303X;
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::illuminanceReadDelay;
@@ -123,21 +123,21 @@ void templateSelect(enum Template _template)
         break;
     case Template::DUAL_LIGHT:
     {
-        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatorDriver::LIGHT_PUSH, ActuatorControlType::GPIO_OUTPUT);
-        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatorDriver::LIGHT_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::SWICTH_ONE, DefaultPins::OUTPUT_ONE, DefaultPins::INPUT_ONE, ActuatorDriver::LIGHT_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::SWICTH_TWO, DefaultPins::OUTPUT_TWO, DefaultPins::INPUT_TWO, ActuatorDriver::LIGHT_PUSH, ActuatorControlType::GPIO_OUTPUT);
     }
     break;
     case Template::DUAL_SWITCH:
     {
-        prepareActuator(I18N::SWICTH_ONE, constantsConfig::OUTPUT_ONE, constantsConfig::INPUT_ONE, ActuatorDriver::SWITCH_PUSH, ActuatorControlType::GPIO_OUTPUT);
-        prepareActuator(I18N::SWICTH_TWO, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, ActuatorDriver::SWITCH_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::SWICTH_ONE, DefaultPins::OUTPUT_ONE, DefaultPins::INPUT_ONE, ActuatorDriver::SWITCH_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::SWICTH_TWO, DefaultPins::OUTPUT_TWO, DefaultPins::INPUT_TWO, ActuatorDriver::SWITCH_PUSH, ActuatorControlType::GPIO_OUTPUT);
     }
     break;
     case Template::COVER:
-        prepareCover(I18N::COVER, constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE, COVER_DUAL_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareCover(I18N::COVER, DefaultPins::OUTPUT_ONE, DefaultPins::OUTPUT_TWO, DefaultPins::INPUT_TWO, DefaultPins::INPUT_ONE, COVER_DUAL_PUSH, ActuatorControlType::GPIO_OUTPUT);
         break;
     case Template::GARAGE:
-        prepareGarage(I18N::GARAGE, constantsConfig::OUTPUT_ONE, constantsConfig::OUTPUT_TWO, constantsConfig::INPUT_TWO, constantsConfig::INPUT_ONE, GARAGE_PUSH, ActuatorControlType::GPIO_OUTPUT);
+        prepareGarage(I18N::GARAGE, DefaultPins::OUTPUT_ONE, DefaultPins::OUTPUT_TWO, DefaultPins::INPUT_TWO, DefaultPins::INPUT_ONE, GARAGE_PUSH, ActuatorControlType::GPIO_OUTPUT);
         break;
     case HAN_MODULE:
         prepareHAN();
