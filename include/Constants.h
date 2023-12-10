@@ -1,5 +1,4 @@
 #pragma once
-
 enum Template
 {
     NO_TEMPLATE,
@@ -71,6 +70,8 @@ namespace DefaultPins
     constexpr int HAN_TX{13u};
     constexpr int HAN_RX{14u};
     constexpr unsigned int noGPIO{99u};
+    constexpr unsigned int outputInputPins[] = {7, 8, 19, 20, 21, 22, 25};
+    constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
 }
 #endif
 #ifdef ESP8266
@@ -87,7 +88,8 @@ namespace DefaultPins
     constexpr int SCL{13u};
     constexpr int HAN_TX{14u};
     constexpr int HAN_RX{12u};
-    constexpr unsigned int noGPIO{99u};
+    constexpr unsigned int noGPIO{999u};
+    constexpr unsigned int outputInputPins[] = {0, 1, 3, 14, 15, 16};
 }
 #endif
 namespace constanstsCloudIO

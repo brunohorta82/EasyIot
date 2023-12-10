@@ -2,7 +2,7 @@
 #include <Shutters.h>
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
-#include "Constants.hpp"
+#include "Constants.h"
 #include "ConfigOnofre.h"
 #include "Mqtt.h"
 #include "CoreWiFi.h"

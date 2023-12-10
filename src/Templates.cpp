@@ -13,7 +13,7 @@ void prepareHAN()
     sensor.driver = HAN;
     sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, DefaultPins::HAN_RX, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
@@ -26,7 +26,7 @@ void prepareSHT4X(int hwAddress)
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::climateReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, DefaultPins::SDA, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
@@ -39,7 +39,7 @@ void prepareLTR303(int hwAddress)
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::illuminanceReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, DefaultPins::SDA, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
@@ -52,7 +52,7 @@ void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress)
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::energyReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.driver, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, tx, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
@@ -65,22 +65,37 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
     actuator.outputs.push_back(output);
     actuator.inputs.push_back(input);
     String idStr;
-    config.generateId(idStr, actuator.name, actuator.driver, sizeof(actuator.uniqueId));
+    config.generateId(idStr, actuator.name, actuator.driver, output, sizeof(actuator.uniqueId));
     strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
     config.actuatores.push_back(actuator);
 }
-void prepareVirtualSwitch(String name, unsigned int input, ActuatorDriver driver)
+int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, ActuatorDriver driver)
 {
+    if (name.isEmpty())
+        return 1;
+    if (!config.validPin(input1))
+        return 2;
+    if (ActuatorDriver::INVALID == driver)
+        return 3;
     Actuator actuator;
     actuator.driver = driver;
+    actuator.inputs.push_back(input1);
+    if (actuator.requireDualInputs() && !config.validPin(input2))
+    {
+        return 4;
+    }
+    else if (actuator.requireDualInputs())
+    {
+        actuator.inputs.push_back(input2);
+    }
     strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
     actuator.typeControl = ActuatorControlType::VIRTUAL;
     actuator.outputs.clear();
-    actuator.inputs.push_back(input);
     String idStr;
-    config.generateId(idStr, actuator.name, actuator.driver, sizeof(actuator.uniqueId));
+    config.generateId(idStr, actuator.name, actuator.driver, input1, sizeof(actuator.uniqueId));
     strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
     config.actuatores.push_back(actuator);
+    return 0;
 }
 void prepareCover(String name, unsigned int outputDown, unsigned int outputUp, unsigned int inputDown, unsigned int inputUp, ActuatorDriver driver, ActuatorControlType type)
 {
@@ -91,7 +106,7 @@ void prepareCover(String name, unsigned int outputDown, unsigned int outputUp, u
     cover.outputs = {outputDown, outputUp};
     cover.inputs = {inputDown, inputUp};
     String idStr;
-    config.generateId(idStr, cover.name, cover.driver, sizeof(cover.uniqueId));
+    config.generateId(idStr, cover.name, cover.driver, outputDown, sizeof(cover.uniqueId));
     strlcpy(cover.uniqueId, idStr.c_str(), sizeof(cover.uniqueId));
     config.actuatores.push_back(cover);
 }
@@ -104,7 +119,7 @@ void prepareGarage(String name, unsigned int gateOne, unsigned int gateTwo, unsi
     garage.outputs = {gateOne, gateTwo};
     garage.inputs = {openCloseSensor, pushSwitch};
     String idStr;
-    config.generateId(idStr, garage.name, garage.driver, sizeof(garage.uniqueId));
+    config.generateId(idStr, garage.name, garage.driver, openCloseSensor, sizeof(garage.uniqueId));
     strlcpy(garage.uniqueId, idStr.c_str(), sizeof(garage.uniqueId));
     config.actuatores.push_back(garage);
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "Arduino.h"
-#include "Constants.hpp"
+#include "Constants.h"
 void normalize(String &inputStr);
 boolean isValidNumber(const char *str);
 void configPIN(uint8_t pin, uint8_t mode);

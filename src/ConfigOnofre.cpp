@@ -10,12 +10,13 @@
 #include <PZEM004Tv30.h>
 #include "HomeAssistantMqttDiscovery.h"
 void actuatoresCallback(message_t const &msg, void *arg);
-void ConfigOnofre::generateId(String &id, const String &name, int familyCode, size_t maxSize)
+void ConfigOnofre::generateId(String &id, const String &name, int familyCode, int io, size_t maxSize)
 {
   id.reserve(maxSize);
   id.concat(chipId);
   id.concat(name);
   id.concat(familyCode);
+  id.concat(io);
   id.toLowerCase();
   normalize(id);
 }
@@ -290,8 +291,6 @@ ConfigOnofre &ConfigOnofre::load()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
 #endif
-  // prepareVirtualSwitch("VIRTUAL", 27, ActuatorDriver::LIGHT_PUSH);
-  // this->save();
   return *this;
 }
 void ConfigOnofre::loadTemplate(int templateId)
@@ -517,38 +516,19 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
     String id = feature["id"] | "";
     if (String("ACTUATOR").equals(feature["group"] | ""))
     {
-      if (strcmp("new", id.c_str()) == 0)
+      for (auto &actuator : actuatores)
       {
-        ActuatorDriver driver = feature["driver"] | ActuatorDriver::INVALID;
-        if (driver == SWITCH_PUSH || driver == SWITCH_LATCH || driver == LIGHT_PUSH || driver == LIGHT_LATCH)
+        if (strcmp(actuator.uniqueId, id.c_str()) == 0)
         {
-          prepareActuator(feature["name"] | I18N::NO_NAME, feature["o1"], feature["i1"], driver, feature["type"] | ActuatorControlType::VIRTUAL);
-        }
-        else if (driver == COVER_SINGLE_PUSH || driver == COVER_DUAL_PUSH || driver == COVER_DUAL_LATCH)
-        {
-          prepareCover(feature["name"] | I18N::NO_NAME, feature["outDown"] | 0, feature["outUp"] | 0, feature["inDown"] | 0, feature["inUp"] | 0, driver, feature["type"] | ActuatorControlType::VIRTUAL);
-        }
-        else if (driver == GARAGE_PUSH)
-        {
-          prepareGarage(feature["name"] | I18N::NO_NAME, feature["gateOne"], feature["gateTwo"], feature["sensor"], feature["switch"], driver, feature["type"] | ActuatorControlType::VIRTUAL);
-        }
-      }
-      else
-      {
-        for (auto &actuator : actuatores)
-        {
-          if (strcmp(actuator.uniqueId, id.c_str()) == 0)
-          {
-            if (strlen(feature["name"] | I18N::NO_NAME) > 0)
-              strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
-            actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
-            actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-            actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-            actuator.knxAddress[0] = feature["area"] | 0;
-            actuator.knxAddress[1] = feature["line"] | 0;
-            actuator.knxAddress[2] = feature["member"] | 0;
-            actuator.setup();
-          }
+          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+            strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
+          actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
+          actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+          actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+          actuator.knxAddress[0] = feature["area"] | 0;
+          actuator.knxAddress[1] = feature["line"] | 0;
+          actuator.knxAddress[2] = feature["member"] | 0;
+          actuator.setup();
         }
       }
     }
@@ -595,19 +575,15 @@ void ConfigOnofre::json(JsonVariant &root)
   root["wifiStatus"] = WiFi.isConnected();
   root["signal"] = WiFi.RSSI();
   JsonVariant outInPins = root.createNestedArray("outInPins");
-#ifdef ESP8266
-  std::vector<int> outputInput = {0, 1, 3, 14, 15, 16};
-#endif
 #ifdef ESP32
   JsonVariant inPins = root.createNestedArray("inPins");
-  std::vector<int> outputInput = {7, 8, 19, 20, 21, 22, 25};
-  std::vector<int> intputOnly = {34, 35, 36, 37, 38};
-  for (auto p : intputOnly)
+
+  for (auto p : DefaultPins::intputOnlyPins)
   {
     inPins.add(p);
   }
 #endif
-  for (auto p : outputInput)
+  for (auto p : DefaultPins::outputInputPins)
   {
     outInPins.add(p);
   }

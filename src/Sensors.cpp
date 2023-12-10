@@ -211,7 +211,7 @@ void Sensor::loop()
       }
 #endif
       lastRead = millis();
-      StaticJsonDocument<300> doc;
+      StaticJsonDocument<400> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       modbus->clearResponseBuffer();
@@ -298,6 +298,7 @@ void Sensor::loop()
             obj["error"] = true;
           }
         }
+        obj["signal"] = WiFi.RSSI();
         serializeJson(obj, state);
         notifyState();
 #ifdef DEBUG_ONOFRE

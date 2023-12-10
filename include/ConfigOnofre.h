@@ -1,5 +1,5 @@
 #pragma once
-#include "Constants.hpp"
+#include "Constants.h"
 #include "Utils.hpp"
 #include <ArduinoJson.h>
 #include "Actuatores.h"
@@ -54,11 +54,12 @@ public:
   void i2cDiscovery();
   void pzemDiscovery();
   bool isSensorExists(int hwAddress);
-  void generateId(String &id, const String &name, int familyCode, size_t maxSize);
+  void generateId(String &id, const String &name, int familyCode, int io, size_t maxSize);
   void loadTemplate(int templateId);
   void loopActuators();
   void loopSensors();
   void requestCloudIOSync();
+
   bool isCloudIOSyncRequested();
 
   void requestWifiScan();
@@ -76,6 +77,15 @@ public:
   constexpr bool isLoopFeaturesPaused()
   {
     return pauseFeaturesLoop;
+  }
+  bool validPin(unsigned int pin)
+  {
+    for (auto p : DefaultPins::outputInputPins)
+    {
+      if (p == pin)
+        return true;
+    }
+    return false;
   }
   void requestReloadWifi();
   bool isReloadWifiRequested();

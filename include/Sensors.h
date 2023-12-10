@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
-#include "Constants.hpp"
+#include "Constants.h"
 #include <ModbusMaster.h>
 #include <Wire.h>
 enum SensorDriver

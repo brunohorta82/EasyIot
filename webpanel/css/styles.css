@@ -463,4 +463,11 @@ input[type="range"]::-ms-fill-lower {
 input[type="range"]::-ms-fill-upper {
     background-color: #434343;
 }
-
+.wizard{
+    margin-top: 10px;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}

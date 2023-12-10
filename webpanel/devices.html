@@ -1,30 +1,68 @@
+<div class="wizard">
+    <div class="box-body">
+
+            <div class="form-group">
+            <label for="f-n-name"><span class="lang-name">Nome</span></label>
+            <input
+                class="f-name form-control" style="width: 200px" maxlength="30" type="text" name="f-name" id="f-n-name"
+                placeholder="ex: kitchen" required/>
+            </div>
+            <div class="form-group">
+            <label for="f-n-driver"><span class="lang-driver">Driver</span></label>
+            <select onchange="driverSelect(this)" name="pins" style="width: 200px" class="form-control" id="f-n-driver">
+                <option value="7">Iluminação Pulsador</option>
+                <option value="8">Iluminação Normal</option>
+                <option value="4">Estore Pulsador Duplo</option>
+                <option value="5">Estore Normal Duplo</option>
+                <option value="1">Interruptor Pulsador</option>
+                <option value="2">Interruptor Normal</option>
+                <option value="3">Estore Pulsador</option>
+                <option value="9">Garagem</option>
+            </select>
+            </div>
+            <div class="form-group">
+            <label id="pin-up-l" for="f-n-pin-1"><span class="lang-pin-up">Pino Subir</span></label>
+            <select name="pins" style="width: 80px" class="form-control" id="f-n-pin-1">
+            </select>
+            </div>
+            <div id="f-n-pin-2-g" class="form-group hide">
+            <label id="pin-down-l" for="f-n-pin-2"><span class="lang-pin-down">Pino Descer</span></label>
+            <select name="pins" style="width: 80px" class="form-control" id="f-n-pin-2">
+            </select>
+            </div>
+            <button type="button" onclick="create()" class="btn-update" id="btn-create"><span
+                class="lang-save">CRIAR</span></button>
+    </div>
+</div>
+
 <div class="box-body">
     <div class="features" id="devices_config">
         <template id="ACTUATOR">
             <div>
-            <svg width="30px" height="30px"  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
-            </svg>
-            <div class="feature-box">
-                <?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-                <label><span class="feature-name"></span></label>
-                <label class=" switch">
-                    <input onchange="toggleSwitch(this)" type="checkbox">
-                    <span class="slider round"></span>
-                </label>
-                <input onchange="shutterPercentage(this)" class="shutter-slider" min="0" max="100" type="range"  />
-            </div>
+                <svg width="30px" height="30px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+                </svg>
+                <div class="feature-box">
+                    <?xml version="1.0" encoding="utf-8"?>
+                    <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+                    <label><span class="feature-name"></span></label>
+                    <label class=" switch">
+                        <input onchange="toggleSwitch(this)" type="checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                    <input onchange="shutterPercentage(this)" class="shutter-slider" min="0" max="100" type="range"/>
+                </div>
             </div>
         </template>
         <template id="SENSOR">
             <div class="feature-box">
-                <svg  viewBox="0 0 30 30">
+                <svg viewBox="0 0 30 30">
                 </svg>
                 <label><span class="feature-name"></span></label>
             </div>
         </template>
     </div>
 </div>
-<div id="modal"  class="modal">
+<div id="modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <span class="close">&times;</span>
@@ -37,19 +75,19 @@
                 placeholder="ex: kitchen" required/>
         </div>
         <div class="f-ac modal-form">
-                <label>Tipo de Interruptor</label>
+            <label>Tipo de Interruptor</label>
             <div class="modal-form-row">
                 <div>
-                    <input type="radio" id="f-in-mode-push" name="f-in-mode"  value="0" />
+                    <input type="radio" id="f-in-mode-push" name="f-in-mode" value="0"/>
                     <label id="f-in-mode-push-lbl" for=f-in-mode-push>Pulsador</label>
                 </div>
                 <div>
-                    <input type="radio" id="f-in-mode-latch" name="f-in-mode"  value="1"  />
-                    <label  id="f-in-mode-latch-lbl" for="f-in-mode-latch">Normal</label>
+                    <input type="radio" id="f-in-mode-latch" name="f-in-mode" value="1"/>
+                    <label id="f-in-mode-latch-lbl" for="f-in-mode-latch">Normal</label>
                 </div>
                 <div id="f-push-t">
-                    <input type="radio" id="f-in-mode-push-toggle" name="f-in-mode"  value="2"  />
-                    <label  id="f-in-mode-push-toggle-lbl" for="f-in-mode-push-toggle">Pulsador</label>
+                    <input type="radio" id="f-in-mode-push-toggle" name="f-in-mode" value="2"/>
+                    <label id="f-in-mode-push-toggle-lbl" for="f-in-mode-push-toggle">Pulsador</label>
                 </div>
             </div>
         </div>
@@ -57,11 +95,11 @@
             <label>Calibração</label>
             <div class="modal-form-row ">
                 <div>
-                    <input type="number" id="f-up" value="0" />
+                    <input type="number" id="f-up" value="0"/>
                     <label class="label-hit" for=f-up>segundos para subir</label>
                 </div>
                 <div>
-                    <input type="number" id="f-down" value="1"  />
+                    <input type="number" id="f-down" value="1"/>
                     <label class="label-hit" for="f-down">segundos para descer</label>
                 </div>
             </div>
@@ -70,19 +108,20 @@
             <label>KNX</label>
             <div class="modal-form-row ">
                 <div>
-                    <input type="number" id="f-area" value="0" />
+                    <input type="number" id="f-area" value="0"/>
                 </div>
                 <div>
-                    <input type="number" id="f-line" value="0"  />
+                    <input type="number" id="f-line" value="0"/>
                 </div>
                 <div>
-                    <input type="number" id="f-member" value="0"  />
+                    <input type="number" id="f-member" value="0"/>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button  type="button" onclick="deleteFeature(this)"  class="btn-delete" id="btn-delete">DELETE</button>
-            <button  type="button" onclick="applyFeatureChanges(this)"  class="btn-update" id="btn-update"><span class="lang-save">UPDATE</span></button>
+            <button type="button" onclick="deleteFeature(this)" class="btn-delete" id="btn-delete">DELETE</button>
+            <button type="button" onclick="applyFeatureChanges(this)" class="btn-update" id="btn-update"><span
+                class="lang-save">UPDATE</span></button>
         </div>
     </div>
 

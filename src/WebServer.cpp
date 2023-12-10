@@ -320,15 +320,13 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     JsonObject actuatorJson = json.as<JsonObject>();
-    if (actuatorJson.containsKey("name") && actuatorJson.containsKey("input") && actuatorJson.containsKey("driver"))
-    {
-    prepareVirtualSwitch(actuatorJson["name"] | "", actuatorJson["input"] | 0, actuatorJson["driver"] | ActuatorDriver::INVALID);
-    config.save().json(root);
-  
-    }else {
+    int result =  prepareVirtualSwitch(actuatorJson["name"] | "", actuatorJson["input1"] |  DefaultPins::noGPIO, actuatorJson["input2"] | DefaultPins::noGPIO, actuatorJson["driver"] | ActuatorDriver::INVALID);
+      if(result == 0){
+        config.save().json(root);
+      }else{
       response->setCode(400);
-      root["result"] = "Invalid Parameters";
-    } 
+      root["result"] = result;
+      }
     response->setLength();
     request->send(response); }));
 

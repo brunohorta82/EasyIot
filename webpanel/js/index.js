@@ -17,9 +17,29 @@ var WORDS_PT = {
     "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
 }
 
+function create() {
+    let s = {};
+    s.name = getValue("f-n-name", "sem nome");
+    s.driver = parseInt( getValue("f-n-driver", 999));
+    s.input1 =parseInt( getValue("f-n-pin-1", 999));
+    s.input2 = parseInt(getValue("f-n-pin-2", 999));
+    fetch(baseUrl + "/switches/virtual", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: JSON.stringify(s)
+    }).then(response => response.json()).then(json => config = json).then(() => {
+        showMessage("config_save_ok");
+        toggleActive("devices");
+    }).catch(() =>
+        showMessage("config_save_error")
+    );
+
+}
+
 function getI18n(key) {
     return WORDS_PT[key];
 }
+
 function stringToHTML(text) {
     let parser = new DOMParser();
     let doc = parser.parseFromString(text, 'text/html');
@@ -27,7 +47,7 @@ function stringToHTML(text) {
 }
 
 function toggleActive(menu) {
-    if (currentPage ===  "node" && menu === "devices") {
+    if (currentPage === "node" && menu === "devices") {
         applyNodeChanges();
     }
     currentPage = menu;
@@ -79,7 +99,7 @@ function fillConfig() {
     document.title = 'BH OnOfre ' + config.nodeId;
     let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
     findById("wifi-signal").textContent = percentage + "%";
-    findById("version_lbl").textContent = config.firmware+" - "+config.mcu;
+    findById("version_lbl").textContent = config.firmware + " - " + config.mcu;
     findById("lbl-chip").textContent = "ID: " + config.chipId;
     findById("lbl-mac").textContent = "MAC: " + config.mac;
     findById("ssid_lbl").textContent = config.wifiSSID;
@@ -154,14 +174,13 @@ function saveConfig() {
     }
     fetch(baseUrl + "/config", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: JSON.stringify(config)
     }).then(response => response.json()).then(json => config = json).then(() => {
         showMessage("config_save_ok");
     }).catch(() =>
         showMessage("config_save_error")
     );
-
 }
 
 function applyFeatureChanges(e) {
@@ -198,6 +217,7 @@ function getValue(id, f) {
     let v = findById(id);
     return v ? v.value : f;
 }
+
 function shutterPercentage(arg) {
     const action = {
         id: arg.id,
@@ -205,12 +225,13 @@ function shutterPercentage(arg) {
     };
     fetch(baseUrl + "/actuators/control", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: JSON.stringify(action)
     }).catch(() =>
         showMessage("control_state_error")
     );
 }
+
 function toggleSwitch(arg) {
     const action = {
         id: arg.id,
@@ -218,12 +239,13 @@ function toggleSwitch(arg) {
     };
     fetch(baseUrl + "/actuators/control", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: JSON.stringify(action)
     }).catch(() =>
         showMessage("control_state_error")
     );
 }
+
 function appendSvgPath(node, d, strokeColor) {
     let a = document.createElementNS("http://www.w3.org/2000/svg", 'path');
     a.setAttribute("d", d);
@@ -263,8 +285,31 @@ function createModal(a, modal, f) {
         findById("btn-update").featureId = f.id;
     }
 }
+function driverSelect(a){
+    let p2 = findById("f-n-pin-2-g");
+    if(parseInt( a.value) === 4 || parseInt(a.value) === 5){
+        p2.classList.remove("hide");
+    }else{
+        p2.classList.add("hide");
+    }
 
+}
 function fillDevices() {
+    let p1 = findById("f-n-pin-1");
+    let p2 = findById("f-n-pin-2");
+    for (const p of config.outInPins) {
+        let option = document.createElement("option");
+        option.text = p;
+        option.value = p;
+        p1.add(option);
+    }
+    for (const p of config.outInPins) {
+        let option = document.createElement("option");
+        option.text = p;
+        option.value = p;
+        p2.add(option);
+    }
+
     let temp, item, a;
     const modal = findById("modal");
     for (const f of config.features) {
@@ -272,7 +317,7 @@ function fillDevices() {
         item = temp.content.querySelector("div");
         a = document.importNode(item, true);
         a.id = "f-" + f.id;
-        a.getElementsByClassName("feature-name").item(0).textContent = f.name;
+        a.getElementsByClassName("feature-name").item(0).textContent = f.name ? f.name : "...";
         let icon = a.getElementsByTagName("svg").item(0);
         icon.classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
         a.getElementsByTagName("svg").item(0).id = 'i-' + f.id;
@@ -280,11 +325,13 @@ function fillDevices() {
         icon = findById('i-' + f.id);
         if ("SENSOR" === f.group) {
             findById("f-knx").classList.add("hide")
-        } if ("ACTUATOR" === f.group) {
+        }
+        if ("ACTUATOR" === f.group) {
             findById("f-knx").classList.remove("hide")
             a.getElementsByTagName("input").item(0).checked = f.state > 0;
             a.getElementsByTagName("input").item(0).id = f.id;
-            a.getElementsByTagName("input").item(1).value = Math.abs(parseInt(f.state) - 100);;
+            a.getElementsByTagName("input").item(1).value = Math.abs(parseInt(f.state) - 100);
+            ;
             a.getElementsByTagName("input").item(1).id = f.id;
             if ("SWITCH" === f.family) {
                 a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
@@ -359,6 +406,7 @@ function loadDefaults() {
         showMessage("defaults_ok")
         : showMessage("device_error"))
 }
+
 function requestUpdate() {
     fetch(baseUrl + "/auto-update", {
         headers: {
@@ -369,6 +417,7 @@ function requestUpdate() {
         showMessage("device_update_ok")
         : showMessage("device_error"))
 }
+
 document.addEventListener("DOMContentLoaded", () => {
 
     findById('features-btn').onclick = function (e) {

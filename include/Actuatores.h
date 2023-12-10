@@ -1,6 +1,6 @@
 #pragma once
 #include "Arduino.h"
-#include "Constants.hpp"
+#include "Constants.h"
 #include <Button2.h>
 #include "ArduinoJson.h"
 #include <vector>
@@ -108,6 +108,10 @@ public:
     {
         return knxAddress[0] > 0 && knxAddress[1] >= 0 && knxAddress[2] == 0;
     };
+    bool requireDualInputs()
+    {
+        return this->driver == driver || this->driver == driver;
+    }
     String familyToText()
     {
         if (isLight())

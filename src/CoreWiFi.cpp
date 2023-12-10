@@ -1,5 +1,5 @@
 #include "CoreWiFi.h"
-#include "Constants.hpp"
+#include "Constants.h"
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
 #include <JustWifi.h>
 #endif
@@ -283,6 +283,7 @@ void refreshMDNS(const char *lastName)
 void setupWiFi()
 {
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
+  WiFi.setSleep(false);
   jw.setHostname(config.nodeId);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
