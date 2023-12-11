@@ -320,6 +320,7 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     JsonObject actuatorJson = json.as<JsonObject>();
+    config.pauseFeatures();
     int result =  prepareVirtualSwitch(actuatorJson["name"] | "", actuatorJson["input1"] |  DefaultPins::noGPIO, actuatorJson["input2"] | DefaultPins::noGPIO, actuatorJson["driver"] | ActuatorDriver::INVALID);
       if(result == 0){
         config.save().json(root);
@@ -327,8 +328,9 @@ void loadAPI()
       response->setCode(400);
       root["result"] = result;
       }
-    response->setLength();
-    request->send(response); }));
+      config.resumeFeatures();
+      response->setLength();
+      request->send(response); }));
 
   /*CONTROL ACTUATOR*/
   server

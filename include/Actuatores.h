@@ -110,7 +110,7 @@ public:
     };
     bool requireDualInputs()
     {
-        return this->driver == driver || this->driver == driver;
+        return this->driver == ActuatorDriver::COVER_DUAL_LATCH || this->driver == ActuatorDriver::COVER_DUAL_PUSH;
     }
     String familyToText()
     {

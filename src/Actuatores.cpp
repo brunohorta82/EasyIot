@@ -215,7 +215,7 @@ void garageNotify(Button2 &btn)
 void Actuator::setup()
 {
   buttons.clear();
-  if (isCover() && outputs.size() == 2)
+  if (isCover() && outputs.size() == 2 && typeControl == ActuatorControlType::GPIO_OUTPUT)
   {
     shutter = new Shutters(outputs[0], outputs[1], sequence);
     shutter->setOperationHandler(shuttersOperationHandler)
@@ -255,7 +255,7 @@ void Actuator::setup()
       buttons.push_back(button);
     }
   }
-  else if (isGarage())
+  else if (isGarage() && typeControl == ActuatorControlType::GPIO_OUTPUT)
   {
     Button2 button;
     button.begin(inputs[0]);
@@ -346,6 +346,9 @@ void Actuator::notifyState(StateOrigin origin)
   // Notify by KNX
   if (StateOrigin::INTERNAL != origin && StateOrigin::KNX != origin && isKnxSupport())
   {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s KNX State:     %d" CR, tags::actuatores, state);
+#endif
     knx.write_1byte_int(knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]), state);
   }
 }
@@ -418,7 +421,7 @@ void ConfigOnofre::loopActuators()
 {
   for (auto &sw : config.actuatores)
   {
-    if (sw.isCover())
+    if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isCover())
     {
       sw.shutter->loop();
     }

@@ -9,7 +9,7 @@ bool homeAssistantOnline(String topic, String payload)
 }
 void createHaSwitch(Actuator &sw)
 {
-  if (!mqttConnected())
+  if (!mqttConnected() || sw.typeControl == ActuatorControlType::VIRTUAL)
     return;
   String objectStr = "";
   String uniqueId = String(sw.uniqueId);

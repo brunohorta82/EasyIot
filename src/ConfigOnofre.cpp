@@ -176,6 +176,11 @@ ConfigOnofre &ConfigOnofre::pauseFeatures()
   pauseFeaturesLoop = true;
   return *this;
 }
+ConfigOnofre &ConfigOnofre::resumeFeatures()
+{
+  pauseFeaturesLoop = false;
+  return *this;
+}
 ConfigOnofre &ConfigOnofre::load()
 {
   knxIdRegister = knx.callback_register("Actuatores", actuatoresCallback);

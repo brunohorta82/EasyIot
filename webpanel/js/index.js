@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.134"
+let baseUrl = "http://192.168.187.166"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -7,6 +7,9 @@ var WORDS_PT = {
     "dual_push": "Pulsador Duplo",
     "dual_latch": "Normal Duplo",
     "single_latch": "Normal",
+    "pin_input": "Pino Entrada",
+    "pin_up": "Pino Abrir",
+    "pin_down": "Pino Fechar",
     "single_push": "Pulsador",
     "update_to": "Atualizar automáticamente para a versão",
     "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
@@ -287,8 +290,14 @@ function createModal(a, modal, f) {
 }
 function driverSelect(a){
     let p2 = findById("f-n-pin-2-g");
+    let pu = findById("pin-up-l");
+    let pd = findById("pin-down-l");
+    pu.textContent = getI18n("pin_input")
+    pd.textContent = getI18n("pin_input")
     if(parseInt( a.value) === 4 || parseInt(a.value) === 5){
         p2.classList.remove("hide");
+        pu.textContent = getI18n("pin_up")
+        pd.textContent = getI18n("pin_down")
     }else{
         p2.classList.add("hide");
     }

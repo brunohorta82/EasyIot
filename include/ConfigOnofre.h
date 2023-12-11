@@ -51,6 +51,7 @@ public:
   ConfigOnofre &init();
   ConfigOnofre &load();
   ConfigOnofre &pauseFeatures();
+  ConfigOnofre &resumeFeatures();
   void i2cDiscovery();
   void pzemDiscovery();
   bool isSensorExists(int hwAddress);
