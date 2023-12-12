@@ -395,11 +395,11 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
 #endif
     for (auto &sw : config.actuatores)
     {
-      if (strcmp(sw.uniqueId, uniqueId) != 0)
+      if (sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
         if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.knxAddress[0] == knxAddress[0] && sw.knxAddress[1] == knxAddress[1] && sw.knxAddress[2] == knxAddress[2])
         {
-          sw.changeState(StateOrigin::INTERNAL,state);
+          sw.changeState(StateOrigin::INTERNAL, state);
         }
       }
     }
@@ -414,7 +414,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   {
     for (auto &sw : config.actuatores)
     {
-      if (strcmp(sw.uniqueId, uniqueId) != 0)
+      if (sw.isKnxSupport() && (sw.uniqueId, uniqueId) != 0)
       {
         if (sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {
