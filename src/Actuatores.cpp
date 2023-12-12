@@ -393,6 +393,16 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Virtual Switch triggered: %s" CR, tags::actuatores, name);
 #endif
+    for (auto &sw : config.actuatores)
+    {
+      if (strcmp(sw.uniqueId, uniqueId) != 0)
+      {
+        if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.knxAddress[0] == knxAddress[0] && sw.knxAddress[1] == knxAddress[1] && sw.knxAddress[2] == knxAddress[2])
+        {
+          sw.changeState(StateOrigin::INTERNAL,state);
+        }
+      }
+    }
   }
   else
   {
@@ -406,7 +416,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
     {
       if (strcmp(sw.uniqueId, uniqueId) != 0)
       {
-        if (sw.knxAddress[0] == knxAddress[0] && (knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0))
+        if (sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {
           sw.state = state;
           sw.notifyState(StateOrigin::INTERNAL);
