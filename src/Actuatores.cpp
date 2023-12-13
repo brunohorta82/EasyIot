@@ -395,7 +395,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
 #endif
     for (auto &sw : config.actuatores)
     {
-      if (sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
+      if (isKnxSupport() && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
         if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.knxAddress[0] == knxAddress[0] && sw.knxAddress[1] == knxAddress[1] && sw.knxAddress[2] == knxAddress[2])
         {
