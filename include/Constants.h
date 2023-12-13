@@ -93,7 +93,7 @@ namespace DefaultPins
     constexpr int HAN_TX{14u};
     constexpr int HAN_RX{12u};
     constexpr unsigned int noGPIO{999u};
-    constexpr unsigned int outputInputPins[] = {0, 1, 2 3, 4, 5 12, 13, 14, 16};
+    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5 12, 13, 14, 16};
 }
 #endif
 namespace constanstsCloudIO
