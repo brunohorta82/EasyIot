@@ -94,6 +94,7 @@ int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, 
     String idStr;
     config.generateId(idStr, actuator.name, actuator.driver, input1, sizeof(actuator.uniqueId));
     strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
+    actuator.setup();
     config.actuatores.push_back(actuator);
     return 0;
 }

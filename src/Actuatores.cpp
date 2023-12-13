@@ -61,7 +61,7 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
   for (auto &a : config.actuatores)
   {
-    if (a.sequence == shutters->actuatorId)
+    if (a.id == shutters->actuatorId)
     {
       a.state = level;
       a.notifyState(StateOrigin::INTERNAL);
@@ -81,7 +81,7 @@ void actuatoresCallback(message_t const &msg, void *arg)
     {
       continue;
     }
-    if (s.knxAddress[0] == msg.received_on.ga.area && s.knxAddress[1] == msg.received_on.ga.line && s.knxAddress[2] == msg.received_on.ga.member)
+    if (s.knxAddress[0] == msg.received_on.ga.area && (s.knxAddress[1] == msg.received_on.ga.line || (msg.received_on.ga.line == 0 && msg.received_on.ga.member == 0)) && (s.knxAddress[2] == msg.received_on.ga.member || msg.received_on.ga.member == 0))
     {
       switch (msg.ct)
       {
@@ -97,7 +97,10 @@ void actuatoresCallback(message_t const &msg, void *arg)
       case KNX_CT_MEM_READ:
       case KNX_CT_MEM_WRITE:
       case KNX_CT_READ:
-        knx.answer_1byte_int(msg.received_on, s.state);
+        if (s.knxAddress[0] == msg.received_on.ga.area && s.knxAddress[1] == msg.received_on.ga.line && s.knxAddress[2] == msg.received_on.ga.member)
+        {
+          knx.answer_1byte_int(msg.received_on, s.state);
+        }
         break;
       case KNX_CT_RESTART:
         break;
@@ -107,9 +110,12 @@ void actuatoresCallback(message_t const &msg, void *arg)
 #ifdef DEBUG_ONOFRE
         Log.notice("%s KNX %s" CR, tags::actuatores, KNX_CT_ANSWER == msg.ct ? "SYNC" : "WRITE");
 #endif
-        int stateIdx = knx.data_to_1byte_int(msg.data);
-        s.changeState(StateOrigin::KNX, stateIdx);
-        config.save();
+        int state = knx.data_to_1byte_int(msg.data);
+        if (s.state != state)
+        {
+          s.changeState(StateOrigin::KNX, state);
+          config.save();
+        }
         break;
       }
       };
@@ -120,7 +126,7 @@ void toogle(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::TOGGLE);
     }
@@ -130,7 +136,7 @@ void openShutter(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::OFF_OPEN);
     }
@@ -140,7 +146,7 @@ void openShutterLatch(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::OFF_OPEN);
     }
@@ -150,7 +156,7 @@ void stopShutterLatch(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       if ((digitalRead(a.inputs[0]) && digitalRead(a.inputs[1])))
       {
@@ -163,7 +169,7 @@ void closeShutterLatch(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
     }
@@ -173,7 +179,7 @@ void closeShutter(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
     }
@@ -183,7 +189,7 @@ void rotateShutter(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
     }
@@ -193,7 +199,7 @@ void stopShutter(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
       config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::STOP);
     }
@@ -203,7 +209,7 @@ void garageNotify(Button2 &btn)
 {
   for (auto a : config.actuatores)
   {
-    if (a.sequence == btn.getID())
+    if (a.id == btn.getID())
     {
 
       a.state = digitalRead(btn.getPin()) ? OFF_OPEN : ON_CLOSE;
@@ -215,9 +221,10 @@ void garageNotify(Button2 &btn)
 void Actuator::setup()
 {
   buttons.clear();
+  id = config.featureIds++;
   if (isCover() && outputs.size() == 2 && typeControl == ActuatorControlType::GPIO_OUTPUT)
   {
-    shutter = new Shutters(outputs[0], outputs[1], sequence);
+    shutter = new Shutters(outputs[0], outputs[1], id);
     shutter->setOperationHandler(shuttersOperationHandler)
         .restoreState(state, upCourseTime * 1000, downCourseTime * 1000)
         .setCourseTime(upCourseTime * 1000, downCourseTime * 1000)
@@ -240,7 +247,7 @@ void Actuator::setup()
     {
       Button2 button;
       button.begin(input);
-      button.setID(sequence);
+      button.setID(id);
       switch (driver)
       {
       case ActuatorDriver::LIGHT_PUSH:
@@ -259,7 +266,7 @@ void Actuator::setup()
   {
     Button2 button;
     button.begin(inputs[0]);
-    button.setID(sequence);
+    button.setID(id);
     button.setDebounceTime(1000);
     button.setChangedHandler(garageNotify);
     button.loop();
@@ -272,10 +279,10 @@ void Actuator::setup()
     {
       Button2 buttonOpen;
       buttonOpen.begin(inputs[0]);
-      buttonOpen.setID(sequence);
+      buttonOpen.setID(id);
       Button2 buttonClose;
       buttonClose.begin(inputs[1]);
-      buttonClose.setID(sequence);
+      buttonClose.setID(id);
       if (ActuatorDriver::COVER_DUAL_PUSH == driver)
       {
         buttonOpen.setPressedHandler(openShutter);
@@ -304,7 +311,7 @@ void Actuator::setup()
       Button2 buttonRotate;
       buttonRotate.begin(inputs[0]);
       buttonRotate.setDebounceTime(50);
-      buttonRotate.setID(sequence);
+      buttonRotate.setID(id);
       buttonRotate.setLongClickTime(500);
       buttonRotate.setLongClickDetectedHandler(stopShutter);
       buttonRotate.setClickHandler(toogle);
@@ -329,13 +336,13 @@ void Actuator::notifyState(StateOrigin origin)
   {
     String stateStr = String(state);
     // Notify by MQTT/Homeassistant
-    if (mqttConnected())
+    if (isRelay() && mqttConnected())
     {
       publishOnMqtt(readTopic, stateStr.c_str(), true);
     }
 
     // Notify by MQTT OnofreCloud
-    if (cloudIOConnected())
+    if (isRelay() && cloudIOConnected())
     {
       notifyStateToCloudIO(cloudIOreadTopic, stateStr.c_str());
     }
@@ -355,7 +362,8 @@ void Actuator::notifyState(StateOrigin origin)
 
 Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
-
+  if (this->state == state)
+    return this;
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
   Log.notice("%s State:     %d" CR, tags::actuatores, state);
@@ -397,7 +405,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
     {
       if (isKnxSupport() && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
-        if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.knxAddress[0] == knxAddress[0] && sw.knxAddress[1] == knxAddress[1] && sw.knxAddress[2] == knxAddress[2])
+        if (sw.isRelay() && sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {
           sw.changeState(StateOrigin::INTERNAL, state);
         }
@@ -414,10 +422,13 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   {
     for (auto &sw : config.actuatores)
     {
-      if (sw.isKnxSupport() && (sw.uniqueId, uniqueId) != 0)
+      if (sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
         if (sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {
+#ifdef DEBUG_ONOFRE
+          Log.notice("%s KNX Group: %s" CR, tags::actuatores, sw.name);
+#endif
           sw.state = state;
           sw.notifyState(StateOrigin::INTERNAL);
         }
@@ -444,6 +455,9 @@ void ConfigOnofre::loopActuators()
       knx.loop();
       if (sw.knxSync == 3)
       {
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s KNX Request Sync for: %s" CR, tags::actuatores, sw.name);
+#endif
         knx.send_1byte_int(knx.GA_to_address(sw.knxAddress[0], sw.knxAddress[1], sw.knxAddress[2]), KNX_CT_READ, 0);
       }
       if (sw.knxSync < 4)

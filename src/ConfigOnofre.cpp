@@ -238,13 +238,12 @@ ConfigOnofre &ConfigOnofre::load()
   strlcpy(apiUser, doc["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(apiPassword, doc["apiPassword"] | constantsConfig::apiPassword, sizeof(apiPassword));
   JsonArray features = doc["features"];
-  int s = 0;
+
   for (auto d : features)
   {
     if (strcmp(d["group"] | "", "ACTUATOR") == 0)
     {
       Actuator actuator;
-      actuator.sequence = s++;
       strlcpy(actuator.uniqueId, d["id"] | "", sizeof(actuator.uniqueId));
       strlcpy(actuator.name, d["name"] | "", sizeof(actuator.name));
       actuator.driver = d["driver"];
@@ -280,7 +279,7 @@ ConfigOnofre &ConfigOnofre::load()
       sensor.delayRead = d["delayRead"];
       sensor.driver = d["driver"];
       sensor.hwAddress = d["hwAddress"] | 0x10;
-      sensor.sequence = s++;
+      sensor.id = featureIds++;
       String family = sensor.familyToText();
       family.toLowerCase();
       sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family, sensor.uniqueId);

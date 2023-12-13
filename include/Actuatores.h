@@ -53,7 +53,6 @@ class Actuator
 public:
     // CONFIG
     char uniqueId[24]{};
-    int sequence = 0;
     char name[24] = {0};
     ActuatorDriver driver = SWITCH_PUSH;
     ActuatorControlType typeControl = VIRTUAL;
@@ -77,6 +76,7 @@ public:
 
     // CONTROL VARIABLES
     bool ready{false};
+    int id = 0;
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
@@ -92,6 +92,15 @@ public:
     {
         return driver == LIGHT_PUSH || driver == LIGHT_LATCH;
     };
+
+    constexpr bool isVirtual()
+    {
+        return typeControl == ActuatorControlType::VIRTUAL;
+    };
+    constexpr bool isRelay()
+    {
+        return typeControl == ActuatorControlType::GPIO_OUTPUT;
+    }
     constexpr bool isSwitch()
     {
         return driver == SWITCH_PUSH || driver == SWITCH_LATCH;

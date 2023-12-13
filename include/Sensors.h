@@ -21,7 +21,7 @@ class Sensor
 public:
   // CONFIG
   char uniqueId[24]{};
-  int sequence = 0;
+
   char name[24] = {0};
   int hwAddress{0x10};
   SensorDriver driver;
@@ -42,6 +42,7 @@ public:
   bool initialized = false;
   bool error = false;
   unsigned long lastErrorTimestamp = 0ul;
+  int id = 0;
   String
   familyToText()
   {

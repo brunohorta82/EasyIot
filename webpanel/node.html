@@ -52,7 +52,7 @@
             <div class="box-body">
                 <label for="dhcp">DHCP</label>
                 <label class="switch">
-                    <input value="true" name="dhcp" id="dhcp"  type="checkbox">
+                    <input value="true" name="dhcp" id="dhcp" type="checkbox">
                     <span class="slider round"></span>
                 </label>
             </div>
@@ -105,7 +105,11 @@
     </form>
     <div class="box-header "><h3 class="box-title"><span class="lang-new-file">Atualização de Firmware</span>
     </h3></div>
-    <button type="button" onclick="requestUpdate()" id="btn-auto-update" class="btn btn-primary hide"></button>
+    <form  role="form" method="POST" enctype="multipart/form-data" action="/auto-update">
+        <button type="submit" id="btn-auto-update" class="btn btn-primary hide"><span
+            class="lang-install-file-version"> Instalar ficheiro</span>
+        </button>
+    </form>
     <form role="form" method="POST" action="/update" enctype="multipart/form-data">
         <div class="box-body">
             <input id="firmwareInputFile" name="update" type="file"/>

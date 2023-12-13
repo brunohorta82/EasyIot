@@ -70,7 +70,7 @@ namespace DefaultPins
     constexpr int HAN_TX{13u};
     constexpr int HAN_RX{14u};
     constexpr unsigned int noGPIO{99u};
-    constexpr unsigned int outputInputPins[] = {7, 8, 19, 20, 21, 22, 25};
+    constexpr unsigned int outputInputPins[] = {7, 8, 12, 13, 14, 19, 20, 21, 22, 25};
     constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
 }
 #endif

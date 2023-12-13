@@ -45,6 +45,9 @@ public:
   std::vector<Actuator> actuatores;
   std::vector<Sensor> sensors;
   Adafruit_SSD1306 *display = NULL;
+
+  // CONTROL VARIABLES
+  int featureIds = 0;
   void json(JsonVariant &root);
   ConfigOnofre &update(JsonObject &root);
   ConfigOnofre &save();
@@ -52,6 +55,7 @@ public:
   ConfigOnofre &load();
   ConfigOnofre &pauseFeatures();
   ConfigOnofre &resumeFeatures();
+
   void i2cDiscovery();
   void pzemDiscovery();
   bool isSensorExists(int hwAddress);
@@ -59,9 +63,12 @@ public:
   void loadTemplate(int templateId);
   void loopActuators();
   void loopSensors();
-  void requestCloudIOSync();
 
+  // CLOUDIO
+  void requestCloudIOSync();
   bool isCloudIOSyncRequested();
+  void startCloudIOWatchdog();
+  void stopCloudIOWatchdog();
 
   void requestWifiScan();
   bool isWifiScanRequested();

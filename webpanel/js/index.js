@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.166"
+let baseUrl = "http://192.168.122.134"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -318,7 +318,20 @@ function fillDevices() {
         option.value = p;
         p2.add(option);
     }
-
+    if(config.inPins) {
+        for (const p of config.inPins) {
+            let option = document.createElement("option");
+            option.text = p;
+            option.value = p;
+            p1.add(option);
+        }
+        for (const p of config.inPins) {
+            let option = document.createElement("option");
+            option.text = p;
+            option.value = p;
+            p2.add(option);
+        }
+    }
     let temp, item, a;
     const modal = findById("modal");
     for (const f of config.features) {
@@ -333,14 +346,13 @@ function fillDevices() {
         findById("devices_config").appendChild(a);
         icon = findById('i-' + f.id);
         if ("SENSOR" === f.group) {
-            findById("f-knx").classList.add("hide")
+            modal.getElementsByClassName("f-knx").item(0).classList.add("hide");
         }
         if ("ACTUATOR" === f.group) {
-            findById("f-knx").classList.remove("hide")
+            modal.getElementsByClassName("f-knx").item(0).classList.remove("hide");
             a.getElementsByTagName("input").item(0).checked = f.state > 0;
             a.getElementsByTagName("input").item(0).id = f.id;
             a.getElementsByTagName("input").item(1).value = Math.abs(parseInt(f.state) - 100);
-            ;
             a.getElementsByTagName("input").item(1).id = f.id;
             if ("SWITCH" === f.family) {
                 a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
@@ -416,16 +428,7 @@ function loadDefaults() {
         : showMessage("device_error"))
 }
 
-function requestUpdate() {
-    fetch(baseUrl + "/auto-update", {
-        headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Accept': 'application/json'
-        }
-    }).then(response => response.status === 200 ?
-        showMessage("device_update_ok")
-        : showMessage("device_error"))
-}
+
 
 document.addEventListener("DOMContentLoaded", () => {
 

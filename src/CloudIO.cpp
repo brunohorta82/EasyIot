@@ -61,6 +61,10 @@ void onMqttConnect(bool sessionPresent)
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
   for (auto &sw : config.actuatores)
   {
+    if (sw.isVirtual())
+    {
+      continue;
+    }
     subscribeOnMqttCloudIO(sw.cloudIOwriteTopic);
     notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
   }
@@ -136,23 +140,40 @@ bool tryMqttCloudConnection()
 void watchdogTimer()
 {
 #ifdef DEBUG_ONOFRE
-  Log.error("%s CloudIO Watchdog running." CR, tags::cloudIO);
+  Log.info("%s CloudIO Watchdog running." CR, tags::cloudIO);
 #endif
-  if (!wifiConnected() || mqttClient.connected())
+  if (!wifiConnected())
   {
 #ifdef DEBUG_ONOFRE
-    Log.error("%s CloudIO OK." CR, tags::cloudIO);
+    Log.warning("%s No Internet Connection." CR, tags::cloudIO);
+#endif
+    return;
+  }
+  if (mqttClient.connected())
+  {
+#ifdef DEBUG_ONOFRE
+    Log.info("%s CloudIO OK." CR, tags::cloudIO);
 #endif
     return;
   }
 #ifdef DEBUG_ONOFRE
-  Log.error("%s CloudIO Reconnect." CR, tags::cloudIO);
+  Log.info("%s CloudIO Reconnect." CR, tags::cloudIO);
 #endif
   config.requestCloudIOSync();
 }
-void startCloudIOWatchdog()
+void ConfigOnofre::startCloudIOWatchdog()
 {
+#ifdef DEBUG_ONOFRE
+  Log.info("%s CloudIO Watchdog Started" CR, tags::cloudIO);
+#endif
   checkCloudIOWatchdog.attach_ms(60000, watchdogTimer);
+}
+void ConfigOnofre::stopCloudIOWatchdog()
+{
+#ifdef DEBUG_ONOFRE
+  Log.info("%s CloudIO Watchdog Stopped" CR, tags::cloudIO);
+#endif
+  checkCloudIOWatchdog.detach();
 }
 void connectToCloudIO()
 {
@@ -184,7 +205,7 @@ void connectToCloudIO()
 #ifdef DEBUG_ONOFRE
     Log.info("%s [HTTP] Device not adopted" CR, tags::cloudIO);
 #endif
-    checkCloudIOWatchdog.detach();
+    config.stopCloudIOWatchdog();
     return;
   }
   if (httpCode != HTTP_CODE_OK)

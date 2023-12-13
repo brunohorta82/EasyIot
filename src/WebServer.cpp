@@ -393,18 +393,16 @@ void loadAPI()
     config.requestLoadDefaults(); });
 
   server
-      .on("/auto-update", HTTP_GET, [](AsyncWebServerRequest *request)
+      .on("/auto-update", HTTP_POST, [](AsyncWebServerRequest *request)
           {
 #if WEB_SECURE_ON
        if (!request->authenticate(config.apiUser, config.apiPassword,REALM))
        return request->requestAuthentication(REALM);
 #endif
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonVariant &root = response->getRoot();
-    root["result"] = "Auto-Update started";
-    response->setLength();
-    request->send(response);
-    config.requestAutoUpdate(); });
+       AsyncWebServerResponse *response = request->beginResponse(200, "text/html", REDIRECT_PAGE);
+       response->addHeader("Connection", "close");
+       request->send(response);
+       config.requestAutoUpdate(); });
 
   server
       .on(
@@ -417,7 +415,7 @@ void loadAPI()
      bool error = Update.hasError();
      if(error)
        config.requestRestart();
-     AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? "<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Update</title> <style>body{background-color: rgb(34, 34, 34); color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update successfully, will be redirected automatically in 20 seconds. Please Wait...\"); setTimeout('Redirect()', 20000); </script></head><body></body></html>":"<!DOCTYPE html><html lang=\"en\"><head> <meta charset=\"UTF-8\"> <title>Atualização</title> <style>body{background-color: #cc0000; color: white; font-size: 18px; padding: 10px; font-weight: lighter;}</style> <script type=\"text/javascript\">function Redirect(){window.location=\"/\";}document.write(\"Update failed, it may be necessary to manually reset the device and try again.\"); setTimeout('Redirect()', 10000); </script></head><body></body></html>");
+     AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? REDIRECT_PAGE : UPDATE_FAILED);
      response->addHeader("Connection", "close");
      request->send(response); },
           [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)

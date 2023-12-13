@@ -53,6 +53,9 @@ boolean reconnect()
         sendToServerEvents("mqtt_health", constantsMqtt::availablePayload);
         for (auto &sw : config.actuatores)
         {
+            if(sw.isVirtual()){
+                continue;
+            }
             subscribeOnMqtt(sw.writeTopic);
             sw.notifyState(StateOrigin::MQTT);
         }

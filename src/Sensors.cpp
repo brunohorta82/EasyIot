@@ -32,7 +32,6 @@ void Sensor::notifyState()
 
 void Sensor::loop()
 {
-  //  if(!wifiConnected())rerun
   if (error)
   {
     if (lastErrorTimestamp + constantsSensor::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())

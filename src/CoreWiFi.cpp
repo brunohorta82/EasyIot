@@ -223,10 +223,12 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     startWebserver();
     knx.start();
     config.requestCloudIOSync();
+    config.startCloudIOWatchdog();
     infoWifi();
     break;
 
   case MESSAGE_ACCESSPOINT_CREATED:
+    config.stopCloudIOWatchdog();
     infoWifi();
     setupCaptivePortal();
     startWebserver();

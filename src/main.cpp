@@ -120,7 +120,7 @@ void setup()
   setupWiFi();
   setupCors();
   setupMQTT();
-  startCloudIOWatchdog();
+ 
 #ifdef ESP32
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
 #endif
