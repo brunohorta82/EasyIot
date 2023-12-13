@@ -70,7 +70,11 @@ namespace DefaultPins
     constexpr int HAN_TX{13u};
     constexpr int HAN_RX{14u};
     constexpr unsigned int noGPIO{99u};
+#ifdef ESP32_4M
+    constexpr unsigned int outputInputPins[] = {7, 12, 13, 14, 19, 20, 21, 22, 25};
+#else
     constexpr unsigned int outputInputPins[] = {7, 8, 12, 13, 14, 19, 20, 21, 22, 25};
+#endif
     constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
 }
 #endif
@@ -89,7 +93,7 @@ namespace DefaultPins
     constexpr int HAN_TX{14u};
     constexpr int HAN_RX{12u};
     constexpr unsigned int noGPIO{999u};
-    constexpr unsigned int outputInputPins[] = {0, 1, 3, 12, 13, 14, 15, 16};
+    constexpr unsigned int outputInputPins[] = {0, 1, 2 3, 4, 5 12, 13, 14, 16};
 }
 #endif
 namespace constanstsCloudIO

@@ -362,7 +362,7 @@ void Actuator::notifyState(StateOrigin origin)
 
 Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
-  if (this->state == state)
+  if (!isGarage() && this->state == state)
     return this;
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
@@ -372,8 +372,6 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
 #endif
   if (typeControl == ActuatorControlType::GPIO_OUTPUT && outputs.size() > 0)
   {
-    if (!isGarage() && this->state == state)
-      return this;
     if (isCover())
     {
       int level = state;

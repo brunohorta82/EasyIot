@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.122.134"
+let baseUrl = "http://192.168.187.149"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -263,6 +263,7 @@ function createModal(a, modal, f) {
         modal.style.display = "block";
         modal.getElementsByClassName("f-name").item(0).textContent = f.name;
         modal.getElementsByClassName("f-name").item(1).value = f.name;
+        findById("f-knx").classList.remove("hide");
         if (f.driver.includes("COVER")) {
             findById("f-calibration").classList.remove("hide")
             findById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
@@ -273,6 +274,7 @@ function createModal(a, modal, f) {
             findById("f-push-t").classList.add("hide");
         }
         if (f.group === "SENSOR")
+            findById("f-knx").classList.add("hide");
             for (let i = 0; i < modal.getElementsByClassName("f-ac").length; i++) {
                 modal.getElementsByClassName("f-ac").item(i).classList.add("hide");
             }
@@ -345,11 +347,8 @@ function fillDevices() {
         a.getElementsByTagName("svg").item(0).id = 'i-' + f.id;
         findById("devices_config").appendChild(a);
         icon = findById('i-' + f.id);
-        if ("SENSOR" === f.group) {
-            modal.getElementsByClassName("f-knx").item(0).classList.add("hide");
-        }
+
         if ("ACTUATOR" === f.group) {
-            modal.getElementsByClassName("f-knx").item(0).classList.remove("hide");
             a.getElementsByTagName("input").item(0).checked = f.state > 0;
             a.getElementsByTagName("input").item(0).id = f.id;
             a.getElementsByTagName("input").item(1).value = Math.abs(parseInt(f.state) - 100);
