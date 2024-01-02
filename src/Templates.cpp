@@ -98,6 +98,23 @@ int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, 
     config.actuatores.push_back(actuator);
     return 0;
 }
+int prepareSensor(String name, unsigned int input1, unsigned int input2, SensorDriver driver)
+{
+    switch (driver)
+    {
+    case DS18B20:
+    case DHT_11:
+    case DHT_21:
+    case DHT_22:
+    case SHT4X:
+    case LTR303X:
+    case PZEM_004T_V03:
+
+    default:
+        break;
+    }
+    return 0;
+}
 void prepareCover(String name, unsigned int outputDown, unsigned int outputUp, unsigned int inputDown, unsigned int inputUp, ActuatorDriver driver, ActuatorControlType type)
 {
     Actuator cover;

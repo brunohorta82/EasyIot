@@ -102,7 +102,7 @@ void addToHomeAssistant(Sensor &s)
   case DHT_22:
   case SHT4X:
     object["uniq_id"] = uniqueId + "t";
-    object["unit_of_meas"] = "º";
+    object["unit_of_meas"] = "ºC";
     object["dev_cla"] = "temperature";
     object["val_tpl"] = "{{value_json.temperature | round(2)}}";
     serializeJson(object, objectStr);

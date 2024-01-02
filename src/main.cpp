@@ -104,23 +104,12 @@ void setup()
   config.load();
 #ifdef ESP32
   config.i2cDiscovery();
-#endif
-#ifdef DEBUG_ONOFRE
-#ifdef ESP8266
-  Serial.end();
-#endif
-#endif
   config.pzemDiscovery();
-#ifdef DEBUG_ONOFRE
-#ifdef ESP8266
-  Serial.begin(115200);
-  Log.begin(LOG_LEVEL_VERBOSE, &Serial);
-#endif
 #endif
   setupWiFi();
   setupCors();
   setupMQTT();
- 
+
 #ifdef ESP32
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
 #endif

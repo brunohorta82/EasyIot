@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.149"
+let baseUrl = "http://192.168.187.135"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -273,11 +273,10 @@ function createModal(a, modal, f) {
         } else {
             findById("f-push-t").classList.add("hide");
         }
-        if (f.group === "SENSOR")
+        if (f.group === "SENSOR") {
             findById("f-knx").classList.add("hide");
-            for (let i = 0; i < modal.getElementsByClassName("f-ac").length; i++) {
-                modal.getElementsByClassName("f-ac").item(i).classList.add("hide");
-            }
+            modal.getElementsByClassName("f-ac").item(i).classList.add("hide");
+        }
         findById("f-up").value = f.upCourseTime;
         findById("f-down").value = f.downCourseTime;
         findById("f-area").value = f.area;

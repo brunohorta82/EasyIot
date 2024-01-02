@@ -6,6 +6,7 @@
 #include <Wire.h>
 enum SensorDriver
 {
+  INVALID_SENSOR = 999,
   DS18B20 = 90,
   DHT_11 = 0,
   DHT_21 = 1,
