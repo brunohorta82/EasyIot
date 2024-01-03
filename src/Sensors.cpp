@@ -5,14 +5,13 @@
 #include "Mqtt.h"
 #include "CoreWiFi.h"
 #include <DallasTemperature.h>
-#include <dht_nonblocking.h>
 #include <PZEM004Tv30.h>
 #include "CloudIO.h"
 #include <DallasTemperature.h>
-#include <dht_nonblocking.h>
 #include "HanOnofre.hpp"
 #include <SensirionI2CSht4x.h>
 #include <LTR303.h>
+#include "DHT.h"
 extern ConfigOnofre config;
 void Sensor::notifyState()
 {
@@ -32,6 +31,10 @@ void Sensor::notifyState()
 
 void Sensor::loop()
 {
+  if (!wifiConnected())
+  {
+    return;
+  }
   if (error)
   {
     if (lastErrorTimestamp + constantsSensor::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())
@@ -53,27 +56,33 @@ void Sensor::loop()
   {
     if (lastRead + delayRead < millis())
     {
-      static DHT_nonblocking *dht;
+      static DHT *dht;
       if (!isInitialized())
       {
-        dht = new DHT_nonblocking(inputs[0], driver);
+        dht = new DHT(inputs[0], driver - 100);
+        dht->begin();
       }
-      float temperature;
-      float humidity;
+      float temperature = dht->readTemperature();
+      float humidity = dht->readHumidity();
+      lastRead = millis();
+      if (isnan(humidity) || isnan(temperature))
+      {
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s DHT ERROR " CR, tags::sensors);
+#endif
+        return;
+      }
       StaticJsonDocument<256> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
+      obj["temperature"] = temperature;
+      obj["humidity"] = humidity;
+      serializeJson(doc, state);
+      notifyState();
       lastRead = millis();
-      if (dht->measure(&temperature, &humidity) == true)
-      {
-        obj["temperature"] = temperature;
-        obj["humidity"] = humidity;
-        serializeJson(doc, state);
-        notifyState();
 #ifdef DEBUG_ONOFRE
-        Log.notice("%s DHT %s}" CR, tags::sensors, state);
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
-      }
     }
   }
   break;

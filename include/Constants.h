@@ -101,7 +101,11 @@ namespace constanstsCloudIO
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
     constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
+#ifdef HAN_MODE
+    constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
+#else
     constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest"};
+#endif
 }
 
 namespace Discovery

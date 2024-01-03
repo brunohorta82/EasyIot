@@ -1,13 +1,12 @@
-<div class="wizard">
+<div id="wizard" class="wizard">
     <div class="box-body">
-
-            <div class="form-group">
+        <div class="form-group">
             <label for="f-n-name"><span class="lang-name">Nome</span></label>
             <input
                 class="f-name form-control" style="width: 200px" maxlength="30" type="text" name="f-name" id="f-n-name"
                 placeholder="ex: kitchen" required/>
-            </div>
-            <div class="form-group">
+        </div>
+        <div class="form-group">
             <label for="f-n-driver"><span class="lang-driver">Driver</span></label>
             <select onchange="driverSelect(this)" name="pins" style="width: 200px" class="form-control" id="f-n-driver">
                 <option value="7">Iluminação Pulsador</option>
@@ -18,20 +17,24 @@
                 <option value="2">Interruptor Normal</option>
                 <option value="3">Estore Pulsador</option>
                 <option value="9">Garagem</option>
+                <option value="111">DHT 11</option>
+                <option value="121">DHT 21</option>
+                <option value="122">DHT 22</option>
+                <option value="90">DS18B20</option>
             </select>
-            </div>
-            <div class="form-group">
+        </div>
+        <div class="form-group">
             <label id="pin-up-l" for="f-n-pin-1"><span class="lang-pin-up">Pino Entrada</span></label>
             <select name="pins" style="width: 80px" class="form-control" id="f-n-pin-1">
             </select>
-            </div>
-            <div id="f-n-pin-2-g" class="form-group hide">
+        </div>
+        <div id="f-n-pin-2-g" class="form-group hide">
             <label id="pin-down-l" for="f-n-pin-2"><span class="lang-pin-down">Pino</span></label>
             <select name="pins" style="width: 80px" class="form-control" id="f-n-pin-2">
             </select>
-            </div>
-            <button type="button" onclick="create()" class="btn-update" id="btn-create"><span
-                class="lang-save">CRIAR</span></button>
+        </div>
+        <button type="button" onclick="create()" class="btn-update" id="btn-create"><span
+            class="lang-save">CRIAR</span></button>
     </div>
 </div>
 

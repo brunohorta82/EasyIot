@@ -8,9 +8,9 @@ enum SensorDriver
 {
   INVALID_SENSOR = 999,
   DS18B20 = 90,
-  DHT_11 = 0,
-  DHT_21 = 1,
-  DHT_22 = 2,
+  DHT_11 = 111,
+  DHT_21 = 121,
+  DHT_22 = 122,
   SHT4X = 91,
   LTR303X = 81,
   PZEM_004T_V03 = 71,

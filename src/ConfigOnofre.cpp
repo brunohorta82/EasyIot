@@ -51,6 +51,9 @@ ConfigOnofre &ConfigOnofre::init()
 #ifdef TEST_TEMPLATE
   templateSelect(Template::DUAL_LIGHT);
 #endif
+#ifdef HAN_MODE
+  templateSelect(Template::HAN_MODULE);
+#endif
   return save();
 }
 bool ConfigOnofre::isSensorExists(int hwAddress)
@@ -573,7 +576,11 @@ void ConfigOnofre::json(JsonVariant &root)
   root["mcu"] = "ESP32";
 #endif
 #ifdef ESP8266
+#ifdef HAN_MODE
+  root["mcu"] = "ESP8266-HAN";
+#else
   root["mcu"] = "ESP8266";
+#endif
 #endif
   root["mac"] = WiFi.macAddress();
   root["wifiStatus"] = WiFi.isConnected();

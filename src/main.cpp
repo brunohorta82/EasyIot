@@ -96,10 +96,12 @@ void featuresTask(void *pvParameters)
 #endif
 void setup()
 {
+
 #ifdef DEBUG_ONOFRE
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
 #endif
+
   startFileSystem();
   config.load();
 #ifdef ESP32
@@ -109,7 +111,6 @@ void setup()
   setupWiFi();
   setupCors();
   setupMQTT();
-
 #ifdef ESP32
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
 #endif

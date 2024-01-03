@@ -30,6 +30,34 @@ void prepareSHT4X(int hwAddress)
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
+
+void prepareDHT(String name, unsigned int inputPin, SensorDriver driver)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
+    sensor.inputs = {inputPin};
+    sensor.driver = driver;
+    sensor.hwAddress = inputPin;
+    sensor.delayRead = constantsConfig::climateReadDelay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, inputPin, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
+
+void prepareDS18B20(String name, unsigned int inputPin)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
+    sensor.inputs = {inputPin};
+    sensor.driver = SensorDriver::DS18B20;
+    sensor.hwAddress = inputPin;
+    sensor.delayRead = constantsConfig::climateReadDelay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, inputPin, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
 void prepareLTR303(int hwAddress)
 {
     Sensor sensor;
@@ -68,6 +96,30 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
     config.generateId(idStr, actuator.name, actuator.driver, output, sizeof(actuator.uniqueId));
     strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
     config.actuatores.push_back(actuator);
+}
+int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int driverCode)
+{
+    if (driverCode < 60)
+    {
+        return prepareVirtualSwitch(name, input1, input2, (ActuatorDriver)driverCode);
+    }
+    else
+    {
+        switch (driverCode)
+        {
+        case SensorDriver::DHT_11:
+        case SensorDriver::DHT_21:
+        case SensorDriver::DHT_22:
+            prepareDHT(name, input1, (SensorDriver)driverCode);
+            break;
+        case SensorDriver::DS18B20:
+            prepareDS18B20(name, input1);
+            break;
+        default:
+            break;
+        }
+    }
+    return 0;
 }
 int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, ActuatorDriver driver)
 {
@@ -112,6 +164,7 @@ int prepareSensor(String name, unsigned int input1, unsigned int input2, SensorD
 
     default:
         break;
+        return 99;
     }
     return 0;
 }

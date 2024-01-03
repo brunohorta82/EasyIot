@@ -90,7 +90,7 @@ public:
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0 && request->arg("t").length() > 0)
+    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
     {
       String n_name = config.chipId;
       if (request->hasArg("i"))
@@ -309,9 +309,9 @@ void loadAPI()
     response->setLength();
     request->send(response); }));
 
-  /*CREATE NEW VIRTUAL SENSOR*/
+  /*CREATE NEW FEATURE*/
   server
-      .addHandler(new AsyncCallbackJsonWebHandler("/switches/virtual", [](AsyncWebServerRequest *request, JsonVariant json)
+      .addHandler(new AsyncCallbackJsonWebHandler("/features", [](AsyncWebServerRequest *request, JsonVariant json)
                                                   {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
@@ -319,11 +319,12 @@ void loadAPI()
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
-    JsonObject actuatorJson = json.as<JsonObject>();
+    JsonObject featureJson = json.as<JsonObject>();
     config.pauseFeatures();
-    int result =  prepareVirtualSwitch(actuatorJson["name"] | "", actuatorJson["input1"] |  DefaultPins::noGPIO, actuatorJson["input2"] | DefaultPins::noGPIO, actuatorJson["driver"] | ActuatorDriver::INVALID);
-      if(result == 0){
-        config.save().json(root);
+    int result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
+    if (result == 0)
+    {
+      config.save().json(root);
       }else{
       response->setCode(400);
       root["result"] = result;

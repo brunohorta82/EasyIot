@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.135"
+let baseUrl = "http://192.168.187.11"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -23,12 +23,12 @@ var WORDS_PT = {
 function create() {
     let s = {};
     s.name = getValue("f-n-name", "sem nome");
-    s.driver = parseInt( getValue("f-n-driver", 999));
-    s.input1 =parseInt( getValue("f-n-pin-1", 999));
+    s.driver = parseInt(getValue("f-n-driver", 999));
+    s.input1 = parseInt(getValue("f-n-pin-1", 999));
     s.input2 = parseInt(getValue("f-n-pin-2", 999));
-    fetch(baseUrl + "/switches/virtual", {
+    fetch(baseUrl + "/features", {
         method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(s)
     }).then(response => response.json()).then(json => config = json).then(() => {
         showMessage("config_save_ok");
@@ -134,177 +134,10 @@ function fillConfig() {
     }
 }
 
-async function loadConfig() {
-    const response = await fetch(baseUrl + "/config");
-    config = await response.json();
-    const vR = await fetch("https://update.bhonofre.pt/firmware/latest-version/" + config.mcu, {
-        mode: "cors"
-    });
-    lastVersion = parseFloat(await vR.text());
-
-
-}
-
-function detectLang() {
-    let lang = "PT";
-    /* if (/^en/.test(navigator.language)) {
-         lang = "EN";
-     } else if (/^ro/.test(navigator.language)) {
-         lang = "RO";
-     }*/
-    return window['WORDS_' + lang];
-}
-
-function applyNodeChanges() {
-    config.nodeId = getValue("nodeId", config.nodeId).trim();
-    config.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
-    config.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
-    config.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
-    config.wifiSSID = getValue("ssid", config.wifiSSID).trim();
-    config.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
-    config.wifiIp = getValue("wifiIp", config.wifiIp).trim();
-    config.wifiMask = getValue("wifiMask", config.wifiMask).trim();
-    config.wifiGw = getValue("wifiGw", config.wifiGw).trim();
-    config.dhcp = findById("dhcp", config.dhcp).checked;
-    config.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
-    config.apiPassword = getValue("apiPassword", config.apiPassword).trim();
-    config.apiUser = getValue("apiUser", config.apiUser).trim();
-}
-
-function saveConfig() {
-    if (currentPage === "node") {
-        applyNodeChanges();
-    }
-    fetch(baseUrl + "/config", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify(config)
-    }).then(response => response.json()).then(json => config = json).then(() => {
-        showMessage("config_save_ok");
-    }).catch(() =>
-        showMessage("config_save_error")
-    );
-}
-
-function applyFeatureChanges(e) {
-    const index = config.features
-        .indexOf(config.features
-            .filter(f => f.id === e.featureId)[0]);
-    if (index < 0) return;
-    let feature = config.features[index];
-    feature.name = getValue("f-name", feature.name).trim();
-    if ("ACTUATOR" === feature.group) {
-        feature.inputMode = parseInt(document.querySelector('input[name="f-in-mode"]:checked').value);
-        feature.upCourseTime = parseInt(getValue("f-up", feature.upCourseTime).trim());
-        feature.downCourseTime = parseInt(getValue("f-down", feature.downCourseTime).trim());
-        feature.area = parseInt(getValue("f-area", feature.area).trim());
-        feature.line = parseInt(getValue("f-line", feature.line).trim());
-        feature.member = parseInt(getValue("f-member", feature.member).trim());
-    }
-    saveConfig();
-    toggleActive("devices");
-}
-
-function deleteFeature(e) {
-    const index = config.features
-        .indexOf(config.features
-            .filter(f => f.id === e.featureId)[0]);
-    config.features.splice(index, 1);
-    if (!config.featuresToRemove) config.featuresToRemove = [];
-    config.featuresToRemove.push(e.featureId)
-    saveConfig();
-    toggleActive("devices");
-}
-
-function getValue(id, f) {
-    let v = findById(id);
-    return v ? v.value : f;
-}
-
-function shutterPercentage(arg) {
-    const action = {
-        id: arg.id,
-        state: Math.abs(parseInt(arg.value) - 100)
-    };
-    fetch(baseUrl + "/actuators/control", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify(action)
-    }).catch(() =>
-        showMessage("control_state_error")
-    );
-}
-
-function toggleSwitch(arg) {
-    const action = {
-        id: arg.id,
-        state: arg.checked ? 100 : 0
-    };
-    fetch(baseUrl + "/actuators/control", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify(action)
-    }).catch(() =>
-        showMessage("control_state_error")
-    );
-}
-
-function appendSvgPath(node, d, strokeColor) {
-    let a = document.createElementNS("http://www.w3.org/2000/svg", 'path');
-    a.setAttribute("d", d);
-    a.setAttribute("stroke", strokeColor);
-    a.setAttribute("stroke-linejoin", "round");
-    a.setAttribute("stroke-linecap", "round");
-    node.appendChild(a)
-}
-
-function createModal(a, modal, f) {
-    a.getElementsByClassName("feature-name").item(0).onclick = function () {
-        modal.style.display = "block";
-        modal.getElementsByClassName("f-name").item(0).textContent = f.name;
-        modal.getElementsByClassName("f-name").item(1).value = f.name;
-        findById("f-knx").classList.remove("hide");
-        if (f.driver.includes("COVER")) {
-            findById("f-calibration").classList.remove("hide")
-            findById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
-            findById("f-in-mode-latch-lbl").outerHTML = getI18n("dual_latch");
-            findById("f-in-mode-push-toggle-lbl").classList.remove("hide");
-            findById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
-        } else {
-            findById("f-push-t").classList.add("hide");
-        }
-        if (f.group === "SENSOR") {
-            findById("f-knx").classList.add("hide");
-            modal.getElementsByClassName("f-ac").item(i).classList.add("hide");
-        }
-        findById("f-up").value = f.upCourseTime;
-        findById("f-down").value = f.downCourseTime;
-        findById("f-area").value = f.area;
-        findById("f-line").value = f.line;
-        findById("f-member").value = f.member;
-        findById("f-in-mode-push").checked = f.inputMode === 0;
-        findById("f-in-mode-latch").checked = f.inputMode === 1;
-        findById("f-in-mode-push-toggle").checked = f.inputMode === 2;
-        findById("btn-delete").featureId = f.id;
-        findById("btn-update").featureId = f.id;
-    }
-}
-function driverSelect(a){
-    let p2 = findById("f-n-pin-2-g");
-    let pu = findById("pin-up-l");
-    let pd = findById("pin-down-l");
-    pu.textContent = getI18n("pin_input")
-    pd.textContent = getI18n("pin_input")
-    if(parseInt( a.value) === 4 || parseInt(a.value) === 5){
-        p2.classList.remove("hide");
-        pu.textContent = getI18n("pin_up")
-        pd.textContent = getI18n("pin_down")
-    }else{
-        p2.classList.add("hide");
-    }
-
-}
 function fillDevices() {
+    if ("ESP8266-HAN" === config.mcu) {
+        findById("wizard").classList.add("hide");
+    }
     let p1 = findById("f-n-pin-1");
     let p2 = findById("f-n-pin-2");
     for (const p of config.outInPins) {
@@ -319,7 +152,7 @@ function fillDevices() {
         option.value = p;
         p2.add(option);
     }
-    if(config.inPins) {
+    if (config.inPins) {
         for (const p of config.inPins) {
             let option = document.createElement("option");
             option.text = p;
@@ -395,6 +228,177 @@ function fillDevices() {
             modal.style.display = "none";
         }
     }
+}
+
+async function loadConfig() {
+    const response = await fetch(baseUrl + "/config");
+    config = await response.json();
+    const vR = await fetch("https://update.bhonofre.pt/firmware/latest-version/" + config.mcu, {
+        mode: "cors"
+    });
+    lastVersion = parseFloat(await vR.text());
+
+
+}
+
+function detectLang() {
+    let lang = "PT";
+    /* if (/^en/.test(navigator.language)) {
+         lang = "EN";
+     } else if (/^ro/.test(navigator.language)) {
+         lang = "RO";
+     }*/
+    return window['WORDS_' + lang];
+}
+
+function applyNodeChanges() {
+    config.nodeId = getValue("nodeId", config.nodeId).trim();
+    config.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
+    config.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
+    config.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
+    config.wifiSSID = getValue("ssid", config.wifiSSID).trim();
+    config.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
+    config.wifiIp = getValue("wifiIp", config.wifiIp).trim();
+    config.wifiMask = getValue("wifiMask", config.wifiMask).trim();
+    config.wifiGw = getValue("wifiGw", config.wifiGw).trim();
+    config.dhcp = findById("dhcp", config.dhcp).checked;
+    config.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
+    config.apiPassword = getValue("apiPassword", config.apiPassword).trim();
+    config.apiUser = getValue("apiUser", config.apiUser).trim();
+}
+
+function saveConfig() {
+    if (currentPage === "node") {
+        applyNodeChanges();
+    }
+    fetch(baseUrl + "/config", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(config)
+    }).then(response => response.json()).then(json => config = json).then(() => {
+        showMessage("config_save_ok");
+    }).catch(() =>
+        showMessage("config_save_error")
+    );
+}
+
+function applyFeatureChanges(e) {
+    const index = config.features
+        .indexOf(config.features
+            .filter(f => f.id === e.featureId)[0]);
+    if (index < 0) return;
+    let feature = config.features[index];
+    feature.name = getValue("f-name", feature.name).trim();
+    if ("ACTUATOR" === feature.group) {
+        feature.inputMode = parseInt(document.querySelector('input[name="f-in-mode"]:checked').value);
+        feature.upCourseTime = parseInt(getValue("f-up", feature.upCourseTime).trim());
+        feature.downCourseTime = parseInt(getValue("f-down", feature.downCourseTime).trim());
+        feature.area = parseInt(getValue("f-area", feature.area).trim());
+        feature.line = parseInt(getValue("f-line", feature.line).trim());
+        feature.member = parseInt(getValue("f-member", feature.member).trim());
+    }
+    saveConfig();
+    toggleActive("devices");
+}
+
+function deleteFeature(e) {
+    const index = config.features
+        .indexOf(config.features
+            .filter(f => f.id === e.featureId)[0]);
+    config.features.splice(index, 1);
+    if (!config.featuresToRemove) config.featuresToRemove = [];
+    config.featuresToRemove.push(e.featureId)
+    saveConfig();
+    toggleActive("devices");
+}
+
+function getValue(id, f) {
+    let v = findById(id);
+    return v ? v.value : f;
+}
+
+function shutterPercentage(arg) {
+    const action = {
+        id: arg.id,
+        state: Math.abs(parseInt(arg.value) - 100)
+    };
+    fetch(baseUrl + "/actuators/control", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(action)
+    }).catch(() =>
+        showMessage("control_state_error")
+    );
+}
+
+function toggleSwitch(arg) {
+    const action = {
+        id: arg.id,
+        state: arg.checked ? 100 : 0
+    };
+    fetch(baseUrl + "/actuators/control", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(action)
+    }).catch(() =>
+        showMessage("control_state_error")
+    );
+}
+
+function appendSvgPath(node, d, strokeColor) {
+    let a = document.createElementNS("http://www.w3.org/2000/svg", 'path');
+    a.setAttribute("d", d);
+    a.setAttribute("stroke", strokeColor);
+    a.setAttribute("stroke-linejoin", "round");
+    a.setAttribute("stroke-linecap", "round");
+    node.appendChild(a)
+}
+
+function createModal(a, modal, f) {
+    a.getElementsByClassName("feature-name").item(0).onclick = function () {
+        modal.style.display = "block";
+        modal.getElementsByClassName("f-name").item(0).textContent = f.name;
+        modal.getElementsByClassName("f-name").item(1).value = f.name;
+        findById("f-knx").classList.remove("hide");
+        if (f.driver.includes("COVER")) {
+            findById("f-calibration").classList.remove("hide")
+            findById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
+            findById("f-in-mode-latch-lbl").outerHTML = getI18n("dual_latch");
+            findById("f-in-mode-push-toggle-lbl").classList.remove("hide");
+            findById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
+        } else {
+            findById("f-push-t").classList.add("hide");
+        }
+        if (f.group === "SENSOR") {
+            findById("f-knx").classList.add("hide");
+            modal.getElementsByClassName("f-ac").item(0).classList.add("hide");
+        }
+        findById("f-up").value = f.upCourseTime;
+        findById("f-down").value = f.downCourseTime;
+        findById("f-area").value = f.area;
+        findById("f-line").value = f.line;
+        findById("f-member").value = f.member;
+        findById("f-in-mode-push").checked = f.inputMode === 0;
+        findById("f-in-mode-latch").checked = f.inputMode === 1;
+        findById("f-in-mode-push-toggle").checked = f.inputMode === 2;
+        findById("btn-delete").featureId = f.id;
+        findById("btn-update").featureId = f.id;
+    }
+}
+function driverSelect(a) {
+    let p2 = findById("f-n-pin-2-g");
+    let pu = findById("pin-up-l");
+    let pd = findById("pin-down-l");
+    pu.textContent = getI18n("pin_input")
+    pd.textContent = getI18n("pin_input")
+    if (parseInt(a.value) === 4 || parseInt(a.value) === 5) {
+        p2.classList.remove("hide");
+        pu.textContent = getI18n("pin_up")
+        pd.textContent = getI18n("pin_down")
+    } else {
+        p2.classList.add("hide");
+    }
+
 }
 
 function showMessage(key) {
