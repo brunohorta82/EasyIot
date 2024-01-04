@@ -123,6 +123,42 @@ void addToHomeAssistant(Sensor &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
+  case RAIN:
+    object["uniq_id"] = uniqueId + "rn";
+    object["dev_cla"] = "moisture";
+    object["pl_on"] = "rain";
+    object["pl_off"] = "sun";
+    object["val_tpl"] = "{{value_json.moisture}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    break;
+  case PIR:
+    object["uniq_id"] = uniqueId + "rn";
+    object["dev_cla"] = "motion";
+    object["pl_on"] = "yes";
+    object["pl_off"] = "no";
+    object["val_tpl"] = "{{value_json.motion}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    break;
+  case DOOR:
+    object["uniq_id"] = uniqueId + "rn";
+    object["dev_cla"] = "door";
+    object["pl_on"] = "open";
+    object["pl_off"] = "close";
+    object["val_tpl"] = "{{value_json.state}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    break;
+  case WINDOW:
+    object["uniq_id"] = uniqueId + "rn";
+    object["dev_cla"] = "window";
+    object["pl_on"] = "open";
+    object["pl_off"] = "close";
+    object["val_tpl"] = "{{value_json.state}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    break;
   case DS18B20:
     object["name"] = String(s.name);
     object["unit_of_meas"] = "ºC";
@@ -132,7 +168,6 @@ void addToHomeAssistant(Sensor &s)
     objectStr = "";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
-
     break;
   case PZEM_004T_V03:
     object["name"] = String(s.name) + " Power";
@@ -306,7 +341,6 @@ void initHomeAssistantDiscovery()
   }
   for (auto &ss : config.sensors)
   {
-    publishOnMqtt(ss.readTopic, String(ss.state).c_str(), true);
     addToHomeAssistant(ss);
   }
 }

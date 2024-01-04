@@ -48,6 +48,9 @@ namespace constantsConfig
     constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME_SECONS{25};
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{60000l};
+    constexpr unsigned long rainDelay{5000l};
+    constexpr unsigned long pirDelay{1000l};
+    constexpr unsigned long hallsensorDelay{1000l};
     constexpr unsigned long illuminanceReadDelay{5000l};
     constexpr unsigned long storeConfigDelay{5000ul};
     constexpr const char *apSecret{"bhonofre"}; // AP PASSWORD
@@ -161,5 +164,9 @@ namespace FeatureDrivers
     constexpr const char *SHT4X{"SHT4X"};
     constexpr const char *PZEM_004T_V03{"PZEM_004T_V03"};
     constexpr const char *HAN{"HAN_MODBUS"};
+    constexpr const char *RAIN{"RAIN"};
+    constexpr const char *DOOR{"DOOR"};
+    constexpr const char *WINDOW{"WINDOW"};
+    constexpr const char *PIR{"PIR"};
     constexpr const char *INVALID{"INVALID"};
 }

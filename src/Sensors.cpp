@@ -86,6 +86,84 @@ void Sensor::loop()
     }
   }
   break;
+  case PIR:
+  {
+    if (lastRead + delayRead < millis())
+    {
+      if (!isInitialized())
+      {
+        configPIN(inputs[0], INPUT);
+      }
+      lastRead = millis();
+      bool currentState = readPIN(inputs[0]);
+      if (lastBinaryState == currentState)
+        return;
+      StaticJsonDocument<128> doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+      obj["motion"] = currentState ? "yes" : "no";
+      serializeJson(doc, state);
+      notifyState();
+      lastBinaryState = currentState;
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  break;
+  case RAIN:
+  {
+    if (lastRead + delayRead < millis())
+    {
+      if (!isInitialized())
+      {
+        configPIN(inputs[0], INPUT_PULLUP);
+      }
+
+      lastRead = millis();
+      bool currentState = readPIN(inputs[0]);
+      if (lastBinaryState == currentState)
+        return;
+      StaticJsonDocument<128> doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+      obj["moisture"] = currentState ? "rain" : "sun";
+      serializeJson(doc, state);
+      notifyState();
+      lastBinaryState = currentState;
+
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  break;
+  case DOOR:
+  case WINDOW:
+  {
+    if (lastRead + delayRead < millis())
+    {
+      if (!isInitialized())
+      {
+        configPIN(inputs[0], INPUT_PULLUP);
+      }
+      lastRead = millis();
+      bool currentState = readPIN(inputs[0]);
+      if (lastBinaryState == currentState)
+        return;
+      StaticJsonDocument<128> doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+      obj["state"] = currentState ? "open" : "close";
+      serializeJson(doc, state);
+      notifyState();
+      lastBinaryState = currentState;
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  break;
   case SHT4X:
   {
 
@@ -118,6 +196,7 @@ void Sensor::loop()
       }
     }
   }
+  break;
   case LTR303X:
   {
     if (lastRead + delayRead < millis())
@@ -187,8 +266,8 @@ void Sensor::loop()
       Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
     }
-    break;
   }
+  break;
   case HAN:
   {
 #ifdef ESP32
@@ -313,8 +392,8 @@ void Sensor::loop()
         Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
       }
-      break;
     }
+    break;
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
     {

@@ -7,14 +7,19 @@
 enum SensorDriver
 {
   INVALID_SENSOR = 999,
-  DS18B20 = 90,
   DHT_11 = 111,
   DHT_21 = 121,
   DHT_22 = 122,
-  SHT4X = 91,
-  LTR303X = 81,
   PZEM_004T_V03 = 71,
   HAN = 80,
+  LTR303X = 81,
+  PIR = 82,
+  RAIN = 83,
+  DOOR = 84,
+  WINDOW = 85,
+  DS18B20 = 90,
+  SHT4X = 91,
+
 };
 
 class Sensor
@@ -54,10 +59,15 @@ public:
     case DHT_11:
     case DHT_21:
     case DHT_22:
+    case RAIN:
       return Family::CLIMATE;
     case PZEM_004T_V03:
     case HAN:
       return Family::ENERGY;
+    case PIR:
+    case DOOR:
+    case WINDOW:
+      return Family::SECURITY;
     case LTR303X:
       return Family::LEVEL_METER;
     }
@@ -83,6 +93,14 @@ public:
       return FeatureDrivers::PZEM_004T_V03;
     case HAN:
       return FeatureDrivers::HAN;
+    case RAIN:
+      return FeatureDrivers::RAIN;
+    case DOOR:
+      return FeatureDrivers::DOOR;
+    case WINDOW:
+      return FeatureDrivers::WINDOW;
+    case PIR:
+      return FeatureDrivers::PIR;
     }
     return FeatureDrivers::INVALID;
   };

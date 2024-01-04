@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.11"
+let baseUrl = "http://192.168.187.149"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -28,7 +28,7 @@ function create() {
     s.input2 = parseInt(getValue("f-n-pin-2", 999));
     fetch(baseUrl + "/features", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: JSON.stringify(s)
     }).then(response => response.json()).then(json => config = json).then(() => {
         showMessage("config_save_ok");
@@ -177,6 +177,7 @@ function fillDevices() {
         let icon = a.getElementsByTagName("svg").item(0);
         icon.classList.add(f.state > 0 ? "feature-icon-on" : "feature-icon-off");
         a.getElementsByTagName("svg").item(0).id = 'i-' + f.id;
+
         findById("devices_config").appendChild(a);
         icon = findById('i-' + f.id);
 
@@ -215,6 +216,28 @@ function fillDevices() {
                 box.getElementsByTagName("svg").item(0).classList.add(s.data > 0 ? "feature-icon-on" : "feature-icon-off");
                 box.getElementsByTagName("input").item(0).checked = s.data > 0;
                 box.getElementsByTagName("input").item(1).value = Math.abs(parseInt(s.data) - 100);
+            })
+        } else {
+
+            source.addEventListener(f.id, (s) => {
+                const j = JSON.parse(s.data);
+                const label =findById("f-" + f.id).getElementsByClassName("feature-value").item(0);
+                if (j.error)
+                    label.textContent = "Error";
+                if (j.state)
+                    label.textContent = j.state;
+                if (j.lux)
+                    label.textContent = Math.round(j.lux*100)/100 + "lux";
+                if (j.temperature)
+                    label.textContent = Math.trunc(j.temperature) + "º";
+                if (j.moisture)
+                    label.textContent = j.moisture;
+                if (j.motion)
+                    label.textContent = j.motion;
+                if (j.power)
+                    label.textContent = Math.trunc(j.power) + "W";
+                if (j.temperature && j.humidity)
+                    label.textContent = Math.trunc(j.temperature) + "º | " + Math.trunc(j.humidity) + "%";
             })
         }
         createModal(a, modal, f);
@@ -256,7 +279,7 @@ function applyNodeChanges() {
     config.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
     config.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
     config.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
-    config.wifiSSID = getValue("ssid", config.wifiSSID).trim();
+    config.wifiSSID = getValue("wifiSSID", config.wifiSSID).trim();
     config.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
     config.wifiIp = getValue("wifiIp", config.wifiIp).trim();
     config.wifiMask = getValue("wifiMask", config.wifiMask).trim();
@@ -273,7 +296,7 @@ function saveConfig() {
     }
     fetch(baseUrl + "/config", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: JSON.stringify(config)
     }).then(response => response.json()).then(json => config = json).then(() => {
         showMessage("config_save_ok");
@@ -324,7 +347,7 @@ function shutterPercentage(arg) {
     };
     fetch(baseUrl + "/actuators/control", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: JSON.stringify(action)
     }).catch(() =>
         showMessage("control_state_error")
@@ -338,7 +361,7 @@ function toggleSwitch(arg) {
     };
     fetch(baseUrl + "/actuators/control", {
         method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: JSON.stringify(action)
     }).catch(() =>
         showMessage("control_state_error")
@@ -385,6 +408,7 @@ function createModal(a, modal, f) {
         findById("btn-update").featureId = f.id;
     }
 }
+
 function driverSelect(a) {
     let p2 = findById("f-n-pin-2-g");
     let pu = findById("pin-up-l");
@@ -429,7 +453,6 @@ function loadDefaults() {
         showMessage("defaults_ok")
         : showMessage("device_error"))
 }
-
 
 
 document.addEventListener("DOMContentLoaded", () => {

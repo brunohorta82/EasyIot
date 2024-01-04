@@ -6,7 +6,6 @@
 extern ConfigOnofre config;
 void prepareHAN()
 {
-
     Sensor sensor;
     strlcpy(sensor.name, I18N::HAN, sizeof(sensor.name));
     sensor.inputs = {DefaultPins::HAN_RX, DefaultPins::HAN_TX};
@@ -26,15 +25,53 @@ void prepareSHT4X(int hwAddress)
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::climateReadDelay;
     String idStr;
-    config.generateId(idStr, sensor.name, sensor.driver, DefaultPins::SDA, sizeof(sensor.uniqueId));
+    config.generateId(idStr, sensor.name, sensor.driver, hwAddress, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
-
+void prepareDoorOrWindow(String name, unsigned int inputPin, SensorDriver driver)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    sensor.inputs = {inputPin};
+    sensor.driver = driver;
+    sensor.hwAddress = inputPin;
+    sensor.delayRead = constantsConfig::hallsensorDelay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, inputPin, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
+void prepareRain(String name, unsigned int inputPin)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    sensor.inputs = {inputPin};
+    sensor.driver = SensorDriver::RAIN;
+    sensor.hwAddress = inputPin;
+    sensor.delayRead = constantsConfig::rainDelay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, inputPin, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
+void preparePir(String name, unsigned int inputPin)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    sensor.inputs = {inputPin};
+    sensor.driver = SensorDriver::PIR;
+    sensor.hwAddress = inputPin;
+    sensor.delayRead = constantsConfig::rainDelay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, inputPin, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
 void prepareDHT(String name, unsigned int inputPin, SensorDriver driver)
 {
     Sensor sensor;
-    strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
     sensor.inputs = {inputPin};
     sensor.driver = driver;
     sensor.hwAddress = inputPin;
@@ -48,7 +85,7 @@ void prepareDHT(String name, unsigned int inputPin, SensorDriver driver)
 void prepareDS18B20(String name, unsigned int inputPin)
 {
     Sensor sensor;
-    strlcpy(sensor.name, I18N::CLIMATIZATION, sizeof(sensor.name));
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
     sensor.inputs = {inputPin};
     sensor.driver = SensorDriver::DS18B20;
     sensor.hwAddress = inputPin;
@@ -114,6 +151,16 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             break;
         case SensorDriver::DS18B20:
             prepareDS18B20(name, input1);
+            break;
+        case SensorDriver::DOOR:
+        case SensorDriver::WINDOW:
+            prepareDoorOrWindow(name, input1, (SensorDriver)driverCode);
+            break;
+        case SensorDriver::PIR:
+            preparePir(name, input1);
+            break;
+        case SensorDriver::RAIN:
+            prepareRain(name, input1);
             break;
         default:
             break;
