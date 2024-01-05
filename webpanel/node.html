@@ -1,0 +1,133 @@
+<div class="box box-primary">
+    <div class="box-header "><h3 class="box-title "><span class="lang-node">NÓ</span></h3></div>
+    <form>
+        <fieldset id="ff" disabled>
+            <div class="box-body">
+                <div class="form-group"><label for="nodeId"><span class="lang-name">Nome</span></label> <input
+                    class="form-control" maxlength="30" type="text" id="nodeId"
+                    placeholder="ex: kitchen" required/></div>
+            </div>
+            <div class="box-header "><h3 class="box-title"><span class="lang-security">Segurança</span></h3>
+            </div>
+            <div class="box-body">
+                <div class="form-group"><label for="accessPointPassword"><span
+                    class="lang-password">Palavra Passe</span>
+                    AP</label> <input autocomplete="off" class="form-control" type="password"
+                                      id="accessPointPassword"
+                                      placeholder="ex: superPassword"/></div>
+
+                <div class="form-group"><label for="apiUser"><span
+                    class="lang-username">Utilizador</span></label> <input autocomplete="off"
+                                                                           class="form-control" type="text"
+                                                                           id="apiUser"
+                                                                           placeholder="ex: admin"/></div>
+
+
+                <div class="form-group"><label for="apiPassword"><span
+                    class="lang-password">Palavra Passe</span></label> <input autocomplete="off"
+                                                                              class="form-control"
+                                                                              type="password"
+                                                                              id="apiPassword"
+                                                                              placeholder="ex: superPassword"/>
+                </div>
+
+            </div>
+            <div class="box-header "><h3 class="box-title">WI-FI </h3></div>
+            <div class="box-body">
+
+                <div class="form-group"><label for="wifiSSID">SSID</label> <input class="form-control"
+                                                                                  maxlength="23" autocomplete="off"
+                                                                                  type="text"
+                                                                                  id="wifiSSID"
+                                                                                  placeholder="ex: meuwifi"/></div>
+
+                <div class="form-group"><label for="wifiSecret"><span
+                    class="lang-password">Palavra Passe</span></label> <input class="form-control"
+                                                                              maxlength="60"
+                                                                              autocomplete="off" type="password"
+                                                                              id="wifiSecret"
+                                                                              placeholder="ex: superpassword"/>
+                </div>
+            </div>
+            <div class="box-body">
+                <label for="dhcp">DHCP</label>
+                <label class="switch">
+                    <input value="true" name="dhcp" id="dhcp" type="checkbox">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="box-body">
+                <div class="form-group"><label for="wifiIp">IP</label> <input class="form-control" type="text"
+                                                                              id="wifiIp"
+                                                                              maxlength="15"
+                                                                              placeholder="ex: 192.168.1.20"/>
+                </div>
+                <div class="form-group"><label for="wifiGw">Gateway</label> <input class="form-control"
+                                                                                   id="wifiGw"
+                                                                                   maxlength="15"
+                                                                                   placeholder="ex: 192.168.1.254"/>
+                </div>
+                <div class="form-group"><label for="wifiMask"><span
+                    class="lang-netmask">Máscara de Rede</span></label> <input class="form-control"
+                                                                               maxlength="15"
+                                                                               id="wifiMask"
+                                                                               placeholder="ex: 255.255.255.0"/>
+                </div>
+            </div>
+            <div class="box-body">
+                  <span class="chip"
+                        id="lbl-mac">.</span>
+            </div>
+            <div class="box-header "><h3 class="box-title">MQTT</h3></div>
+            <div class="box-body">
+                <div class="form-group"><label for="mqttIpDns">Broker IP / DNS</label> <input class="form-control"
+                                                                                              type="text"
+                                                                                              maxlength="40"
+                                                                                              id="mqttIpDns"
+                                                                                              placeholder="ex: 192.168.1.30"/>
+                </div>
+                <div class="form-group"><label for="mqttUsername"><span
+                    class="lang-username">Utilizador</span></label>
+                    <input class="form-control" autocomplete="off" type="text"
+                           maxlength="30" id="mqttUsername" placeholder="ex: iam"/></div>
+
+
+                <div class="form-group"><label for="mqttPassword"><span
+                    class="lang-password">Palavra Passe</span></label> <input class="form-control"
+                                                                              maxlength="62"
+                                                                              type="password" autocomplete="off"
+                                                                              id="mqttPassword"
+                                                                              placeholder="ex: superstrongpassword"/>
+
+                </div>
+            </div>
+        </fieldset>
+    </form>
+    <div class="box-header "><h3 class="box-title"><span class="lang-new-file">Atualização de Firmware</span>
+    </h3></div>
+    <form  role="form" method="POST" enctype="multipart/form-data" action="/auto-update">
+        <button type="submit" id="btn-auto-update" class="btn btn-primary hide"><span
+            class="lang-install-file-version"> Instalar ficheiro</span>
+        </button>
+    </form>
+    <form role="form" method="POST" action="/update" enctype="multipart/form-data">
+        <div class="box-body">
+            <input id="firmwareInputFile" name="update" type="file"/>
+        </div>
+        <div class="box-body">
+            <button type="submit" class="btn btn-primary "><span
+                class="lang-install-file-version"> Instalar ficheiro</span>
+            </button>
+        </div>
+    </form>
+
+    <form>
+        <div class="system-footer">
+            <button type="button" onclick="loadDefaults()" class="btn btn-danger"><span class="lang-reset-factory">Carregar Configuração de Fábrica</span>
+            </button>
+            <button type="button" onclick="reboot()" class="btn btn-warning"><span class="lang-restart">Reiniciar</span>
+            </button>
+        </div>
+    </form>
+
+</div>
