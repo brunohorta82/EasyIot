@@ -42,7 +42,7 @@ public:
   std::vector<unsigned int> inputs;
 
   // CONTROL VARIABLES
-  bool lastBinaryState = false;
+  int lastBinaryState = -1;
   unsigned long delayRead = 5000ul;
   unsigned long lastRead = 0ul;
   bool initialized = false;

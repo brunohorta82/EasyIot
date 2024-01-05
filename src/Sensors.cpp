@@ -50,6 +50,8 @@ void Sensor::loop()
 
   switch (driver)
   {
+  case INVALID_SENSOR:
+    return;
   case DHT_11:
   case DHT_21:
   case DHT_22:
@@ -96,7 +98,7 @@ void Sensor::loop()
         configPIN(inputs[0], INPUT);
       }
       lastRead = millis();
-      bool currentState = readPIN(inputs[0]);
+      int currentState = readPINToInt(inputs[0]);
       if (lastBinaryState == currentState)
         return;
       StaticJsonDocument<128> doc;
@@ -123,7 +125,7 @@ void Sensor::loop()
       }
 
       lastRead = millis();
-      bool currentState = readPIN(inputs[0]);
+      int currentState = readPINToInt(inputs[0]);
       if (lastBinaryState == currentState)
         return;
       StaticJsonDocument<128> doc;
@@ -151,7 +153,7 @@ void Sensor::loop()
         configPIN(inputs[0], INPUT_PULLUP);
       }
       lastRead = millis();
-      bool currentState = readPIN(inputs[0]);
+      int currentState = readPINToInt(inputs[0]);
       if (lastBinaryState == currentState)
         return;
       StaticJsonDocument<128> doc;
@@ -402,11 +404,13 @@ void Sensor::loop()
         }
         obj["signal"] = WiFi.RSSI();
         obj["comm"] = serialConf;
+#ifdef ESP8266
         if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
         {
           obj["temperature"] = temperature;
           obj["humidity"] = humidity;
         }
+#endif
         serializeJson(obj, state);
         doc.clear();
         notifyState();

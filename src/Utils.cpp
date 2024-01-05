@@ -34,6 +34,14 @@ bool readPIN(uint8_t pin)
     }
     return digitalRead(pin);
 }
+int readPINToInt(uint8_t pin)
+{
+    if (pin == DefaultPins::noGPIO)
+    {
+        return -1;
+    }
+    return digitalRead(pin) ? 1 : 0;
+}
 void normalize(String &inputStr)
 {
     inputStr.toLowerCase();
