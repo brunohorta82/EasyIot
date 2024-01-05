@@ -343,5 +343,6 @@ void initHomeAssistantDiscovery()
   for (auto &ss : config.sensors)
   {
     addToHomeAssistant(ss);
+    publishOnMqtt(ss.readTopic, ss.state.c_str(), true);
   }
 }

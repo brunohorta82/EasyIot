@@ -47,7 +47,7 @@ namespace constantsConfig
 {
     constexpr unsigned long SHUTTER_DEFAULT_COURSE_TIME_SECONS{25};
     constexpr unsigned long energyReadDelay{5000l};
-    constexpr unsigned long climateReadDelay{60000l};
+    constexpr unsigned long climateReadDelay{10000l};
     constexpr unsigned long rainDelay{5000l};
     constexpr unsigned long pirDelay{1000l};
     constexpr unsigned long hallsensorDelay{1000l};

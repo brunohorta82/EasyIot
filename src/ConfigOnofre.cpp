@@ -286,6 +286,7 @@ ConfigOnofre &ConfigOnofre::load()
       String family = sensor.familyToText();
       family.toLowerCase();
       sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family.c_str(), sensor.uniqueId);
+      sensor.state = "";
       JsonArray inputs = d["inputs"];
       for (auto in : inputs)
       {
@@ -400,11 +401,19 @@ ConfigOnofre &ConfigOnofre::save()
 
 ConfigOnofre &ConfigOnofre::reloadFeatures()
 {
+  for (auto &actuator : actuatores)
+  {
+    String family = actuator.familyToText();
+    family.toLowerCase();
+    sprintf(actuator.readTopic, "onofre/%s/%s/%s/state", chipId, family.c_str(), actuator.uniqueId);
+    sprintf(actuator.writeTopic, "onofre/%s/%s/%s/set", chipId, family.c_str(), actuator.uniqueId);
+  }
   for (auto &sensor : sensors)
   {
     String family = sensor.familyToText();
     family.toLowerCase();
     sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family.c_str(), sensor.uniqueId);
+    sensor.state = "";
   }
   initHomeAssistantDiscovery();
   return *this;

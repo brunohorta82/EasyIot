@@ -297,8 +297,16 @@ void Sensor::loop()
 #endif
 #ifdef ESP8266
       static SoftwareSerial softwareSerial = SoftwareSerial(inputs[1], inputs[0]);
+      static SensirionI2CSht4x sensor;
+
+      float temperature = 0.0;
+      float humidity = 0.0;
+
       if (!isInitialized())
       {
+        Wire.begin(DefaultPins::SDA, DefaultPins::SCL);
+        sensor.begin(Wire, Discovery::I2C_SHT4X_ADDRESS);
+        sensor.softReset();
         modbus = new ModbusMaster();
         softwareSerial.begin(9600, serialConf);
         modbus->begin(1, softwareSerial);
@@ -393,6 +401,12 @@ void Sensor::loop()
           }
         }
         obj["signal"] = WiFi.RSSI();
+        obj["comm"] = serialConf;
+        if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
+        {
+          obj["temperature"] = temperature;
+          obj["humidity"] = humidity;
+        }
         serializeJson(obj, state);
         doc.clear();
         notifyState();
