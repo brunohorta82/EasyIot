@@ -1,5 +1,5 @@
-![](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/logo.png)
- 
+<img src="https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/logo.png " width="48">
+
 * [Intro](#id1)
 * [BH ONOFRE BOARD](https://github.com/brunohorta82/BH_OnOfre)
 * [BH PZEM BOARD](https://github.com/brunohorta82/BH_PZEM_ESP8266)
