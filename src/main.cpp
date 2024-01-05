@@ -110,7 +110,7 @@ void setup()
 #endif
   setupWiFi();
   setupCors();
-  setupMQTT();
+  setupMQTT(false);
 #ifdef ESP32
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
 #endif

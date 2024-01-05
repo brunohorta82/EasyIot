@@ -9,6 +9,5 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
 int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, ActuatorDriver driver);
 void prepareCover(String name, unsigned int outputDown, unsigned int outputUp, unsigned int inputDown, unsigned int inputUp, ActuatorDriver driver, ActuatorControlType type);
 void prepareGarage(String name, unsigned int gateOne, unsigned int gateTwo, unsigned int openCloseSensor, unsigned int pushSwitch, ActuatorDriver driver, ActuatorControlType type);
-int prepareSensor(String name, unsigned int input1, unsigned int input2, SensorDriver driver);
 void prepareSHT4X(int hwAddress);
 void prepareLTR303(int hwAddress);

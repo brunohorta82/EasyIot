@@ -259,8 +259,8 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.state = d["state"] | 0;
       String family = actuator.familyToText();
       family.toLowerCase();
-      sprintf(actuator.readTopic, "onofre/%s/%s/%s/state", chipId, family, actuator.uniqueId);
-      sprintf(actuator.writeTopic, "onofre/%s/%s/%s/set", chipId, family, actuator.uniqueId);
+      sprintf(actuator.readTopic, "onofre/%s/%s/%s/state", chipId, family.c_str(), actuator.uniqueId);
+      sprintf(actuator.writeTopic, "onofre/%s/%s/%s/set", chipId, family.c_str(), actuator.uniqueId);
       JsonArray outputs = d["outputs"];
       for (auto out : outputs)
       {
@@ -285,7 +285,7 @@ ConfigOnofre &ConfigOnofre::load()
       sensor.id = featureIds++;
       String family = sensor.familyToText();
       family.toLowerCase();
-      sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family, sensor.uniqueId);
+      sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family.c_str(), sensor.uniqueId);
       JsonArray inputs = d["inputs"];
       for (auto in : inputs)
       {
@@ -395,6 +395,18 @@ ConfigOnofre &ConfigOnofre::save()
   Log.notice("%s ConfigOnofre stored." CR, tags::config);
 #endif
   doc.clear();
+  return *this;
+}
+
+ConfigOnofre &ConfigOnofre::reloadFeatures()
+{
+  for (auto &sensor : sensors)
+  {
+    String family = sensor.familyToText();
+    family.toLowerCase();
+    sprintf(sensor.readTopic, "onofre/%s/%s/%s/metrics", chipId, family.c_str(), sensor.uniqueId);
+  }
+  initHomeAssistantDiscovery();
   return *this;
 }
 void ConfigOnofre::controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result)
@@ -512,8 +524,9 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
                                 { return id.equals(item.uniqueId); });
       if (match != sensors.end())
       {
+        removeFromHomeAssistant("binary_sensor", id.c_str());
+        removeFromHomeAssistant("sensor", id.c_str());
         sensors.erase(match);
-        removeFromHomeAssistant("sensor", id);
       }
     }
   }
@@ -551,7 +564,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
       }
     }
   }
-  setupMQTT();
+  setupMQTT(false);
   root.clear();
   return this->save();
 }

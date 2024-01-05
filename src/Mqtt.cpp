@@ -53,7 +53,8 @@ boolean reconnect()
         sendToServerEvents("mqtt_health", constantsMqtt::availablePayload);
         for (auto &sw : config.actuatores)
         {
-            if(sw.isVirtual()){
+            if (sw.isVirtual())
+            {
                 continue;
             }
             subscribeOnMqtt(sw.writeTopic);
@@ -65,13 +66,13 @@ boolean reconnect()
     return mqttConnected();
 }
 
-void setupMQTT()
+void setupMQTT(bool forceDisconnect)
 {
 
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Setup" CR, tags::mqtt);
 #endif
-    if (mqttConnected())
+    if (mqttConnected() && forceDisconnect)
     {
         mqttClient.disconnect();
     }

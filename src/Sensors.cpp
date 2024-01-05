@@ -78,6 +78,7 @@ void Sensor::loop()
       obj["temperature"] = temperature;
       obj["humidity"] = humidity;
       serializeJson(doc, state);
+      doc.clear();
       notifyState();
       lastRead = millis();
 #ifdef DEBUG_ONOFRE
@@ -103,6 +104,7 @@ void Sensor::loop()
       state.clear();
       obj["motion"] = currentState ? "yes" : "no";
       serializeJson(doc, state);
+      doc.clear();
       notifyState();
       lastBinaryState = currentState;
 #ifdef DEBUG_ONOFRE
@@ -127,8 +129,9 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["moisture"] = currentState ? "rain" : "sun";
+      obj["rain"] = currentState ? "no" : "yes";
       serializeJson(doc, state);
+      doc.clear();
       notifyState();
       lastBinaryState = currentState;
 
@@ -156,6 +159,7 @@ void Sensor::loop()
       state.clear();
       obj["state"] = currentState ? "open" : "close";
       serializeJson(doc, state);
+      doc.clear();
       notifyState();
       lastBinaryState = currentState;
 #ifdef DEBUG_ONOFRE
@@ -188,6 +192,7 @@ void Sensor::loop()
         obj["temperature"] = temperature;
         obj["humidity"] = humidity;
         serializeJson(doc, state);
+        doc.clear();
         notifyState();
         lastRead = millis();
 #ifdef DEBUG_ONOFRE
@@ -234,6 +239,7 @@ void Sensor::loop()
           obj["ch1"] = data1;
           obj["lux"] = lux;
           serializeJson(doc, state);
+          doc.clear();
           notifyState();
 #ifdef DEBUG_ONOFRE
           Log.notice("%s %s " CR, tags::sensors, state.c_str());
@@ -261,6 +267,7 @@ void Sensor::loop()
       dallas->requestTemperatures();
       obj["temperature"] = dallas->getTempCByIndex(0);
       serializeJson(doc, state);
+      doc.clear();
       notifyState();
 #ifdef DEBUG_ONOFRE
       Log.notice("%s %s " CR, tags::sensors, state.c_str());
@@ -387,6 +394,7 @@ void Sensor::loop()
         }
         obj["signal"] = WiFi.RSSI();
         serializeJson(obj, state);
+        doc.clear();
         notifyState();
 #ifdef DEBUG_ONOFRE
         Log.notice("%s %s " CR, tags::sensors, state.c_str());
@@ -440,8 +448,8 @@ void Sensor::loop()
         obj["energy"] = e;
       }
       serializeJson(doc, state);
-      notifyState();
       doc.clear();
+      notifyState();
       if (config.display != NULL)
       {
         config.display->clearDisplay();

@@ -324,30 +324,7 @@ void loadAPI()
     int result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
     if (result == 0)
     {
-      config.save().json(root);
-      }else{
-      response->setCode(400);
-      root["result"] = result;
-      }
-      config.resumeFeatures();
-      response->setLength();
-      request->send(response); }));
-  /*CREATE NEW VIRTUAL SENSOR*/
-  server
-      .addHandler(new AsyncCallbackJsonWebHandler("/sensors", [](AsyncWebServerRequest *request, JsonVariant json)
-                                                  {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonVariant &root = response->getRoot();
-    JsonObject actuatorJson = json.as<JsonObject>();
-    config.pauseFeatures();
-    int result = prepareSensor(actuatorJson["name"] | "", actuatorJson["input1"] | DefaultPins::noGPIO, actuatorJson["input2"] | DefaultPins::noGPIO, actuatorJson["driver"] | SensorDriver::INVALID_SENSOR);
-    if (result == 0)
-    {
-      config.save().json(root);
+      config.save().reloadFeatures().json(root);
       }else{
       response->setCode(400);
       root["result"] = result;

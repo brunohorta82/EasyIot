@@ -116,58 +116,55 @@ void addToHomeAssistant(Sensor &s)
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/h" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case LTR303X:
-    object["uniq_id"] = uniqueId + "lx";
+    object["uniq_id"] = uniqueId;
     object["unit_of_meas"] = "lx";
     object["dev_cla"] = "illuminance";
     object["val_tpl"] = "{{value_json.lux}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case RAIN:
-    object["uniq_id"] = uniqueId + "rn";
-    object["dev_cla"] = "moisture";
-    object["pl_on"] = "rain";
-    object["pl_off"] = "sun";
-    object["val_tpl"] = "{{value_json.moisture}}";
+    object["uniq_id"] = uniqueId;
+    object["ic"] = "mdi:weather-pouring";
+    object["icon_template"] = "{% if  value == 0  %} mdi:restart{ % else % } mdi:weather-pouring{% endif %}";
+    object["val_tpl"] = "{{value_json.rain}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PIR:
-    object["uniq_id"] = uniqueId + "rn";
+    object["uniq_id"] = uniqueId;
     object["dev_cla"] = "motion";
     object["pl_on"] = "yes";
     object["pl_off"] = "no";
     object["val_tpl"] = "{{value_json.motion}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DOOR:
-    object["uniq_id"] = uniqueId + "rn";
+    object["uniq_id"] = uniqueId;
     object["dev_cla"] = "door";
     object["pl_on"] = "open";
     object["pl_off"] = "close";
     object["val_tpl"] = "{{value_json.state}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case WINDOW:
-    object["uniq_id"] = uniqueId + "rn";
+    object["uniq_id"] = uniqueId;
     object["dev_cla"] = "window";
     object["pl_on"] = "open";
     object["pl_off"] = "close";
     object["val_tpl"] = "{{value_json.state}}";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/lx" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case DS18B20:
-    object["name"] = String(s.name);
-    object["unit_of_meas"] = "ºC";
     object["uniq_id"] = uniqueId;
+    object["unit_of_meas"] = "ºC";
     object["dev_cla"] = "temperature";
     object["val_tpl"] = "{{value_json.temperature | round(2)}}";
-    objectStr = "";
     serializeJson(object, objectStr);
-    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/t" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
     break;
   case PZEM_004T_V03:
     object["name"] = String(s.name) + " Power";
@@ -323,9 +320,13 @@ void addToHomeAssistant(Actuator &sw)
 
 void removeFromHomeAssistant(String family, String uniqueId)
 {
+
   if (!mqttConnected())
     return;
-  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), "", false);
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s REMOVE FROM HA %s" CR, tags::discovery, uniqueId.c_str());
+#endif
+  publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), "\0", false);
 }
 void initHomeAssistantDiscovery()
 {

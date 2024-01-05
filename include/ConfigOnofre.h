@@ -55,7 +55,7 @@ public:
   ConfigOnofre &load();
   ConfigOnofre &pauseFeatures();
   ConfigOnofre &resumeFeatures();
-
+  ConfigOnofre &reloadFeatures();
   void i2cDiscovery();
   void pzemDiscovery();
   bool isSensorExists(int hwAddress);
@@ -82,7 +82,7 @@ public:
   void requestLoadDefaults();
   bool isLoadDefaultsRequested();
 
-  constexpr bool isLoopFeaturesPaused()
+    constexpr bool isLoopFeaturesPaused()
   {
     return pauseFeaturesLoop;
   }
