@@ -1,4 +1,4 @@
-![](screenshots/logo.png =x250)
+![](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/logo.png | width=250)
  
 * [Intro](#id1)
 * [BH ONOFRE BOARD](https://github.com/brunohorta82/BH_OnOfre)
