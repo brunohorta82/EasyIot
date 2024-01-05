@@ -1,4 +1,4 @@
-![](./screenshots/logo.png =x250)
+![](screenshots/logo.png =x250)
  
 * [Intro](#id1)
 * [BH ONOFRE BOARD](https://github.com/brunohorta82/BH_OnOfre)
