@@ -1,4 +1,4 @@
-<img src="https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/logo.png " width="48">
+<img src="https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/logo.png " width="220">
 
 * [Intro](#id1)
 * [BH ONOFRE BOARD](https://github.com/brunohorta82/BH_OnOfre)
