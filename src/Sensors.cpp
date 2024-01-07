@@ -104,7 +104,7 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["motion"] = currentState ? "yes" : "no";
+      obj["motion"] = currentState ? "detected" : "clear";
       serializeJson(doc, state);
       doc.clear();
       notifyState();
@@ -131,7 +131,7 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["rain"] = currentState ? "no" : "yes";
+      obj["rain"] = currentState ? "clear" : "rain";
       serializeJson(doc, state);
       doc.clear();
       notifyState();
@@ -159,7 +159,7 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["state"] = currentState ? "open" : "close";
+      obj["state"] = currentState ? "opened" : "closed";
       serializeJson(doc, state);
       doc.clear();
       notifyState();
@@ -328,7 +328,7 @@ void Sensor::loop()
         }
         han_clock_t clock{.buffer = buffer};
         char strftime_buf[64];
-        sprintf(strftime_buf, "%d-%02d-%02dT%02d:%02d:%02d.000", clock.year, clock.day_of_month, clock.day_of_month, clock.hour, clock.minute, clock.second);
+        sprintf(strftime_buf, "%d-%02d-%02dT%02d:%02d:%02d.000Z", clock.year, clock.day_of_month, clock.day_of_month, clock.hour, clock.minute, clock.second);
         obj["dateTime"] = strftime_buf;
       }
       if (modbus->readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == modbus->ku8MBSuccess)

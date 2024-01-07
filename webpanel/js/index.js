@@ -234,10 +234,11 @@ function fillDevices() {
                     label.textContent = j.moisture;
                 if (j.motion)
                     label.textContent = j.motion;
-                if (j.power)
-                    label.textContent = Math.trunc(j.power) + "W";
                 if (j.temperature && j.humidity)
                     label.textContent = Math.trunc(j.temperature) + "º | " + Math.trunc(j.humidity) + "%";
+                if (j.power)
+                    label.textContent = Math.trunc(j.power) + "W";
+
             })
         }
         createModal(a, modal, f);
