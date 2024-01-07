@@ -230,7 +230,7 @@ function fillDevices() {
                     label.textContent = Math.round(j.lux*100)/100 + "lux";
                 if (j.temperature)
                     label.textContent = Math.trunc(j.temperature) + "º";
-                if (j.moisture)
+                if (j.rain)
                     label.textContent = j.moisture;
                 if (j.motion)
                     label.textContent = j.motion;
