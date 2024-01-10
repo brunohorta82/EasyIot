@@ -1,0 +1,17 @@
+JustWifi
+SHT4x=https://github.com/Sensirion/arduino-i2c-sht4x.git
+AsyncWebServer=https://github.com/me-no-dev/ESPAsyncWebServer
+ESP KNX IP Library=https://github.com/brunohorta82/esp-knx-ip.git
+adafruit/DHT sensor library@^1.4.6
+ArduinoJson
+PubSubClient
+Arduino-Log=https://github.com/thijse/Arduino-Log.git
+ArduinoModbus=https://github.com/4-20ma/ModbusMaster.git
+PZEM004Tv30=https://github.com/mandulaj/PZEM-004T-v30.git
+lennarthennigs/Button2@^2.2.4
+SSD1306=https://github.com/adafruit/Adafruit_SSD1306.git
+LTR303=https://github.com/brunohorta82/LTR303.git
+DallasTemperature
+adafruit/Adafruit Unified Sensor@^1.1.14
+vl53lx=cirromulus/VL53L0X@^1.4.3
+AsyncMqttClient
