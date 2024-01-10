@@ -1,5 +1,4 @@
-let baseUrl = "http://192.168.187.149"
-var config;
+let baseUrl= ""\nvar config;
 var lastVersion = 0.0;
 let source = null;
 var currentPage = "node"
