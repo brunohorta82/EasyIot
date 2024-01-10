@@ -386,7 +386,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
       delay(1000);
       writeToPIN(outputs[0], LOW);
     }
-    else if ((isLight() || isSwitch()))
+    else if ((isLight() || isSwitch() || isGardenValve()))
     {
       if (state == ActuatorState::ON_CLOSE || state == ActuatorState::OFF_OPEN)
         writeToPIN(outputs[0], state ? HIGH : LOW);

@@ -192,7 +192,7 @@ public:
     {
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);
-      if (config.templateId == Template::NO_TEMPLATE)
+      if (!(config.actuatores.size() == 0 && config.sensors.size() == 0))
       {
         form.replace("class='hide'", "");
       }

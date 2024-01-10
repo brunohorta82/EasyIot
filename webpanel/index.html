@@ -1,55 +1,55 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
     <meta charset="utf-8">
     <title>BH OnoFre</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="css/styles.css?v=9.128">
 </head>
+
 <body>
-<div>
-    <header >
-        <nav class="navbar" role="navigation">
-            <svg width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fill-rule="evenodd" clip-rule="evenodd"
+    <div>
+        <header>
+            <nav class="navbar" role="navigation">
+                <svg width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" clip-rule="evenodd"
                         d="M9.87165 15.901C11.8044 15.901 13.3712 14.3202 13.3712 12.3702C13.3712 10.4202 11.8044 8.83936 9.87165 8.83936C7.93888 8.83936 6.37207 10.4202 6.37207 12.3702C6.37207 14.3202 7.93888 15.901 9.87165 15.901ZM23.1055 15.3013C21.9522 14.286 20.2357 14.2764 19.0712 15.2787L12.6019 20.8473C11.9143 21.4393 11.5182 22.3054 11.5182 23.2174V35.4244C11.5182 35.9979 11.0574 36.4629 10.4889 36.4629C9.92045 36.4629 9.45962 35.9979 9.45962 35.4244V23.2174C9.45962 21.6975 10.1197 20.2538 11.2658 19.2673L17.7351 13.6987C19.6759 12.0281 22.5367 12.0441 24.4589 13.7364L30.7528 19.2771C31.8729 20.2631 32.5156 21.6897 32.5156 23.1895V25.6729C33.8504 26.1707 34.802 27.4661 34.802 28.9858C34.802 30.9358 33.2352 32.5166 31.3025 32.5166C29.3697 32.5166 27.8029 30.9358 27.8029 28.9858C27.8029 27.3299 28.9327 25.9402 30.4571 25.5587V23.1895C30.4571 22.2896 30.0714 21.4337 29.3993 20.842L23.1055 15.3013Z"
                         fill="#1D1D1D" />
-            </svg>
-            <ul class="onofre-menu" data-widget="tree">
-                <li class=""><a href="#" id="node-btn" class="menu-item"> <span class="lang-node">NÓ</span></a></li>
-                <li><a href="#" id="features-btn" > <span class="lang-features">FUNÇÕES</span></a>
-                </li>
-            </ul>
-            <button  type="button"
-                     onclick="saveConfig()" class="btn btn-primary btl-save-all"><span class="lang-save">Guardar Tudo</span></button>
-        </nav>
-    </header>
-    <div class="stats-panel">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
+                </svg>
+                <ul class="onofre-menu" data-widget="tree">
+                    <li class=""><a href="#" id="node-btn" class="menu-item"> <span class="lang-node">ONOFRE</span></a></li>
+                    <li><a href="#" id="features-btn"> <span class="lang-features">FUNÇÕES</span></a>
+                    </li>
+                </ul>
+                <button type="button" onclick="saveConfig()" class="btn btn-primary btl-save-all"><span
+                        class="lang-save">Guardar Tudo</span></button>
+            </nav>
+        </header>
+        <div class="stats-panel">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
                     d="M15.7561 23.7832C16.2799 23.2214 16.9133 22.773 17.6171 22.4655C18.3209 22.1581 19.0808 21.9983 19.8489 21.9956C20.6169 21.9929 21.3773 22.1476 22.0833 22.4502C22.7892 22.7528 23.4258 23.1967 23.9535 23.7548M13.2898 20.3582C14.1279 19.4594 15.1413 18.742 16.2674 18.25C17.3935 17.758 18.6083 17.5021 19.8371 17.4978C21.066 17.4935 22.2822 17.7412 23.4117 18.2253C24.5412 18.7094 25.56 19.4198 26.4045 20.3128M10 17.2912C11.2571 15.9431 12.7772 14.8669 14.4663 14.1289C16.1555 13.3909 17.977 13.0065 19.8203 13.0001C21.6637 12.9937 23.49 13.3651 25.1843 14.0913C26.8786 14.8174 28.4064 15.8837 29.673 17.223M19.8685 28.7422C19.2474 28.7422 18.744 28.2388 18.744 27.6178C18.744 26.9967 19.2474 26.4933 19.8685 26.4933C20.4895 26.4933 20.9929 26.9967 20.9929 27.6178C20.9929 28.2388 20.4895 28.7422 19.8685 28.7422Z"
                     stroke="#40DF86" stroke-linecap="round" stroke-linejoin="round" />
-        </svg> <span id="ssid_lbl"></span><span id="wifi-signal">0%</span></label>
-        <span >| MQTT </span> <span id="mqtt_lbl"></span><span id="mqtt_state" class="led"></span>
-        <span >| NAME </span><label for="nodeId"><span class="lang-name"></span></label><input
-        maxlength="30" type="text" id="nodeId"
-        placeholder="ex: kitchen" required/>
-        <span >| CHIP </span> <span id="lbl-chip"></span><span id="lbl-chip" class="chip"></span>
-        
-    </div>
-    <div >
-        <section class="content container-fluid dashboard-container"></section>
-    </div>
-    <footer class="onofre-footer">
-        <span class="lang-version">Versão </span> <span id="version_lbl">-</span>
+            </svg> <span id="ssid_lbl"></span><span id="wifi-signal">0%</span></label>
+            <span>| MQTT </span> <span id="mqtt_lbl"></span><span id="mqtt_state" class="led"></span>
+            <span>| NAME </span><label for="nodeId"><span class="lang-name"></span></label><input maxlength="30"
+                type="text" class="form-name" id="nodeId" placeholder="ex: kitchen" required /><span  id="lbl-chip"></span>
+        </div>
         <div>
-            <strong><a href="https://onofre.store">OnOfre</a> - Powered by Bruno Horta @
-                2018 in
-                Portugal</strong>
+            <section class="content container-fluid dashboard-container"></section>
+        </div>
+        <footer class="onofre-footer">
+            <span class="lang-version">Versão </span> <span id="version_lbl">-</span>
+            <div>
+                <strong><a href="https://onofre.store">OnOfre</a> - Powered by Bruno Horta @
+                    2018 in
+                    Portugal</strong>
             </div>
         </footer>
 
-</div>
-<script src="js/index.js?v=9.129"></script>
+    </div>
+    <script src="js/index.js?v=9.129"></script>
 </body>
+
 </html>

@@ -34,9 +34,11 @@ xxd -i -n styles_min_css ../webpanel/css/styles.min.css.gz > ../include/StylesMi
 sed -i "" "s/\[\]/\[\] PROGMEM/" ../include/StylesMinCss.h
 echo "#include <Arduino.h>\n\r$(cat ../include/StylesMinCss.h)" > ../include/StylesMinCss.h 
 
+rm -f ../webpanel/js/index.tmp.js
 rm -f  ../webpanel/devices.min.html
 rm -f  ../webpanel/index.min.html   
 rm -f  ../webpanel/node.min.html 
+rm -f  ../webpanel/css/styles.min.css
 rm -f  ../webpanel/js/index.min.js
 rm -f  ../webpanel/devices.min.html.gz
 rm -f  ../webpanel/index.min.html.gz   
