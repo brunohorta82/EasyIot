@@ -160,7 +160,10 @@ public:
             return FeatureDrivers::LIGHT_LATCH;
         case GARAGE_PUSH:
             return FeatureDrivers::GARAGE_PUSH;
+        case GARDEN_VALVE:
+            return FeatureDrivers::GARDEN_VALVE;
         }
+
         return FeatureDrivers::INVALID;
     };
     ActuatorInputMode driverToInputMode()
