@@ -127,8 +127,10 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
     actuator.driver = driver;
     strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
     actuator.typeControl = type;
-    actuator.outputs.push_back(output);
-    actuator.inputs.push_back(input);
+    if (output != DefaultPins::noGPIO)
+        actuator.outputs.push_back(output);
+    if (input != DefaultPins::noGPIO)
+        actuator.inputs.push_back(input);
     String idStr;
     config.generateId(idStr, actuator.name, actuator.driver, output, sizeof(actuator.uniqueId));
     strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
@@ -257,6 +259,11 @@ void templateSelect(enum Template _template)
         break;
     case HAN_MODULE:
         prepareHAN();
+    case GARDEN:
+        prepareActuator(I18N::VALVE_ONE, DefaultPins::OUTPUT_ONE, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::VALVE_TWO, DefaultPins::OUTPUT_TWO, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::VALVE_THREE, DefaultPins::OUTPUT_VALVE_THREE, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::VALVE_FOUR, DefaultPins::OUTPUT_VALVE_FOUR, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
         break;
     default:
         return;

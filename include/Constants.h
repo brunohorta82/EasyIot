@@ -6,7 +6,8 @@ enum Template
     DUAL_SWITCH,
     COVER,
     GARAGE,
-    HAN_MODULE
+    HAN_MODULE,
+    GARDEN,
 };
 namespace constantsMqtt
 {
@@ -62,6 +63,7 @@ namespace constantsConfig
 namespace DefaultPins
 {
     // ESP32 DEFAULT PINS
+    constexpr unsigned int noGPIO{99u};
     constexpr unsigned int INPUT_ONE{14u};
     constexpr unsigned int INPUT_TWO{13u};
     constexpr unsigned int OUTPUT_ONE{4u};
@@ -72,7 +74,8 @@ namespace DefaultPins
     constexpr int SCL{33u};
     constexpr int HAN_TX{13u};
     constexpr int HAN_RX{14u};
-    constexpr unsigned int noGPIO{99u};
+    constexpr unsigned int OUTPUT_VALVE_THREE{noGPIO};
+    constexpr unsigned int OUTPUT_VALVE_FOUR{noGPIO};
 #ifdef ESP32_4M
     constexpr unsigned int outputInputPins[] = {7, 12, 13, 14, 19, 20, 21, 22, 25};
 #else
@@ -85,18 +88,20 @@ namespace DefaultPins
 namespace DefaultPins
 {
     // ESP8266 DEFAULT PINS
+    constexpr unsigned int noGPIO{999u};
     constexpr unsigned int INPUT_ONE{12u};
     constexpr unsigned int INPUT_TWO{13u};
     constexpr unsigned int OUTPUT_ONE{4u};
     constexpr unsigned int OUTPUT_TWO{5u};
+    constexpr unsigned int OUTPUT_VALVE_THREE{13u};
+    constexpr unsigned int OUTPUT_VALVE_FOUR{14u};
     constexpr unsigned int PZEM_TX{3u};
     constexpr unsigned int PZEM_RX{1u};
     constexpr int SDA{2u};
     constexpr int SCL{13u};
     constexpr int HAN_TX{14u};
     constexpr int HAN_RX{12u};
-    constexpr unsigned int noGPIO{999u};
-    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 12, 13, 14, 16};
+    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 12, 13, 14};
 }
 #endif
 namespace constanstsCloudIO
@@ -122,6 +127,7 @@ namespace Discovery
 namespace Family
 {
     constexpr const char *SWITCH{"SWITCH"};
+    constexpr const char *GARDEN{"GARDEN"};
     constexpr const char *LIGTH{"LIGHT"};
     constexpr const char *CLIMATE{"CLIMATE"};
     constexpr const char *SECURITY{"SECURITY"};
@@ -135,6 +141,10 @@ namespace I18N
 {
     constexpr const char *SWICTH_ONE{"Interruptor1"};
     constexpr const char *SWICTH_TWO{"Interruptor2"};
+    constexpr const char *VALVE_ONE{"Válvula 1"};
+    constexpr const char *VALVE_TWO{"Válvula 2"};
+    constexpr const char *VALVE_THREE{"Válvula 3"};
+    constexpr const char *VALVE_FOUR{"Válvula 4"};
     constexpr const char *GARAGE{"Garagem"};
     constexpr const char *COVER{"Estore"};
     constexpr const char *HAN{"Contador"};
@@ -168,5 +178,6 @@ namespace FeatureDrivers
     constexpr const char *DOOR{"DOOR"};
     constexpr const char *WINDOW{"WINDOW"};
     constexpr const char *PIR{"PIR"};
+    constexpr const char *GARDEN_VALVE{"GARDEN_VALVE"};
     constexpr const char *INVALID{"INVALID"};
 }

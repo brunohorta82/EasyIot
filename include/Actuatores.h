@@ -39,6 +39,7 @@ enum ActuatorDriver
     LIGHT_PUSH = 7,
     LIGHT_LATCH = 8,
     GARAGE_PUSH = 9,
+    GARDEN_VALVE = 10,
     INVALID = 999
 };
 
@@ -105,6 +106,10 @@ public:
     {
         return driver == SWITCH_PUSH || driver == SWITCH_LATCH;
     };
+    constexpr bool isGardenValve()
+    {
+        return driver == GARDEN_VALVE;
+    };
     constexpr bool isGarage()
     {
         return driver == GARAGE_PUSH;
@@ -131,6 +136,8 @@ public:
             return Family::SECURITY;
         if (isSwitch())
             return Family::SWITCH;
+        if (isGardenValve())
+            return Family::GARDEN;
         return Family::NONE;
     };
     String driverToText()

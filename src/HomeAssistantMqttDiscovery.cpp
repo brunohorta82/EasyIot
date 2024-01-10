@@ -69,6 +69,15 @@ void createHaSwitch(Actuator &sw)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
   }
+  else if (sw.isGardenValve())
+  {
+    object["stat_t"] = sw.readTopic;
+    object["ic"] = "mdi:pipe-valve";
+    object["pl_on"] = ActuatorState::ON_CLOSE;
+    object["pl_off"] = ActuatorState::OFF_OPEN;
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/switch/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
+  }
   doc.clear();
 }
 

@@ -186,7 +186,7 @@ function fillDevices() {
             a.getElementsByTagName("input").item(0).id = f.id;
             a.getElementsByTagName("input").item(1).value = Math.abs(parseInt(f.state) - 100);
             a.getElementsByTagName("input").item(1).id = f.id;
-            if ("SWITCH" === f.family) {
+            if ("SWITCH" === f.family || "GARDEN" === f.family) {
                 a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
                 appendSvgPath(icon, "M20 12C22.7614 12 25 14.2386 25 17L25 24C25 26.7614 22.7614 29 20 29C17.2386 29 15 26.7614 15 24L15 17C15 14.2386 17.2386 12 20 12Z");
                 let b = document.createElementNS("http://www.w3.org/2000/svg", 'circle');

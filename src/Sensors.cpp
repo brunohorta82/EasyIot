@@ -12,6 +12,7 @@
 #include <SensirionI2CSht4x.h>
 #include <LTR303.h>
 #include "DHT.h"
+#include <VL53L0X.h>
 extern ConfigOnofre config;
 void Sensor::notifyState()
 {
@@ -52,6 +53,44 @@ void Sensor::loop()
   {
   case INVALID_SENSOR:
     return;
+  case VL53l0X:
+  {
+
+    if (lastRead + delayRead < millis())
+    {
+      static VL53L0X sensor;
+      if (!isInitialized())
+      {
+        sensor.setTimeout(500);
+        if (!sensor.init())
+        {
+#ifdef DEBUG_ONOFRE
+          Log.error("%s Failed to detect and initialize sensor " CR, tags::sensors);
+#endif
+          setError();
+        }
+        sensor.setSignalRateLimit(0.1);                                 // LONG_RANGE
+        sensor.setVcselPulsePeriod(VL53L0X::VcselPeriodPreRange, 18);   // LONG_RANGE
+        sensor.setVcselPulsePeriod(VL53L0X::VcselPeriodFinalRange, 14); // LONG_RANGE
+        sensor.setMeasurementTimingBudget(200000);                      // HIGH_ACCURACY
+      }
+
+      lastRead = millis();
+      uint16_t measureValue = sensor.readRangeContinuousMillimeters();
+      StaticJsonDocument<256> doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+      obj["messure"] = measureValue;
+      serializeJson(doc, state);
+      doc.clear();
+      notifyState();
+      lastRead = millis();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  break;
   case DHT_11:
   case DHT_21:
   case DHT_22:
@@ -82,7 +121,6 @@ void Sensor::loop()
       serializeJson(doc, state);
       doc.clear();
       notifyState();
-      lastRead = millis();
 #ifdef DEBUG_ONOFRE
       Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
@@ -159,7 +197,7 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["state"] = currentState ? "opened" : "closed";
+      obj["state"] = currentState ? "open" : "closed";
       serializeJson(doc, state);
       doc.clear();
       notifyState();
@@ -209,7 +247,7 @@ void Sensor::loop()
     if (lastRead + delayRead < millis())
     {
       lastRead = millis();
-      static int gain = 3;
+      static int gain = 6;
       static LTR303 light;
       if (!isInitialized())
       {

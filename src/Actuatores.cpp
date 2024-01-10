@@ -236,7 +236,7 @@ void Actuator::setup()
   {
     configPIN(output, OUTPUT);
     writeToPIN(output, 0);
-    if (isLight() || isSwitch())
+    if (isLight() || isSwitch() || isGardenValve())
     {
       writeToPIN(output, state);
     }
