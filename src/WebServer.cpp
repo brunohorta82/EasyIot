@@ -192,7 +192,7 @@ public:
     {
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);
-      if (config.templateId != 0)
+      if (config.templateId == 0)
       {
         form.replace("class='hide'", "");
       }
