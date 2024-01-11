@@ -230,7 +230,8 @@ fieldset {
     color: #ccc;
     background-color: #333;
     display: block;
-    width: 120px;
+    width: 140px;
+    text-align: center;
     height: 22px;
     border: 0 solid #ccc;
     border-bottom: 1px solid #ccc;

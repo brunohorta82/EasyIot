@@ -467,7 +467,7 @@ void Sensor::loop()
       {
         config.i2cDiscovery();
       }
-      static SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
+      SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
       PZEM004Tv30 pzemv03(softwareSerial);
 #endif
 #if defined(ESP32)

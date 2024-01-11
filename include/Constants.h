@@ -93,8 +93,8 @@ namespace DefaultPins
     constexpr unsigned int INPUT_TWO{13u};
     constexpr unsigned int OUTPUT_ONE{4u};
     constexpr unsigned int OUTPUT_TWO{5u};
-    constexpr unsigned int OUTPUT_VALVE_THREE{13u};
-    constexpr unsigned int OUTPUT_VALVE_FOUR{14u};
+    constexpr unsigned int OUTPUT_VALVE_THREE{14u};
+    constexpr unsigned int OUTPUT_VALVE_FOUR{13u};
     constexpr unsigned int PZEM_TX{3u};
     constexpr unsigned int PZEM_RX{1u};
     constexpr int SDA{2u};
@@ -118,10 +118,11 @@ namespace constanstsCloudIO
 
 namespace Discovery
 {
-    constexpr int I2C_SHT4X_ADDRESS{0x44};         // TEMPERATURE/HUMIDITY
-    constexpr int I2C_LTR303_ADDRESS{0x29};        // ILLUMINANCE
-    constexpr int I2C_SSD1306_ADDRESS{0x3C};       // DISPLAY
-    constexpr int MODBUS_PZEM_ADDRESS_START{0x10}; // POWER METER
+    constexpr int I2C_SHT4X_ADDRESS{0x44};           // TEMPERATURE/HUMIDITY
+    constexpr int I2C_LTR303_ADDRESS{0x29};          // ILLUMINANCE
+    constexpr int I2C_SSD1306_ADDRESS{0x3C};         // DISPLAY
+    constexpr int MODBUS_PZEM_ADDRESS_START{0x10};   // POWER METER
+    constexpr int MODBUS_PZEM_ADDRESS_DEFAULT{0xF8}; // POWER METER
 }
 
 namespace Family

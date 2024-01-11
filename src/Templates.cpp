@@ -164,6 +164,9 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
         case SensorDriver::RAIN:
             prepareRain(name, input1);
             break;
+        case SensorDriver::PZEM_004T_V03:
+            preparePzem(name, input1, input2, Discovery::MODBUS_PZEM_ADDRESS_DEFAULT);
+            break;
         default:
             break;
         }

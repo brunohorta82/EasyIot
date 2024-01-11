@@ -60,6 +60,7 @@ public:
     case DHT_11:
     case DHT_21:
     case DHT_22:
+      return Family::CLIMATE;
     case RAIN:
       return Family::GARDEN;
     case PZEM_004T_V03:

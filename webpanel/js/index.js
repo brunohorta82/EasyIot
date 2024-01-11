@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.122.154"
+let baseUrl = "http://192.168.187.242"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -222,23 +222,25 @@ function fillDevices() {
             source.addEventListener(f.id, (s) => {
                 const j = JSON.parse(s.data);
                 const label =findById("f-" + f.id).getElementsByClassName("feature-value").item(0);
-                if (j.error)
-                    label.textContent = "Error";
-                if (j.state)
-                    label.textContent = j.state;
-                if (j.lux)
-                    label.textContent = Math.round(j.lux*100)/100 + "lux";
-                if (j.temperature)
-                    label.textContent = Math.trunc(j.temperature) + "º";
-                if (j.rain)
-                    label.textContent = j.moisture;
-                if (j.motion)
-                    label.textContent = j.motion;
-                if (j.temperature && j.humidity)
-                    label.textContent = Math.trunc(j.temperature) + "º | " + Math.trunc(j.humidity) + "%";
-                if (j.power)
-                    label.textContent = Math.trunc(j.power) + "W";
-
+                if(label) {
+                    if (j.error!== undefined)
+                        label.textContent = "Error";
+                    if (j.state!== undefined)
+                        label.textContent = j.state;
+                    if (j.lux!== undefined)
+                        label.textContent = Math.round(j.lux * 100) / 100 + "lux";
+                    if (j.temperature!== undefined)
+                        label.textContent = Math.trunc(j.temperature) + "º";
+                    if (j.rain!== undefined)
+                        label.textContent = j.moisture;
+                    if (j.motion!== undefined)
+                        label.textContent = j.motion;
+                    if (j.temperature  !== undefined && j.humidity  !== undefined)
+                        label.textContent = Math.trunc(j.temperature) + "º | " + Math.trunc(j.humidity) + "%";
+                    if (j.power  !== undefined) {
+                        label.textContent = Math.trunc( j.power) + "W";
+                    }
+                }
             })
         }
         createModal(a, modal, f);
@@ -412,14 +414,18 @@ function createModal(a, modal, f) {
 
 function driverSelect(a) {
     let p2 = findById("f-n-pin-2-g");
-    let pu = findById("pin-up-l");
-    let pd = findById("pin-down-l");
-    pu.textContent = getI18n("pin_input")
-    pd.textContent = getI18n("pin_input")
+    let p1l = findById("pin-up-l");
+    let p2l = findById("pin-down-l");
+    p1l.textContent = getI18n("pin_input")
+    p2l.textContent = getI18n("pin_input")
     if (parseInt(a.value) === 4 || parseInt(a.value) === 5) {
         p2.classList.remove("hide");
-        pu.textContent = getI18n("pin_up")
-        pd.textContent = getI18n("pin_down")
+        p1l.textContent = getI18n("pin_up")
+        p2l.textContent = getI18n("pin_down")
+    }  if (parseInt(a.value) === 71) {
+        p2.classList.remove("hide");
+        p1l.textContent = 'RX'
+        p2l.textContent = 'TX'
     } else {
         p2.classList.add("hide");
     }

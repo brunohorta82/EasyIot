@@ -57,7 +57,9 @@ public:
   ConfigOnofre &resumeFeatures();
   ConfigOnofre &reloadFeatures();
   void i2cDiscovery();
+#ifdef ESP32
   void pzemDiscovery();
+#endif
   bool isSensorExists(int hwAddress);
   void generateId(String &id, const String &name, int familyCode, int io, size_t maxSize);
   void loadTemplate(int templateId);
@@ -82,7 +84,7 @@ public:
   void requestLoadDefaults();
   bool isLoadDefaultsRequested();
 
-    constexpr bool isLoopFeaturesPaused()
+  constexpr bool isLoopFeaturesPaused()
   {
     return pauseFeaturesLoop;
   }

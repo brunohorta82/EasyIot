@@ -65,12 +65,12 @@ bool ConfigOnofre::isSensorExists(int hwAddress)
   }
   return false;
 }
-
+#ifdef ESP32
 void ConfigOnofre::pzemDiscovery()
 {
+
   bool found = false;
   bool needsSave = false;
-#ifdef ESP32
   for (int i = 0; i < 3; i++)
   {
     PZEM004Tv30 pzem(Serial1, DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, Discovery::MODBUS_PZEM_ADDRESS_START + i);
@@ -89,16 +89,11 @@ void ConfigOnofre::pzemDiscovery()
       }
     }
   }
-#endif
+
   if (!found)
   {
-#ifdef ESP8266
-    SoftwareSerial softwareSerial = SoftwareSerial(DefaultPins::PZEM_TX, DefaultPins::PZEM_RX);
-    PZEM004Tv30 pzem(softwareSerial);
-#endif
-#ifdef ESP32
     PZEM004Tv30 pzem(Serial1, DefaultPins::PZEM_TX, DefaultPins::PZEM_RX);
-#endif
+
     delay(200);
     float voltageOne = pzem.voltage();
     if (!isnan(voltageOne))
@@ -110,17 +105,15 @@ void ConfigOnofre::pzemDiscovery()
         needsSave = true;
       }
     }
-#ifdef ESP8266
-    softwareSerial.end();
-#endif
   }
 
   if (needsSave)
   {
     save();
   }
-}
 
+}
+#endif
 void ConfigOnofre::i2cDiscovery()
 {
 #ifdef DEBUG_ONOFRE
