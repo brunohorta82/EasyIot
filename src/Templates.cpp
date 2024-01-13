@@ -265,8 +265,10 @@ void templateSelect(enum Template _template)
     case GARDEN:
         prepareActuator(I18N::VALVE_ONE, DefaultPins::OUTPUT_ONE, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
         prepareActuator(I18N::VALVE_TWO, DefaultPins::OUTPUT_TWO, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+#ifdef ESP8266
         prepareActuator(I18N::VALVE_THREE, DefaultPins::OUTPUT_VALVE_THREE, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
         prepareActuator(I18N::VALVE_FOUR, DefaultPins::OUTPUT_VALVE_FOUR, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+#endif
         break;
     default:
         return;

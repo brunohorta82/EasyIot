@@ -128,15 +128,15 @@ void addToHomeAssistant(Sensor &s)
     object["uniq_id"] = uniqueId;
     object["unit_of_meas"] = "lx";
     object["dev_cla"] = "illuminance";
-    object["val_tpl"] = "{{value_json.lux}}";
+    object["val_tpl"] = "{{value_json.lux  | round(2) }}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     break;
   case VL53l0X:
     object["uniq_id"] = uniqueId;
-    object["unit_of_meas"] = "lx";
-    object["dev_cla"] = "illuminance";
-    object["val_tpl"] = "{{value_json.lux}}";
+    object["unit_of_meas"] = "mm";
+    object["dev_cla"] = "level";
+    object["val_tpl"] = "{{value_json.distance}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     break;

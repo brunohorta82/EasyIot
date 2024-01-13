@@ -429,6 +429,7 @@ void Sensor::loop()
           {
 #ifdef ESP8266
             serialConf = SWSERIAL_8N1;
+            softwareSerial.end();
 #endif
 #ifdef ESP32
             serialConf = SERIAL_8N1;

@@ -23,7 +23,7 @@ namespace constantsSensor
     constexpr const char *noneClass{"none"};
     constexpr const char *familySensor{"sensor"};
     constexpr const char *binarySensorFamily{"binary_sensor"};
-    constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{60000};
+    constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{120000};
 } // namespace constantsSensor
 namespace tags
 {

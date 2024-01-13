@@ -23,7 +23,7 @@ void checkInternalRoutines()
 
   if (config.isWifiScanRequested())
   {
-#ifdef DEBUG_ONOFREs
+#ifdef DEBUG_ONOFRE
     Log.notice("%sScan Network.", tags::system);
 #endif
     scanNewWifiNetworks();
@@ -40,7 +40,7 @@ void checkInternalRoutines()
 
   if (config.isLoadDefaultsRequested())
   {
-#ifdef DEBUG_ONOFREs
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Load Defaults requested.", tags::system);
 #endif
     LittleFS.format();
@@ -49,7 +49,7 @@ void checkInternalRoutines()
 
   if (config.isAutoUpdateRequested())
   {
-#ifdef DEBUG_ONOFREs
+#ifdef DEBUG_ONOFRE
     Log.notice("%sAuto Update Request.", tags::system);
 #endif
     performUpdate();
