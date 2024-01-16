@@ -62,7 +62,7 @@ void preparePir(String name, unsigned int inputPin)
     sensor.inputs = {inputPin};
     sensor.driver = SensorDriver::PIR;
     sensor.hwAddress = inputPin;
-    sensor.delayRead = constantsConfig::rainDelay;
+    sensor.delayRead = constantsConfig::pirDelay;
     String idStr;
     config.generateId(idStr, sensor.name, sensor.driver, inputPin, sizeof(sensor.uniqueId));
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
@@ -262,6 +262,7 @@ void templateSelect(enum Template _template)
         break;
     case HAN_MODULE:
         prepareHAN();
+        break;
     case GARDEN:
         prepareActuator(I18N::VALVE_ONE, DefaultPins::OUTPUT_ONE, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
         prepareActuator(I18N::VALVE_TWO, DefaultPins::OUTPUT_TWO, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);

@@ -23,6 +23,12 @@ body {
 
 }
 
+.feature-details {
+    width: 100%;
+    height: 79px;
+    display: flex;
+}
+
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -74,17 +80,19 @@ body {
 .feature-box {
     background-color: #333;
     width: 400px;
+    height: 124px;
     border-radius: 10px;
     border-color: #474646;
     border-style: solid;
     border-width: 1px;
-    display: flex;
     padding: 12px;
     margin: 10px;
-    flex-direction: row;
+    display: flex;
+    flex-flow: column;
+
 }
 
-.feature-box>div {
+.feature-box > div {
     flex-grow: 1;
 }
 
@@ -96,16 +104,16 @@ body {
     transform: translateY(-50%);
 }
 
-.onofre-menu>li>a {
+.onofre-menu > li > a {
     border-left: 3px solid transparent;
     color: #fff;
     height: 46px;
     text-decoration: none
 }
 
-.onofre-menu>li.active>a,
-.onofre-menu>li.menu-open>a,
-.onofre-menu>li:hover>a {
+.onofre-menu > li.active > a,
+.onofre-menu > li.menu-open > a,
+.onofre-menu > li:hover > a {
     color: #fff;
     border-bottom: 4px solid #333;
     text-decoration: none
@@ -145,13 +153,13 @@ body {
     padding: 0
 }
 
-.onofre-menu>li {
+.onofre-menu > li {
     margin: 0;
     padding: 0;
     display: inline-block
 }
 
-.onofre-menu>li>a {
+.onofre-menu > li > a {
     padding-top: 12px;
     padding-left: 10px;
     padding-right: 10px;
@@ -345,17 +353,15 @@ a {
     transition: .4s;
 }
 
-input:checked+.slider {
-    background-color: #40DF86;
-    ;
+input:checked + .slider {
+    background-color: #40DF86;;
 }
 
-input:focus+.slider {
-    box-shadow: 0 0 1px #40DF86;
-    ;
+input:focus + .slider {
+    box-shadow: 0 0 1px #40DF86;;
 }
 
-input:checked+.slider:before {
+input:checked + .slider:before {
     -webkit-transform: translateX(26px);
     -ms-transform: translateX(26px);
     transform: translateX(26px);
@@ -433,8 +439,7 @@ input:checked+.slider:before {
 
 .close:hover,
 .close:focus {
-    color: #40DF86;
-    ;
+    color: #40DF86;;
     text-decoration: none;
     cursor: pointer;
 }
@@ -574,4 +579,33 @@ input[type="range"]::-ms-fill-upper {
 .tooltip:hover .tooltiptext {
     visibility: visible;
     opacity: 1;
+}
+
+.gpio-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    height: 20px;
+    font-size: 9px;
+}
+
+
+.gpio-in {
+    background-color: cornflowerblue;
+    padding: 5px;
+    height: 20px;
+    color: #222222;
+    border-radius: 20px;
+    min-width: 20px;
+    text-align: center;
+}
+
+.gpio-out {
+    background-color: #FFB74B;
+    padding: 5px;
+    color: #222222;
+    height: 20px;
+    border-radius: 20px;
+    min-width: 20px;
+    text-align: center;
 }

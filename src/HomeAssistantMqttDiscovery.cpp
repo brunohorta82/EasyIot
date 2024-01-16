@@ -150,8 +150,8 @@ void addToHomeAssistant(Sensor &s)
   case PIR:
     object["uniq_id"] = uniqueId;
     object["dev_cla"] = "motion";
-    object["pl_on"] = "yes";
-    object["pl_off"] = "no";
+    object["pl_on"] = Payloads::motionOnPayload;
+    object["pl_off"] = Payloads::motionOffPayload;
     object["val_tpl"] = "{{value_json.motion}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
@@ -159,8 +159,8 @@ void addToHomeAssistant(Sensor &s)
   case DOOR:
     object["uniq_id"] = uniqueId;
     object["dev_cla"] = "door";
-    object["pl_on"] = "open";
-    object["pl_off"] = "close";
+    object["pl_on"] = Payloads::windowDoornOnPayload;
+    object["pl_off"] = Payloads::windowDoornOffPayload;
     object["val_tpl"] = "{{value_json.state}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
@@ -168,8 +168,8 @@ void addToHomeAssistant(Sensor &s)
   case WINDOW:
     object["uniq_id"] = uniqueId;
     object["dev_cla"] = "window";
-    object["pl_on"] = "open";
-    object["pl_off"] = "close";
+    object["pl_on"] = Payloads::windowDoornOnPayload;
+    object["pl_off"] = Payloads::windowDoornOffPayload;
     object["val_tpl"] = "{{value_json.state}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);

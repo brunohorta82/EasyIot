@@ -9,15 +9,15 @@
         </div>
         <div class="form-group">
             <label for="f-n-driver"><span class="lang-driver">Driver</span></label>
-            <select onchange="driverSelect(this)" name="pins" style="width: 200px" class="form-control" id="f-n-driver">
-                <option value="7">Iluminação Pulsador</option>
-                <option value="8">Iluminação Normal</option>
-                <option value="4">Estore Pulsador Duplo</option>
-                <option value="5">Estore Normal Duplo</option>
-                <option value="1">Interruptor Pulsador</option>
-                <option value="2">Interruptor Normal</option>
-                <option value="3">Estore Pulsador</option>
-                <option value="9">Garagem</option>
+            <select onchange="driverSelect(this)" name="pins" style="width: 224px" class="form-control" id="f-n-driver">
+                <option value="7">Iluminação Pulsador Virtual</option>
+                <option value="8">Iluminação Normal Virtual</option>
+                <option value="4">Estore Pulsador Duplo Virtual</option>
+                <option value="5">Estore Normal Duplo Virtual</option>
+                <option value="1">Interruptor Pulsador Virtual</option>
+                <option value="2">Interruptor Normal Virtual</option>
+                <option value="3">Estore Pulsador Virtual</option>
+                <option value="9">Garagem Virtual</option>
                 <option value="111">DHT 11</option>
                 <option value="121">DHT 21</option>
                 <option value="122">DHT 22</option>
@@ -28,7 +28,6 @@
                 <option value="85">Sensor Janela</option>
                 <option value="71">Pzem-004T V3</option>
             </select>
-
         </div>
         <div class="form-group">
             <label id="pin-up-l" for="f-n-pin-1"><span class="lang-pin-up">Pino Entrada</span></label>
@@ -42,36 +41,43 @@
         </div>
         <button type="button" onclick="create()" class="btn-update" id="btn-create"><span
             class="lang-save">CRIAR</span></button>
-
     </div>
 
 </div>
 <hr style="height:2px;border-width:0;color:gray;background-color:rgb(34, 139, 34)">
 <div class="box-body">
-
     <div class="features" id="devices_config">
         <template id="ACTUATOR">
             <div>
                 <svg width="30px" height="30px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
                 </svg>
                 <div class="feature-box">
-                    <?xml version="1.0" encoding="utf-8"?>
-                    <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-                    <label><span class="feature-name"></span></label>
-                    <label class=" switch">
-                        <input onchange="toggleSwitch(this)" type="checkbox">
-                        <span class="slider round"></span>
-                    </label>
-                    <input onchange="shutterPercentage(this)" class="shutter-slider" min="0" max="100" type="range"/>
+                    <div class="feature-details">
+                        <label><span class="feature-name"></span></label>
+                        <label class=" switch">
+                            <input onchange="toggleSwitch(this)" type="checkbox">
+                            <span class="slider round"></span>
+                        </label>
+                        <input onchange="shutterPercentage(this)" class="shutter-slider" min="0" max="100"
+                               type="range"/>
+                    </div>
+                    <div class="gpio-row">
+                    </div>
                 </div>
             </div>
         </template>
         <template id="SENSOR">
-            <div class="feature-box">
+            <div>
                 <svg viewBox="0 0 30 30">
                 </svg>
-                <label><span class="feature-name"></span></label>
-                <label><span class="feature-value"></span></label>
+                <div class="feature-box">
+                    <div class="feature-details">
+                        <label><span class="feature-name"></span></label>
+                        <label><span class="feature-value"></span></label>
+                    </div>
+                    <div class="gpio-row">
+                    </div>
+                </div>
             </div>
         </template>
     </div>

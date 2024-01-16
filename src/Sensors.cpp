@@ -38,7 +38,7 @@ void Sensor::loop()
   }
   if (error)
   {
-    if (lastErrorTimestamp + constantsSensor::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())
+    if (lastErrorTimestamp + constantsConfig::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())
     {
       error = false;
       reInit();
@@ -142,7 +142,7 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["motion"] = currentState ? "detected" : "clear";
+      obj["motion"] = currentState ? Payloads::motionOnPayload : Payloads::motionOffPayload;
       serializeJson(doc, state);
       doc.clear();
       notifyState();
@@ -169,7 +169,7 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["rain"] = currentState ? "rain" : "clear";
+      obj["rain"] = currentState ? Payloads::rainOnPayload : Payloads::rainOffPayload;
       serializeJson(doc, state);
       doc.clear();
       notifyState();
@@ -197,7 +197,7 @@ void Sensor::loop()
       StaticJsonDocument<128> doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
-      obj["state"] = currentState ? "open" : "closed";
+      obj["state"] = currentState ? Payloads::windowDoornOnPayload : Payloads::windowDoornOffPayload;
       serializeJson(doc, state);
       doc.clear();
       notifyState();

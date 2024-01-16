@@ -111,7 +111,6 @@ void ConfigOnofre::pzemDiscovery()
   {
     save();
   }
-
 }
 #endif
 void ConfigOnofre::i2cDiscovery()
@@ -653,6 +652,10 @@ void ConfigOnofre::json(JsonVariant &root)
     a["name"] = s.name;
     a["hwAddress"] = s.hwAddress;
     a["family"] = s.familyToText();
+    if (s.lastBinaryState > 0)
+    {
+      a["state"] = s.state;
+    }
     a["delayRead"] = s.delayRead;
     a["driver"] = s.driverToText();
     JsonArray inputs = a.createNestedArray("inputs");

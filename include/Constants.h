@@ -18,13 +18,17 @@ namespace constantsMqtt
     constexpr const char *unavailablePayload{"offline"};
     constexpr const int defaultPort{1883};
 } // namespace constantsMqtt
-namespace constantsSensor
+
+namespace Payloads
 {
-    constexpr const char *noneClass{"none"};
-    constexpr const char *familySensor{"sensor"};
-    constexpr const char *binarySensorFamily{"binary_sensor"};
-    constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{120000};
-} // namespace constantsSensor
+    constexpr const char *motionOnPayload{"detected"};
+    constexpr const char *motionOffPayload{"clear"};
+    constexpr const char *windowDoornOnPayload{"closed"};
+    constexpr const char *windowDoornOffPayload{"open"};
+    constexpr const char *rainOnPayload{"rain"};
+    constexpr const char *rainOffPayload{"clear"};
+}
+// namespace constantsSensor
 namespace tags
 {
     constexpr const char *system{"[SYSTEM]"};
@@ -50,7 +54,7 @@ namespace constantsConfig
     constexpr unsigned long energyReadDelay{5000l};
     constexpr unsigned long climateReadDelay{10000l};
     constexpr unsigned long rainDelay{5000l};
-    constexpr unsigned long pirDelay{1000l};
+    constexpr unsigned long pirDelay{100l};
     constexpr unsigned long hallsensorDelay{1000l};
     constexpr unsigned long illuminanceReadDelay{5000l};
     constexpr unsigned long storeConfigDelay{5000ul};
@@ -58,6 +62,7 @@ namespace constantsConfig
     constexpr const char *apiUser{"admin"};     // API USER
     constexpr const char *apiPassword{"xpto"};  // API PASSWORD
     constexpr const char *PW_HIDE{"******"};
+    constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{120000};
 }
 #ifdef ESP32
 namespace DefaultPins
@@ -101,7 +106,7 @@ namespace DefaultPins
     constexpr int SCL{13u};
     constexpr int HAN_TX{14u};
     constexpr int HAN_RX{12u};
-    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 12, 13, 14};
+    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 12, 13, 14, 16};
 }
 #endif
 namespace constanstsCloudIO
