@@ -652,7 +652,7 @@ void ConfigOnofre::json(JsonVariant &root)
     a["name"] = s.name;
     a["hwAddress"] = s.hwAddress;
     a["family"] = s.familyToText();
-    if (s.lastBinaryState > 0)
+    if (s.lastBinaryState >= 0)
     {
       a["state"] = s.state;
     }

@@ -134,6 +134,33 @@ function fillConfig() {
     }
 }
 
+function extracted(id,state) {
+    if(state === undefined) return;
+    const j = JSON.parse(state);
+    if (j) {
+        const label = findById("f-" + id).getElementsByClassName("feature-value").item(0);
+        if (label) {
+            if (j.error !== undefined)
+                label.textContent = "Error";
+            if (j.state !== undefined)
+                label.textContent = j.state;
+            if (j.lux !== undefined)
+                label.textContent = Math.round(j.lux * 100) / 100 + "lux";
+            if (j.temperature !== undefined)
+                label.textContent = Math.trunc(j.temperature) + "º";
+            if (j.rain !== undefined)
+                label.textContent = j.rain;
+            if (j.motion !== undefined)
+                label.textContent = j.motion;
+            if (j.temperature !== undefined && j.humidity !== undefined)
+                label.textContent = Math.trunc(j.temperature) + "º | " + Math.trunc(j.humidity) + "%";
+            if (j.power !== undefined) {
+                label.textContent = Math.trunc(j.power) + "W";
+            }
+        }
+    }
+}
+
 function fillDevices() {
     if ("ESP8266-HAN" === config.mcu) {
         findById("wizard").classList.add("hide");
@@ -234,50 +261,10 @@ function fillDevices() {
             })
         } else {
             if(f.state !== undefined) {
-                const j = JSON.parse(f.state);
-                const label = findById("f-" + f.id).getElementsByClassName("feature-value").item(0);
-                if (label) {
-                    if (j.error !== undefined)
-                        label.textContent = "Error";
-                    if (j.state !== undefined)
-                        label.textContent = j.state;
-                    if (j.lux !== undefined)
-                        label.textContent = Math.round(j.lux * 100) / 100 + "lux";
-                    if (j.temperature !== undefined)
-                        label.textContent = Math.trunc(j.temperature) + "º";
-                    if (j.rain !== undefined)
-                        label.textContent = j.rain;
-                    if (j.motion !== undefined)
-                        label.textContent = j.motion;
-                    if (j.temperature !== undefined && j.humidity !== undefined)
-                        label.textContent = Math.trunc(j.temperature) + "º | " + Math.trunc(j.humidity) + "%";
-                    if (j.power !== undefined) {
-                        label.textContent = Math.trunc(j.power) + "W";
-                    }
-                }
+                extracted(f.id,f.state);
             }
             source.addEventListener(f.id, (s) => {
-                const j = JSON.parse(s.data);
-                const label = findById("f-" + f.id).getElementsByClassName("feature-value").item(0);
-                if (label) {
-                    if (j.error !== undefined)
-                        label.textContent = "Error";
-                    if (j.state !== undefined)
-                        label.textContent = j.state;
-                    if (j.lux !== undefined)
-                        label.textContent = Math.round(j.lux * 100) / 100 + "lux";
-                    if (j.temperature !== undefined)
-                        label.textContent = Math.trunc(j.temperature) + "º";
-                    if (j.rain !== undefined)
-                        label.textContent = j.rain;
-                    if (j.motion !== undefined)
-                        label.textContent = j.motion;
-                    if (j.temperature !== undefined && j.humidity !== undefined)
-                        label.textContent = Math.trunc(j.temperature) + "º | " + Math.trunc(j.humidity) + "%";
-                    if (j.power !== undefined) {
-                        label.textContent = Math.trunc(j.power) + "W";
-                    }
-                }
+                extracted(f.id,s.data);
             })
         }
         createModal(a, modal, f);
