@@ -132,7 +132,7 @@ void addToHomeAssistant(Sensor &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     break;
-  case VL53l0X:
+  case TMF880X:
     object["uniq_id"] = uniqueId;
     object["unit_of_meas"] = "mm";
     object["dev_cla"] = "level";

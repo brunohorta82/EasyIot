@@ -228,7 +228,7 @@ void loadWebPanel()
 #endif
               AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
               response->addHeader("Content-Encoding", "gzip");
-              response->addHeader("Cache-Control", "max-age=600");
+              response->addHeader("Cache-Control", "max-age=30");
               request->send(response); });
 
   server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -290,7 +290,7 @@ void loadAPI()
 #endif
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
-    config.json(root);
+    config.json(root,true);
     response->setLength();
     request->send(response); });
 
@@ -305,7 +305,7 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     JsonObject configJson = json.as<JsonObject>();
-    config.update(configJson).json(root);
+    config.update(configJson).json(root,true);
     response->setLength();
     request->send(response); }));
 
@@ -324,7 +324,7 @@ void loadAPI()
     int result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
     if (result == 0)
     {
-      config.save().reloadFeatures().json(root);
+      config.save().reloadFeatures().json(root,true);
       }else{
       response->setCode(400);
       root["result"] = result;

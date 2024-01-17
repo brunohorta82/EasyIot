@@ -190,7 +190,7 @@ void connectToCloudIO()
   String payload = "";
   DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
   JsonVariant root = doc.to<JsonVariant>();
-  config.json(root);
+  config.json(root, false);
   serializeJson(doc, payload);
   http.begin(client, constanstsCloudIO::configUrl);
   http.addHeader("Content-Type", "application/json");

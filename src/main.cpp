@@ -104,9 +104,12 @@ void setup()
 
   startFileSystem();
   config.load();
+  
 #ifdef ESP32
+#ifndef HAN_MODE
   config.i2cDiscovery();
   config.pzemDiscovery();
+#endif
 #endif
   setupWiFi();
   setupCors();

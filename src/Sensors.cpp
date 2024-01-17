@@ -12,7 +12,7 @@
 #include <SensirionI2CSht4x.h>
 #include <LTR303.h>
 #include "DHT.h"
-#include <VL53L0X.h>
+#include "SparkFun_TMF8801_Arduino_Library.h"
 extern ConfigOnofre config;
 void Sensor::notifyState()
 {
@@ -53,41 +53,53 @@ void Sensor::loop()
   {
   case INVALID_SENSOR:
     return;
-  case VL53l0X:
+  case TMF880X:
   {
 
     if (lastRead + delayRead < millis())
     {
-      static VL53L0X sensor;
+      static TMF8801 sensor;
       if (!isInitialized())
       {
-        sensor.setTimeout(500);
-        if (!sensor.init())
+        if (sensor.begin() == true)
         {
-#ifdef DEBUG_ONOFRE
-          Log.error("%s Failed to detect and initialize sensor " CR, tags::sensors);
-#endif
-          setError();
+          sensor.enableInterrupt();
+          Serial.print("TMF8801 serial number ");
+          Serial.print(sensor.getSerialNumber());
+          Serial.println(" connected");
+          Serial.print("Chip revision: ");
+          Serial.println(sensor.getHardwareVersion());
+          Serial.print("App version: ");
+          Serial.print(sensor.getApplicationVersionMajor());
+          Serial.print(".");
+          Serial.println(sensor.getApplicationVersionMinor());
         }
-        sensor.setSignalRateLimit(0.1);                                 // LONG_RANGE
-        sensor.setVcselPulsePeriod(VL53L0X::VcselPeriodPreRange, 18);   // LONG_RANGE
-        sensor.setVcselPulsePeriod(VL53L0X::VcselPeriodFinalRange, 14); // LONG_RANGE
-        sensor.setMeasurementTimingBudget(200000);                      // HIGH_ACCURACY
+        // or an error message i something went wrong.
+        else
+        {
+          Serial.println("System halted.");
+        }
       }
+      lastRead = millis();
+      if (!sensor.isConnected())
+      {
+        sensor.wakeUpDevice();
+        sensor.begin();
+      }
+      if (sensor.dataAvailable())
+      {
 
-      lastRead = millis();
-      uint16_t measureValue = sensor.readRangeContinuousMillimeters();
-      StaticJsonDocument<256> doc;
-      JsonObject obj = doc.to<JsonObject>();
-      state.clear();
-      obj["messure"] = measureValue;
-      serializeJson(doc, state);
-      doc.clear();
-      notifyState();
-      lastRead = millis();
+        StaticJsonDocument<64> doc;
+        JsonObject obj = doc.to<JsonObject>();
+        state.clear();
+        obj["messure"] = sensor.getDistance();
+        serializeJson(doc, state);
+        doc.clear();
+        notifyState();
 #ifdef DEBUG_ONOFRE
-      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+        Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
+      }
     }
   }
   break;
@@ -369,43 +381,7 @@ void Sensor::loop()
         sprintf(strftime_buf, "%d-%02d-%02dT%02d:%02d:%02d", clock.year, clock.month, clock.day_of_month, clock.hour, clock.minute, clock.second);
         obj["dateTime"] = strftime_buf;
       }
-      if (modbus->readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == modbus->ku8MBSuccess)
-      {
-        obj["voltage"] = modbus->getResponseBuffer(0) / 10.0;
-        obj["current"] = modbus->getResponseBuffer(1) / 10.0;
-      }
-      if (modbus->readInputRegisters(ACTIVE_ENERGY_IMPORT_PLUS_A, 2) == modbus->ku8MBSuccess)
-      {
-        obj["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-        obj["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-      }
-      if (modbus->readInputRegisters(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3) == modbus->ku8MBSuccess)
-      {
-        obj["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-        obj["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-        obj["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
-      }
-      if (modbus->readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3) == modbus->ku8MBSuccess)
-      {
-        obj["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
-        obj["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
-        obj["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
-      }
-      if (modbus->readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == modbus->ku8MBSuccess)
-      {
-        obj["frequency"] = modbus->getResponseBuffer(0) / 10.0;
-      }
-      if (modbus->readInputRegisters(CURRENTLY_ACTIVE_TARIFF, 1) == modbus->ku8MBSuccess)
-      {
-        obj["tarif"] = modbus->getResponseBuffer(0) >> 8;
-      }
-      if (modbus->readInputRegisters(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3) == modbus->ku8MBSuccess)
-      {
-        obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-        obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-        obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
-      }
-      if (obj.size() == 0)
+      else
       {
 #ifdef ESP8266
         if (serialConf == SWSERIAL_8N1)
@@ -419,6 +395,10 @@ void Sensor::loop()
             serialConf = SERIAL_8N2;
             Serial1.end();
 #endif
+            obj["error"] = "8N1 Fail, trying with 8N2";
+            serializeJson(obj, state);
+            doc.clear();
+            notifyState();
             reInit();
 #ifdef DEBUG_ONOFRE
             Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
@@ -438,8 +418,49 @@ void Sensor::loop()
 #ifdef DEBUG_ONOFRE
             Log.error("%s HAN read error please check the connections and try again. " CR, tags::sensors);
 #endif
-            obj["error"] = true;
+            obj["error"] = "8N2 Fail, Retry in 2 minutes";
+            serializeJson(obj, state);
+            doc.clear();
+            notifyState();
           }
+          return;
+        }
+
+        if (modbus->readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == modbus->ku8MBSuccess)
+        {
+          obj["voltage"] = modbus->getResponseBuffer(0) / 10.0;
+          obj["current"] = modbus->getResponseBuffer(1) / 10.0;
+        }
+        if (modbus->readInputRegisters(ACTIVE_ENERGY_IMPORT_PLUS_A, 2) == modbus->ku8MBSuccess)
+        {
+          obj["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+          obj["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+        }
+        if (modbus->readInputRegisters(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3) == modbus->ku8MBSuccess)
+        {
+          obj["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+          obj["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+          obj["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+        }
+        if (modbus->readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3) == modbus->ku8MBSuccess)
+        {
+          obj["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
+          obj["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
+          obj["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
+        }
+        if (modbus->readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == modbus->ku8MBSuccess)
+        {
+          obj["frequency"] = modbus->getResponseBuffer(0) / 10.0;
+        }
+        if (modbus->readInputRegisters(CURRENTLY_ACTIVE_TARIFF, 1) == modbus->ku8MBSuccess)
+        {
+          obj["tarif"] = modbus->getResponseBuffer(0) >> 8;
+        }
+        if (modbus->readInputRegisters(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3) == modbus->ku8MBSuccess)
+        {
+          obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+          obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+          obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
         }
         obj["signal"] = WiFi.RSSI();
         obj["comm"] = serialConf;

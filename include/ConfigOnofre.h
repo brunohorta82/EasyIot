@@ -48,7 +48,7 @@ public:
 
   // CONTROL VARIABLES
   int featureIds = 0;
-  void json(JsonVariant &root);
+  void json(JsonVariant &root, bool allFields);
   ConfigOnofre &update(JsonObject &root);
   ConfigOnofre &save();
   ConfigOnofre &init();

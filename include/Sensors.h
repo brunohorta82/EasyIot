@@ -19,7 +19,7 @@ enum SensorDriver
   WINDOW = 85,
   DS18B20 = 90,
   SHT4X = 91,
-  VL53l0X = 92
+  TMF880X = 92
 
 };
 

@@ -164,6 +164,9 @@ void ConfigOnofre::i2cDiscovery()
         }
       }
     }
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Smart Bus Done." CR, tags::config);
+#endif
   }
 }
 ConfigOnofre &ConfigOnofre::pauseFeatures()
@@ -185,14 +188,19 @@ ConfigOnofre &ConfigOnofre::load()
   }
 
   File file = LittleFS.open(configFilenames::config, "r+");
-  StaticJsonDocument<DYNAMIC_JSON_DOCUMENT_SIZE> doc;
-#ifdef DEBUG_ONOFRE
+  DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
+
   DeserializationError error = deserializeJson(doc, file);
+  file.close();
   if (error)
+  {
+#ifdef DEBUG_ONOFRE
     Log.notice("%s Failed to read file, using default configuration." CR, tags::config);
-#else
-  deserializeJson(doc, file);
+    serializeJson(doc, Serial);
 #endif
+    doc.clear();
+    return init();
+  }
 
 #ifdef ESP8266
   strlcpy(chipId, String(ESP.getChipId()).c_str(), sizeof(chipId));
@@ -287,9 +295,10 @@ ConfigOnofre &ConfigOnofre::load()
       sensors.push_back(sensor);
     }
   }
-  file.close();
+  doc.clear();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
+
 #endif
   return *this;
 }
@@ -570,7 +579,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   return this->save();
 }
 
-void ConfigOnofre::json(JsonVariant &root)
+void ConfigOnofre::json(JsonVariant &root, bool allFields)
 {
   root["nodeId"] = nodeId;
   root["chipId"] = chipId;
@@ -581,7 +590,8 @@ void ConfigOnofre::json(JsonVariant &root)
   root["wifiSSID"] = wifiSSID;
   root["dhcp"] = dhcp;
   // DYNAMIC VALUES
-  root["mqttConnected"] = mqttConnected();
+  if (allFields)
+    root["mqttConnected"] = mqttConnected();
   root["wifiIp"] = WiFi.localIP().toString();
   root["wifiMask"] = WiFi.subnetMask().toString();
   root["wifiGw"] = WiFi.gatewayIP().toString();
@@ -597,8 +607,8 @@ void ConfigOnofre::json(JsonVariant &root)
 #endif
 #endif
   root["mac"] = WiFi.macAddress();
-  root["wifiStatus"] = WiFi.isConnected();
-  root["signal"] = WiFi.RSSI();
+  if (allFields)
+    root["signal"] = WiFi.RSSI();
   JsonVariant outInPins = root.createNestedArray("outInPins");
 #ifdef ESP32
   JsonVariant inPins = root.createNestedArray("inPins");
@@ -617,21 +627,25 @@ void ConfigOnofre::json(JsonVariant &root)
   for (auto s : actuatores)
   {
     JsonObject a = features.createNestedObject();
-    a["group"] = "ACTUATOR";
+    if (allFields)
+      a["group"] = "ACTUATOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
     a["typeControl"] = s.typeControl;
     if (s.typeControl == ActuatorControlType::GPIO_OUTPUT)
     {
-      a["upCourseTime"] = s.upCourseTime;
-      a["downCourseTime"] = s.downCourseTime;
+      if (allFields)
+        a["upCourseTime"] = s.upCourseTime;
+      if (allFields)
+        a["downCourseTime"] = s.downCourseTime;
       JsonArray outputs = a.createNestedArray("outputs");
       for (auto out : s.outputs)
       {
         outputs.add(out);
       }
     }
-    a["inputMode"] = s.driverToInputMode();
+    if (allFields)
+      a["inputMode"] = s.driverToInputMode();
     a["family"] = s.familyToText();
     a["driver"] = s.driverToText();
     a["state"] = s.state;
@@ -647,16 +661,16 @@ void ConfigOnofre::json(JsonVariant &root)
   for (auto s : sensors)
   {
     JsonObject a = features.createNestedObject();
-    a["group"] = "SENSOR";
+    if (allFields)
+      a["group"] = "SENSOR";
     a["id"] = s.uniqueId;
     a["name"] = s.name;
-    a["hwAddress"] = s.hwAddress;
     a["family"] = s.familyToText();
     if (s.lastBinaryState >= 0)
     {
-      a["state"] = s.state;
+      if (allFields)
+        a["state"] = s.state;
     }
-    a["delayRead"] = s.delayRead;
     a["driver"] = s.driverToText();
     JsonArray inputs = a.createNestedArray("inputs");
     for (auto in : s.inputs)
