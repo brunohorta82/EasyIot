@@ -1,9 +1,9 @@
-EasyIot7/.vscode/*
-*.icloud
-EasyIot7/.DS_Store
-EasyIot7/package-lock.json
-EasyIot7/package.json
+package-lock.json
+package.json
 node_modules
 .DS_Store
-.DS_Store
-.DS_Store
+.pio
+.vscode
+.gitignore
+.vscode/launch.json
+.vscode/c_cpp_properties.json
