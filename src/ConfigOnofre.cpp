@@ -164,10 +164,10 @@ void ConfigOnofre::i2cDiscovery()
         }
       }
     }
-#ifdef DEBUG_ONOFRE
-    Log.notice("%s Smart Bus Done." CR, tags::config);
-#endif
   }
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Smart Bus Done." CR, tags::config);
+#endif
 }
 ConfigOnofre &ConfigOnofre::pauseFeatures()
 {

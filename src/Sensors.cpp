@@ -430,37 +430,44 @@ void Sensor::loop()
         {
           obj["voltage"] = modbus->getResponseBuffer(0) / 10.0;
           obj["current"] = modbus->getResponseBuffer(1) / 10.0;
+          delay(50);
         }
         if (modbus->readInputRegisters(ACTIVE_ENERGY_IMPORT_PLUS_A, 2) == modbus->ku8MBSuccess)
         {
           obj["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
           obj["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+          delay(50);
         }
         if (modbus->readInputRegisters(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3) == modbus->ku8MBSuccess)
         {
           obj["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
           obj["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
           obj["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+          delay(50);
         }
         if (modbus->readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3) == modbus->ku8MBSuccess)
         {
           obj["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
           obj["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
           obj["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
+          delay(50);
         }
         if (modbus->readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == modbus->ku8MBSuccess)
         {
           obj["frequency"] = modbus->getResponseBuffer(0) / 10.0;
+          delay(50);
         }
         if (modbus->readInputRegisters(CURRENTLY_ACTIVE_TARIFF, 1) == modbus->ku8MBSuccess)
         {
           obj["tarif"] = modbus->getResponseBuffer(0) >> 8;
+          delay(50);
         }
         if (modbus->readInputRegisters(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3) == modbus->ku8MBSuccess)
         {
           obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
           obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
           obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+          delay(50);
         }
         obj["signal"] = WiFi.RSSI();
         obj["comm"] = serialConf;

@@ -5,51 +5,344 @@
     <meta charset="utf-8">
     <title>BH OnoFre</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="css/styles.css?v=9.145">
+    <link rel="stylesheet" href="css/styles.css?v=9.148">
+    <link href="https://fonts.cdnfonts.com/css/red-hat-display" rel="stylesheet">
 </head>
-
 <body>
+<template id="ACTUATOR">
     <div>
-        <header>
-            <nav class="navbar" role="navigation">
-                <svg width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" clip-rule="evenodd"
-                        d="M9.87165 15.901C11.8044 15.901 13.3712 14.3202 13.3712 12.3702C13.3712 10.4202 11.8044 8.83936 9.87165 8.83936C7.93888 8.83936 6.37207 10.4202 6.37207 12.3702C6.37207 14.3202 7.93888 15.901 9.87165 15.901ZM23.1055 15.3013C21.9522 14.286 20.2357 14.2764 19.0712 15.2787L12.6019 20.8473C11.9143 21.4393 11.5182 22.3054 11.5182 23.2174V35.4244C11.5182 35.9979 11.0574 36.4629 10.4889 36.4629C9.92045 36.4629 9.45962 35.9979 9.45962 35.4244V23.2174C9.45962 21.6975 10.1197 20.2538 11.2658 19.2673L17.7351 13.6987C19.6759 12.0281 22.5367 12.0441 24.4589 13.7364L30.7528 19.2771C31.8729 20.2631 32.5156 21.6897 32.5156 23.1895V25.6729C33.8504 26.1707 34.802 27.4661 34.802 28.9858C34.802 30.9358 33.2352 32.5166 31.3025 32.5166C29.3697 32.5166 27.8029 30.9358 27.8029 28.9858C27.8029 27.3299 28.9327 25.9402 30.4571 25.5587V23.1895C30.4571 22.2896 30.0714 21.4337 29.3993 20.842L23.1055 15.3013Z"
-                        fill="#1D1D1D" />
-                </svg>
-                <ul class="onofre-menu" data-widget="tree">
-                    <li class=""><a href="#" id="node-btn" class="menu-item"> <span class="lang-node">ONOFRE</span></a></li>
-                    <li><a href="#" id="features-btn"> <span class="lang-features">FUNÇÕES</span></a>
-                    </li>
-                </ul>
-                <button type="button" onclick="saveConfig()" class="btn btn-primary btl-save-all"><span
-                        class="lang-save">Guardar Tudo</span></button>
-            </nav>
-        </header>
-        <div class="stats-panel">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                    d="M15.7561 23.7832C16.2799 23.2214 16.9133 22.773 17.6171 22.4655C18.3209 22.1581 19.0808 21.9983 19.8489 21.9956C20.6169 21.9929 21.3773 22.1476 22.0833 22.4502C22.7892 22.7528 23.4258 23.1967 23.9535 23.7548M13.2898 20.3582C14.1279 19.4594 15.1413 18.742 16.2674 18.25C17.3935 17.758 18.6083 17.5021 19.8371 17.4978C21.066 17.4935 22.2822 17.7412 23.4117 18.2253C24.5412 18.7094 25.56 19.4198 26.4045 20.3128M10 17.2912C11.2571 15.9431 12.7772 14.8669 14.4663 14.1289C16.1555 13.3909 17.977 13.0065 19.8203 13.0001C21.6637 12.9937 23.49 13.3651 25.1843 14.0913C26.8786 14.8174 28.4064 15.8837 29.673 17.223M19.8685 28.7422C19.2474 28.7422 18.744 28.2388 18.744 27.6178C18.744 26.9967 19.2474 26.4933 19.8685 26.4933C20.4895 26.4933 20.9929 26.9967 20.9929 27.6178C20.9929 28.2388 20.4895 28.7422 19.8685 28.7422Z"
-                    stroke="#40DF86" stroke-linecap="round" stroke-linejoin="round" />
-            </svg> <span id="ssid_lbl"></span><span id="wifi-signal">0%</span></label>
-            <span>| MQTT </span> <span id="mqtt_lbl"></span><span id="mqtt_state" class="led"></span>
-            <span>| NOME </span><label for="nodeId"><span class="lang-name"></span></label><input maxlength="30"
-                type="text" class="form-name" id="nodeId" placeholder="ex: kitchen" required /><span  id="lbl-chip"></span>
-        </div>
-        <div>
-            <section class="content container-fluid dashboard-container"></section>
-        </div>
-        <footer class="onofre-footer">
-            <span class="lang-version">Versão </span> <span id="version_lbl">-</span>
-            <div>
-                <strong><a href="https://onofre.store">OnOfre</a> - Powered by Bruno Horta @
-                    2018 in
-                    Portugal</strong>
+        <svg width="30px" height="30px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+        </svg>
+        <div class="feature-box">
+            <div class="feature-details">
+                <label><span class="feature-name"></span></label>
+                <label class=" switch">
+                    <input onchange="toggleSwitch(this)" type="checkbox">
+                    <span class="slider round"></span>
+                </label>
+                <input onchange="shutterPercentage(this)" class="shutter-slider" min="0" max="100"
+                       type="range"/>
             </div>
-        </footer>
-
+            <div class="gpio-row">
+            </div>
+        </div>
     </div>
-    <script src="js/index.js?v=9.145"></script>
+</template>
+<template id="SENSOR">
+    <div>
+        <svg viewBox="0 0 30 30">
+        </svg>
+        <div class="feature-box">
+            <div class="feature-details">
+                <label><span class="feature-name"></span></label>
+                <label><span class="feature-value"></span></label>
+            </div>
+            <div class="gpio-row">
+            </div>
+        </div>
+    </div>
+</template>
+<nav>
+    <div class="logo-img">
+        <svg width="62" height="67" viewBox="0 0 69 67" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M9.93213 67.0003C8.56083 67.0003 7.44922 65.8723 7.44922 64.4813V34.8737C7.44922 31.1869 9.04173 27.6856 11.8065 25.2927L27.4132 11.7863C32.0953 7.73406 38.9969 7.77308 43.6343 11.8775L58.8192 25.3163C61.5197 27.7081 63.0696 31.1682 63.0696 34.8058V40.6812C66.5053 41.7523 68.9999 44.9656 68.9999 48.7632C68.9999 53.4367 65.2217 57.2253 60.5611 57.2253C55.9004 57.2253 52.1222 53.4367 52.1222 48.7632C52.1222 44.9462 54.6424 41.7195 58.1053 40.6649V34.8058C58.1053 32.6234 57.1731 30.5472 55.5528 29.1122L40.3694 15.6734C37.5868 13.2107 33.4459 13.1874 30.6367 15.6186L15.0297 29.125C13.3709 30.5607 12.4154 32.6616 12.4154 34.8737V64.4813C12.4154 65.8723 11.3034 67.0003 9.93213 67.0003Z"
+                  fill="#97D700"/>
+            <path
+                d="M8.43885 16.9243C13.0995 16.9243 16.8777 13.1357 16.8777 8.46214C16.8777 3.78863 13.0995 0 8.43885 0C3.7782 0 0 3.78863 0 8.46214C0 13.1357 3.7782 16.9243 8.43885 16.9243Z"
+                fill="#97D700"/>
+        </svg>
+        <span class="logo-txt">ONOFRE</span>
+    </div>
+    <ul class="onofre-menu">
+        <li class=""><a href="#" id="node-btn" class="menu-item active"> <span class="lang-node">HOME</span></a></li>
+        <li><a href="#" id="features-btn"> <span class="lang-features">FUNÇÕES</span></a>
+        </li>
+    </ul>
+    <button type="button" onclick="saveConfig()" class="btn btn-primary btl-save-all"><span
+        class="lang-save">Guardar Tudo</span></button>
+</nav>
+<div class="stats-panel">
+    <div class="s-item">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+                d="M15.7561 23.7832C16.2799 23.2214 16.9133 22.773 17.6171 22.4655C18.3209 22.1581 19.0808 21.9983 19.8489 21.9956C20.6169 21.9929 21.3773 22.1476 22.0833 22.4502C22.7892 22.7528 23.4258 23.1967 23.9535 23.7548M13.2898 20.3582C14.1279 19.4594 15.1413 18.742 16.2674 18.25C17.3935 17.758 18.6083 17.5021 19.8371 17.4978C21.066 17.4935 22.2822 17.7412 23.4117 18.2253C24.5412 18.7094 25.56 19.4198 26.4045 20.3128M10 17.2912C11.2571 15.9431 12.7772 14.8669 14.4663 14.1289C16.1555 13.3909 17.977 13.0065 19.8203 13.0001C21.6637 12.9937 23.49 13.3651 25.1843 14.0913C26.8786 14.8174 28.4064 15.8837 29.673 17.223M19.8685 28.7422C19.2474 28.7422 18.744 28.2388 18.744 27.6178C18.744 26.9967 19.2474 26.4933 19.8685 26.4933C20.4895 26.4933 20.9929 26.9967 20.9929 27.6178C20.9929 28.2388 20.4895 28.7422 19.8685 28.7422Z"
+                stroke="#97D700" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span id="ssid_lbl"></span><span class="green" id="wifi-signal">0%</span>
+    </div>
+
+    <div class="s-item">
+        <span class="green">NOME</span><label for="nodeId"><span class="lang-name"></span></label>
+        <input oninput="this.size = this.value.length+4"
+               maxlength="30"
+               type="text" id="nodeId" placeholder="ex: kitchen" required/><span class="green" id="lbl-chip"></span>
+    </div>
+    <div class="s-item">
+        <span>MQTT</span><span id="mqtt_state" class="led"></span>
+    </div>
+</div>
+<div class="content" id="node-pn">
+    <div class="box">
+        <form>
+            <div class="box-body">
+                <div class="form-group"><label for="accessPointPassword"><span
+                    class="lang-password">Palavra Passe</span>
+                    AP</label> <input autocomplete="off" class="form-control" type="password"
+                                      id="accessPointPassword"
+                                      placeholder="ex: superPassword"/></div>
+
+                <div class="form-group"><label for="apiUser"><span
+                    class="lang-username">Utilizador</span></label>
+                    <input autocomplete="off" class="form-control" type="text" id="apiUser"
+                           placeholder="ex: admin"/>
+                </div>
+                <div class="form-group"><label for="apiPassword"><span
+                    class="lang-password">Palavra Passe</span></label>
+                    <input autocomplete="off" class="form-control" type="password" id="apiPassword"
+                           placeholder="ex: superPassword"/>
+                </div>
+            </div>
+            <h3 class="box-title">WI-FI </h3>
+            <div class="box-body">
+                <div class="form-group"><label for="wifiSSID">SSID</label>
+                    <input class="form-control" maxlength="23" autocomplete="off" type="text" id="wifiSSID"
+                           placeholder="ex: meuwifi"/>
+                </div>
+                <div class="form-group"><label for="wifiSecret"><span
+                    class="lang-password">Palavra Passe</span></label> <input class="form-control"
+                                                                              maxlength="60"
+                                                                              autocomplete="off" type="password"
+                                                                              id="wifiSecret"
+                                                                              placeholder="ex: superpassword"/>
+                </div>
+                <div class="form-group right">
+                    <label class="switch-lbl" for="dhcp">DHCP</label>
+                    <label class="switch">
+                        <input value="true" name="dhcp" id="dhcp" type="checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="box-body">
+                <div class="form-group"><label for="wifiIp">IP</label> <input class="form-control" type="text"
+                                                                              id="wifiIp"
+                                                                              maxlength="15"
+                                                                              placeholder="ex: 192.168.1.20"/>
+                </div>
+                <div class="form-group"><label for="wifiGw">Gateway</label> <input class="form-control"
+                                                                                   id="wifiGw"
+                                                                                   maxlength="15"
+                                                                                   placeholder="ex: 192.168.1.254"/>
+                </div>
+                <div class="form-group"><label for="wifiMask"><span
+                    class="lang-netmask">Máscara de Rede</span></label> <input class="form-control"
+                                                                               maxlength="15"
+                                                                               id="wifiMask"
+                                                                               placeholder="ex: 255.255.255.0"/>
+                </div>
+            </div>
+            <div class="box-body">
+                  <span class="chip"
+                        id="lbl-mac"></span>
+            </div>
+            <h3 class="box-title">MQTT</h3>
+            <div class="box-body">
+                <div class="form-group"><label for="mqttIpDns">Broker IP / DNS</label> <input
+                    class="form-control"
+                    type="text"
+                    maxlength="40"
+                    id="mqttIpDns"
+                    placeholder="ex: 192.168.1.30"/>
+                </div>
+                <div class="form-group"><label for="mqttUsername"><span
+                    class="lang-username">Utilizador</span></label>
+                    <input class="form-control" autocomplete="off" type="text"
+                           maxlength="30" id="mqttUsername" placeholder="ex: iam"/></div>
+
+
+                <div class="form-group"><label for="mqttPassword"><span
+                    class="lang-password">Palavra Passe</span></label> <input class="form-control"
+                                                                              maxlength="62"
+                                                                              type="password" autocomplete="off"
+                                                                              id="mqttPassword"
+                                                                              placeholder="ex: superstrongpassword"/>
+
+                </div>
+            </div>
+        </form>
+        <h3>Firmware</h3>
+        <div class="firmware">
+            <form role="form" method="POST" action="/update" enctype="multipart/form-data">
+                <div class="box-body">
+                    <input class="btn" id="firmwareInputFile" name="update" type="file"/>
+
+                    <button type="submit" class="btn btn-primary upload"><span
+                        class="lang-install-file-version"> Instalar ficheiro</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="box-body">
+            <form role="form" method="POST" enctype="multipart/form-data" action="/auto-update">
+                <button type="submit" id="btn-auto-update" class="btn btn-primary hide"><span
+                    class="lang-install-file-version"> Instalar ficheiro</span>
+                </button>
+            </form>
+        </div>
+        <h3>Sistema</h3>
+        <div class="box-body">
+            <button type="button" onclick="loadDefaults()" class="btn btn-danger btn-system"><span
+                class="lang-reset-factory">Carregar Configuração de Fábrica</span>
+            </button>
+            <div class="area-system-bk">
+                <button type="button"  onclick="backup()" class="btn btn-system-dual backup"><span class="lang-restart">Backup</span>
+                </button>
+                <button type="button"  onclick="restore()" class="btn btn-system-dual restore"><span class="lang-restart">Restaurar</span>
+                </button>
+            </div>
+            <button type="button" onclick="reboot()" class="btn btn-system"><span class="lang-restart">Reiniciar</span>
+            </button>
+        </div>
+    </div>
+</div>
+<div class="content hide cols" id="feature-pn">
+    <div class="box-body">
+        <div class="features" id="devices_config">
+        </div>
+    </div>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h3 class="f-name"></h3>
+            </div>
+            <div class="modal-form">
+                <label for="f-name"><span class="lang-name">Nome</span></label>
+                <input
+                    class="f-name form-control" maxlength="30" type="text" name="f-name" id="f-name"
+                    placeholder="ex: kitchen" required/>
+            </div>
+            <div class="f-ac modal-form">
+                <label>Tipo de Interruptor</label>
+                <div class="modal-form-row">
+                    <div>
+                        <input type="radio" id="f-in-mode-push" name="f-in-mode" value="0"/>
+                        <label id="f-in-mode-push-lbl" for=f-in-mode-push>Pulsador</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="f-in-mode-latch" name="f-in-mode" value="1"/>
+                        <label id="f-in-mode-latch-lbl" for="f-in-mode-latch">Normal</label>
+                    </div>
+                    <div id="f-push-t">
+                        <input type="radio" id="f-in-mode-push-toggle" name="f-in-mode" value="2"/>
+                        <label id="f-in-mode-push-toggle-lbl" for="f-in-mode-push-toggle">Pulsador</label>
+                    </div>
+                </div>
+            </div>
+            <div id="f-calibration" class="f-ac hide modal-form">
+                <label>Calibração</label>
+                <div class="modal-form-row ">
+                    <div>
+                        <input type="number" id="f-up" value="0"/>
+                        <label class="label-hit" for=f-up>segundos para subir</label>
+                    </div>
+                    <div>
+                        <input type="number" id="f-down" value="1"/>
+                        <label class="label-hit" for="f-down">segundos para descer</label>
+                    </div>
+                </div>
+            </div>
+            <div id="f-knx" class="modal-form hide">
+                <label>KNX</label>
+                <div class="modal-form-row ">
+                    <div>
+                        <input type="number" id="f-area" value="0"/>
+                    </div>
+                    <div>
+                        <input type="number" id="f-line" value="0"/>
+                    </div>
+                    <div>
+                        <input type="number" id="f-member" value="0"/>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="deleteFeature(this)" class="btn-delete" id="btn-delete">DELETE</button>
+                <button type="button" onclick="applyFeatureChanges(this)" class="btn-update" id="btn-update"><span
+                    class="lang-save">UPDATE</span></button>
+            </div>
+        </div>
+    </div>
+    <div class="wizard">
+        <h3>Adicionar</h3>
+        <div class="wizard-props" id="wizard">
+            <div class="form-group">
+                <label for="f-n-name"><span class="lang-name">Nome</span></label>
+                <input
+                    class="f-name form-control" maxlength="30" type="text" name="f-name"
+                    id="f-n-name"
+                    placeholder="ex: kitchen" required/>
+            </div>
+            <div class="form-group">
+                <label for="f-n-driver"><span class="lang-driver">Driver</span></label>
+                <select onchange="driverSelect(this)" name="pins" class="form-control"
+                        id="f-n-driver">
+                    <option value="7">Iluminação Pulsador Virtual</option>
+                    <option value="8">Iluminação Normal Virtual</option>
+                    <option value="4">Estore Pulsador Duplo Virtual</option>
+                    <option value="5">Estore Normal Duplo Virtual</option>
+                    <option value="1">Interruptor Pulsador Virtual</option>
+                    <option value="2">Interruptor Normal Virtual</option>
+                    <option value="3">Estore Pulsador Virtual</option>
+                    <option value="9">Garagem Virtual</option>
+                    <option value="111">DHT 11</option>
+                    <option value="121">DHT 21</option>
+                    <option value="122">DHT 22</option>
+                    <option value="90">DS18B20</option>
+                    <option value="83">Sensor Chuva</option>
+                    <option value="82">Sensor Movimento PIR</option>
+                    <option value="84">Sensor Porta</option>
+                    <option value="85">Sensor Janela</option>
+                    <option value="71">Pzem-004T V3</option>
+                </select>
+            </div>
+            <div>
+                <div class="form-group">
+                    <label id="pin-up-l" for="f-n-pin-1"><span class="lang-pin-up">Pino Entrada</span></label>
+                    <select name="pins"  class="form-control" id="f-n-pin-1">
+                    </select>
+                </div>
+                <div id="f-n-pin-2-g" class="form-group hide">
+                    <label id="pin-down-l" for="f-n-pin-2"><span class="lang-pin-down">Pino</span></label>
+                    <select name="pins"  class="form-control" id="f-n-pin-2">
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="box-body right">
+        <button type="button" onclick="create()" class="btl-save-all" id="btn-create"><span
+            class="lang-save">ADICIONAR</span></button>
+        </div>
+    </div>
+</div>
+<footer>
+    <div class="version">
+        <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M3.16665 21.0001C2.72943 21.0001 2.375 20.6466 2.375 20.2106V10.9306C2.375 9.77504 2.88276 8.6776 3.76429 7.92758L8.74032 3.69423C10.2332 2.42413 12.4337 2.43636 13.9123 3.72281L18.7538 7.93499C19.6148 8.68465 20.109 9.76916 20.109 10.9093V12.7508C21.2045 13.0866 21.9999 14.0937 21.9999 15.284C21.9999 16.7488 20.7952 17.9363 19.3092 17.9363C17.8232 17.9363 16.6186 16.7488 16.6186 15.284C16.6186 14.0876 17.4221 13.0763 18.5262 12.7457V10.9093C18.5262 10.2253 18.229 9.57451 17.7124 9.12476L12.8713 4.91258C11.9841 4.14069 10.6638 4.1334 9.76811 4.89541L4.79195 9.12876C4.26308 9.57874 3.95843 10.2373 3.95843 10.9306V20.2106C3.95843 20.6466 3.60388 21.0001 3.16665 21.0001Z"
+                  fill="#97D700"/>
+            <path
+                d="M2.69065 5.30463C4.17665 5.30463 5.38129 4.11715 5.38129 2.65231C5.38129 1.18748 4.17665 0 2.69065 0C1.20464 0 0 1.18748 0 2.65231C0 4.11715 1.20464 5.30463 2.69065 5.30463Z"
+                fill="#97D700"/>
+        </svg>
+        <p><span class="lang-version">Versão </span> <span class="green" id="version_lbl"></span></p>
+        <p>Powered by OnOfre@2018 <span class="green">Made Portugal</span></p>
+    </div>
+    <a  href="http://doctor.onofre.store/" target="_blank"> <img height="73px" src="http://cloudio.bhonofre.pt/img/dr_onofre.png" alt="Dr OnOfre"></a>
+</footer>
+<script src="js/index.js?v=9.148"></script>
 </body>
 
 </html>

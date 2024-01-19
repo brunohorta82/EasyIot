@@ -7,8 +7,6 @@
 #include "Templates.h"
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
-#include "DevicesHtml.h"
-#include "NodeHtml.h"
 #include "IndexHtml.h"
 #include "StylesMinCss.h"
 #include "IndexJs.h"
@@ -230,28 +228,6 @@ void loadWebPanel()
               response->addHeader("Content-Encoding", "gzip");
               response->addHeader("Cache-Control", "max-age=30");
               request->send(response); });
-
-  server.on("/node.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", node_html, sizeof(node_html));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=600");
-    request->send(response); });
-
-  server.on("/devices.html", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", devices_html, sizeof(devices_html));
-    response->addHeader("Content-Encoding", "gzip");
-    response->addHeader("Cache-Control", "max-age=600");
-    request->send(response); });
 
   // JS
   server.on("/js/index.js", HTTP_GET, [](AsyncWebServerRequest *request)
