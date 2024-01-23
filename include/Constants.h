@@ -55,6 +55,7 @@ namespace constantsConfig
     constexpr unsigned long climateReadDelay{10000l};
     constexpr unsigned long rainDelay{5000l};
     constexpr unsigned long pirDelay{100l};
+    constexpr unsigned long hcsr04Delay{100l};
     constexpr unsigned long hallsensorDelay{1000l};
     constexpr unsigned long illuminanceReadDelay{5000l};
     constexpr unsigned long storeConfigDelay{5000ul};
@@ -185,5 +186,6 @@ namespace FeatureDrivers
     constexpr const char *WINDOW{"WINDOW"};
     constexpr const char *PIR{"PIR"};
     constexpr const char *GARDEN_VALVE{"GARDEN_VALVE"};
+    constexpr const char *HCSR04{"HCSR04"};
     constexpr const char *INVALID{"INVALID"};
 }

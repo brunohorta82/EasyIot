@@ -29,6 +29,19 @@ void prepareSHT4X(int hwAddress)
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
+void prepareHCSR04(String name, unsigned int triggerPin, unsigned int echoPin)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    sensor.inputs = {triggerPin, echoPin};
+    sensor.driver = SensorDriver::HCSR04;
+    sensor.hwAddress = triggerPin;
+    sensor.delayRead = constantsConfig::hcsr04Delay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, triggerPin, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
 void prepareDoorOrWindow(String name, unsigned int inputPin, SensorDriver driver)
 {
     Sensor sensor;
@@ -160,6 +173,9 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             break;
         case SensorDriver::PIR:
             preparePir(name, input1);
+            break;
+        case SensorDriver::HCSR04:
+            prepareHCSR04(name, input1, input2);
             break;
         case SensorDriver::RAIN:
             prepareRain(name, input1);

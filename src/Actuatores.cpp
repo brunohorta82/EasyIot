@@ -220,6 +220,7 @@ void garageNotify(Button2 &btn)
 
 void Actuator::setup()
 {
+  ready = false;
   buttons.clear();
   id = config.featureIds++;
   if (isCover() && outputs.size() == 2 && typeControl == ActuatorControlType::GPIO_OUTPUT)

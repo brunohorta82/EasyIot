@@ -13,6 +13,8 @@
 #include <LTR303.h>
 #include "DHT.h"
 #include "SparkFun_TMF8801_Arduino_Library.h"
+#include <NewPing.h>
+
 extern ConfigOnofre config;
 void Sensor::notifyState()
 {
@@ -327,6 +329,27 @@ void Sensor::loop()
     }
   }
   break;
+  case HCSR04:
+  {
+    if (lastRead + delayRead < millis())
+    {
+      NewPing sonar(inputs[0], inputs[1], 350);
+
+      StaticJsonDocument<256> doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+      lastRead = millis();
+      unsigned int distance = sonar.ping_cm();
+      obj["distance"] = distance;
+      serializeJson(doc, state);
+      doc.clear();
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  break;
   case HAN:
   {
 #ifdef ESP32
@@ -369,7 +392,8 @@ void Sensor::loop()
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       modbus->clearResponseBuffer();
-      if (modbus->readInputRegisters(CLOCK, 1) == modbus->ku8MBSuccess)
+      uint8_t rsl = modbus->readInputRegisters(CLOCK, 1);
+      if (rsl == modbus->ku8MBSuccess)
       {
         std::array<uint16_t, 6> buffer;
         for (size_t i = 0; i <= modbus->available(); ++i)
@@ -395,11 +419,21 @@ void Sensor::loop()
             serialConf = SERIAL_8N2;
             Serial1.end();
 #endif
-            obj["error"] = "8N1 Fail, trying with 8N2";
+            if (rsl == 0x81)
+            {
+              obj["error"] = "Access denied";
+              setError();
+            }
+            else
+            {
+              obj["error"] = rsl;
+              obj["status"] = "8N1 Fail, trying with 8N2";
+              reInit();
+            }
             serializeJson(obj, state);
             doc.clear();
             notifyState();
-            reInit();
+
 #ifdef DEBUG_ONOFRE
             Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
 #endif
@@ -418,7 +452,7 @@ void Sensor::loop()
 #ifdef DEBUG_ONOFRE
             Log.error("%s HAN read error please check the connections and try again. " CR, tags::sensors);
 #endif
-            obj["error"] = "8N2 Fail, Retry in 2 minutes";
+            obj["error"] = "Discovey Fail, Retry in 2 minutes";
             serializeJson(obj, state);
             doc.clear();
             notifyState();

@@ -11,3 +11,4 @@ void prepareCover(String name, unsigned int outputDown, unsigned int outputUp, u
 void prepareGarage(String name, unsigned int gateOne, unsigned int gateTwo, unsigned int openCloseSensor, unsigned int pushSwitch, ActuatorDriver driver, ActuatorControlType type);
 void prepareSHT4X(int hwAddress);
 void prepareLTR303(int hwAddress);
+void prepareHCSR04(int hwAddress, unsigned int input1, unsigned int input2);

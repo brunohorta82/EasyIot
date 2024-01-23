@@ -19,7 +19,8 @@ enum SensorDriver
   WINDOW = 85,
   DS18B20 = 90,
   SHT4X = 91,
-  TMF880X = 92
+  TMF880X = 92,
+  HCSR04 = 93
 
 };
 
@@ -71,6 +72,7 @@ public:
     case WINDOW:
       return Family::SECURITY;
     case LTR303X:
+    case HCSR04:
       return Family::LEVEL_METER;
     }
     return Family::NONE;
@@ -103,6 +105,8 @@ public:
       return FeatureDrivers::WINDOW;
     case PIR:
       return FeatureDrivers::PIR;
+    case HCSR04:
+      return FeatureDrivers::HCSR04;
     }
     return FeatureDrivers::INVALID;
   };

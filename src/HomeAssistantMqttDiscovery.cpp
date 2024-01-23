@@ -132,6 +132,14 @@ void addToHomeAssistant(Sensor &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     break;
+  case HCSR04:
+    object["uniq_id"] = uniqueId;
+    object["unit_of_meas"] = "cm";
+    object["dev_cla"] = "distance";
+    object["val_tpl"] = "{{value_json.distance}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    break;
   case TMF880X:
     object["uniq_id"] = uniqueId;
     object["unit_of_meas"] = "mm";
