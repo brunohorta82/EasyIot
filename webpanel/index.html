@@ -1,74 +1,156 @@
 <!DOCTYPE html>
 <html lang="pt">
-
 <head>
     <meta charset="utf-8">
-    <title>OnOFre</title>
+    <title>OnOfre</title>
     <link rel="icon" type="image/x-icon" href="https://cloudio.bhonofre.pt/favicon.ico">
-    <link rel="stylesheet" href="css/styles.css?v=9.149">
+    <link rel="stylesheet" href="css/styles.css?v=9.152">
     <link href="https://fonts.cdnfonts.com/css/red-hat-display" rel="stylesheet">
 </head>
-
 <body>
-    <template id="ACTUATOR">
-        <div>
-            <svg width="30px" height="30px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
-            </svg>
-            <div class="feature-box">
-                <div class="feature-details">
-                    <label><span class="feature-name"></span></label>
-                    <label class=" switch">
-                        <input onchange="toggleSwitch(this)" type="checkbox">
-                        <span class="slider round"></span>
-                    </label>
-                    <input onchange="shutterPercentage(this)" class="shutter-slider" min="0" max="100" type="range" />
+<template id="ACTUATOR">
+    <div class="feature-box">
+        <div class="f-n-i">
+            <img class="feature-icon" alt="family" src="https://cloudio.bhonofre.pt/img/MAGIC.svg">
+            <label class="feature-name"></label>
+        </div>
+        <input class="shutter-slider" min="0" max="100" type="range"/>
+        <img class="feature-edit" alt="editar" src="https://cloudio.bhonofre.pt/img/dots.svg">
+    </div>
+</template>
+<template id="SENSOR">
+    <div class="sensor-box">
+        <div class="sensor-values">
+            <img class="sensor-icon" alt="family" src="https://cloudio.bhonofre.pt/img/MAGIC.svg">
+            <label class="feature-value"></label>
+            <img class="sensor-icon" alt="family" src="https://cloudio.bhonofre.pt/img/MAGIC.svg">
+            <label><span class="feature-value"></span></label>
+        </div>
+        <label class="feature-name"></label>
+        <img class="feature-edit" alt="editar" src="https://cloudio.bhonofre.pt/img/dots.svg">
+    </div>
+</template>
+<template id="HAN">
+    <div class="han-box">
+        <label class="feature-name"></label>
+        <div class="han-widget-row">
+            <div class="flex-col">
+                <img class="han-icon" alt="Exportado" src="https://cloudio.bhonofre.pt/img/import.svg">
+                <span class="v tw"> <span class="v tw" id="power">0</span>W</span>
+                <span>Importado</span>
+            </div>
+            <div class="flex-col">
+                <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/close.svg">
+                <span class="v tw" id="error"></span>
+                <span id="status"></span>
+            </div>
+            <div class="flex-col">
+                <img class="han-icon" alt="Tensão" src="https://cloudio.bhonofre.pt/img/export.svg">
+                <span class="v tw"><span class="v tw" id="export">0</span>W</span>
+                <span>Exportado</span>
+            </div>
+        </div>
+        <div class="han-header">
+            <label style="font-size: 16px; color: white">CONTRATO E LEITURAS</label>
+            <label style="color: white" class="chip-han">Tarifario <span class="v" id="tarif"></span></label>
+        </div>
+        <div class="han-values">
+            <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/calendar.svg">
+            <span id="dateTime" class="v"></span>
+            <span>Contrados</span>
+            <span>Consumo Real</span>
+            <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/empty.svg">
+            <span>Vazio</span>
+            <span class="v"> <span class="v" id="demandControlT1">0</span>kVA</span>
+            <span class="v chip-han"> <span class="v" id="rate1">0</span>kWh</span>
+            <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/ponta.svg">
+            <span>Ponta</span>
+            <span class="v"> <span class="v" id="demandControlT2">0</span>kVA</span>
+            <span class="v chip-han"> <span class="v" id="rate2">0</span>kWh</span>
+            <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/full.svg">
+            <span>Cheias</span>
+            <span class="v"> <span class="v" id="demandControlT3">0</span>kVA</span>
+            <span class="v chip-han"> <span class="v" id="rate3">0</span>kWh</span>
+        </div>
+        <label style="font-size: 16px; color: white">INFORMAÇÕES AVANÇADAS</label>
+        <div class="advanced">
+            <div>
+                <label style="color: white">Consumo Instantâneo</label>
+                <div class="han-col">
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/energia.svg">
+                        <span>Potência</span>
+                        <span class="v"> <span class="v" id="power_1">0</span>W</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/voltage.svg">
+                        <span>Tensão</span>
+                        <span class="v"> <span class="v" id="voltage">0</span>V</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="Frequência" src="https://cloudio.bhonofre.pt/img/current.svg">
+                        <span>Corrente</span>
+                        <span class="v"> <span class="v" id="current">0</span>A</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/frequency.svg">
+                        <span>Frequência</span>
+                        <span class="v"> <span class="v" id="frequency">0</span>Hz</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/power_facgtor.svg">
+                        <span>Fator Potência</span>
+                        <span id="powerFactor" class="v">0</span>
+                    </div>
                 </div>
-                <div class="gpio-row">
+            </div>
+            <div>
+                <label style="color: white;">Consumo Acumulado</label>
+                <div class="han-col">
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/import.svg">
+                        <span>Energia Importada</span>
+                        <span class="v"> <span class="v" id="powerImport">0</span>kWh</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="Frequência" src="https://cloudio.bhonofre.pt/img/export.svg">
+                        <span>Energia Exportada</span>
+                        <span class="v"> <span class="v" id="powerExport">0</span>kWh</span>
+                    </div>
                 </div>
             </div>
         </div>
-    </template>
-    <template id="SENSOR">
-        <div>
-            <svg viewBox="0 0 30 30">
-            </svg>
-            <div class="feature-box">
-                <div class="feature-details">
-                    <label><span class="feature-name"></span></label>
-                    <label><span class="feature-value"></span></label>
-                </div>
-                <div class="gpio-row">
-                </div>
-            </div>
-        </div>
-    </template>
-    <nav>
-        <div class="logo-img">
-            <svg width="62" height="67" viewBox="0 0 69 67" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fill-rule="evenodd" clip-rule="evenodd"
-                    d="M9.93213 67.0003C8.56083 67.0003 7.44922 65.8723 7.44922 64.4813V34.8737C7.44922 31.1869 9.04173 27.6856 11.8065 25.2927L27.4132 11.7863C32.0953 7.73406 38.9969 7.77308 43.6343 11.8775L58.8192 25.3163C61.5197 27.7081 63.0696 31.1682 63.0696 34.8058V40.6812C66.5053 41.7523 68.9999 44.9656 68.9999 48.7632C68.9999 53.4367 65.2217 57.2253 60.5611 57.2253C55.9004 57.2253 52.1222 53.4367 52.1222 48.7632C52.1222 44.9462 54.6424 41.7195 58.1053 40.6649V34.8058C58.1053 32.6234 57.1731 30.5472 55.5528 29.1122L40.3694 15.6734C37.5868 13.2107 33.4459 13.1874 30.6367 15.6186L15.0297 29.125C13.3709 30.5607 12.4154 32.6616 12.4154 34.8737V64.4813C12.4154 65.8723 11.3034 67.0003 9.93213 67.0003Z"
-                    fill="#97D700" />
-                <path
-                    d="M8.43885 16.9243C13.0995 16.9243 16.8777 13.1357 16.8777 8.46214C16.8777 3.78863 13.0995 0 8.43885 0C3.7782 0 0 3.78863 0 8.46214C0 13.1357 3.7782 16.9243 8.43885 16.9243Z"
-                    fill="#97D700" />
-            </svg>
-            <span class="logo-txt">ONOFRE</span>
-        </div>
-        <ul class="onofre-menu">
-            <li class=""><a href="#" id="node-btn" class="menu-item active"> <span class="lang-node">HOME</span></a>
-            </li>
-            <li><a href="#" id="features-btn"> <span class="lang-features">FUNÇÕES</span></a>
-            </li>
-        </ul>
-        <button type="button" onclick="saveConfig()" class="btn btn-primary btl-save-all"><span
-                class="lang-save">Guardar Tudo</span></button>
-    </nav>
-    <div class="stats-panel">
+        <img class="feature-edit hide" alt="editar" src="https://cloudio.bhonofre.pt/img/dots.svg">
+    </div>
+</template>
+<nav>
+    <div class="logo-img">
+        <svg width="62" height="67" viewBox="0 0 69 67" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M9.93213 67.0003C8.56083 67.0003 7.44922 65.8723 7.44922 64.4813V34.8737C7.44922 31.1869 9.04173 27.6856 11.8065 25.2927L27.4132 11.7863C32.0953 7.73406 38.9969 7.77308 43.6343 11.8775L58.8192 25.3163C61.5197 27.7081 63.0696 31.1682 63.0696 34.8058V40.6812C66.5053 41.7523 68.9999 44.9656 68.9999 48.7632C68.9999 53.4367 65.2217 57.2253 60.5611 57.2253C55.9004 57.2253 52.1222 53.4367 52.1222 48.7632C52.1222 44.9462 54.6424 41.7195 58.1053 40.6649V34.8058C58.1053 32.6234 57.1731 30.5472 55.5528 29.1122L40.3694 15.6734C37.5868 13.2107 33.4459 13.1874 30.6367 15.6186L15.0297 29.125C13.3709 30.5607 12.4154 32.6616 12.4154 34.8737V64.4813C12.4154 65.8723 11.3034 67.0003 9.93213 67.0003Z"
+                  fill="#97D700"/>
+            <path
+                d="M8.43885 16.9243C13.0995 16.9243 16.8777 13.1357 16.8777 8.46214C16.8777 3.78863 13.0995 0 8.43885 0C3.7782 0 0 3.78863 0 8.46214C0 13.1357 3.7782 16.9243 8.43885 16.9243Z"
+                fill="#97D700"/>
+        </svg>
+        <span class="logo-txt">ONOFRE</span>
+    </div>
+    <ul class="onofre-menu">
+        <li><a href="#" id="features-btn"> <span class="lang-features">FUNÇÕES</span></a>
+        </li>
+        <li class=""><a href="#" id="node-btn" class="menu-item active"> <span class="lang-node">SISTEMA</span></a>
+        </li>
+    </ul>
+    <button type="button" onclick="saveConfig()" class="btn btn-primary btl-save-all"><span
+        class="lang-save">Guardar</span></button>
+</nav>
+<div class="stats-panel">
+    <div class="box-body">
         <div class="s-item">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                     d="M15.7561 23.7832C16.2799 23.2214 16.9133 22.773 17.6171 22.4655C18.3209 22.1581 19.0808 21.9983 19.8489 21.9956C20.6169 21.9929 21.3773 22.1476 22.0833 22.4502C22.7892 22.7528 23.4258 23.1967 23.9535 23.7548M13.2898 20.3582C14.1279 19.4594 15.1413 18.742 16.2674 18.25C17.3935 17.758 18.6083 17.5021 19.8371 17.4978C21.066 17.4935 22.2822 17.7412 23.4117 18.2253C24.5412 18.7094 25.56 19.4198 26.4045 20.3128M10 17.2912C11.2571 15.9431 12.7772 14.8669 14.4663 14.1289C16.1555 13.3909 17.977 13.0065 19.8203 13.0001C21.6637 12.9937 23.49 13.3651 25.1843 14.0913C26.8786 14.8174 28.4064 15.8837 29.673 17.223M19.8685 28.7422C19.2474 28.7422 18.744 28.2388 18.744 27.6178C18.744 26.9967 19.2474 26.4933 19.8685 26.4933C20.4895 26.4933 20.9929 26.9967 20.9929 27.6178C20.9929 28.2388 20.4895 28.7422 19.8685 28.7422Z"
-                    stroke="#97D700" stroke-linecap="round" stroke-linejoin="round" />
+                    stroke="#97D700" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <span id="ssid_lbl"></span><span class="green" id="wifi-signal">0%</span>
         </div>
@@ -76,197 +158,217 @@
         <div class="s-item">
             <span class="green">NOME</span><label for="nodeId"><span class="lang-name"></span></label>
             <input oninput="this.size = this.value.length+4" maxlength="30" type="text" id="nodeId"
-                placeholder="ex: kitchen" required /><span class="green" id="lbl-chip"></span>
+                   placeholder="ex: kitchen" required/><span class="green" id="lbl-chip"></span>
         </div>
         <div class="s-item">
             <span>MQTT</span><span id="mqtt_state" class="led"></span>
         </div>
     </div>
-    <div class="content" id="node-pn">
-        <div class="box">
-            <form>
-                <div class="box-body">
-                    <div class="form-group"><label for="accessPointPassword"><span class="lang-password">Palavra
+</div>
+<div class="content hide" id="node-pn">
+    <div class="box-body">
+        <div class="form-group"><label for="accessPointPassword"><span class="lang-password">Palavra
                                 Passe</span>
-                            AP</label> <input autocomplete="off" class="form-control" type="password"
-                            id="accessPointPassword" placeholder="ex: superPassword" /></div>
+            AP</label> <input autocomplete="off" class="form-control" type="password"
+                              id="accessPointPassword" placeholder="ex: superPassword"/></div>
 
-                    <div class="form-group"><label for="apiUser"><span class="lang-username">Utilizador</span></label>
-                        <input autocomplete="off" class="form-control" type="text" id="apiUser"
-                            placeholder="ex: admin" />
-                    </div>
-                    <div class="form-group"><label for="apiPassword"><span class="lang-password">Palavra
+        <div class="form-group"><label for="apiUser"><span class="lang-username">Utilizador</span></label>
+            <input autocomplete="off" class="form-control" type="text" id="apiUser"
+                   placeholder="ex: admin"/>
+        </div>
+        <div class="form-group"><label for="apiPassword"><span class="lang-password">Palavra
                                 Passe</span></label>
-                        <input autocomplete="off" class="form-control" type="password" id="apiPassword"
-                            placeholder="ex: superPassword" />
-                    </div>
-                </div>
-                <h3 class="box-title">WI-FI </h3>
-                <div class="box-body">
-                    <div class="form-group"><label for="wifiSSID">SSID</label>
-                        <input class="form-control" maxlength="23" autocomplete="off" type="text" id="wifiSSID"
-                            placeholder="ex: meuwifi" />
-                    </div>
-                    <div class="form-group"><label for="wifiSecret"><span class="lang-password">Palavra
+            <input autocomplete="off" class="form-control" type="password" id="apiPassword"
+                   placeholder="ex: superPassword"/>
+        </div>
+    </div>
+    <div class="box-title">
+        <span>WI-FI</span>
+        <span class="chip" id="lbl-mac"></span>
+    </div>
+    <div class="box-body">
+        <div class="form-group"><label for="wifiSSID">SSID</label>
+            <input class="form-control" maxlength="23" autocomplete="off" type="text" id="wifiSSID"
+                   placeholder="ex: meuwifi"/>
+        </div>
+        <div class="form-group"><label for="wifiSecret"><span class="lang-password">Palavra
                                 Passe</span></label> <input class="form-control" maxlength="60" autocomplete="off"
-                            type="password" id="wifiSecret" placeholder="ex: superpassword" />
-                    </div>
-                    <div class="form-group right">
-                        <label class="switch-lbl" for="dhcp">DHCP</label>
-                        <label class="switch">
-                            <input value="true" name="dhcp" id="dhcp" type="checkbox">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                </div>
+                                                            type="password" id="wifiSecret"
+                                                            placeholder="ex: superpassword"/>
+        </div>
+        <div class="form-group right">
+            <label class="dhcp-lbl" for="dhcp">DHCP</label>
+            <label class="switch">
+                <input value="true" name="dhcp" id="dhcp" type="checkbox">
+                <span class="slider round"></span>
+            </label>
+        </div>
+    </div>
 
-                <div class="box-body">
-                    <div class="form-group"><label for="wifiIp">IP</label> <input class="form-control" type="text"
-                            id="wifiIp" maxlength="15" placeholder="ex: 192.168.1.20" />
-                    </div>
-                    <div class="form-group"><label for="wifiGw">Gateway</label> <input class="form-control" id="wifiGw"
-                            maxlength="15" placeholder="ex: 192.168.1.254" />
-                    </div>
-                    <div class="form-group"><label for="wifiMask"><span class="lang-netmask">Máscara de
+    <div class="box-body">
+        <div class="form-group"><label for="wifiIp">IP</label> <input class="form-control" type="text"
+                                                                      id="wifiIp" maxlength="15"
+                                                                      placeholder="ex: 192.168.1.20"/>
+        </div>
+        <div class="form-group"><label for="wifiGw">Gateway</label> <input class="form-control" id="wifiGw"
+                                                                           maxlength="15"
+                                                                           placeholder="ex: 192.168.1.254"/>
+        </div>
+        <div class="form-group"><label for="wifiMask"><span class="lang-netmask">Máscara de
                                 Rede</span></label> <input class="form-control" maxlength="15" id="wifiMask"
-                            placeholder="ex: 255.255.255.0" />
-                    </div>
-                </div>
-                <div class="box-body">
-                    <span class="chip" id="lbl-mac"></span>
-                </div>
-                <h3 class="box-title">MQTT</h3>
-                <div class="box-body">
-                    <div class="form-group"><label for="mqttIpDns">Broker IP / DNS</label> <input class="form-control"
-                            type="text" maxlength="40" id="mqttIpDns" placeholder="ex: 192.168.1.30" />
-                    </div>
-                    <div class="form-group"><label for="mqttUsername"><span
-                                class="lang-username">Utilizador</span></label>
-                        <input class="form-control" autocomplete="off" type="text" maxlength="30" id="mqttUsername"
-                            placeholder="ex: iam" />
-                    </div>
+                                                           placeholder="ex: 255.255.255.0"/>
+        </div>
+    </div>
+    <div class="box-title">
+        <span>MQTT</span>
+    </div>
+    <div class="box-body">
+        <div class="form-group"><label for="mqttIpDns">Broker IP / DNS</label> <input class="form-control"
+                                                                                      type="text" maxlength="40"
+                                                                                      id="mqttIpDns"
+                                                                                      placeholder="ex: 192.168.1.30"/>
+        </div>
+        <div class="form-group"><label for="mqttUsername"><span
+            class="lang-username">Utilizador</span></label>
+            <input class="form-control" autocomplete="off" type="text" maxlength="30" id="mqttUsername"
+                   placeholder="ex: iam"/>
+        </div>
 
 
-                    <div class="form-group"><label for="mqttPassword"><span class="lang-password">Palavra
+        <div class="form-group"><label for="mqttPassword"><span class="lang-password">Palavra
                                 Passe</span></label> <input class="form-control" maxlength="62" type="password"
-                            autocomplete="off" id="mqttPassword" placeholder="ex: superstrongpassword" />
+                                                            autocomplete="off" id="mqttPassword"
+                                                            placeholder="ex: superstrongpassword"/>
 
-                    </div>
-                </div>
-            </form>
-            <h3>Firmware</h3>
-            <div class="firmware">
-                <form role="form" method="POST" action="/update" enctype="multipart/form-data">
-                    <div class="box-body">
-                        <input class="btn" id="firmwareInputFile" name="update" type="file" />
+        </div>
+    </div>
 
-                        <button type="submit" class="btn btn-primary upload"><span class="lang-install-file-version">
+    <div class="box-title">
+        <span>Firmware</span>
+    </div>
+    <div class="firmware">
+        <form role="form" method="POST" action="/update" enctype="multipart/form-data">
+            <div class="box-body">
+                <input class="btn" id="firmwareInputFile" name="update" type="file"/>
+
+                <button type="submit" class="btn btn-primary upload"><span class="lang-install-file-version">
                                 Instalar ficheiro</span>
-                        </button>
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="box-body">
+        <form role="form" method="POST" enctype="multipart/form-data" action="/auto-update">
+            <button type="submit" id="btn-auto-update" class="btn btn-primary hide"><span
+                class="lang-install-file-version"> Instalar ficheiro</span>
+            </button>
+        </form>
+    </div>
+    <div class="box-title">
+        <span>Sistema</span>
+    </div>
+    <div class="box-body">
+        <button type="button" onclick="loadDefaults()" class="btn btn-danger btn-system"><span
+            class="lang-reset-factory">Reset</span>
+        </button>
+        <div class="area-system-bk">
+            <button type="button" onclick="backup()" class="btn btn-system-dual backup"><span
+                class="lang-restart">Backup</span>
+            </button>
+            <input id="restore" class="hide" type="file"/>
+            <button type="button" onclick="document.getElementById('restore').click()"
+                    class="btn btn-system-dual restore"><span
+                class="lang-restart">Restaurar</span>
+            </button>
+        </div>
+        <button type="button" onclick="reboot()" class="btn btn-system"><span
+            class="lang-restart">Reiniciar</span>
+        </button>
+    </div>
+</div>
+<div class="content cols" id="feature-pn">
+    <div class="features-body">
+        <div id="han_config">
+        </div>
+        <div class="sensors" id="sensors_config">
+        </div>
+        <div class="features" id="actuators_config">
+        </div>
+    </div>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-form">
+                <input style="width: 100%" class="f-name form-control input-modal" maxlength="30" type="text" name="f-name" id="f-name"
+                       placeholder="ex: kitchen" required/>
+            </div>
+            <div class="f-ac modal-form">
+                <label>Tipo de Interruptor</label>
+                <div class="modal-form-row">
+                    <div>
+                        <input type="radio" id="f-in-mode-push" name="f-in-mode" value="0"/>
+                        <label id="f-in-mode-push-lbl" for=f-in-mode-push>Pulsador</label>
                     </div>
-                </form>
-            </div>
-            <div class="box-body">
-                <form role="form" method="POST" enctype="multipart/form-data" action="/auto-update">
-                    <button type="submit" id="btn-auto-update" class="btn btn-primary hide"><span
-                            class="lang-install-file-version"> Instalar ficheiro</span>
-                    </button>
-                </form>
-            </div>
-            <h3>Sistema</h3>
-            <div class="box-body">
-                <button type="button" onclick="loadDefaults()" class="btn btn-danger btn-system"><span
-                        class="lang-reset-factory">Carregar Configuração de Fábrica</span>
-                </button>
-                <div class="area-system-bk">
-                    <button type="button" onclick="backup()" class="btn btn-system-dual backup"><span
-                            class="lang-restart">Backup</span>
-                    </button>
-                    <button type="button" onclick="restore()" class="btn btn-system-dual restore"><span
-                            class="lang-restart">Restaurar</span>
-                    </button>
+                    <div>
+                        <input type="radio" id="f-in-mode-latch" name="f-in-mode" value="1"/>
+                        <label id="f-in-mode-latch-lbl" for="f-in-mode-latch">Normal</label>
+                    </div>
+                    <div id="f-push-t">
+                        <input type="radio" id="f-in-mode-push-toggle" name="f-in-mode" value="2"/>
+                        <label id="f-in-mode-push-toggle-lbl" for="f-in-mode-push-toggle">Pulsador</label>
+                    </div>
                 </div>
-                <button type="button" onclick="reboot()" class="btn btn-system"><span
-                        class="lang-restart">Reiniciar</span>
+            </div>
+            <div id="f-calibration" class="f-ac hide modal-form">
+                <label>Calibração</label>
+                <div class="modal-form-row ">
+
+                        <input  class="form-control" type="number" id="f-up" value="0"/>
+                        <label class="label-hit" for=f-up>segundos para subir</label>
+
+                        <input class="form-control" type="number" id="f-down" value="1"/>
+                        <label class="label-hit" for="f-down">segundos para descer</label>
+
+                </div>
+            </div>
+            <div id="f-knx" class="modal-form hide">
+                <label>KNX</label>
+                <div class="modal-form-row ">
+                    <div>
+                        <input class="form-control" type="number" id="f-area" min="0" max="254" value="0"/>
+                    </div>
+                    <div>
+                        <input class="form-control" type="number" id="f-line" min="0" max="254" value="0"/>
+                    </div>
+                    <div>
+                        <input class="form-control" type="number" id="f-member" pattern="[0-9]" min="0" max="254"
+                               value="0"/>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="deleteFeature(this)" class="btn-delete"
+                        id="btn-delete">Eliminar
                 </button>
+                <button type="button" onclick="applyFeatureChanges(this)" style="width: 100px" class="btn btl-save-all"
+                        id="btn-update"><span
+                    class="lang-save">Atualizar</span></button>
             </div>
         </div>
     </div>
-    <div class="content hide cols" id="feature-pn">
-        <div class="box-body">
-            <div class="features" id="devices_config">
+
+    <div id="wizard" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span onclick="closeModal('wizard')" class="close">&times;</span>
             </div>
-        </div>
-        <div id="modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <span class="close">&times;</span>
-                    <h3 class="f-name"></h3>
-                </div>
-                <div class="modal-form">
-                    <label for="f-name"><span class="lang-name">Nome</span></label>
-                    <input class="f-name form-control" maxlength="30" type="text" name="f-name" id="f-name"
-                        placeholder="ex: kitchen" required />
-                </div>
-                <div class="f-ac modal-form">
-                    <label>Tipo de Interruptor</label>
-                    <div class="modal-form-row">
-                        <div>
-                            <input type="radio" id="f-in-mode-push" name="f-in-mode" value="0" />
-                            <label id="f-in-mode-push-lbl" for=f-in-mode-push>Pulsador</label>
-                        </div>
-                        <div>
-                            <input type="radio" id="f-in-mode-latch" name="f-in-mode" value="1" />
-                            <label id="f-in-mode-latch-lbl" for="f-in-mode-latch">Normal</label>
-                        </div>
-                        <div id="f-push-t">
-                            <input type="radio" id="f-in-mode-push-toggle" name="f-in-mode" value="2" />
-                            <label id="f-in-mode-push-toggle-lbl" for="f-in-mode-push-toggle">Pulsador</label>
-                        </div>
-                    </div>
-                </div>
-                <div id="f-calibration" class="f-ac hide modal-form">
-                    <label>Calibração</label>
-                    <div class="modal-form-row ">
-                        <div>
-                            <input type="number" id="f-up" value="0" />
-                            <label class="label-hit" for=f-up>segundos para subir</label>
-                        </div>
-                        <div>
-                            <input type="number" id="f-down" value="1" />
-                            <label class="label-hit" for="f-down">segundos para descer</label>
-                        </div>
-                    </div>
-                </div>
-                <div id="f-knx" class="modal-form hide">
-                    <label>KNX</label>
-                    <div class="modal-form-row ">
-                        <div>
-                            <input type="number" id="f-area" value="0" />
-                        </div>
-                        <div>
-                            <input type="number" id="f-line" value="0" />
-                        </div>
-                        <div>
-                            <input type="number" id="f-member" value="0" />
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" onclick="deleteFeature(this)" class="btn-delete"
-                        id="btn-delete">DELETE</button>
-                    <button type="button" onclick="applyFeatureChanges(this)" class="btn-update" id="btn-update"><span
-                            class="lang-save">UPDATE</span></button>
-                </div>
-            </div>
-        </div>
-        <div class="wizard">
-            <h3>Adicionar</h3>
-            <div class="wizard-props" id="wizard">
+            <div class="wizard-props">
                 <div class="form-group">
                     <label for="f-n-name"><span class="lang-name">Nome</span></label>
                     <input class="f-name form-control" maxlength="30" type="text" name="f-name" id="f-n-name"
-                        placeholder="ex: kitchen" required />
+                           placeholder="ex: kitchen" required/>
                 </div>
                 <div class="form-group">
                     <label for="f-n-driver"><span class="lang-driver">Driver</span></label>
@@ -304,29 +406,36 @@
                     </div>
                 </div>
             </div>
-            <div class="box-body right">
-                <button type="button" onclick="create()" class="btl-save-all" id="btn-create"><span
-                        class="lang-save">ADICIONAR</span></button>
+            <div class="box-body ">
+                <button type="button" style="margin-left: 30px" onclick="create()" class="btl-save-all" id="btn-create"><span
+                    class="lang-save">ADICIONAR</span></button>
             </div>
         </div>
     </div>
-    <footer>
+</div>
+<div id="w-add" class="wizard-control hide">
+    <button type="button" onclick="showWizard()" class="btn btn-add">+</button>
+</div>
+<footer>
+    <div class="box-body" style="align-items: end;">
         <div class="version">
             <svg width="22" height="21" viewBox="0 0 22 21" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fill-rule="evenodd" clip-rule="evenodd"
-                    d="M3.16665 21.0001C2.72943 21.0001 2.375 20.6466 2.375 20.2106V10.9306C2.375 9.77504 2.88276 8.6776 3.76429 7.92758L8.74032 3.69423C10.2332 2.42413 12.4337 2.43636 13.9123 3.72281L18.7538 7.93499C19.6148 8.68465 20.109 9.76916 20.109 10.9093V12.7508C21.2045 13.0866 21.9999 14.0937 21.9999 15.284C21.9999 16.7488 20.7952 17.9363 19.3092 17.9363C17.8232 17.9363 16.6186 16.7488 16.6186 15.284C16.6186 14.0876 17.4221 13.0763 18.5262 12.7457V10.9093C18.5262 10.2253 18.229 9.57451 17.7124 9.12476L12.8713 4.91258C11.9841 4.14069 10.6638 4.1334 9.76811 4.89541L4.79195 9.12876C4.26308 9.57874 3.95843 10.2373 3.95843 10.9306V20.2106C3.95843 20.6466 3.60388 21.0001 3.16665 21.0001Z"
-                    fill="#97D700" />
+                      d="M3.16665 21.0001C2.72943 21.0001 2.375 20.6466 2.375 20.2106V10.9306C2.375 9.77504 2.88276 8.6776 3.76429 7.92758L8.74032 3.69423C10.2332 2.42413 12.4337 2.43636 13.9123 3.72281L18.7538 7.93499C19.6148 8.68465 20.109 9.76916 20.109 10.9093V12.7508C21.2045 13.0866 21.9999 14.0937 21.9999 15.284C21.9999 16.7488 20.7952 17.9363 19.3092 17.9363C17.8232 17.9363 16.6186 16.7488 16.6186 15.284C16.6186 14.0876 17.4221 13.0763 18.5262 12.7457V10.9093C18.5262 10.2253 18.229 9.57451 17.7124 9.12476L12.8713 4.91258C11.9841 4.14069 10.6638 4.1334 9.76811 4.89541L4.79195 9.12876C4.26308 9.57874 3.95843 10.2373 3.95843 10.9306V20.2106C3.95843 20.6466 3.60388 21.0001 3.16665 21.0001Z"
+                      fill="#97D700"/>
                 <path
                     d="M2.69065 5.30463C4.17665 5.30463 5.38129 4.11715 5.38129 2.65231C5.38129 1.18748 4.17665 0 2.69065 0C1.20464 0 0 1.18748 0 2.65231C0 4.11715 1.20464 5.30463 2.69065 5.30463Z"
-                    fill="#97D700" />
+                    fill="#97D700"/>
             </svg>
             <p><span class="lang-version">Versão </span> <span class="green" id="version_lbl"></span></p>
             <p>Powered by OnOfre@2018 <span class="green">Developed in Portugal</span></p>
         </div>
         <a href="http://doctor.onofre.store/" target="_blank"> <img height="73px"
-                src="http://cloudio.bhonofre.pt/img/dr_onofre.png" alt="Dr OnOfre"></a>
-    </footer>
-    <script src="js/index.js?v=9.149"></script>
+                                                                    src="https://cloudio.bhonofre.pt/img/dr_onofre.svg"
+                                                                    alt="Dr OnOfre"></a>
+    </div>
+</footer>
+<script src="js/index.js?v=9.152"></script>
 </body>
 
 </html>

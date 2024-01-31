@@ -24,8 +24,8 @@
 extern ConfigOnofre config;
 
 DNSServer dnsServer;
-static AsyncWebServer server(80);
-static AsyncEventSource events("/events");
+AsyncWebServer server(80);
+AsyncEventSource events("/events");
 
 void performUpdate()
 {
@@ -389,14 +389,17 @@ void loadAPI()
        if (!request->authenticate(config.apiUser, config.apiPassword,REALM))
        return request->requestAuthentication(REALM);
 #endif
+    
      bool error = Update.hasError();
      if(error)
        config.requestRestart();
      AsyncWebServerResponse *response = request->beginResponse(200, "text/html", !error? REDIRECT_PAGE : UPDATE_FAILED);
      response->addHeader("Connection", "close");
-     request->send(response); },
+     request->send(response);
+     stopWebserver(); },
           [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
           {
+            config.pauseFeatures();
             if (!index)
             {
 #ifdef DEBUG_ONOFRE

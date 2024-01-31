@@ -238,7 +238,43 @@ public:
         }
         return driver;
     };
+    ActuatorDriver findDriverFromName(String literal)
+    {
 
+        if (literal.equals("SWITCH_PUSH"))
+        {
+            return SWITCH_PUSH;
+        }
+        if (literal.equals("SWITCH_LATCH"))
+        {
+            return SWITCH_LATCH;
+        }
+        if (literal.equals("COVER_DUAL_PUSH"))
+        {
+            return COVER_DUAL_PUSH;
+        }
+        if (literal.equals("COVER_DUAL_LATCH"))
+        {
+            return COVER_DUAL_LATCH;
+        }
+        if (literal.equals("LIGHT_PUSH"))
+        {
+            return LIGHT_PUSH;
+        }
+        if (literal.equals("LIGHT_LATCH"))
+        {
+            return LIGHT_LATCH;
+        }
+        if (literal.equals("GARAGE_PUSH"))
+        {
+            return GARAGE_PUSH;
+        }
+        if (literal.equals("GARDEN_VALVE"))
+        {
+            return GARDEN_VALVE;
+        }
+        return INVALID;
+    };
     Actuator *
     changeState(StateOrigin origin, int state);
     void setup();

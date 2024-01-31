@@ -43,7 +43,12 @@ void Sensor::loop()
     if (lastErrorTimestamp + constantsConfig::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())
     {
       error = false;
-      reInit();
+#ifdef HAN_MODE
+      if (errorCounter >= 10)
+      {
+        config.requestRestart();
+      }
+#endif
 #ifdef DEBUG_ONOFRE
       Log.info("%s Error automatically cleaned. System will try again." CR, tags::sensors);
 #endif
@@ -351,12 +356,17 @@ void Sensor::loop()
   }
   break;
   case HAN:
+  case HAN_8N2:
   {
 #ifdef ESP32
     static uint32_t serialConf = SERIAL_8N1;
 #endif
 #ifdef ESP8266
     static Config serialConf = SWSERIAL_8N1;
+    if (driver == SensorDriver::HAN_8N2)
+    {
+      serialConf = SWSERIAL_8N2;
+    }
 #endif
     if (lastRead + delayRead < millis())
     {
@@ -388,7 +398,8 @@ void Sensor::loop()
       }
 #endif
       lastRead = millis();
-      StaticJsonDocument<400> doc;
+      StaticJsonDocument<400>
+          doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       modbus->clearResponseBuffer();
@@ -407,120 +418,126 @@ void Sensor::loop()
       }
       else
       {
-#ifdef ESP8266
-        if (serialConf == SWSERIAL_8N1)
+        if (rsl == 0x81)
         {
-          serialConf = SWSERIAL_8N2;
-          softwareSerial.end();
-#endif
-#ifdef ESP32
-          if (serialConf == SERIAL_8N1)
-          {
-            serialConf = SERIAL_8N2;
-            Serial1.end();
-#endif
-            if (rsl == 0x81)
-            {
-              obj["error"] = "Access denied";
-              setError();
-            }
-            else
-            {
-              obj["error"] = rsl;
-              obj["status"] = "8N1 Fail, trying with 8N2";
-              reInit();
-            }
-            serializeJson(obj, state);
-            doc.clear();
-            notifyState();
-
+          obj["status"] = "Acesso negado contacte a E-Redes";
+        }
+        else if (rsl == 0xE2)
+        {
+          obj["status"] = "Problemas na comunicação";
+        }
+        else if (rsl == 0xE1)
+        {
+          obj["status"] = "Função Inválida";
+        }
+        else if (rsl == 0xE0)
+        {
+          obj["status"] = "Endereço Inválido";
+        }
+        else
+        {
+          obj["status"] = "Erro desconhecido";
+        }
+        setError();
 #ifdef DEBUG_ONOFRE
-            Log.info("%s HAN  Discovery ativated, testing new config automatically. " CR, tags::sensors);
-#endif
-            return;
-          }
-          else
-          {
-#ifdef ESP8266
-            serialConf = SWSERIAL_8N1;
-            softwareSerial.end();
-#endif
-#ifdef ESP32
-            serialConf = SERIAL_8N1;
-#endif
-            setError();
-#ifdef DEBUG_ONOFRE
-            Log.error("%s HAN read error please check the connections and try again. " CR, tags::sensors);
-#endif
-            obj["error"] = "Discovey Fail, Retry in 2 minutes";
-            serializeJson(obj, state);
-            doc.clear();
-            notifyState();
-          }
-          return;
-        }
-
-        if (modbus->readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == modbus->ku8MBSuccess)
-        {
-          obj["voltage"] = modbus->getResponseBuffer(0) / 10.0;
-          obj["current"] = modbus->getResponseBuffer(1) / 10.0;
-          delay(50);
-        }
-        if (modbus->readInputRegisters(ACTIVE_ENERGY_IMPORT_PLUS_A, 2) == modbus->ku8MBSuccess)
-        {
-          obj["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-          obj["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-          delay(50);
-        }
-        if (modbus->readInputRegisters(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3) == modbus->ku8MBSuccess)
-        {
-          obj["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-          obj["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-          obj["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
-          delay(50);
-        }
-        if (modbus->readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3) == modbus->ku8MBSuccess)
-        {
-          obj["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
-          obj["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
-          obj["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
-          delay(50);
-        }
-        if (modbus->readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == modbus->ku8MBSuccess)
-        {
-          obj["frequency"] = modbus->getResponseBuffer(0) / 10.0;
-          delay(50);
-        }
-        if (modbus->readInputRegisters(CURRENTLY_ACTIVE_TARIFF, 1) == modbus->ku8MBSuccess)
-        {
-          obj["tarif"] = modbus->getResponseBuffer(0) >> 8;
-          delay(50);
-        }
-        if (modbus->readInputRegisters(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3) == modbus->ku8MBSuccess)
-        {
-          obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
-          obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
-          obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
-          delay(50);
-        }
-        obj["signal"] = WiFi.RSSI();
-        obj["comm"] = serialConf;
-#ifdef ESP8266
-        if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
-        {
-          obj["temperature"] = temperature;
-          obj["humidity"] = humidity;
-        }
-#endif
-        serializeJson(obj, state);
-        doc.clear();
-        notifyState();
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s %s " CR, tags::sensors, state.c_str());
+        Log.info("%s HAN  Error: %d. " CR, tags::sensors, rsl);
 #endif
       }
+      if (!error && modbus->readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == modbus->ku8MBSuccess)
+      {
+        obj["voltage"] = modbus->getResponseBuffer(0) / 10.0;
+        obj["current"] = modbus->getResponseBuffer(1) / 10.0;
+        delay(50);
+      }
+      else
+      {
+        setError();
+      }
+      if (!error && modbus->readInputRegisters(ACTIVE_ENERGY_IMPORT_PLUS_A, 2) == modbus->ku8MBSuccess)
+      {
+        obj["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+        obj["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+        delay(50);
+      }
+      else
+      {
+        setError();
+      }
+      if (!error && modbus->readInputRegisters(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3) == modbus->ku8MBSuccess)
+      {
+        obj["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+        obj["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+        obj["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+        delay(50);
+      }
+      else
+      {
+        setError();
+      }
+      if (!error && modbus->readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3) == modbus->ku8MBSuccess)
+      {
+        obj["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
+        obj["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
+        obj["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
+        delay(50);
+      }
+      else
+      {
+        setError();
+      }
+      if (!error && modbus->readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == modbus->ku8MBSuccess)
+      {
+        obj["frequency"] = modbus->getResponseBuffer(0) / 10.0;
+        delay(50);
+      }
+      else
+      {
+        setError();
+      }
+      if (!error && modbus->readInputRegisters(CURRENTLY_ACTIVE_TARIFF, 1) == modbus->ku8MBSuccess)
+      {
+        obj["tarif"] = modbus->getResponseBuffer(0) >> 8;
+        delay(50);
+      }
+      else
+      {
+        setError();
+      }
+      if (!error && modbus->readInputRegisters(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3) == modbus->ku8MBSuccess)
+      {
+        obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
+        obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
+        obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
+        delay(50);
+      }
+      else
+      {
+        setError();
+      }
+      obj["error"] = rsl;
+      obj["errorCount"] = errorCounter;
+      if (!error)
+      {
+        obj["status"] = "HAN OK";
+      }
+      obj["signal"] = WiFi.RSSI();
+      obj["comm"] = "8N1";
+#ifdef ESP8266
+      if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
+      {
+        obj["temperature"] = round(temperature);
+        obj["humidity"] = round(humidity);
+      }
+#endif
+      serializeJson(obj, state);
+      doc.clear();
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
     }
-    break;
+  }
+  break;
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
     {
@@ -654,4 +671,4 @@ void Sensor::loop()
     }
     break;
   }
-  }
+}

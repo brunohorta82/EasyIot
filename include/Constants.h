@@ -63,7 +63,7 @@ namespace constantsConfig
     constexpr const char *apiUser{"admin"};     // API USER
     constexpr const char *apiPassword{"xpto"};  // API PASSWORD
     constexpr const char *PW_HIDE{"******"};
-    constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{120000};
+    constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{60000};
 }
 #ifdef ESP32
 namespace DefaultPins
@@ -82,7 +82,7 @@ namespace DefaultPins
     constexpr int HAN_RX{14u};
     constexpr unsigned int OUTPUT_VALVE_THREE{noGPIO};
     constexpr unsigned int OUTPUT_VALVE_FOUR{noGPIO};
-#ifdef ESP32_4M
+#ifdef ESP32_MAKER_4MB
     constexpr unsigned int outputInputPins[] = {7, 12, 13, 14, 19, 20, 21, 22, 25};
 #else
     constexpr unsigned int outputInputPins[] = {7, 8, 12, 13, 14, 19, 20, 21, 22, 25};
@@ -117,6 +117,8 @@ namespace constanstsCloudIO
     constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
 #ifdef HAN_MODE
     constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
+#elif ESP32_MAKER_4MB
+    constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-MAKER-4MB"};
 #else
     constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest"};
 #endif
@@ -181,6 +183,7 @@ namespace FeatureDrivers
     constexpr const char *SHT4X{"SHT4X"};
     constexpr const char *PZEM_004T_V03{"PZEM_004T_V03"};
     constexpr const char *HAN{"HAN_MODBUS"};
+    constexpr const char *HAN_8N2{"HAN_MODBUS_8N2"};
     constexpr const char *RAIN{"RAIN"};
     constexpr const char *DOOR{"DOOR"};
     constexpr const char *WINDOW{"WINDOW"};

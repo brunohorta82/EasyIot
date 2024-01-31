@@ -52,6 +52,8 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%sAuto Update Request.", tags::system);
 #endif
+    config.pauseFeatures();
+    stopWebserver();
     performUpdate();
   }
 
@@ -96,7 +98,6 @@ void featuresTask(void *pvParameters)
 #endif
 void setup()
 {
-
 #ifdef DEBUG_ONOFRE
   Serial.begin(115200);
   Log.begin(LOG_LEVEL_VERBOSE, &Serial);
@@ -104,7 +105,7 @@ void setup()
 
   startFileSystem();
   config.load();
-  
+
 #ifdef ESP32
 #ifndef HAN_MODE
   config.i2cDiscovery();

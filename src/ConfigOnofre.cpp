@@ -181,6 +181,9 @@ ConfigOnofre &ConfigOnofre::resumeFeatures()
 }
 ConfigOnofre &ConfigOnofre::load()
 {
+#ifdef ESP32
+  pinMode(DefaultPins::OUTPUT_TWO, OUTPUT);
+#endif
   knxIdRegister = knx.callback_register("Actuatores", actuatoresCallback);
   if (!LittleFS.exists(configFilenames::config))
   {
@@ -448,6 +451,7 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
         }
         else if (a.isCover() || a.isGarage())
         {
+
           if (a.lastState == ActuatorState::OFF_OPEN)
           {
             state = ActuatorState::ON_CLOSE;
@@ -456,8 +460,8 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
           {
             state = ActuatorState::OFF_OPEN;
           }
-          a.lastState = state;
         }
+        a.lastState = state;
       }
       a.changeState(origin, state);
       this->save();
@@ -468,6 +472,12 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
 
 ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
+  bool restore = root["backup"] | false;
+  if (restore)
+  {
+    actuatores.clear();
+    sensors.clear();
+  }
   dhcp = root["dhcp"] | true;
   String mqttPasswordStr = root["mqttPassword"] | "";
   if (root.containsKey("mqttPassword") && mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
@@ -541,35 +551,79 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
     }
   }
   JsonArray features = root["features"];
+  int counter = 0;
   for (auto feature : features)
   {
+    counter++;
     String id = feature["id"] | "";
     if (String("ACTUATOR").equals(feature["group"] | ""))
     {
-      for (auto &actuator : actuatores)
+      if (restore)
       {
-        if (strcmp(actuator.uniqueId, id.c_str()) == 0)
+        Actuator actuator;
+        if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+          strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
+        actuator.driver = actuator.findDriverFromName(feature["driver"] | "INVALID");
+        String idStr;
+        generateId(idStr, actuator.name, actuator.driver, counter, sizeof(actuator.uniqueId));
+        strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
+        actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+        actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+        actuator.typeControl = feature["typeControl"] | ActuatorControlType::VIRTUAL;
+        actuator.knxAddress[0] = feature["area"] | 0;
+        actuator.knxAddress[1] = feature["line"] | 0;
+        actuator.knxAddress[2] = feature["member"] | 0;
+        actuator.state = feature["state"] | 0;
+        JsonArray inputsJson = feature["inputs"];
+        for (auto in : inputsJson)
         {
-          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
-            strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
-          actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
-          actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-          actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-          actuator.knxAddress[0] = feature["area"] | 0;
-          actuator.knxAddress[1] = feature["line"] | 0;
-          actuator.knxAddress[2] = feature["member"] | 0;
-          actuator.setup();
+          actuator.inputs.push_back(in | 0u);
+        }
+        JsonArray outputsJson = feature["outputs"];
+        for (auto out : outputsJson)
+        {
+          actuator.outputs.push_back(out | 0u);
+        }
+        actuator.setup();
+        actuatores.push_back(actuator);
+      }
+      else
+      {
+        for (auto &actuator : actuatores)
+        {
+          if (strcmp(actuator.uniqueId, id.c_str()) == 0)
+          {
+            if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+              strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
+            actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
+            actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+            actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+            actuator.knxAddress[0] = feature["area"] | 0;
+            actuator.knxAddress[1] = feature["line"] | 0;
+            actuator.knxAddress[2] = feature["member"] | 0;
+            actuator.setup();
+          }
         }
       }
     }
     if (String("SENSOR").equals(feature["group"] | ""))
     {
-      for (auto &sensor : sensors)
+      /*
       {
-        if (strcmp(sensor.uniqueId, id.c_str()) == 0)
+      "id": "7110928interruptor174", //TODO
+    ,*/
+      if (restore)
+      {
+      }
+      else
+      {
+        for (auto &sensor : sensors)
         {
-          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
-            strlcpy(sensor.name, feature["name"] | I18N::NO_NAME, sizeof(sensor.name));
+          if (strcmp(sensor.uniqueId, id.c_str()) == 0)
+          {
+            if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+              strlcpy(sensor.name, feature["name"] | I18N::NO_NAME, sizeof(sensor.name));
+          }
         }
       }
     }
@@ -597,7 +651,11 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["wifiGw"] = WiFi.gatewayIP().toString();
   root["firmware"] = String(VERSION, 3);
 #ifdef ESP32
+#ifndef ESP32_MAKER_4MB
+  root["mcu"] = "ESP32-MAKER-4MB";
+#else
   root["mcu"] = "ESP32";
+#endif
 #endif
 #ifdef ESP8266
 #ifdef HAN_MODE

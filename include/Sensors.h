@@ -12,6 +12,7 @@ enum SensorDriver
   DHT_22 = 122,
   PZEM_004T_V03 = 71,
   HAN = 80,
+  HAN_8N2 = 79,
   LTR303X = 81,
   PIR = 82,
   RAIN = 83,
@@ -49,6 +50,7 @@ public:
   unsigned long lastRead = 0ul;
   bool initialized = false;
   bool error = false;
+  int errorCounter = 0;
   unsigned long lastErrorTimestamp = 0ul;
   int id = 0;
   String
@@ -66,6 +68,7 @@ public:
       return Family::GARDEN;
     case PZEM_004T_V03:
     case HAN:
+    case HAN_8N2:
       return Family::ENERGY;
     case PIR:
     case DOOR:
@@ -97,6 +100,8 @@ public:
       return FeatureDrivers::PZEM_004T_V03;
     case HAN:
       return FeatureDrivers::HAN;
+    case HAN_8N2:
+      return FeatureDrivers::HAN_8N2;
     case RAIN:
       return FeatureDrivers::RAIN;
     case DOOR:
@@ -133,6 +138,7 @@ public:
   {
     error = true;
     lastErrorTimestamp = millis();
+    errorCounter++;
   };
   void loop();
   void notifyState();

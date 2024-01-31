@@ -20,8 +20,9 @@ O projeto EasyIot, é o firmware oficial para todas as boards OnOfre, no entanto
 
 ## Painel de Controlo <a name="id3"></a>
 
-![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/node.png)
-![devices](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/devices.png)
+![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/system.png)
+![features](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/features.png)
+![han](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/han.png)
 
 
 ## Hardware <a name="id2"></a>
