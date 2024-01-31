@@ -1,4 +1,4 @@
-<img src="https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/logo.png " width="220">
+<img src="https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/logo.png " width="220">
 
 * [Intro](#id1)
 * [BH ONOFRE BOARD](https://github.com/brunohorta82/BH_OnOfre)
@@ -20,16 +20,16 @@ O projeto EasyIot, é o firmware oficial para todas as boards OnOfre, no entanto
 
 ## Painel de Controlo <a name="id3"></a>
 
-![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/system.png)
-![features](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/features.png)
-![han](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/han.png)
+![dash](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/system.png)
+![features](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/features.png)
+![han](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/han.png)
 
 
 ## Hardware <a name="id2"></a>
 * OnOfre V6
-![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/v6.png)
+![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/v6.png)
 * OnOfre Programador
-![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/dev/screenshots/prog-usbc.png)
+![dev_board_6](https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/prog-usbc.png)
 
 ## Software necessário <a name="id3"></a>
 
