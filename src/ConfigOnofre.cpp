@@ -651,7 +651,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["wifiGw"] = WiFi.gatewayIP().toString();
   root["firmware"] = String(VERSION, 3);
 #ifdef ESP32
-#ifndef ESP32_MAKER_4MB
+#ifdef ESP32_MAKER_4MB
   root["mcu"] = "ESP32-MAKER-4MB";
 #else
   root["mcu"] = "ESP32";
