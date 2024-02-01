@@ -9,7 +9,7 @@
 * [OnOfre Doctor](https://doctor.onofre.store)
 
 ## AP Password
-bhponofre
+bhonofre
 
 ## WEBPANEL User/Password
 admin / xpto
