@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>OnOfre</title>
     <link rel="icon" type="image/x-icon" href="https://cloudio.bhonofre.pt/favicon.ico">
-    <link rel="stylesheet" href="css/styles.css?v=9.152">
+    <link rel="stylesheet" href="css/styles.css?v=9.154">
     <link href="https://fonts.cdnfonts.com/css/red-hat-display" rel="stylesheet">
 </head>
 <body>
@@ -117,6 +117,39 @@
                         <span>Energia Exportada</span>
                         <span class="v"> <span class="v" id="powerExport">0</span>kWh</span>
                     </div>
+                </div>
+            </div>
+        </div>
+        <div class="advanced">
+            <div>
+                <label style="color: white">Diagrama de Carga</label>
+                <div class="han-col">
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/calendar.svg">
+                        <span>Data</span>
+                        <span class="v" id="dateProfile">0</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/import.svg">
+                        <span>Energia Importada</span>
+                        <span class="v"> <span class="v" id="activeEnergyImport">0</span>Wh</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/export.svg">
+                        <span>Energia Exportada</span>
+                        <span class="v"> <span class="v" id="activeEnergyExport">0</span>Wh</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="Frequência" src="https://cloudio.bhonofre.pt/img/energia.svg">
+                        <span>Energia Reativa (Rc)</span>
+                        <span class="v"> <span class="v" id="reactiveEnergyRC">0</span>Wh</span>
+                    </div>
+                    <div class="han-values-dual">
+                        <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/energia.svg">
+                        <span>Energia Reativa (Ri)</span>
+                        <span class="v"> <span class="v" id="reactiveEnergyRI">0</span>Wh</span>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -301,7 +334,8 @@
                 <span class="close">&times;</span>
             </div>
             <div class="modal-form">
-                <input style="width: 100%" class="f-name form-control input-modal" maxlength="30" type="text" name="f-name" id="f-name"
+                <input style="width: 100%" class="f-name form-control input-modal" maxlength="30" type="text"
+                       name="f-name" id="f-name"
                        placeholder="ex: kitchen" required/>
             </div>
             <div class="f-ac modal-form">
@@ -325,12 +359,19 @@
                 <label>Calibração</label>
                 <div class="modal-form-row ">
 
-                        <input  class="form-control" type="number" id="f-up" value="0"/>
-                        <label class="label-hit" for=f-up>segundos para subir</label>
+                    <input class="form-control" type="number" id="f-up" value="0"/>
+                    <label class="label-hit" for=f-up>segundos para subir</label>
 
-                        <input class="form-control" type="number" id="f-down" value="1"/>
-                        <label class="label-hit" for="f-down">segundos para descer</label>
+                    <input class="form-control" type="number" id="f-down" value="1"/>
+                    <label class="label-hit" for="f-down">segundos para descer</label>
 
+                </div>
+            </div>
+            <div id="f-auto" class="f-auto hide modal-form">
+                <div class="modal-form-row ">
+                    <label>Desligar automáticamente em</label>
+                    <input class="form-control" type="number" id="f-autoOff" value="0"/>
+                    <label class="label-hit" for=f-up> segundos</label>
                 </div>
             </div>
             <div id="f-knx" class="modal-form hide">
@@ -381,16 +422,17 @@
                         <option value="2">Interruptor Normal Virtual</option>
                         <option value="3">Estore Pulsador Virtual</option>
                         <option value="9">Garagem Virtual</option>
-                        <option value="111">DHT 11</option>
-                        <option value="121">DHT 21</option>
-                        <option value="122">DHT 22</option>
-                        <option value="90">DS18B20</option>
+                        <option value="111">Climatização DHT 11</option>
+                        <option value="121">Climatização DHT 21</option>
+                        <option value="122">Climatização DHT 22</option>
+                        <option value="90">Climatização DS18B20</option>
                         <option value="83">Sensor Chuva</option>
                         <option value="82">Sensor Movimento PIR</option>
                         <option value="84">Sensor Porta</option>
                         <option value="85">Sensor Janela</option>
-                        <option value="71">Pzem-004T V3</option>
-                        <option value="93">HC-SR04</option>
+                        <option value="71">Energia Pzem-004T V3</option>
+                        <option value="93">Sonar HC-SR04</option>
+                        <option value="94">Movimento LD2410</option>
                     </select>
                 </div>
                 <div>
@@ -435,7 +477,7 @@
                                                                     alt="Dr OnOfre"></a>
     </div>
 </footer>
-<script src="js/index.js?v=9.152"></script>
+<script src="js/index.js?v=9.154"></script>
 </body>
 
 </html>

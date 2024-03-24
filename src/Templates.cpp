@@ -16,6 +16,32 @@ void prepareHAN()
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
+
+void prepareLD2410(String name, unsigned int rx, unsigned int tx)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    sensor.inputs = {tx, rx};
+    sensor.driver = LD2410;
+    sensor.delayRead = constantsConfig::ld2410Delay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, rx, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
+void prepareTMF882X(int hwAddress)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, "TEST TOF", sizeof(sensor.name));
+    sensor.inputs = {DefaultPins::SDA, DefaultPins::SCL};
+    sensor.driver = TMF882X;
+    sensor.hwAddress = hwAddress;
+    sensor.delayRead = constantsConfig::ld2410Delay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, hwAddress, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
 void prepareSHT4X(int hwAddress)
 {
     Sensor sensor;
@@ -179,6 +205,9 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             break;
         case SensorDriver::RAIN:
             prepareRain(name, input1);
+            break;
+        case SensorDriver::LD2410:
+            prepareLD2410(name, input1, input2);
             break;
         case SensorDriver::PZEM_004T_V03:
             preparePzem(name, input1, input2, Discovery::MODBUS_PZEM_ADDRESS_DEFAULT);

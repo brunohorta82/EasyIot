@@ -450,7 +450,6 @@ void stopWebserver()
   Log.notice("%s WEBSERVER STOP" CR, tags::system);
 #endif
   DefaultHeaders::Instance().end();
-  server.end();
 }
 void startWebserver()
 {

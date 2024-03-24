@@ -20,8 +20,9 @@ enum SensorDriver
   WINDOW = 85,
   DS18B20 = 90,
   SHT4X = 91,
-  TMF880X = 92,
-  HCSR04 = 93
+  TMF882X = 92,
+  HCSR04 = 93,
+  LD2410 = 94
 
 };
 
@@ -73,11 +74,17 @@ public:
     case PIR:
     case DOOR:
     case WINDOW:
+    case LD2410:
       return Family::SECURITY;
     case LTR303X:
     case HCSR04:
       return Family::LEVEL_METER;
+    case INVALID_SENSOR:
+      return Family::NONE;
+    default:
+      return Family::NONE;
     }
+
     return Family::NONE;
   };
   String driverToText()
@@ -112,6 +119,12 @@ public:
       return FeatureDrivers::PIR;
     case HCSR04:
       return FeatureDrivers::HCSR04;
+    case LD2410:
+      return FeatureDrivers::LD2410;
+    case TMF882X:
+      return FeatureDrivers::TMF882X;
+    case INVALID_SENSOR:
+      return FeatureDrivers::INVALID;
     }
     return FeatureDrivers::INVALID;
   };
@@ -136,6 +149,8 @@ public:
   };
   const void setError()
   {
+    if (error)
+      return;
     error = true;
     lastErrorTimestamp = millis();
     errorCounter++;

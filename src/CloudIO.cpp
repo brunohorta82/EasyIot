@@ -188,7 +188,7 @@ void connectToCloudIO()
   HTTPClient http;
   WiFiClient client;
   String payload = "";
-  DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
+  JsonDocument doc;
   JsonVariant root = doc.to<JsonVariant>();
   config.json(root, false);
   serializeJson(doc, payload);
@@ -215,7 +215,7 @@ void connectToCloudIO()
   else if (httpCode == HTTP_CODE_OK)
   {
     String payload = http.getString();
-    StaticJsonDocument<200> resp;
+    JsonDocument resp;
     DeserializationError error = deserializeJson(doc, payload);
     strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
     strlcpy(config.cloudIOPassword, doc["password"] | "", sizeof(config.cloudIOPassword));
@@ -226,14 +226,14 @@ void connectToCloudIO()
     {
       String family = sw.familyToText();
       family.toLowerCase();
-      snprintf(sw.cloudIOwriteTopic, sizeof(sw.cloudIOwriteTopic), "%s/%s/%s/%s/set", config.cloudIOUsername, config.chipId, family, sw.uniqueId);
-      snprintf(sw.cloudIOreadTopic, sizeof(sw.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, family, sw.uniqueId);
+      snprintf(sw.cloudIOwriteTopic, sizeof(sw.cloudIOwriteTopic), "%s/%s/%s/%s/set", config.cloudIOUsername, config.chipId, family.c_str(), sw.uniqueId);
+      snprintf(sw.cloudIOreadTopic, sizeof(sw.cloudIOreadTopic), "%s/%s/%s/%s/status", config.cloudIOUsername, config.chipId, family.c_str(), sw.uniqueId);
     }
     for (auto &ss : config.sensors)
     {
       String family = ss.familyToText();
       family.toLowerCase();
-      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/metrics", config.cloudIOUsername, config.chipId, family, ss.uniqueId);
+      snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/metrics", config.cloudIOUsername, config.chipId, family.c_str(), ss.uniqueId);
     }
     resp.clear();
     if (!error && strlen(config.cloudIOUsername) > 0 && strlen(config.cloudIOPassword) > 0)

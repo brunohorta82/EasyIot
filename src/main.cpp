@@ -105,18 +105,21 @@ void setup()
 
   startFileSystem();
   config.load();
-
+  setupWiFi();
+  setupCors();
 #ifdef ESP32
 #ifndef HAN_MODE
   config.i2cDiscovery();
   config.pzemDiscovery();
 #endif
 #endif
-  setupWiFi();
-  setupCors();
   setupMQTT(false);
 #ifdef ESP32
+#ifdef HAN_MODE
+  xTaskCreate(featuresTask, "Features-Task", 4048, NULL, 100, NULL);
+#else
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
+#endif
 #endif
 }
 

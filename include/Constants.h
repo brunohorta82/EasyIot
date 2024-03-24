@@ -21,6 +21,8 @@ namespace constantsMqtt
 
 namespace Payloads
 {
+    constexpr const char *presenceOnPayload{"detected"};
+    constexpr const char *presenceOffPayload{"clear"};
     constexpr const char *motionOnPayload{"detected"};
     constexpr const char *motionOffPayload{"clear"};
     constexpr const char *windowDoornOnPayload{"closed"};
@@ -55,6 +57,7 @@ namespace constantsConfig
     constexpr unsigned long climateReadDelay{10000l};
     constexpr unsigned long rainDelay{5000l};
     constexpr unsigned long pirDelay{100l};
+    constexpr unsigned long ld2410Delay{200l};
     constexpr unsigned long hcsr04Delay{100l};
     constexpr unsigned long hallsensorDelay{1000l};
     constexpr unsigned long illuminanceReadDelay{5000l};
@@ -129,6 +132,7 @@ namespace Discovery
     constexpr int I2C_SHT4X_ADDRESS{0x44};           // TEMPERATURE/HUMIDITY
     constexpr int I2C_LTR303_ADDRESS{0x29};          // ILLUMINANCE
     constexpr int I2C_SSD1306_ADDRESS{0x3C};         // DISPLAY
+    constexpr int I2C_TMF880X_ADDRESS{0x41};         // TIME OF FLY
     constexpr int MODBUS_PZEM_ADDRESS_START{0x10};   // POWER METER
     constexpr int MODBUS_PZEM_ADDRESS_DEFAULT{0xF8}; // POWER METER
 }
@@ -190,5 +194,8 @@ namespace FeatureDrivers
     constexpr const char *PIR{"PIR"};
     constexpr const char *GARDEN_VALVE{"GARDEN_VALVE"};
     constexpr const char *HCSR04{"HCSR04"};
+    constexpr const char *LD2410{"LD2410"};
+    constexpr const char *TMF882X{"TMF882X"};
+
     constexpr const char *INVALID{"INVALID"};
 }

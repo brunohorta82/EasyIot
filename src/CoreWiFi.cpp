@@ -25,6 +25,7 @@ void SysProvEvent(arduino_event_t *sys_event)
     startWebserver();
     knx.start();
     config.requestCloudIOSync();
+    refreshMDNS(config.nodeId);
     break;
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
     Serial.println("\nDisconnected. Connecting to the AP again... ");
@@ -90,8 +91,8 @@ void scanNewWifiNetworks()
   }
   else
   {
-    const size_t CAPACITY = JSON_ARRAY_SIZE(result) + 200;
-    DynamicJsonDocument doc(CAPACITY);
+
+    JsonDocument doc;
     JsonArray object = doc.to<JsonArray>();
     for (int8_t i = 0; i < result; ++i)
     {
@@ -297,7 +298,7 @@ void setupWiFi()
   // Sample uuid that user can pass during provisioning using BLE
   uint8_t uuid[16] = {0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
                       0xea, 0x4a, 0x82, 0x03, 0x04, 0x90, 0x1a, 0x02};
-  WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM, WIFI_PROV_SECURITY_1, pop, service_name, service_key, uuid, true);
+  WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM, WIFI_PROV_SECURITY_1, pop, service_name, service_key, uuid, false);
   log_d("ble qr");
   WiFiProv.printQR(service_name, pop, "ble");
 #endif

@@ -163,6 +163,10 @@ void ConfigOnofre::i2cDiscovery()
           save();
         }
       }
+      else if (address == Discovery::I2C_TMF880X_ADDRESS)
+      {
+        prepareTMF882X(address);
+      }
     }
   }
 #ifdef DEBUG_ONOFRE
@@ -191,7 +195,7 @@ ConfigOnofre &ConfigOnofre::load()
   }
 
   File file = LittleFS.open(configFilenames::config, "r+");
-  DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
+  JsonDocument doc;
 
   DeserializationError error = deserializeJson(doc, file);
   file.close();
@@ -260,6 +264,7 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.upCourseTime = d["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
       actuator.downCourseTime = d["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
       actuator.state = d["state"] | 0;
+      actuator.autoOff = d["autoOff"] | 0ul;
       String family = actuator.familyToText();
       family.toLowerCase();
       sprintf(actuator.readTopic, "onofre/%s/%s/%s/state", chipId, family.c_str(), actuator.uniqueId);
@@ -313,7 +318,7 @@ void ConfigOnofre::loadTemplate(int templateId)
 ConfigOnofre &ConfigOnofre::save()
 {
   File file = LittleFS.open(configFilenames::config, "w+");
-  DynamicJsonDocument doc(DYNAMIC_JSON_DOCUMENT_SIZE);
+  JsonDocument doc;
   doc["templateId"] = templateId;
   if (!String(nodeId).isEmpty())
     doc["nodeId"] = nodeId;
@@ -347,10 +352,10 @@ ConfigOnofre &ConfigOnofre::save()
   doc["apiUser"] = apiUser;
   doc["apiPassword"] = apiPassword;
 
-  JsonArray features = doc.createNestedArray("features");
+  JsonArray features = doc["features"].to<JsonArray>();
   for (auto s : actuatores)
   {
-    JsonObject a = features.createNestedObject();
+    JsonDocument a;
     a["group"] = "ACTUATOR";
     a["driver"] = s.driver;
     a["id"] = s.uniqueId;
@@ -361,28 +366,30 @@ ConfigOnofre &ConfigOnofre::save()
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
-    a["state"] = s.state;
-    JsonArray outputs = a.createNestedArray("outputs");
+    a["member"] = s.knxAddress[2];
+    a["autoOff"] = s.autoOff;
+    JsonArray outputs = a["outputs"].to<JsonArray>();
     for (auto out : s.outputs)
     {
       outputs.add(out);
     }
-    JsonArray inputs = a.createNestedArray("inputs");
+    JsonArray inputs = a["inputs"].to<JsonArray>();
     for (auto in : s.inputs)
     {
       inputs.add(in);
     }
+    features.add(a);
   }
   for (auto ss : sensors)
   {
-    JsonObject a = features.createNestedObject();
+    JsonObject a = features.add<JsonObject>();
     a["group"] = "SENSOR";
     a["id"] = ss.uniqueId;
     a["name"] = ss.name;
     a["driver"] = ss.driver;
     a["hwAddress"] = ss.hwAddress;
     a["delayRead"] = ss.delayRead;
-    JsonArray inputs = a.createNestedArray("inputs");
+    JsonArray inputs = a["inputs"].to<JsonArray>();
     for (auto in : ss.inputs)
     {
       inputs.add(in);
@@ -445,23 +452,7 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
     {
       if (state == ActuatorState::TOGGLE)
       {
-        if (a.isLight() || a.isSwitch())
-        {
-          state = a.state == ActuatorState::ON_CLOSE ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
-        }
-        else if (a.isCover() || a.isGarage())
-        {
-
-          if (a.lastState == ActuatorState::OFF_OPEN)
-          {
-            state = ActuatorState::ON_CLOSE;
-          }
-          else if (a.lastState == ActuatorState::ON_CLOSE)
-          {
-            state = ActuatorState::OFF_OPEN;
-          }
-        }
-        a.lastState = state;
+        state = a.state == ActuatorState::ON_CLOSE ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
       }
       a.changeState(origin, state);
       this->save();
@@ -573,6 +564,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
         actuator.knxAddress[0] = feature["area"] | 0;
         actuator.knxAddress[1] = feature["line"] | 0;
         actuator.knxAddress[2] = feature["member"] | 0;
+        actuator.autoOff = feature["autoOff"] | 0ul;
         actuator.state = feature["state"] | 0;
         JsonArray inputsJson = feature["inputs"];
         for (auto in : inputsJson)
@@ -601,6 +593,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
             actuator.knxAddress[0] = feature["area"] | 0;
             actuator.knxAddress[1] = feature["line"] | 0;
             actuator.knxAddress[2] = feature["member"] | 0;
+            actuator.autoOff = feature["autoOff"] | 0ul;
             actuator.setup();
           }
         }
@@ -608,10 +601,6 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
     }
     if (String("SENSOR").equals(feature["group"] | ""))
     {
-      /*
-      {
-      "id": "7110928interruptor174", //TODO
-    ,*/
       if (restore)
       {
       }
@@ -667,9 +656,9 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["mac"] = WiFi.macAddress();
   if (allFields)
     root["signal"] = WiFi.RSSI();
-  JsonVariant outInPins = root.createNestedArray("outInPins");
+  JsonArray outInPins = root["outInPins"].to<JsonArray>();
 #ifdef ESP32
-  JsonVariant inPins = root.createNestedArray("inPins");
+  JsonVariant inPins = root["inPins"].to<JsonArray>();
 
   for (auto p : DefaultPins::intputOnlyPins)
   {
@@ -681,10 +670,10 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     outInPins.add(p);
   }
 
-  JsonArray features = root.createNestedArray("features");
+  JsonArray features = root["features"].to<JsonArray>();
   for (auto s : actuatores)
   {
-    JsonObject a = features.createNestedObject();
+    JsonObject a = features.add<JsonObject>();
     if (allFields)
       a["group"] = "ACTUATOR";
     a["id"] = s.uniqueId;
@@ -696,7 +685,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
         a["upCourseTime"] = s.upCourseTime;
       if (allFields)
         a["downCourseTime"] = s.downCourseTime;
-      JsonArray outputs = a.createNestedArray("outputs");
+      JsonArray outputs = a["outputs"].to<JsonArray>();
       for (auto out : s.outputs)
       {
         outputs.add(out);
@@ -707,10 +696,11 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     a["family"] = s.familyToText();
     a["driver"] = s.driverToText();
     a["state"] = s.state;
+    a["autoOff"] = s.autoOff;
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
-    JsonArray inputs = a.createNestedArray("inputs");
+    JsonArray inputs = a["inputs"].to<JsonArray>();
     for (auto in : s.inputs)
     {
       inputs.add(in);
@@ -718,7 +708,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   }
   for (auto s : sensors)
   {
-    JsonObject a = features.createNestedObject();
+    JsonObject a = features.add<JsonObject>();
     if (allFields)
       a["group"] = "SENSOR";
     a["id"] = s.uniqueId;
@@ -730,7 +720,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
         a["state"] = s.state;
     }
     a["driver"] = s.driverToText();
-    JsonArray inputs = a.createNestedArray("inputs");
+    JsonArray inputs = a["inputs"].to<JsonArray>();
     for (auto in : s.inputs)
     {
       inputs.add(in);
@@ -781,11 +771,51 @@ bool ConfigOnofre::isReloadWifiRequested()
   }
   return false;
 }
-
+void ConfigOnofre::loopActuators()
+{
+  for (auto &sw : actuatores)
+  {
+    if (sw.state == 100 && sw.autoOff > 0 && sw.lastChange > 0 && sw.lastChange + (sw.autoOff * 1000) < millis())
+    {
+      sw.changeState(StateOrigin::AUTO, 0);
+    }
+    if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isCover())
+    {
+      sw.shutter->loop();
+    }
+    for (auto &button : sw.buttons)
+    {
+      button.loop();
+    }
+    if (wifiConnected() && sw.isKnxSupport())
+    {
+      knx.loop();
+      if (sw.knxSync == 3)
+      {
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s KNX Request Sync for: %s" CR, tags::actuatores, sw.name);
+#endif
+        knx.send_1byte_int(knx.GA_to_address(sw.knxAddress[0], sw.knxAddress[1], sw.knxAddress[2]), KNX_CT_READ, 0);
+      }
+      if (sw.knxSync < 4)
+      {
+        sw.knxSync++;
+      }
+    }
+  }
+}
 void ConfigOnofre::requestRestart()
 {
   reboot = true;
 }
+void ConfigOnofre::loopSensors()
+{
+  for (auto &s : sensors)
+  {
+    s.loop();
+  }
+}
+
 bool ConfigOnofre::isRestartRequested()
 {
   if (reboot)

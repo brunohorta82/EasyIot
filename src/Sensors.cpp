@@ -12,9 +12,14 @@
 #include <SensirionI2CSht4x.h>
 #include <LTR303.h>
 #include "DHT.h"
-#include "SparkFun_TMF8801_Arduino_Library.h"
+#include "SparkFun_TMF882X_Library.h"
 #include <NewPing.h>
 
+#ifdef ESP32
+#include <OpenTherm.h>
+#include <ld2410.h>
+#endif
+// OpenTherm ot(1, 2);
 extern ConfigOnofre config;
 void Sensor::notifyState()
 {
@@ -44,9 +49,10 @@ void Sensor::loop()
     {
       error = false;
 #ifdef HAN_MODE
-      if (errorCounter >= 10)
+      if (errorCounter >= 5)
       {
         config.requestRestart();
+        return;
       }
 #endif
 #ifdef DEBUG_ONOFRE
@@ -60,46 +66,56 @@ void Sensor::loop()
   {
   case INVALID_SENSOR:
     return;
-  case TMF880X:
+  case TMF882X:
   {
 
-    if (lastRead + delayRead < millis())
+    if (lastRead + 1000 < millis())
     {
-      static TMF8801 sensor;
+      static SparkFun_TMF882X sensor;
+      static struct tmf882x_msg_meas_results myResults;
       if (!isInitialized())
       {
-        if (sensor.begin() == true)
+        if (!sensor.begin())
         {
-          sensor.enableInterrupt();
-          Serial.print("TMF8801 serial number ");
-          Serial.print(sensor.getSerialNumber());
-          Serial.println(" connected");
-          Serial.print("Chip revision: ");
-          Serial.println(sensor.getHardwareVersion());
-          Serial.print("App version: ");
-          Serial.print(sensor.getApplicationVersionMajor());
-          Serial.print(".");
-          Serial.println(sensor.getApplicationVersionMinor());
+          Serial.println("Error - The TMF882X failed to initialize - is the board connected?");
+          while (1)
+            ;
         }
-        // or an error message i something went wrong.
         else
-        {
-          Serial.println("System halted.");
-        }
+          Serial.println("TMF882X started.");
       }
-      lastRead = millis();
-      if (!sensor.isConnected())
+      Serial.println("Measurement:");
+      if (sensor.startMeasuring(myResults))
       {
-        sensor.wakeUpDevice();
-        sensor.begin();
-      }
-      if (sensor.dataAvailable())
-      {
+        // print out results
+        Serial.println("Measurement:");
+        Serial.print("     Result Number: ");
+        Serial.print(myResults.result_num);
+        Serial.print("  Number of Results: ");
+        Serial.println(myResults.num_results);
 
-        StaticJsonDocument<64> doc;
+        for (int i = 0; i < myResults.num_results; ++i)
+        {
+          Serial.print("       conf: ");
+          Serial.print(myResults.results[i].confidence);
+          Serial.print(" distance mm: ");
+          Serial.print(myResults.results[i].distance_mm);
+          Serial.print(" channel: ");
+          Serial.print(myResults.results[i].channel);
+          Serial.print(" sub_capture: ");
+          Serial.println(myResults.results[i].sub_capture);
+        }
+        Serial.print("     photon: ");
+        Serial.print(myResults.photon_count);
+        Serial.print(" ref photon: ");
+        Serial.print(myResults.ref_photon_count);
+        Serial.print(" ALS: ");
+        Serial.println(myResults.ambient_light);
+        Serial.println();
+        JsonDocument doc;
         JsonObject obj = doc.to<JsonObject>();
         state.clear();
-        obj["messure"] = sensor.getDistance();
+        obj["messure"] = 10;
         serializeJson(doc, state);
         doc.clear();
         notifyState();
@@ -107,6 +123,8 @@ void Sensor::loop()
         Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
       }
+      Serial.println("jj:");
+      lastRead = millis();
     }
   }
   break;
@@ -132,7 +150,7 @@ void Sensor::loop()
 #endif
         return;
       }
-      StaticJsonDocument<256> doc;
+      JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       obj["temperature"] = temperature;
@@ -158,7 +176,7 @@ void Sensor::loop()
       int currentState = readPINToInt(inputs[0]);
       if (lastBinaryState == currentState)
         return;
-      StaticJsonDocument<128> doc;
+      JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       obj["motion"] = currentState ? Payloads::motionOnPayload : Payloads::motionOffPayload;
@@ -185,7 +203,7 @@ void Sensor::loop()
       int currentState = readPINToInt(inputs[0]);
       if (lastBinaryState == currentState)
         return;
-      StaticJsonDocument<128> doc;
+      JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       obj["rain"] = currentState ? Payloads::rainOnPayload : Payloads::rainOffPayload;
@@ -213,7 +231,7 @@ void Sensor::loop()
       int currentState = readPINToInt(inputs[0]);
       if (lastBinaryState == currentState)
         return;
-      StaticJsonDocument<128> doc;
+      JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       obj["state"] = currentState ? Payloads::windowDoornOnPayload : Payloads::windowDoornOffPayload;
@@ -245,7 +263,7 @@ void Sensor::loop()
       float humidity = 0.0;
       if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
       {
-        StaticJsonDocument<256> doc;
+        JsonDocument doc;
         JsonObject obj = doc.to<JsonObject>();
         state.clear();
         obj["temperature"] = temperature;
@@ -290,7 +308,7 @@ void Sensor::loop()
 #endif
             return;
           }
-          StaticJsonDocument<256> doc;
+          JsonDocument doc;
           JsonObject obj = doc.to<JsonObject>();
           state.clear();
           obj["gain"] = gain;
@@ -319,7 +337,7 @@ void Sensor::loop()
         dallas->begin();
       }
 
-      StaticJsonDocument<256> doc;
+      JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       lastRead = millis();
@@ -340,7 +358,7 @@ void Sensor::loop()
     {
       NewPing sonar(inputs[0], inputs[1], 350);
 
-      StaticJsonDocument<256> doc;
+      JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       lastRead = millis();
@@ -354,32 +372,23 @@ void Sensor::loop()
 #endif
     }
   }
-  break;
+
   case HAN:
   case HAN_8N2:
   {
-#ifdef ESP32
-    static uint32_t serialConf = SERIAL_8N1;
-#endif
-#ifdef ESP8266
-    static Config serialConf = SWSERIAL_8N1;
-    if (driver == SensorDriver::HAN_8N2)
-    {
-      serialConf = SWSERIAL_8N2;
-    }
-#endif
+
     if (lastRead + delayRead < millis())
     {
       static ModbusMaster *modbus;
 #ifdef ESP32
       if (!isInitialized())
       {
-        setCpuFrequencyMhz(80);
         modbus = new ModbusMaster();
-        Serial1.begin(9600, serialConf, inputs[0], inputs[1]);
+        Serial1.begin(9600, SERIAL_8N1, 5, 6);
         modbus->begin(1, Serial1);
       }
 #endif
+
 #ifdef ESP8266
       static SoftwareSerial softwareSerial = SoftwareSerial(inputs[1], inputs[0]);
       static SensirionI2CSht4x sensor;
@@ -389,16 +398,16 @@ void Sensor::loop()
 
       if (!isInitialized())
       {
+        modbus = new ModbusMaster();
         Wire.begin(DefaultPins::SDA, DefaultPins::SCL);
         sensor.begin(Wire, Discovery::I2C_SHT4X_ADDRESS);
         sensor.softReset();
-        modbus = new ModbusMaster();
-        softwareSerial.begin(9600, serialConf);
+        softwareSerial.begin(9600, SWSERIAL_8N1);
         modbus->begin(1, softwareSerial);
       }
 #endif
       lastRead = millis();
-      StaticJsonDocument<400>
+      JsonDocument
           doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
@@ -415,6 +424,7 @@ void Sensor::loop()
         char strftime_buf[64];
         sprintf(strftime_buf, "%d-%02d-%02dT%02d:%02d:%02d", clock.year, clock.month, clock.day_of_month, clock.hour, clock.minute, clock.second);
         obj["dateTime"] = strftime_buf;
+        delay(100);
       }
       else
       {
@@ -438,7 +448,7 @@ void Sensor::loop()
         {
           obj["status"] = "Erro desconhecido";
         }
-        setError();
+        //  setError();
 #ifdef DEBUG_ONOFRE
         Log.info("%s HAN  Error: %d. " CR, tags::sensors, rsl);
 #endif
@@ -514,14 +524,36 @@ void Sensor::loop()
       {
         setError();
       }
-      obj["error"] = rsl;
+
+      if (modbus->readLastProfile(0x06, 0x01) == modbus->ku8MBSuccess)
+      {
+        std::array<uint16_t, 6> buffer;
+        for (size_t i = 0; i <= 3; ++i)
+        {
+          buffer[i] = modbus->getResponseBuffer(i);
+        }
+        han_clock_t clock{.buffer = buffer};
+        char strftime_buf[64];
+        sprintf(strftime_buf, "%d-%02d-%02dT%02d:%02d:%02d", clock.year, clock.month, clock.day_of_month, clock.hour, clock.minute, clock.second);
+        obj["dateProfile"] = strftime_buf;
+        obj["amr"] = modbus->getResponseBuffer(6);
+        obj["activeEnergyImport"] = modbus->getResponseBuffer(8) |
+                                    modbus->getResponseBuffer(7) << 16;
+        obj["reactiveEnergyRC"] = modbus->getResponseBuffer(10) |
+                                  modbus->getResponseBuffer(9) << 16;
+        obj["reactiveEnergyRI)"] = modbus->getResponseBuffer(12) |
+                                   modbus->getResponseBuffer(11) << 16;
+        obj["activeEnergyExport)"] = modbus->getResponseBuffer(14) |
+                                     modbus->getResponseBuffer(13) << 16;
+      }
+
       obj["errorCount"] = errorCounter;
       if (!error)
       {
         obj["status"] = "HAN OK";
       }
       obj["signal"] = WiFi.RSSI();
-      obj["comm"] = "8N1";
+      obj["comm"] = "SWSERIAL_8N1";
 #ifdef ESP8266
       if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
       {
@@ -538,6 +570,91 @@ void Sensor::loop()
     }
   }
   break;
+
+#ifdef ESP32
+  case LD2410:
+  {
+    static ld2410 radar;
+    if (initialized)
+    {
+      radar.read();
+    }
+    if (lastRead + delayRead < millis())
+    {
+      if (!isInitialized())
+      {
+        Serial1.begin(256000, SERIAL_8N1, inputs[0], inputs[1]);
+        delay(500);
+        if (radar.begin(Serial1))
+        {
+#ifdef DEBUG_ONOFRE
+          Log.error("Ld2410 error " CR, tags::sensors);
+#endif
+          return;
+        }
+      }
+      lastRead = millis();
+
+      if (radar.isConnected())
+      {
+        JsonDocument
+            doc;
+        JsonObject obj = doc.to<JsonObject>();
+        state.clear();
+        if (radar.presenceDetected())
+        {
+            bool currentState = readPINToInt(inputs[0]);
+          if (lastBinaryState == currentState)
+            return;
+          lastBinaryState = currentState;
+          obj["presence"] = Payloads::presenceOnPayload;
+          if (radar.stationaryTargetDetected())
+          {
+            obj["stationaryTargetDistance"] = radar.stationaryTargetDistance();
+            obj["stationaryTargetEnergy"] = radar.stationaryTargetEnergy();
+          }
+          else
+          {
+            obj["stationaryTargetDistance"] = 0;
+            obj["stationaryTargetEnergy"] = 0;
+          }
+          if (radar.movingTargetDetected())
+          {
+            obj["movingTargetDistance"] = radar.movingTargetDistance();
+            obj["movingTargetEnergy"] = radar.movingTargetEnergy();
+            obj["motion"] = Payloads::motionOnPayload;
+          }
+          else
+          {
+            obj["movingTargetEnergy"] = 0;
+            obj["movingTargetDistance"] = 0;
+            obj["motion"] = Payloads::motionOffPayload;
+          }
+        }
+        else
+        {
+          obj["stationaryTargetDistance"] = 0;
+          obj["stationaryTargetEnergy"] = 0;
+          obj["presence"] = Payloads::presenceOffPayload;
+          obj["movingTargetEnergy"] = 0;
+          obj["movingTargetDistance"] = 0;
+          obj["motion"] = Payloads::motionOffPayload;
+        }
+        serializeJson(doc, state);
+        doc.clear();
+        notifyState();
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+      }
+    }
+    break;
+  }
+
+#else
+  case LD2410:
+    break;
+#endif
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
     {
@@ -557,11 +674,17 @@ void Sensor::loop()
       PZEM004Tv30 pzemv03(Serial1, inputs[0], inputs[1], hwAddress);
 #endif
       lastRead = millis();
-      StaticJsonDocument<256> doc;
+      JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
       lastRead = millis();
-      float v, f, c, p, pf, e = 0.0;
+      float v = 0.0;
+      float f = 0.0;
+      float c = 0.0;
+      float p = 0.0;
+      float pf = 0.0;
+      float e = 0.0;
+
       v = pzemv03.voltage();
       if (isnan(v))
       {

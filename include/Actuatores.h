@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include "Constants.h"
 #include <Button2.h>
+#include <Shutters.h>
 #include "ArduinoJson.h"
 #include <vector>
 #include "FS.h"
@@ -21,7 +22,8 @@ enum StateOrigin
     KNX = 2,
     MQTT = 3,
     CLOUDIO = 4,
-    WEBPANEL = 5
+    WEBPANEL = 5,
+    AUTO = 6,
 };
 enum ActuatorInputMode
 {
@@ -59,6 +61,7 @@ public:
     ActuatorControlType typeControl = VIRTUAL;
     int state = 0;
     int lastState = 0;
+    unsigned long autoOff = 0ul;
     // CLOUDIO
     char cloudIOwriteTopic[128]{};
     char cloudIOreadTopic[128]{};
@@ -78,6 +81,7 @@ public:
     // CONTROL VARIABLES
     bool ready{false};
     int id = 0;
+    unsigned long lastChange = 0ul;
 
     // VIRTUAL COVER CONTROLLER
     Shutters *shutter;
@@ -162,6 +166,8 @@ public:
             return FeatureDrivers::GARAGE_PUSH;
         case GARDEN_VALVE:
             return FeatureDrivers::GARDEN_VALVE;
+        case INVALID:
+            return FeatureDrivers::INVALID;
         }
 
         return FeatureDrivers::INVALID;

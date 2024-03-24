@@ -1,5 +1,4 @@
 #include "Actuatores.h"
-#include <Shutters.h>
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
 #include "Constants.h"
@@ -258,6 +257,8 @@ void Actuator::setup()
       case ActuatorDriver::LIGHT_LATCH:
       case ActuatorDriver::SWITCH_LATCH:
         button.setChangedHandler(toogle);
+      default:
+        continue;
       }
       button.loop();
       buttons.push_back(button);
@@ -363,6 +364,7 @@ void Actuator::notifyState(StateOrigin origin)
 
 Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
+  lastChange = millis();
   if (!isGarage() && this->state == state)
     return this;
 #ifdef DEBUG_ONOFRE
@@ -435,41 +437,4 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
     }
   }
   return this;
-}
-
-void ConfigOnofre::loopActuators()
-{
-  for (auto &sw : config.actuatores)
-  {
-    if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isCover())
-    {
-      sw.shutter->loop();
-    }
-    for (auto &button : sw.buttons)
-    {
-      button.loop();
-    }
-    if (wifiConnected() && sw.isKnxSupport())
-    {
-      knx.loop();
-      if (sw.knxSync == 3)
-      {
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s KNX Request Sync for: %s" CR, tags::actuatores, sw.name);
-#endif
-        knx.send_1byte_int(knx.GA_to_address(sw.knxAddress[0], sw.knxAddress[1], sw.knxAddress[2]), KNX_CT_READ, 0);
-      }
-      if (sw.knxSync < 4)
-      {
-        sw.knxSync++;
-      }
-    }
-  }
-}
-void ConfigOnofre::loopSensors()
-{
-  for (auto &s : config.sensors)
-  {
-    s.loop();
-  }
 }

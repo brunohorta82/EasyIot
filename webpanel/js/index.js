@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.134"
+let baseUrl = "http://192.168.187.103"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -37,6 +37,7 @@ function create() {
         refreshFeatures();
         clearCreate();
         closeModal("wizard");
+
 
     }).catch(() =>
         showMessage("config_save_error")
@@ -147,6 +148,10 @@ function applyState(id, state) {
             if (j.motion !== undefined) {
                 label1.textContent = j.motion;
             }
+            if (j.stationaryTargetDistance !== undefined && j.movingTargetDistance !== undefined) {
+                label1.textContent = j.stationaryTargetDistance+" cm";
+                label2.textContent = j.movingTargetDistance+" cm";;
+            }
             if (j.temperature !== undefined && j.humidity !== undefined) {
                 label1.textContent = Math.trunc(j.temperature) + "º";
                 label2.textContent = Math.trunc(j.humidity) + "%";
@@ -199,6 +204,7 @@ function fillDevices() {
         a = document.importNode(item, true);
         a.id = "f-" + f.id;
         a.getElementsByClassName("feature-name").item(0).textContent = f.name ? f.name : "...";
+
         let clickArea = "feature-box";
         if ("ACTUATOR" === f.group) {
             findById("actuators_config").appendChild(a);
@@ -208,12 +214,18 @@ function fillDevices() {
             control.classList.remove("ON");
             a.getElementsByTagName("input").item(0).value = Math.abs(parseInt(f.state) - 100);
             a.getElementsByTagName("input").item(0).id = f.id;
-            if ("SWITCH" === f.family || "GARDEN" === f.family) {
+            if ("SWITCH" === f.family) {
                 control.onclick = () => toggleSwitch(f.id);
                 a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/PLUG.svg";
                 control.classList.add(f.state > 0 ? "ON" : "OFF");
                 a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
-            } else if ("LIGHT" === f.family) {
+            }
+            if ( "GARDEN" === f.family) {
+                control.onclick = () => toggleSwitch(f.id);
+                a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/GARDEN.svg";
+                control.classList.add(f.state > 0 ? "ON" : "OFF");
+                a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
+            }else if ("LIGHT" === f.family) {
                 control.onclick = () => toggleSwitch(f.id);
                 control.classList.add(f.state > 0 ? "ON" : "OFF");
                 a.light = true;
@@ -263,8 +275,12 @@ function fillDevices() {
                 icon1.src = "https://cloudio.bhonofre.pt/img/TEMPERATURE.svg";
             } else if (f.driver === 'LTR303') {
                 icon1.src = "https://cloudio.bhonofre.pt/img/LUX.svg";
-            } else if (f.driver === 'PIR') {
+            } else if (f.driver === 'PIR' ) {
                 icon1.src = "https://cloudio.bhonofre.pt/img/MOTION.svg";
+            }else if(f.driver === 'LD2410'){
+                icon2.classList.remove("hide");
+                icon1.src = "https://cloudio.bhonofre.pt/img/MOTION.svg";
+                icon2.src = "https://cloudio.bhonofre.pt/img/MOTION.svg";
             } else if (f.driver === 'RAIN') {
                 icon1.src = "https://cloudio.bhonofre.pt/img/rain.svg";
             } else if (f.driver === 'PZEM_004T_V03') {
@@ -436,6 +452,7 @@ function applyFeatureChanges(e) {
         feature.area = parseInt(getValue("f-area", feature.area).trim());
         feature.line = parseInt(getValue("f-line", feature.line).trim());
         feature.member = parseInt(getValue("f-member", feature.member).trim());
+        feature.autoOff = parseInt(getValue("f-autoOff", feature.autoOff).trim());
     }
     saveConfig(refreshFeatures);
     closeModal("modal");
@@ -456,7 +473,11 @@ function getValue(id, f) {
     let v = findById(id);
     return v ? v.value : f;
 }
-
+function setValue(id, value) {
+    let v = findById(id);
+    if(v)
+        v.value = value;
+}
 function shutterPercentage(arg) {
     const action = {
         id: arg.id,
@@ -492,7 +513,9 @@ function createModal(a, modal, f) {
         modal.style.display = "block";
         modal.getElementsByClassName("f-name").item(0).value = f.name;
         findById("f-knx").classList.remove("hide");
+           findById("f-auto").classList.add("hide");
         modal.getElementsByClassName("f-ac").item(0).classList.remove("hide");
+        findById("f-autoOff").value = f.autoOff;
         if (f.driver.includes("COVER")) {
             findById("f-calibration").classList.remove("hide")
             findById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
@@ -500,6 +523,9 @@ function createModal(a, modal, f) {
             findById("f-in-mode-push-toggle-lbl").classList.remove("hide");
             findById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
         } else {
+            if(f.typeControl == 1 && (f.driver.includes("LIGHT") || f.driver.includes("SWITCH"))) {
+                findById("f-auto").classList.remove("hide");
+            }
             findById("f-push-t").classList.add("hide");
         }
         if (f.group === "SENSOR") {
@@ -521,7 +547,10 @@ function createModal(a, modal, f) {
 }
 
 function clearCreate(a) {
-    findById("f-n-name").value = null;
+    setValue("f-n-name",null);
+    setValue("f-n-pin-1", 7);
+    setValue("f-n-pin-2", 7);
+    setValue("f-n-driver", 7);
     let p2 = findById("f-n-pin-2-g");
     p2.classList.remove("hide");
     p2.classList.add("hide");
@@ -537,7 +566,7 @@ function driverSelect(a) {
         p2.classList.remove("hide");
         p1l.textContent = getI18n("pin_up")
         p2l.textContent = getI18n("pin_down")
-    } else if (parseInt(a.value) === 71) {
+    } else if (parseInt(a.value) === 71 || parseInt(a.value) === 94) {
         p2.classList.remove("hide");
         p1l.textContent = 'RX'
         p2l.textContent = 'TX'

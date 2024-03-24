@@ -28,9 +28,9 @@ public:
   char cloudIOUsername[40];
   char cloudIOPassword[64];
   bool cloudIOReady{false};
-  char cloudIOhealthTopic[64];
-  char cloudIOwriteTopic[64];
-  char cloudIOreadTopic[64];
+  char cloudIOhealthTopic[128];
+  char cloudIOwriteTopic[128];
+  char cloudIOreadTopic[128];
   // WIFI
   char wifiSSID[32];
   char wifiSecret[64];
