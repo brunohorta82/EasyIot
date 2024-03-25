@@ -114,8 +114,8 @@ void addToHomeAssistant(Sensor &s)
     object["val_tpl"] = "{{value_json.temperature | round(2)}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
-    delay(1)
-        objectStr = "";
+    delay(1);
+    objectStr = "";
     object["uniq_id"] = "humidity" + uniqueId;
     object["unit_of_meas"] = "%";
     object["dev_cla"] = "humidity";
