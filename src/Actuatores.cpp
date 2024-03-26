@@ -231,7 +231,6 @@ void Actuator::setup()
         .onLevelReached(onShuttersLevelReached)
         .begin();
   }
-
   for (auto output : outputs)
   {
     configPIN(output, OUTPUT);

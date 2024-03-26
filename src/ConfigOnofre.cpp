@@ -368,6 +368,7 @@ ConfigOnofre &ConfigOnofre::save()
     a["member"] = s.knxAddress[2];
     a["member"] = s.knxAddress[2];
     a["autoOff"] = s.autoOff;
+    a["state"] = s.state;
     JsonArray outputs = a["outputs"].to<JsonArray>();
     for (auto out : s.outputs)
     {
