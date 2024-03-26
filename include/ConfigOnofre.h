@@ -16,6 +16,7 @@ public:
   int templateId = {0};
   char nodeId[32] = {};
   char chipId[32] = {};
+  char provisionId[32] = {};
   // MQTT
   char mqttIpDns[40];
   int mqttPort = 1883;

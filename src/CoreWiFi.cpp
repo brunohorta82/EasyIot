@@ -10,17 +10,15 @@ int retryCount = 0;
 unsigned long connectedOn = 0ul;
 extern ConfigOnofre config;
 #if defined(ESP32) && !defined(LEGACY_PROVISON)
-const char *pop = "abcd1234";           // Proof of possession - otherwise called a PIN - string provided by the device, entered by user in the phone app
-const char *service_name = "ONOFRE_13"; // Name of your device (the Espressif apps expects by default device name starting with "Prov_")
-const char *service_key = NULL;         // Password used for SofAP method (NULL = no password needed)
-bool reset_provisioned = true;          // When true the library will automatically delete previously provisioned data.
+
 void SysProvEvent(arduino_event_t *sys_event)
 {
   switch (sys_event->event_id)
   {
   case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-    Serial.print("\nConnected IP address : ");
-    Serial.println(IPAddress(sys_event->event_info.got_ip.ip_info.ip.addr));
+#ifdef DEBUG_ONOFRE
+    Log.notice("Wi-Fi AP password incorrect %s" CR, tags::wifi, IPAddress(sys_event->event_info.got_ip.ip_info.ip.addr));
+#endif
     setupWebPanel();
     startWebserver();
     knx.start();
@@ -28,37 +26,55 @@ void SysProvEvent(arduino_event_t *sys_event)
     refreshMDNS(config.nodeId);
     break;
   case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-    Serial.println("\nDisconnected. Connecting to the AP again... ");
+#ifdef DEBUG_ONOFRE
+    Log.notice("Disconnected. Connecting to the AP again... " CR, tags::wifi);
+#endif
     break;
   case ARDUINO_EVENT_PROV_START:
-    Serial.println("\nProvisioning started\nGive Credentials of your access point using smartphone app");
+#ifdef DEBUG_ONOFRE
+    Log.notice("Provisioning started\nGive Credentials of your access point using smartphone app" CR, tags::wifi);
+#endif
     break;
   case ARDUINO_EVENT_PROV_CRED_RECV:
   {
-    Serial.println("\nReceived Wi-Fi credentials");
-    Serial.print("\tSSID : ");
-    Serial.println((const char *)sys_event->event_info.prov_cred_recv.ssid);
-    Serial.print("\tPassword : ");
-    Serial.println((char const *)sys_event->event_info.prov_cred_recv.password);
-    // strlcpy(config.wifiSSID, (const char *)sys_event->event_info.prov_cred_recv.ssid, sizeof(config.wifiSSID));
-    // strlcpy(config.wifiSecret, (char const *)sys_event->event_info.prov_cred_recv.password, sizeof(config.wifiSecret));
+#ifdef DEBUG_ONOFRE
+    Log.notice("Received Wi-Fi credentials SSID:%s PASSWORD:" CR, tags::wifi, (const char *)sys_event->event_info.prov_cred_recv.ssid, (char const *)sys_event->event_info.prov_cred_recv.password);
+#endif
+
+    strlcpy(config.wifiSSID, (const char *)sys_event->event_info.prov_cred_recv.ssid, sizeof(config.wifiSSID));
+    strlcpy(config.wifiSecret, (char const *)sys_event->event_info.prov_cred_recv.password, sizeof(config.wifiSecret));
     break;
   }
   case ARDUINO_EVENT_PROV_CRED_FAIL:
   {
-    Serial.println("\nProvisioning failed!\nPlease reset to factory and retry provisioning\n");
+#ifdef DEBUG_ONOFRE
+    Log.warning("Provisioning failed!\nPlease reset to factory and retry provisioning" CR, tags::wifi);
+#endif
     if (sys_event->event_info.prov_fail_reason == WIFI_PROV_STA_AUTH_ERROR)
-      Serial.println("\nWi-Fi AP password incorrect");
+    {
+#ifdef DEBUG_ONOFRE
+      Log.notice("Wi-Fi AP password incorrect" CR, tags::wifi);
+#endif
+    }
     else
-      Serial.println("\nWi-Fi AP not found....Add API \" nvs_flash_erase() \" before beginProvision()");
+    {
+#ifdef DEBUG_ONOFRE
+      Log.notice("Wi-Fi AP not found....Add API \" nvs_flash_erase() \" before beginProvision()" CR, tags::wifi);
+#endif
+    }
     break;
   }
   case ARDUINO_EVENT_PROV_CRED_SUCCESS:
-    Serial.println("\nProvisioning Successful");
-    // config.save();
+#ifdef DEBUG_ONOFRE
+    Log.notice("Provisioning Successful" CR, tags::wifi);
+#endif
+
+    config.save();
     break;
   case ARDUINO_EVENT_PROV_END:
-    Serial.println("\nProvisioning Ends");
+#ifdef DEBUG_ONOFRE
+    Log.notice("Provisioning Ends" CR, tags::wifi);
+#endif
     break;
   default:
     break;
@@ -294,13 +310,14 @@ void setupWiFi()
 #if defined(ESP32) && !defined(LEGACY_PROVISON)
   WiFi.setSleep(true);
   WiFi.onEvent(SysProvEvent);
-  Serial.println("Begin Provisioning using BLE");
-  // Sample uuid that user can pass during provisioning using BLE
+#ifdef DEBUG_ONOFRE
+  Log.info("Begin Provisioning using BLE" CR, tags::wifi);
+#endif
+  const char *service_key;
   uint8_t uuid[16] = {0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf,
                       0xea, 0x4a, 0x82, 0x03, 0x04, 0x90, 0x1a, 0x02};
-  WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM, WIFI_PROV_SECURITY_1, pop, service_name, service_key, uuid, false);
-  log_d("ble qr");
-  WiFiProv.printQR(service_name, pop, "ble");
+  WiFiProv.beginProvision(WIFI_PROV_SCHEME_BLE, WIFI_PROV_SCHEME_HANDLER_FREE_BTDM, WIFI_PROV_SECURITY_1, Provision::pop, config.provisionId, service_key, uuid, false);
+  WiFiProv.printQR(config.provisionId, Provision::pop, "ble");
 #endif
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
 #if JUSTWIFI_ENABLE_SMARTCONFIG

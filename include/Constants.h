@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #pragma once
 enum Template
 {
@@ -17,7 +18,14 @@ namespace constantsMqtt
     constexpr const char *homeAssistantAutoDiscoveryPrefix{"homeassistant"};
     constexpr const char *unavailablePayload{"offline"};
     constexpr const int defaultPort{1883};
-} // namespace constantsMqtt
+} // namespace constantsMqt
+
+namespace Provision
+{
+    constexpr const char *pop = "abcd1234";
+    constexpr const char *PREFIX = "ONOFRE";
+
+}
 
 namespace Payloads
 {

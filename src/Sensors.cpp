@@ -12,9 +12,7 @@
 #include <SensirionI2CSht4x.h>
 #include <LTR303.h>
 #include "DHT.h"
-#include "SparkFun_TMF882X_Library.h"
 #include <NewPing.h>
-
 #ifdef ESP32
 #include <OpenTherm.h>
 #include <ld2410.h>
@@ -68,64 +66,6 @@ void Sensor::loop()
     return;
   case TMF882X:
   {
-
-    if (lastRead + 1000 < millis())
-    {
-      static SparkFun_TMF882X sensor;
-      static struct tmf882x_msg_meas_results myResults;
-      if (!isInitialized())
-      {
-        if (!sensor.begin())
-        {
-          Serial.println("Error - The TMF882X failed to initialize - is the board connected?");
-          while (1)
-            ;
-        }
-        else
-          Serial.println("TMF882X started.");
-      }
-      Serial.println("Measurement:");
-      if (sensor.startMeasuring(myResults))
-      {
-        // print out results
-        Serial.println("Measurement:");
-        Serial.print("     Result Number: ");
-        Serial.print(myResults.result_num);
-        Serial.print("  Number of Results: ");
-        Serial.println(myResults.num_results);
-
-        for (int i = 0; i < myResults.num_results; ++i)
-        {
-          Serial.print("       conf: ");
-          Serial.print(myResults.results[i].confidence);
-          Serial.print(" distance mm: ");
-          Serial.print(myResults.results[i].distance_mm);
-          Serial.print(" channel: ");
-          Serial.print(myResults.results[i].channel);
-          Serial.print(" sub_capture: ");
-          Serial.println(myResults.results[i].sub_capture);
-        }
-        Serial.print("     photon: ");
-        Serial.print(myResults.photon_count);
-        Serial.print(" ref photon: ");
-        Serial.print(myResults.ref_photon_count);
-        Serial.print(" ALS: ");
-        Serial.println(myResults.ambient_light);
-        Serial.println();
-        JsonDocument doc;
-        JsonObject obj = doc.to<JsonObject>();
-        state.clear();
-        obj["messure"] = 10;
-        serializeJson(doc, state);
-        doc.clear();
-        notifyState();
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s %s " CR, tags::sensors, state.c_str());
-#endif
-      }
-      Serial.println("jj:");
-      lastRead = millis();
-    }
   }
   break;
   case DHT_11:
@@ -603,7 +543,7 @@ void Sensor::loop()
         state.clear();
         if (radar.presenceDetected())
         {
-            bool currentState = readPINToInt(inputs[0]);
+          bool currentState = readPINToInt(inputs[0]);
           if (lastBinaryState == currentState)
             return;
           lastBinaryState = currentState;
