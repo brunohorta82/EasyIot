@@ -269,8 +269,8 @@ function fillDevices() {
             if (f.driver === 'SHT4X' || f.driver === 'DHT_11' || f.driver === 'DHT_21' || f.driver === 'DHT_22') {
                 icon1.classList.remove("hide");
                 icon2.classList.remove("hide");
-                icon1.src = "https://cloudio.bhonofre.pt/img/HUMIDITY.svg";
-                icon2.src = "https://cloudio.bhonofre.pt/img/TEMPERATURE.svg";
+                icon1.src = "https://cloudio.bhonofre.pt/img/TEMPERATURE.svg";
+                icon2.src = "https://cloudio.bhonofre.pt/img/HUMIDITY.svg";
             } else if (f.driver === 'DS18B20') {
                 icon1.src = "https://cloudio.bhonofre.pt/img/TEMPERATURE.svg";
             } else if (f.driver === 'LTR303') {

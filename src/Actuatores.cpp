@@ -256,6 +256,7 @@ void Actuator::setup()
       case ActuatorDriver::LIGHT_LATCH:
       case ActuatorDriver::SWITCH_LATCH:
         button.setChangedHandler(toogle);
+        break;
       default:
         continue;
       }
