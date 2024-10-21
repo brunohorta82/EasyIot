@@ -147,6 +147,62 @@ void addToHomeAssistant(Sensor &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     break;
+  case LD2410:
+    object["name"] = "Movimento";
+    object["uniq_id"] = uniqueId + "motion";
+    object["dev_cla"] = "motion";
+    object["pl_on"] = Payloads::motionOnPayload;
+    object["pl_off"] = Payloads::motionOffPayload;
+    object["val_tpl"] = "{{value_json.motion}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+    object["name"] = "Presença";
+    object["uniq_id"] = uniqueId + "occupancy";
+    object["dev_cla"] = "occupancy";
+    object["pl_on"] = Payloads::motionOnPayload;
+    object["pl_off"] = Payloads::motionOffPayload;
+    object["val_tpl"] = "{{value_json.occupancy}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+
+    object["name"] = "Distancia alvo parado";
+    object["uniq_id"] = uniqueId + "stationaryTargetDistance";
+    object["unit_of_meas"] = "cm";
+    object["dev_cla"] = "distance";
+    object["val_tpl"] = "{{value_json.stationaryTargetDistance}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+
+    object["name"] = "Energia alvo parado";
+    object["uniq_id"] = uniqueId + "stationaryTargetEnergy";
+    object["unit_of_meas"] = "%";
+    object["dev_cla"] = "power_factor";
+    object["val_tpl"] = "{{value_json.stationaryTargetEnergy}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+
+    object["name"] = "Energia alvo em movimento";
+    object["uniq_id"] = uniqueId + "movingTargetEnergy";
+    object["unit_of_meas"] = "%";
+    object["dev_cla"] = "power_factor";
+    object["val_tpl"] = "{{value_json.movingTargetEnergy}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+
+    object["name"] = "Distancia alvo em movimento";
+    object["uniq_id"] = uniqueId + "movingTargetDistance";
+    object["unit_of_meas"] = "cm";
+    object["dev_cla"] = "distance";
+    object["val_tpl"] = "{{value_json.movingTargetDistance}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+    break;
   case RAIN:
     object["uniq_id"] = uniqueId;
     object["ic"] = "mdi:weather-pouring";

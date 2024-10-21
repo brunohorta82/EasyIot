@@ -84,7 +84,7 @@ void ConfigOnofre::pzemDiscovery()
       found = voltageOne > 0;
       if (found && !isSensorExists(pzem.getAddress()))
       {
-        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, pzem.getAddress());
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, pzem.getAddress(), SensorDriver::PZEM_004T_V03);
         needsSave = true;
       }
     }
@@ -101,7 +101,7 @@ void ConfigOnofre::pzemDiscovery()
       found = voltageOne > 0;
       if (found && !isSensorExists(pzem.getAddress()))
       {
-        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, pzem.getAddress());
+        preparePzem(String(I18N::ENERGY) + String(pzem.getAddress()), DefaultPins::PZEM_TX, DefaultPins::PZEM_RX, pzem.getAddress(), SensorDriver::PZEM_004T_V03);
         needsSave = true;
       }
     }
@@ -220,6 +220,8 @@ ConfigOnofre &ConfigOnofre::load()
   }
   templateId = doc["templateId"];
   strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
+  sprintf(provisionId, "ONOFRE%s", chipId);
+
 #endif
   strlcpy(nodeId,
           doc["nodeId"] | chipId,

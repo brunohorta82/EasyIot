@@ -20,6 +20,8 @@ void loopWiFi();
 bool wifiConnected();
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
 void reloadWiFiConfig();
+#else
+void beginBleProvison();
 #endif
 void scanNewWifiNetworks();
 void enableScan();

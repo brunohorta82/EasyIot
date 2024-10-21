@@ -6,6 +6,7 @@
 #include "CoreWiFi.h"
 #include <DallasTemperature.h>
 #include <PZEM004Tv30.h>
+#include <PZEM004T.h>
 #include "CloudIO.h"
 #include <DallasTemperature.h>
 #include "HanOnofre.hpp"
@@ -16,6 +17,7 @@
 #ifdef ESP32
 #include <OpenTherm.h>
 #include <ld2410.h>
+#include "SparkFun_TMF882X_Library.h"
 #endif
 // OpenTherm ot(1, 2);
 extern ConfigOnofre config;
@@ -64,10 +66,68 @@ void Sensor::loop()
   {
   case INVALID_SENSOR:
     return;
+#ifdef ESP32
   case TMF882X:
   {
+    if (lastRead + delayRead < millis())
+    {
+      static SparkFun_TMF882X sensor;
+      static struct tmf882x_msg_meas_results myResults;
+      if (!isInitialized())
+      {
+        if (!sensor.begin())
+        {
+#ifdef DEBUG_ONOFRE
+          Log.info("%s Error The TMF882X failed to initialize - is the board connected?" CR, tags::sensors);
+#endif
+          setError();
+          return;
+        }
+      }
+      if (sensor.startMeasuring(myResults))
+      {
+        // print out results
+        Serial.println("Measurement:");
+        Serial.print("     Result Number: ");
+        Serial.print(myResults.result_num);
+        Serial.print("  Number of Results: ");
+        Serial.println(myResults.num_results);
+
+        for (int i = 0; i < myResults.num_results; ++i)
+        {
+          Serial.print("       conf: ");
+          Serial.print(myResults.results[i].confidence);
+          Serial.print(" distance mm: ");
+          Serial.print(myResults.results[i].distance_mm);
+          Serial.print(" channel: ");
+          Serial.print(myResults.results[i].channel);
+          Serial.print(" sub_capture: ");
+          Serial.println(myResults.results[i].sub_capture);
+        }
+        Serial.print("     photon: ");
+        Serial.print(myResults.photon_count);
+        Serial.print(" ref photon: ");
+        Serial.print(myResults.ref_photon_count);
+        Serial.print(" ALS: ");
+        Serial.println(myResults.ambient_light);
+        Serial.println();
+        JsonDocument doc;
+        JsonObject obj = doc.to<JsonObject>();
+        state.clear();
+        obj["messure"] = 10;
+        serializeJson(doc, state);
+        doc.clear();
+        notifyState();
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+      }
+      Serial.println("jj:");
+      lastRead = millis();
+    }
   }
   break;
+#endif
   case DHT_11:
   case DHT_21:
   case DHT_22:
@@ -191,7 +251,7 @@ void Sensor::loop()
     if (lastRead + delayRead < millis())
     {
 
-      static SensirionI2CSht4x sensor;
+      static SensirionI2cSht4x sensor;
       if (!isInitialized())
       {
         sensor.begin(Wire, Discovery::I2C_SHT4X_ADDRESS);
@@ -201,7 +261,7 @@ void Sensor::loop()
       }
       float temperature = 0.0;
       float humidity = 0.0;
-      if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
+      if (!sensor.measureLowestPrecision(temperature, humidity))
       {
         JsonDocument doc;
         JsonObject obj = doc.to<JsonObject>();
@@ -314,7 +374,6 @@ void Sensor::loop()
   }
 
   case HAN:
-  case HAN_8N2:
   {
 
     if (lastRead + delayRead < millis())
@@ -324,14 +383,14 @@ void Sensor::loop()
       if (!isInitialized())
       {
         modbus = new ModbusMaster();
-        Serial1.begin(9600, SERIAL_8N1, 5, 6);
+        Serial1.begin(9600, SERIAL_8N1, 21, 7);
         modbus->begin(1, Serial1);
       }
 #endif
 
 #ifdef ESP8266
       static SoftwareSerial softwareSerial = SoftwareSerial(inputs[1], inputs[0]);
-      static SensirionI2CSht4x sensor;
+      static SensirionI2cSht4x sensor;
 
       float temperature = 0.0;
       float humidity = 0.0;
@@ -495,7 +554,7 @@ void Sensor::loop()
       obj["signal"] = WiFi.RSSI();
       obj["comm"] = "SWSERIAL_8N1";
 #ifdef ESP8266
-      if (sensor.measureLowestPrecision(temperature, humidity) == NO_ERROR)
+      if (!sensor.measureLowestPrecision(temperature, humidity))
       {
         obj["temperature"] = round(temperature);
         obj["humidity"] = round(humidity);
@@ -541,13 +600,11 @@ void Sensor::loop()
             doc;
         JsonObject obj = doc.to<JsonObject>();
         state.clear();
+
         if (radar.presenceDetected())
         {
-          bool currentState = readPINToInt(inputs[0]);
-          if (lastBinaryState == currentState)
-            return;
-          lastBinaryState = currentState;
-          obj["presence"] = Payloads::presenceOnPayload;
+          lastBinaryState = true;
+          obj["occupancy"] = Payloads::presenceOnPayload;
           if (radar.stationaryTargetDetected())
           {
             obj["stationaryTargetDistance"] = radar.stationaryTargetDistance();
@@ -573,12 +630,15 @@ void Sensor::loop()
         }
         else
         {
+          if (lastBinaryState == false)
+            return;
           obj["stationaryTargetDistance"] = 0;
           obj["stationaryTargetEnergy"] = 0;
-          obj["presence"] = Payloads::presenceOffPayload;
+          obj["occupancy"] = Payloads::presenceOffPayload;
           obj["movingTargetEnergy"] = 0;
           obj["movingTargetDistance"] = 0;
           obj["motion"] = Payloads::motionOffPayload;
+          lastBinaryState = false;
         }
         serializeJson(doc, state);
         doc.clear();
@@ -725,6 +785,98 @@ void Sensor::loop()
             config.display->println(power.c_str());
             config.display->display();
           }
+        }
+      }
+
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s" CR, tags::sensors, state.c_str());
+#endif
+    }
+    break;
+  case PZEM_004T_V01:
+
+    if (lastRead + delayRead < millis())
+    {
+
+#ifdef ESP8266
+      PZEM004T pzem = PZEM004T(inputs[0], inputs[1]);
+#endif
+#ifdef ESP32
+      static PZEM004T pzem = PZEM004T(&Serial1, 27, 26);
+#endif
+      IPAddress ip(192, 168, 1, 1);
+#if defined(ESP8266)
+      if (!isInitialized())
+      {
+        pzem.setAddress(ip);
+      }
+
+#endif
+#if defined(ESP32)
+
+      if (!isInitialized())
+      {
+
+        pzem.setAddress(ip);
+      }
+
+#endif
+      lastRead = millis();
+      JsonDocument doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+      lastRead = millis();
+      float v = 0.0;
+      float f = 0.0;
+      float c = 0.0;
+      float p = 0.0;
+      float e = 0.0;
+
+      v = pzem.voltage(ip);
+      if (isnan(v))
+      {
+        setError();
+        obj["error"] = true;
+      }
+      else
+      {
+        c = pzem.current(ip);
+        p = pzem.power(ip);
+        e = pzem.energy(ip);
+        obj["voltage"] = v;
+        obj["current"] = c;
+        obj["power"] = p;
+        obj["energy"] = e;
+      }
+      serializeJson(doc, state);
+      doc.clear();
+      notifyState();
+      if (config.display != NULL)
+      {
+        config.display->clearDisplay();
+        config.display->setTextSize(1);              // Normal 1:1 pixel scale
+        config.display->setTextColor(SSD1306_WHITE); // Draw white text
+        config.display->setCursor(0, 0);
+        if (error)
+        {
+          config.display->printf("ERROR");
+          config.display->display();
+        }
+        else
+        {
+          config.display->printf("%0.fV %0.fA %0.fHz", v, c, f);
+          config.display->setCursor(0, 46);
+          config.display->printf("%.0fKwh", e);
+          config.display->setTextSize(2);
+          int16_t x1;
+          int16_t y1;
+          uint16_t width;
+          uint16_t height;
+          String power = String(p) + "W";
+          config.display->getTextBounds(power.c_str(), 0, 0, &x1, &y1, &width, &height);
+          config.display->setCursor((128 - width) / 2, ((64 - height) / 2) - 4);
+          config.display->println(power.c_str());
+          config.display->display();
         }
       }
 

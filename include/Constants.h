@@ -65,7 +65,7 @@ namespace constantsConfig
     constexpr unsigned long climateReadDelay{10000l};
     constexpr unsigned long rainDelay{5000l};
     constexpr unsigned long pirDelay{100l};
-    constexpr unsigned long ld2410Delay{200l};
+    constexpr unsigned long ld2410Delay{500l};
     constexpr unsigned long hcsr04Delay{100l};
     constexpr unsigned long hallsensorDelay{1000l};
     constexpr unsigned long illuminanceReadDelay{5000l};
@@ -96,7 +96,7 @@ namespace DefaultPins
 #ifdef ESP32_MAKER_4MB
     constexpr unsigned int outputInputPins[] = {7, 12, 13, 14, 19, 20, 21, 22, 25};
 #else
-    constexpr unsigned int outputInputPins[] = {7, 8, 12, 13, 14, 19, 20, 21, 22, 25};
+    constexpr unsigned int outputInputPins[] = {4,5,7, 8, 12, 13, 14, 19, 20, 21, 22, 25, 26, 27};
 #endif
     constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
 }
@@ -194,6 +194,7 @@ namespace FeatureDrivers
     constexpr const char *DHT_22{"DHT_22"};
     constexpr const char *SHT4X{"SHT4X"};
     constexpr const char *PZEM_004T_V03{"PZEM_004T_V03"};
+    constexpr const char *PZEM_004T_V01{"PZEM_004T_V01"};
     constexpr const char *HAN{"HAN_MODBUS"};
     constexpr const char *HAN_8N2{"HAN_MODBUS_8N2"};
     constexpr const char *RAIN{"RAIN"};

@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.103"
+let baseUrl = "http://192.168.187.136"
 var config;
 var lastVersion = 0.0;
 let source = null;
@@ -566,7 +566,7 @@ function driverSelect(a) {
         p2.classList.remove("hide");
         p1l.textContent = getI18n("pin_up")
         p2l.textContent = getI18n("pin_down")
-    } else if (parseInt(a.value) === 71 || parseInt(a.value) === 94) {
+    } else if (parseInt(a.value) === 72 ||parseInt(a.value) === 71 || parseInt(a.value) === 94) {
         p2.classList.remove("hide");
         p1l.textContent = 'RX'
         p2l.textContent = 'TX'

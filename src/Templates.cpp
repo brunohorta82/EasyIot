@@ -147,11 +147,11 @@ void prepareLTR303(int hwAddress)
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
-void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress)
+void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress, SensorDriver driver)
 {
     Sensor sensor;
     strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
-    sensor.driver = PZEM_004T_V03;
+    sensor.driver = driver;
     sensor.inputs = {tx, rx};
     sensor.hwAddress = hwAddress;
     sensor.delayRead = constantsConfig::energyReadDelay;
@@ -210,7 +210,8 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             prepareLD2410(name, input1, input2);
             break;
         case SensorDriver::PZEM_004T_V03:
-            preparePzem(name, input1, input2, Discovery::MODBUS_PZEM_ADDRESS_DEFAULT);
+        case SensorDriver::PZEM_004T_V01:
+            preparePzem(name, input1, input2, Discovery::MODBUS_PZEM_ADDRESS_DEFAULT, (SensorDriver)driverCode);
             break;
         default:
             break;

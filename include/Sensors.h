@@ -11,8 +11,8 @@ enum SensorDriver
   DHT_21 = 121,
   DHT_22 = 122,
   PZEM_004T_V03 = 71,
+  PZEM_004T_V01 = 72,
   HAN = 80,
-  HAN_8N2 = 79,
   LTR303X = 81,
   PIR = 82,
   RAIN = 83,
@@ -68,8 +68,8 @@ public:
     case RAIN:
       return Family::GARDEN;
     case PZEM_004T_V03:
+    case PZEM_004T_V01:
     case HAN:
-    case HAN_8N2:
       return Family::ENERGY;
     case PIR:
     case DOOR:
@@ -105,10 +105,10 @@ public:
       return FeatureDrivers::DHT_22;
     case PZEM_004T_V03:
       return FeatureDrivers::PZEM_004T_V03;
+    case PZEM_004T_V01:
+      return FeatureDrivers::PZEM_004T_V01;
     case HAN:
       return FeatureDrivers::HAN;
-    case HAN_8N2:
-      return FeatureDrivers::HAN_8N2;
     case RAIN:
       return FeatureDrivers::RAIN;
     case DOOR:

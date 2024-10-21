@@ -3,7 +3,7 @@
 #include "Actuatores.h"
 #include "Sensors.h"
 void templateSelect(enum Template _template);
-void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress);
+void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress, SensorDriver driver);
 int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int driverCode);
 void prepareActuator(String name, unsigned int output, unsigned int input, ActuatorDriver driver, ActuatorControlType type);
 int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, ActuatorDriver driver);

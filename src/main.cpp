@@ -7,6 +7,7 @@
 #include <esp-knx-ip.h>
 #include "LittleFS.h"
 #ifdef ESP32
+#include "nvs_flash.h"
 #include "driver/adc.h"
 #endif
 ConfigOnofre config;
@@ -42,6 +43,15 @@ void checkInternalRoutines()
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Load Defaults requested.", tags::system);
+#endif
+#if defined(ESP32) && !defined(LEGACY_PROVISON)
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      ESP_ERROR_CHECK(nvs_flash_init());
+    }
 #endif
     LittleFS.format();
     config.requestRestart();
@@ -83,6 +93,7 @@ void startFileSystem()
     }
   }
 }
+
 #ifdef ESP32
 void featuresTask(void *pvParameters)
 {
@@ -110,7 +121,7 @@ void setup()
 #ifdef ESP32
 #ifndef HAN_MODE
   config.i2cDiscovery();
-  config.pzemDiscovery();
+//  config.pzemDiscovery();
 #endif
 #endif
   setupMQTT(false);
