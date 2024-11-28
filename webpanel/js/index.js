@@ -523,7 +523,7 @@ function createModal(a, modal, f) {
             findById("f-in-mode-push-toggle-lbl").classList.remove("hide");
             findById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
         } else {
-            if(f.typeControl == 1 && (f.driver.includes("LIGHT") || f.driver.includes("SWITCH"))) {
+            if(f.typeControl == 1 && (f.driver.includes("LIGHT") || f.driver.includes("SWITCH") || f.driver.includes("GARDEN"))) {
                 findById("f-auto").classList.remove("hide");
             }
             findById("f-push-t").classList.add("hide");

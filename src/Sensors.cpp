@@ -569,7 +569,6 @@ void Sensor::loop()
     }
   }
   break;
-
 #ifdef ESP32
   case LD2410:
   {
@@ -582,6 +581,7 @@ void Sensor::loop()
     {
       if (!isInitialized())
       {
+
         Serial1.begin(256000, SERIAL_8N1, inputs[0], inputs[1]);
         delay(500);
         if (radar.begin(Serial1))
@@ -650,10 +650,6 @@ void Sensor::loop()
     }
     break;
   }
-
-#else
-  case LD2410:
-    break;
 #endif
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
