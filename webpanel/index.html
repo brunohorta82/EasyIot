@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
     <meta charset="utf-8">
-    <title>OnOfre</title>
+    <title> OnOfre </title>
     <link rel="icon" type="image/x-icon" href="https://cloudio.bhonofre.pt/favicon.ico">
     <link rel="stylesheet" href="css/styles.css?v=9.158">
     <link href="https://fonts.cdnfonts.com/css/red-hat-display" rel="stylesheet">
@@ -37,7 +37,7 @@
             <div class="flex-col">
                 <img class="han-icon" alt="Exportado" src="https://cloudio.bhonofre.pt/img/import.svg">
                 <span class="v tw"> <span class="v tw" id="power">0</span>W</span>
-                <span>Importado</span>
+                <span> Import </span>
             </div>
             <div class="flex-col">
                 <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/close.svg">
@@ -46,108 +46,108 @@
             </div>
             <div class="flex-col">
                 <img class="han-icon" alt="Tensão" src="https://cloudio.bhonofre.pt/img/export.svg">
-                <span class="v tw"><span class="v tw" id="export">0</span>W</span>
-                <span>Exportado</span>
+                <span class="v tw"><span class="v tw" id="export"> 0 </span> W </span>
+                <span> Export </span>
             </div>
         </div>
         <div class="han-header">
-            <label style="font-size: 16px; color: white">CONTRATO E LEITURAS</label>
-            <label style="color: white" class="chip-han">Tarifario <span class="v" id="tarif"></span></label>
+            <label style="font-size: 16px; color: white"> CONTRACT AND READINGS </label>
+            <label style="color: white" class="chip-han"> Price list <span class="v" id="tarif"></span></label>
         </div>
         <div class="han-values">
             <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/calendar.svg">
             <span id="dateTime" class="v"></span>
-            <span>Contratado</span>
-            <span>Consumo Real</span>
+            <span> Engaged </span>
+            <span> Real consumption </span>
             <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/empty.svg">
-            <span>Vazio</span>
-            <span class="v"> <span class="v" id="demandControlT1">0</span>kVA</span>
-            <span class="v chip-han"> <span class="v" id="rate1">0</span>kWh</span>
+            <span> Empty </span>
+            <span class="v"> <span class="v" id="demandControlT1"> 0 </span> kVA </span>
+            <span class="v chip-han"> <span class="v" id="rate1"> 0 </span> kWh </span>
             <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/ponta.svg">
-            <span>Ponta</span>
-            <span class="v"> <span class="v" id="demandControlT2">0</span>kVA</span>
-            <span class="v chip-han"> <span class="v" id="rate2">0</span>kWh</span>
+            <span> Tip </span>
+            <span class="v"> <span class="v" id="demandControlT2"> 0 </span> kVA </span>
+            <span class="v chip-han"> <span class="v" id="rate2"> 0 </span> kWh </span>
             <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/full.svg">
-            <span>Cheias</span>
-            <span class="v"> <span class="v" id="demandControlT3">0</span>kVA</span>
-            <span class="v chip-han"> <span class="v" id="rate3">0</span>kWh</span>
+            <span> Floods </span>
+            <span class="v"> <span class="v" id="demandControlT3"> 0 </span> kVA </span>
+            <span class="v chip-han"> <span class="v" id="rate3"> 0 </span> kWh </span>
         </div>
-        <label style="font-size: 16px; color: white">INFORMAÇÕES AVANÇADAS</label>
+        <label style="font-size: 16px; color: white"> ADVANCED INFORMATION </label>
         <div class="advanced">
             <div>
-                <label style="color: white">Consumo Instantâneo</label>
+                <label style="color: white"> Instant Consumption </label>
                 <div class="han-col">
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/energia.svg">
-                        <span>Potência</span>
-                        <span class="v"> <span class="v" id="power_1">0</span>W</span>
+                        <span> Power </span>
+                        <span class="v"> <span class="v" id="power_1"> 0 </span> W </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/voltage.svg">
-                        <span>Tensão</span>
-                        <span class="v"> <span class="v" id="voltage">0</span>V</span>
+                        <span> Voltage </span>
+                        <span class="v"> <span class="v" id="voltage"> 0 </span> V </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="Frequência" src="https://cloudio.bhonofre.pt/img/current.svg">
-                        <span>Corrente</span>
-                        <span class="v"> <span class="v" id="current">0</span>A</span>
+                        <span> Current </span>
+                        <span class="v"> <span class="v" id="current"> 0 </span> A </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/frequency.svg">
-                        <span>Frequência</span>
-                        <span class="v"> <span class="v" id="frequency">0</span>Hz</span>
+                        <span> Frequency </span>
+                        <span class="v"> <span class="v" id="frequency"> 0 </span> Hz </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/power_facgtor.svg">
-                        <span>Fator Potência</span>
-                        <span id="powerFactor" class="v">0</span>
+                        <span> Power Factor </span>
+                        <span id="powerFactor" class="v"> 0 </span>
                     </div>
                 </div>
             </div>
             <div>
-                <label style="color: white;">Consumo Acumulado</label>
+                <label style="color: white;"> Accumulated Consumption </label>
                 <div class="han-col">
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/import.svg">
-                        <span>Energia Importada</span>
-                        <span class="v"> <span class="v" id="powerImport">0</span>kWh</span>
+                        <span> Imported Energy </span>
+                        <span class="v"> <span class="v" id="powerImport"> 0 </span> kWh </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="Frequência" src="https://cloudio.bhonofre.pt/img/export.svg">
-                        <span>Energia Exportada</span>
-                        <span class="v"> <span class="v" id="powerExport">0</span>kWh</span>
+                        <span> Exported Energy </span>
+                        <span class="v"> <span class="v" id="powerExport"> 0 </span> kWh </span>
                     </div>
                 </div>
             </div>
         </div>
         <div class="advanced">
             <div>
-                <label style="color: white">Diagrama de Carga</label>
+                <label style="color: white"> Load Diagram </label>
                 <div class="han-col">
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/calendar.svg">
-                        <span>Data</span>
-                        <span class="v" id="dateProfile">0</span>
+                        <span> Date </span>
+                        <span class="v" id="dateProfile"> 0 </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/import.svg">
-                        <span>Energia Importada</span>
-                        <span class="v"> <span class="v" id="activeEnergyImport">0</span>Wh</span>
+                        <span> Imported Energy </span>
+                        <span class="v"> <span class="v" id="activeEnergyImport"> 0 </span> Wh </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/export.svg">
-                        <span>Energia Exportada</span>
-                        <span class="v"> <span class="v" id="activeEnergyExport">0</span>Wh</span>
+                        <span> Exported Energy </span>
+                        <span class="v"> <span class="v" id="activeEnergyExport"> 0 </span> Wh </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="Frequência" src="https://cloudio.bhonofre.pt/img/energia.svg">
-                        <span>Energia Reativa (Rc)</span>
-                        <span class="v"> <span class="v" id="reactiveEnergyRC">0</span>Wh</span>
+                        <span> Reactive Energy (Rc) </span>
+                        <span class="v"> <span class="v" id="reactiveEnergyRC"> 0 </span> Wh </span>
                     </div>
                     <div class="han-values-dual">
                         <img class="han-icon" alt="family" src="https://cloudio.bhonofre.pt/img/energia.svg">
-                        <span>Energia Reativa (Ri)</span>
-                        <span class="v"> <span class="v" id="reactiveEnergyRI">0</span>Wh</span>
+                        <span> Reactive Energy (Ri) </span>
+                        <span class="v"> <span class="v" id="reactiveEnergyRI"> 0 </span> Wh </span>
                     </div>
 
                 </div>
@@ -166,16 +166,16 @@
                 d="M8.43885 16.9243C13.0995 16.9243 16.8777 13.1357 16.8777 8.46214C16.8777 3.78863 13.0995 0 8.43885 0C3.7782 0 0 3.78863 0 8.46214C0 13.1357 3.7782 16.9243 8.43885 16.9243Z"
                 fill="#97D700"/>
         </svg>
-        <span class="logo-txt">ONOFRE</span>
+        <span class="logo-txt"> ONOFRE </span>
     </div>
     <ul class="onofre-menu">
-        <li><a href="#" id="features-btn"> <span class="lang-features">FUNÇÕES</span></a>
+        <li><a href="#" id="features-btn"> <span class="lang-features"> FUNCTIONS </span></a>
         </li>
-        <li class=""><a href="#" id="node-btn" class="menu-item active"> <span class="lang-node">SISTEMA</span></a>
+        <li class=""><a href="#" id="node-btn" class="menu-item active"> <span class="lang-node"> SYSTEM </span></a>
         </li>
     </ul>
     <button type="button" onclick="saveConfig()" class="btn btn-primary btl-save-all"><span
-        class="lang-save">Guardar</span></button>
+        class="lang-save"> Save </span></button>
 </nav>
 <div class="stats-panel">
     <div class="box-body">
@@ -185,52 +185,48 @@
                     d="M15.7561 23.7832C16.2799 23.2214 16.9133 22.773 17.6171 22.4655C18.3209 22.1581 19.0808 21.9983 19.8489 21.9956C20.6169 21.9929 21.3773 22.1476 22.0833 22.4502C22.7892 22.7528 23.4258 23.1967 23.9535 23.7548M13.2898 20.3582C14.1279 19.4594 15.1413 18.742 16.2674 18.25C17.3935 17.758 18.6083 17.5021 19.8371 17.4978C21.066 17.4935 22.2822 17.7412 23.4117 18.2253C24.5412 18.7094 25.56 19.4198 26.4045 20.3128M10 17.2912C11.2571 15.9431 12.7772 14.8669 14.4663 14.1289C16.1555 13.3909 17.977 13.0065 19.8203 13.0001C21.6637 12.9937 23.49 13.3651 25.1843 14.0913C26.8786 14.8174 28.4064 15.8837 29.673 17.223M19.8685 28.7422C19.2474 28.7422 18.744 28.2388 18.744 27.6178C18.744 26.9967 19.2474 26.4933 19.8685 26.4933C20.4895 26.4933 20.9929 26.9967 20.9929 27.6178C20.9929 28.2388 20.4895 28.7422 19.8685 28.7422Z"
                     stroke="#97D700" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span id="ssid_lbl"></span><span class="green" id="wifi-signal">0%</span>
+            <span id="ssid_lbl"></span><span class="green" id="wifi-signal"> 0% </span>
         </div>
 
         <div class="s-item">
-            <span class="green">NOME</span><label for="nodeId"><span class="lang-name"></span></label>
+            <span class="green"> Name </span><label for="nodeId"><span class="lang-name"></span></label>
             <input oninput="this.size = this.value.length+4" maxlength="30" type="text" id="nodeId"
                    placeholder="ex: kitchen" required/><span class="green" id="lbl-chip"></span>
         </div>
         <div class="s-item">
-            <span>MQTT</span><span id="mqtt_state" class="led"></span>
+            <span> MQTT </span><span id="mqtt_state" class="led"></span>
         </div>
     </div>
 </div>
 <div class="content hide" id="node-pn">
     <div class="box-body">
-        <div class="form-group"><label for="accessPointPassword"><span class="lang-password">Palavra
-                                Passe</span>
-            AP</label> <input autocomplete="off" class="form-control" type="password"
+        <div class="form-group"><label for="accessPointPassword"><span class="lang-password"> AP Password </span> AP </label> <input autocomplete="off" class="form-control" type="password"
                               id="accessPointPassword" placeholder="ex: superPassword"/></div>
 
-        <div class="form-group"><label for="apiUser"><span class="lang-username">Utilizador</span></label>
+        <div class="form-group"><label for="apiUser"><span class="lang-username"> User </span></label>
             <input autocomplete="off" class="form-control" type="text" id="apiUser"
                    placeholder="ex: admin"/>
         </div>
-        <div class="form-group"><label for="apiPassword"><span class="lang-password">Palavra
-                                Passe</span></label>
+        <div class="form-group"><label for="apiPassword"><span class="lang-password"> Password </span></label>
             <input autocomplete="off" class="form-control" type="password" id="apiPassword"
                    placeholder="ex: superPassword"/>
         </div>
     </div>
     <div class="box-title">
-        <span>WI-FI</span>
+        <span> WI-FI </span>
         <span class="chip" id="lbl-mac"></span>
     </div>
     <div class="box-body">
-        <div class="form-group"><label for="wifiSSID">SSID</label>
+        <div class="form-group"><label for="wifiSSID"> SSID </label>
             <input class="form-control" maxlength="23" autocomplete="off" type="text" id="wifiSSID"
                    placeholder="ex: meuwifi"/>
         </div>
-        <div class="form-group"><label for="wifiSecret"><span class="lang-password">Palavra
-                                Passe</span></label> <input class="form-control" maxlength="60" autocomplete="off"
+        <div class="form-group"><label for="wifiSecret"><span class="lang-password"> Password </span></label> <input class="form-control" maxlength="60" autocomplete="off"
                                                             type="password" id="wifiSecret"
                                                             placeholder="ex: superpassword"/>
         </div>
         <div class="form-group right">
-            <label class="dhcp-lbl" for="dhcp">DHCP</label>
+            <label class="dhcp-lbl" for="dhcp"> DHCP </label>
             <label class="switch">
                 <input value="true" name="dhcp" id="dhcp" type="checkbox">
                 <span class="slider round"></span>
@@ -239,37 +235,35 @@
     </div>
 
     <div class="box-body">
-        <div class="form-group"><label for="wifiIp">IP</label> <input class="form-control" type="text"
+        <div class="form-group"><label for="wifiIp"> IP </label> <input class="form-control" type="text"
                                                                       id="wifiIp" maxlength="15"
                                                                       placeholder="ex: 192.168.1.20"/>
         </div>
-        <div class="form-group"><label for="wifiGw">Gateway</label> <input class="form-control" id="wifiGw"
+        <div class="form-group"><label for="wifiGw"> Gateway </label> <input class="form-control" id="wifiGw"
                                                                            maxlength="15"
                                                                            placeholder="ex: 192.168.1.254"/>
         </div>
-        <div class="form-group"><label for="wifiMask"><span class="lang-netmask">Máscara de
-                                Rede</span></label> <input class="form-control" maxlength="15" id="wifiMask"
+        <div class="form-group"><label for="wifiMask"><span class="lang-netmask"> Network Mask </span></label> <input class="form-control" maxlength="15" id="wifiMask"
                                                            placeholder="ex: 255.255.255.0"/>
         </div>
     </div>
     <div class="box-title">
-        <span>MQTT</span>
+        <span> MQTT </span>
     </div>
     <div class="box-body">
-        <div class="form-group"><label for="mqttIpDns">Broker IP / DNS</label> <input class="form-control"
+        <div class="form-group"><label for="mqttIpDns"> Broker IP / DNS </label> <input class="form-control"
                                                                                       type="text" maxlength="40"
                                                                                       id="mqttIpDns"
                                                                                       placeholder="ex: 192.168.1.30"/>
         </div>
         <div class="form-group"><label for="mqttUsername"><span
-            class="lang-username">Utilizador</span></label>
+            class="lang-username"> User </span></label>
             <input class="form-control" autocomplete="off" type="text" maxlength="30" id="mqttUsername"
                    placeholder="ex: iam"/>
         </div>
 
 
-        <div class="form-group"><label for="mqttPassword"><span class="lang-password">Palavra
-                                Passe</span></label> <input class="form-control" maxlength="62" type="password"
+        <div class="form-group"><label for="mqttPassword"><span class="lang-password"> Password </span></label> <input class="form-control" maxlength="62" type="password"
                                                             autocomplete="off" id="mqttPassword"
                                                             placeholder="ex: superstrongpassword"/>
 
@@ -277,15 +271,14 @@
     </div>
 
     <div class="box-title">
-        <span>Firmware</span>
+        <span> Firmware </span>
     </div>
     <div class="firmware">
         <form role="form" method="POST" action="/update" enctype="multipart/form-data">
             <div class="box-body">
                 <input class="btn" id="firmwareInputFile" name="update" type="file"/>
 
-                <button type="submit" class="btn btn-primary upload"><span class="lang-install-file-version">
-                                Instalar ficheiro</span>
+                <button type="submit" class="btn btn-primary upload"><span class="lang-install-file-version"> Install file </span>
                 </button>
             </div>
         </form>
@@ -293,29 +286,29 @@
     <div class="box-body">
         <form role="form" method="POST" enctype="multipart/form-data" action="/auto-update">
             <button type="submit" id="btn-auto-update" class="btn btn-primary hide"><span
-                class="lang-install-file-version"> Instalar ficheiro</span>
+                class="lang-install-file-version"> Install file </span>
             </button>
         </form>
     </div>
     <div class="box-title">
-        <span>Sistema</span>
+        <span> SYSTEM </span>
     </div>
     <div class="box-body">
         <button type="button" onclick="loadDefaults()" class="btn btn-danger btn-system"><span
-            class="lang-reset-factory">Reset</span>
+            class="lang-reset-factory"> Reset </span>
         </button>
         <div class="area-system-bk">
             <button type="button" onclick="backup()" class="btn btn-system-dual backup"><span
-                class="lang-restart">Backup</span>
+                class="lang-restart"> Backup </span>
             </button>
             <input id="restore" class="hide" type="file"/>
             <button type="button" onclick="document.getElementById('restore').click()"
                     class="btn btn-system-dual restore"><span
-                class="lang-restart">Restaurar</span>
+                class="lang-restart"> Restore </span>
             </button>
         </div>
         <button type="button" onclick="reboot()" class="btn btn-system"><span
-            class="lang-restart">Reiniciar</span>
+            class="lang-restart"> Restart </span>
         </button>
     </div>
 </div>
@@ -339,43 +332,43 @@
                        placeholder="ex: kitchen" required/>
             </div>
             <div class="f-ac modal-form">
-                <label>Tipo de Interruptor</label>
+                <label> Switch Type </label>
                 <div class="modal-form-row">
                     <div>
                         <input type="radio" id="f-in-mode-push" name="f-in-mode" value="0"/>
-                        <label id="f-in-mode-push-lbl" for=f-in-mode-push>Pulsador</label>
+                        <label id="f-in-mode-push-lbl" for=f-in-mode-push> Pulsator </label>
                     </div>
                     <div>
                         <input type="radio" id="f-in-mode-latch" name="f-in-mode" value="1"/>
-                        <label id="f-in-mode-latch-lbl" for="f-in-mode-latch">Normal</label>
+                        <label id="f-in-mode-latch-lbl" for="f-in-mode-latch"> Normal </label>
                     </div>
                     <div id="f-push-t">
                         <input type="radio" id="f-in-mode-push-toggle" name="f-in-mode" value="2"/>
-                        <label id="f-in-mode-push-toggle-lbl" for="f-in-mode-push-toggle">Pulsador</label>
+                        <label id="f-in-mode-push-toggle-lbl" for="f-in-mode-push-toggle"> Pulsator </label>
                     </div>
                 </div>
             </div>
             <div id="f-calibration" class="f-ac hide modal-form">
-                <label>Calibração</label>
+                <label> Calibration </label>
                 <div class="modal-form-row ">
 
                     <input class="form-control" type="number" id="f-up" value="0"/>
-                    <label class="label-hit" for=f-up>segundos para subir</label>
+                    <label class="label-hit" for=f-up> seconds to go up </label>
 
                     <input class="form-control" type="number" id="f-down" value="1"/>
-                    <label class="label-hit" for="f-down">segundos para descer</label>
+                    <label class="label-hit" for="f-down"> seconds to go down </label>
 
                 </div>
             </div>
             <div id="f-auto" class="f-auto hide modal-form">
                 <div class="modal-form-row ">
-                    <label>Desligar automáticamente em</label>
+                    <label> Turn off automatically in </label>
                     <input class="form-control" type="number" id="f-autoOff" value="0"/>
-                    <label class="label-hit" for=f-up> segundos</label>
+                    <label class="label-hit" for=f-up> seconds </label>
                 </div>
             </div>
             <div id="f-knx" class="modal-form hide">
-                <label>KNX</label>
+                <label> KNX </label>
                 <div class="modal-form-row ">
                     <div>
                         <input class="form-control" type="number" id="f-area" min="0" max="254" value="0"/>
@@ -391,11 +384,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" onclick="deleteFeature(this)" class="btn-delete"
-                        id="btn-delete">Eliminar
-                </button>
+                        id="btn-delete"> Delete </button>
                 <button type="button" onclick="applyFeatureChanges(this)" style="width: 100px" class="btn btl-save-all"
                         id="btn-update"><span
-                    class="lang-save">Atualizar</span></button>
+                    class="lang-save"> Update </span></button>
             </div>
         </div>
     </div>
@@ -407,43 +399,43 @@
             </div>
             <div class="wizard-props">
                 <div class="form-group">
-                    <label for="f-n-name"><span class="lang-name">Nome</span></label>
+                    <label for="f-n-name"><span class="lang-name"> Name </span></label>
                     <input class="f-name form-control" maxlength="30" type="text" name="f-name" id="f-n-name"
                            placeholder="ex: kitchen" required/>
                 </div>
                 <div class="form-group">
-                    <label for="f-n-driver"><span class="lang-driver">Driver</span></label>
+                    <label for="f-n-driver"><span class="lang-driver"> Driver </span></label>
                     <select onchange="driverSelect(this)" name="pins" class="form-control" id="f-n-driver">
-                        <option value="7">Iluminação Pulsador Virtual</option>
-                        <option value="8">Iluminação Normal Virtual</option>
-                        <option value="4">Estore Pulsador Duplo Virtual</option>
-                        <option value="5">Estore Normal Duplo Virtual</option>
-                        <option value="1">Interruptor Pulsador Virtual</option>
-                        <option value="2">Interruptor Normal Virtual</option>
-                        <option value="3">Estore Pulsador Virtual</option>
-                        <option value="9">Garagem Virtual</option>
-                        <option value="111">Climatização DHT 11</option>
-                        <option value="121">Climatização DHT 21</option>
-                        <option value="122">Climatização DHT 22</option>
-                        <option value="90">Climatização DS18B20</option>
-                        <option value="83">Sensor Chuva</option>
-                        <option value="82">Sensor Movimento PIR</option>
-                        <option value="84">Sensor Porta</option>
-                        <option value="85">Sensor Janela</option>
-                        <option value="72">Energia Pzem-004T V1</option>
-                        <option value="71">Energia Pzem-004T V3</option>
-                        <option value="93">Sonar HC-SR04</option>
-                        <option value="94">Movimento LD2410</option>
+                        <option value="7"> Virtual Pulsator Lighting </option>
+                        <option value="8"> Virtual Normal Lighting </option>
+                        <option value="4"> Virtual Double Push-Button Blind </option>
+                        <option value="5"> Virtual Normal Double Blind </option>
+                        <option value="1"> Virtual Push-Button Switch </option>
+                        <option value="2"> Virtual Normal Switch </option>
+                        <option value="3"> Virtual Push-Button Blind </option>
+                        <option value="9"> Virtual Garage </option>
+                        <option value="111"> Air conditioning DHT 11 </option>
+                        <option value="121"> Air conditioning DHT 21 </option>
+                        <option value="122"> Air conditioning DHT 22 </option>
+                        <option value="90"> Air conditioning DS18B20 </option>
+                        <option value="83"> Rain Sensor </option>
+                        <option value="82"> PIR Motion Sensor </option>
+                        <option value="84"> Door Sensor </option>
+                        <option value="85"> Window Sensor </option>
+                        <option value="72"> Pzem-004T Energy V1 </option>
+                        <option value="71"> Pzem-004T Energy V3 </option>
+                        <option value="93"> Sonar HC-SR04 </option>
+                        <option value="94"> Motion Sensor LD2410</option>
                     </select>
                 </div>
                 <div>
                     <div class="form-group">
-                        <label id="pin-up-l" for="f-n-pin-1"><span class="lang-pin-up">Pino Entrada</span></label>
+                        <label id="pin-up-l" for="f-n-pin-1"><span class="lang-pin-up"> Input Pin </span></label>
                         <select name="pins" class="form-control" id="f-n-pin-1">
                         </select>
                     </div>
                     <div id="f-n-pin-2-g" class="form-group hide">
-                        <label id="pin-down-l" for="f-n-pin-2"><span class="lang-pin-down">Pino</span></label>
+                        <label id="pin-down-l" for="f-n-pin-2"><span class="lang-pin-down"> Pin </span></label>
                         <select name="pins" class="form-control" id="f-n-pin-2">
                         </select>
                     </div>
@@ -451,7 +443,7 @@
             </div>
             <div class="box-body ">
                 <button type="button" style="margin-left: 30px" onclick="create()" class="btl-save-all" id="btn-create"><span
-                    class="lang-save">ADICIONAR</span></button>
+                    class="lang-save"> ADD </span></button>
             </div>
         </div>
     </div>
@@ -470,7 +462,7 @@
                     d="M2.69065 5.30463C4.17665 5.30463 5.38129 4.11715 5.38129 2.65231C5.38129 1.18748 4.17665 0 2.69065 0C1.20464 0 0 1.18748 0 2.65231C0 4.11715 1.20464 5.30463 2.69065 5.30463Z"
                     fill="#97D700"/>
             </svg>
-            <p><span class="lang-version">Versão </span> <span class="green" id="version_lbl"></span></p>
+            <p><span class="lang-version"> Version </span> <span class="green" id="version_lbl"></span></p>
             <p>Powered by OnOfre@2018 <span class="green">Developed in Portugal</span></p>
         </div>
         <a href="http://doctor.onofre.store/" target="_blank"> <img height="73px"

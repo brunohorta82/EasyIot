@@ -160,18 +160,18 @@ namespace Family
 
 namespace I18N
 {
-    constexpr const char *SWICTH_ONE{"Interruptor1"};
-    constexpr const char *SWICTH_TWO{"Interruptor2"};
-    constexpr const char *VALVE_ONE{"Válvula 1"};
-    constexpr const char *VALVE_TWO{"Válvula 2"};
-    constexpr const char *VALVE_THREE{"Válvula 3"};
-    constexpr const char *VALVE_FOUR{"Válvula 4"};
-    constexpr const char *GARAGE{"Garagem"};
-    constexpr const char *COVER{"Estore"};
-    constexpr const char *HAN{"Contador"};
-    constexpr const char *ENERGY{"Energia "};
-    constexpr const char *ILLUMINANCE{"Iluminação "};
-    constexpr const char *CLIMATIZATION{"Climatização"};
+    constexpr const char *SWICTH_ONE{"Swithch 1"};
+    constexpr const char *SWICTH_TWO{"Swithch 2"};
+    constexpr const char *VALVE_ONE{"Valve 1"};
+    constexpr const char *VALVE_TWO{"Valve 2"};
+    constexpr const char *VALVE_THREE{"Valve 3"};
+    constexpr const char *VALVE_FOUR{"Valve 4"};
+    constexpr const char *GARAGE{"Garage"};
+    constexpr const char *COVER{"Blinds"};
+    constexpr const char *HAN{"Counter"};
+    constexpr const char *ENERGY{"Power "};
+    constexpr const char *ILLUMINANCE{"Ilumination"};
+    constexpr const char *CLIMATIZATION{"Climatization"};
     constexpr const char *NO_NAME{"Sem Nome"};
 
 }

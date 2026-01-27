@@ -4,22 +4,22 @@ var lastVersion = 0.0;
 let source = null;
 var currentPage = "node"
 var WORDS_PT = {
-    "dual_push": "Pulsador Duplo",
-    "dual_latch": "Normal Duplo",
-    "single_latch": "Normal",
-    "pin_input": "Pino Entrada",
-    "pin_up": "Pino Abrir",
-    "pin_down": "Pino Fechar",
-    "single_push": "Pulsador",
-    "trigger": "Trigger",
-    "echo": "Echo",
-    "update_to": "Atualizar automáticamente para a versão",
-    "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
-    "config_save_ok": "Configuração Guardada",
-    "device_reboot_ok": "O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.",
-    "device_error": "Não foi possivel finalizar a acção, verifique se está correctamente ligado à rede. Se o problema persistir tente desligar da energia e voltar a ligar.",
-    "device_update_ok": "O dispositivo está a atualizar, ficará disponivel dentro de 20 segundos.",
-    "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
+    "dual_push": " Double Pulsator ",
+    "dual_latch": " Normal Double ",
+    "single_latch": " Normal ",
+    "pin_input": " Input Pin" ,
+    "pin_up": " Open Pin ",
+    "pin_down": " Pin Close ",
+    "single_push": " Pulsator ",
+    "trigger": " Trigger ",
+    "echo": " Echo ",
+    "update_to": " Automatically update to version ",
+    "config_save_error": " We were unable to save the current configuration, please try again.",
+    "config_save_ok": " Saved Configuration ",
+    "device_reboot_ok": " The device is restarting; it will be available again in 10 seconds.",
+    "device_error": " The action could not be completed; please check if you are correctly connected to the power supply. If the problem persists, try unplugging it and plugging it back in. ",
+    "device_update_ok": " The device is updating; it will be available in 20 seconds. ",
+    "defaults_ok": " Factory settings applied successfully. Please reconnect to the Access Point and access the control panel at http://192.168.4.1 in your browser. ",
 }
 
 function create() {
