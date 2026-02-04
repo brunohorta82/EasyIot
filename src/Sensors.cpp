@@ -14,6 +14,7 @@
 #include <LTR303.h>
 #include "DHT.h"
 #include <NewPing.h>
+#include <vector>
 #ifdef ESP32
 #include <OpenTherm.h>
 #include <ld2410.h>
@@ -21,6 +22,36 @@
 #endif
 // OpenTherm ot(1, 2);
 extern ConfigOnofre config;
+
+namespace
+{
+struct DallasBus
+{
+  unsigned int pin;
+  OneWire *oneWire;
+  DallasTemperature *dallas;
+};
+
+static std::vector<DallasBus> dallasBuses;
+
+static DallasTemperature *getDallasForPin(unsigned int pin)
+{
+  for (auto &bus : dallasBuses)
+  {
+    if (bus.pin == pin)
+    {
+      return bus.dallas;
+    }
+  }
+  DallasBus bus;
+  bus.pin = pin;
+  bus.oneWire = new OneWire(pin);
+  bus.dallas = new DallasTemperature(bus.oneWire);
+  bus.dallas->begin();
+  dallasBuses.push_back(bus);
+  return dallasBuses.back().dallas;
+}
+} // namespace
 void Sensor::notifyState()
 {
   // Notify by MQTT/Homeassistant
@@ -330,12 +361,7 @@ void Sensor::loop()
   {
     if (lastRead + delayRead < millis())
     {
-      static DallasTemperature *dallas;
-      if (!isInitialized())
-      {
-        dallas = new DallasTemperature(new OneWire(inputs[0]));
-        dallas->begin();
-      }
+      DallasTemperature *dallas = getDallasForPin(inputs[0]);
 
       JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
