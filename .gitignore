@@ -3,6 +3,9 @@ package.json
 node_modules
 .DS_Store
 .pio
+platformio_override.ini
+.DS_Store
+.gitignore
 .vscode
 .gitignore
 .vscode/launch.json
