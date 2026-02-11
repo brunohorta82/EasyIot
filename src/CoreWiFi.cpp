@@ -96,7 +96,7 @@ void SysProvEvent(arduino_event_t *sys_event)
 #endif
 String getApName()
 {
-  String version = String(VERSION, 3);
+  String version = String(VERSION);
   version.replace(".", "x");
   if (strcmp(config.nodeId, config.chipId) == 0)
     return "OnOfre-" + String(config.chipId) + "-" + version;
@@ -295,7 +295,7 @@ void refreshMDNS(const char *lastName)
   {
     MDNS.addService("bhonofre", "tcp", 80);
     MDNS.addServiceTxt("bhonofre", "tcp", "hardwareId", String(config.chipId));
-    MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION, 3));
+    MDNS.addServiceTxt("bhonofre", "tcp", "firmware", String(VERSION));
     MDNS.addServiceTxt("bhonofre", "tcp", "wifi", String(config.wifiSSID));
 #ifdef ESP32
     MDNS.addServiceTxt("bhonofre", "tcp", "mcu", "ESP32");

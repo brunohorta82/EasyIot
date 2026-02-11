@@ -28,7 +28,7 @@ void createHaSwitch(Actuator &sw)
   device["mdl"] = "V5 - " + String(config.chipId);
 #endif
   device["mf"] = "OnOfre Portugal";
-  device["sw"] = String(VERSION, 3);
+  device["sw"] = String(VERSION);
   object["avty_t"] = config.healthTopic;
 
   if (sw.isGarage())
@@ -99,7 +99,7 @@ void addToHomeAssistant(Sensor &s)
   device["mdl"] = "V5 - " + String(config.chipId);
 #endif
   device["mf"] = "OnOfre Portugal";
-  device["sw"] = String(VERSION, 3);
+  device["sw"] = String(VERSION);
   String uniqueId = String(s.uniqueId);
   switch (s.driver)
   {
