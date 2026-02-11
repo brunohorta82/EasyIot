@@ -40,7 +40,7 @@ void SysProvEvent(arduino_event_t *sys_event)
   case ARDUINO_EVENT_PROV_CRED_RECV:
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Received Wi-Fi credentials SSID:%s PASSWORD:" CR, tags::wifi, (const char *)sys_event->event_info.prov_cred_recv.ssid, (char const *)sys_event->event_info.prov_cred_recv.password);
+    Log.notice("%s Received Wi-Fi credentials." CR, tags::wifi);
 #endif
 
     strlcpy(config.wifiSSID, (const char *)sys_event->event_info.prov_cred_recv.ssid, sizeof(config.wifiSSID));
