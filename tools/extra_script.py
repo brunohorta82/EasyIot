@@ -12,8 +12,13 @@ except Exception:
 # Extract version
 version = None
 for define in my_flags.get("CPPDEFINES", []):
-    if isinstance(define, list) and define[0] == "VERSION":
+    if isinstance(define, (list, tuple)) and define[0] == "VERSION":
         version = define[1]
+        if isinstance(version, str):
+            version = version.strip('"')
+
+if not version:
+    version = "unknown"
 
 # Generate firmware name with date in DD.MM.YYYY format
 timestamp = datetime.datetime.now().strftime("%d.%m.%Y")
