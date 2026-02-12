@@ -18,6 +18,8 @@ cleaner build flags, and consistent firmware version reporting.
 - Firmware: use `String(VERSION)` for API, mDNS, and Home Assistant firmware metadata. - 11.02.2026
 - Build script: improve `tools/extra_script.py` parsing for quoted `VERSION` values. - 11.02.2026
 - Git: keep `platformio_override.ini` ignored as a local-only file. - 11.02.2026
+- Firmware: replace deprecated ArduinoJson `containsKey()` checks in config update path with `isNull()` guards. - 12.02.2026
+- Firmware: add explicit ESP8266 no-op switch cases for ESP32-only drivers (`TMF882X`, `LD2410`) to clear switch warnings. - 12.02.2026
 
 ### Version 9.163 - Stable Release
 - Baseline before `9.17-dev` maintenance and build-flow updates. - 
