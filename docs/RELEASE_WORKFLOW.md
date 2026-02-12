@@ -47,3 +47,14 @@ This document defines the standard flow for development, upstream cherry-pick PR
 - If a PR is closed or merged, delete local/remote CP branch to keep repo clean.
 - If `git cherry-pick --continue` fails due to editor, use:
   - `GIT_EDITOR=true git cherry-pick --continue`
+
+## Release Notes Draft
+
+- Generate a draft from recent commits:
+  - `tools/generate_release_notes.sh`
+- Generate from a specific range:
+  - `tools/generate_release_notes.sh --range <from..to>`
+- Change output file:
+  - `tools/generate_release_notes.sh --count 25 --output RELEASE_NOTES_DRAFT.md`
+- Default output path is repo root:
+  - `RELEASE_NOTES_DRAFT.md`

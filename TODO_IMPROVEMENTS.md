@@ -32,10 +32,6 @@ Current version: 9.17-dev
 2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
 3. [ ] Add quick rollback notes for failed release/update.
 
-## Process & Release (P2)
-
-1. [ ] Add a small script to prepare release notes draft.
-
 #
 
 # Done
@@ -68,6 +64,7 @@ Current version: 9.17-dev
 1. [x] Added PR workflow guide (development -> cherry-pick branch -> upstream PR). File: `docs/RELEASE_WORKFLOW.md`
 2. [x] Added branch naming convention for external CP branches. File: `docs/RELEASE_WORKFLOW.md`
 3. [x] Added release checklist document in repo docs. File: `docs/RELEASE_WORKFLOW.md`
+4. [x] Added script to generate release notes draft from commits. File: `tools/generate_release_notes.sh`
 
 ## Quick Release Flow
 

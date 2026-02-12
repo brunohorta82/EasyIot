@@ -30,6 +30,7 @@ All notable changes to this project are documented in this file.
 - Added `docs/RELEASE_WORKFLOW.md` with CP/PR workflow steps.
 - Added branch naming convention for CP branches.
 - Added release checklist in repo docs.
+- Added `tools/generate_release_notes.sh` to create `RELEASE_NOTES_DRAFT.md` from git history.
 
 ## [9.163] - Stable baseline
 
