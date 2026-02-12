@@ -26,6 +26,11 @@ All notable changes to this project are documented in this file.
 - Replaced deprecated ArduinoJson `containsKey()` checks with `isNull()` guards in config update flow.
 - Added explicit ESP8266 no-op switch cases for ESP32-only drivers (`TMF882X`, `LD2410`) to clear switch warnings.
 
+### Process and Release
+- Added `docs/RELEASE_WORKFLOW.md` with CP/PR workflow steps.
+- Added branch naming convention for CP branches.
+- Added release checklist in repo docs.
+
 ## [9.163] - Stable baseline
 
 - Baseline before `9.17-dev` maintenance and build-flow updates.

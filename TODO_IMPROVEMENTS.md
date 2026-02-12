@@ -34,10 +34,7 @@ Current version: 9.17-dev
 
 ## Process & Release (P2)
 
-1. [ ] Add a short PR workflow guide (development -> cherry-pick branch -> upstream PR).
-2. [ ] Add branch naming convention for external PRs.
-3. [ ] Add a release checklist document in repo docs.
-4. [ ] Add a small script to prepare release notes draft.
+1. [ ] Add a small script to prepare release notes draft.
 
 #
 
@@ -65,6 +62,12 @@ Current version: 9.17-dev
 
 1. [x] Replaced deprecated ArduinoJson `containsKey()` checks in config update path with `isNull()` guards. File: `src/ConfigOnofre.cpp`
 2. [x] Added explicit ESP8266 no-op switch cases for ESP32-only sensor drivers (`TMF882X`, `LD2410`) to remove compiler switch warnings. File: `src/Sensors.cpp`
+
+## Process & Release
+
+1. [x] Added PR workflow guide (development -> cherry-pick branch -> upstream PR). File: `docs/RELEASE_WORKFLOW.md`
+2. [x] Added branch naming convention for external CP branches. File: `docs/RELEASE_WORKFLOW.md`
+3. [x] Added release checklist document in repo docs. File: `docs/RELEASE_WORKFLOW.md`
 
 ## Quick Release Flow
 
