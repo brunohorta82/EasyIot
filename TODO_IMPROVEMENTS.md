@@ -43,6 +43,7 @@ Current version: 9.17-dev
 5. [x] Improved `extra_script.py` handling for quoted `VERSION` values.
 6. [x] Added `CHANGELOG.md` as the single release-history file.
 7. [x] Added pre-release metadata validator (version/changelog/env/OTA URL checks). File: `tools/validate_release.sh`
+8. [x] Added automatic pre-build hooks for HTML conversion and release validation with skip flags. Files: `tools/extra_script.py`, `platformio.ini`
 
 ## Security
 
