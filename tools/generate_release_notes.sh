@@ -160,3 +160,4 @@ current_branch="$(git rev-parse --abbrev-ref HEAD)"
 } > "${output_file}"
 
 echo "Release notes draft written to ${output_file}"
+echo "" # add space betwen lines

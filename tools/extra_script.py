@@ -1,7 +1,7 @@
 import datetime
 import os
 import subprocess
-from SCons.Script import DefaultEnvironment  # type: ignore
+from SCons.Script import Action, DefaultEnvironment  # type: ignore
 
 env = DefaultEnvironment()
 
@@ -31,10 +31,11 @@ def run_html_converter(source, target, env):
         return 0
 
     project_dir = env["PROJECT_DIR"]
+    print("")
     script_path = os.path.join(project_dir, "tools", "html_converter.sh")
-
     print("")
     print("Running html_converter.sh ...")
+    print("")
     print("Script path:", script_path)
     print("")
 
@@ -43,6 +44,7 @@ def run_html_converter(source, target, env):
         return 1
 
     subprocess.run(["/bin/bash", script_path], check=True)
+    print("")
     return 0
 
 
@@ -62,6 +64,7 @@ def run_release_validation(source, target, env):
 
     print("")
     print("Running validate_release.sh ...")
+    print("")
     print("Script path:", script_path)
     print("")
 
@@ -70,12 +73,15 @@ def run_release_validation(source, target, env):
         cmd.extend(["--release"])
 
     subprocess.run(cmd, check=True)
+    print("")
+    print("--- Pre-build checks complete ---")
+    print("")
     return 0
 
 
 # Run before firmware link/build output is generated.
-env.AddPreAction("$PROGPATH", run_html_converter)
-env.AddPreAction("$PROGPATH", run_release_validation)
+env.AddPreAction("$PROGPATH", Action(run_html_converter, "Pre-build: HTML convert"))
+env.AddPreAction("$PROGPATH", Action(run_release_validation, "Pre-build: release validation"))
 
 # Firmware naming
 my_flags = _parse_flags()
@@ -88,4 +94,6 @@ for define in my_flags.get("CPPDEFINES", []):
         break
 
 timestamp = datetime.datetime.now().strftime("%d.%m.%Y")
+print("")
 env.Replace(PROGNAME=f"Firmware_{env['PIOENV']}_{version} - {timestamp}")
+print("")
