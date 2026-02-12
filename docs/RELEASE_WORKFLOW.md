@@ -50,6 +50,12 @@ This document defines the standard flow for development, upstream cherry-pick PR
 - If a PR is closed or merged, delete local/remote CP branch to keep repo clean.
 - If `git cherry-pick --continue` fails due to editor, use:
   - `GIT_EDITOR=true git cherry-pick --continue`
+- Build hooks are automatic via `tools/extra_script.py`:
+  - HTML converter runs before build
+  - Release metadata validation runs before build
+- Optional skip defines in `platformio.ini` (`[extra] default_flags`):
+  - `SKIP_HTML_CONVERT`
+  - `SKIP_RELEASE_VALIDATE`
 
 ## Release Notes Draft
 

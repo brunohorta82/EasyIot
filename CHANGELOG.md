@@ -12,6 +12,12 @@ All notable changes to this project are documented in this file.
 - Improved `tools/extra_script.py` parsing for quoted `VERSION` values.
 - Kept `platformio_override.ini` ignored as a local-only file.
 - Added `tools/validate_release.sh` for pre-release metadata validation (version, changelog, release envs, OTA/config URL checks).
+- Added automatic pre-build hooks in `tools/extra_script.py`:
+  - run `tools/html_converter.sh`
+  - run `tools/validate_release.sh`
+- Added skip toggles in `platformio.ini`:
+  - `SKIP_HTML_CONVERT`
+  - `SKIP_RELEASE_VALIDATE`
 
 ### Security
 - Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
