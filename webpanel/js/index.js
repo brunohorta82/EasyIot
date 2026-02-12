@@ -1,6 +1,6 @@
-let baseUrl = "http://192.168.187.136"
+const baseUrl = (window.location.origin && window.location.origin !== "null") ? window.location.origin : "";
 var config;
-var lastVersion = 0.0;
+var lastVersion = "";
 let source = null;
 var currentPage = "node"
 var WORDS_PT = {
@@ -20,6 +20,42 @@ var WORDS_PT = {
     "device_error": " The action could not be completed; please check if you are correctly connected to the power supply. If the problem persists, try unplugging it and plugging it back in. ",
     "device_update_ok": " The device is updating; it will be available in 20 seconds. ",
     "defaults_ok": " Factory settings applied successfully. Please reconnect to the Access Point and access the control panel at http://192.168.4.1 in your browser. ",
+}
+
+function parseVersion(version) {
+    const raw = (version || "").toString().trim();
+    const parts = raw.split("-", 2);
+    const core = parts[0]
+        .split(".")
+        .map((value) => {
+            const numeric = value.replace(/[^0-9]/g, "");
+            return numeric.length ? parseInt(numeric, 10) : 0;
+        });
+    const suffix = (parts[1] || "").toLowerCase();
+    return {core, suffix};
+}
+
+function compareVersions(leftVersion, rightVersion) {
+    const left = parseVersion(leftVersion);
+    const right = parseVersion(rightVersion);
+    const maxLength = Math.max(left.core.length, right.core.length);
+    for (let i = 0; i < maxLength; i++) {
+        const leftPart = left.core[i] || 0;
+        const rightPart = right.core[i] || 0;
+        if (leftPart !== rightPart) {
+            return leftPart > rightPart ? 1 : -1;
+        }
+    }
+    if (left.suffix === right.suffix) {
+        return 0;
+    }
+    if (!left.suffix) {
+        return 1;
+    }
+    if (!right.suffix) {
+        return -1;
+    }
+    return left.suffix.localeCompare(right.suffix);
 }
 
 function create() {
@@ -109,9 +145,12 @@ function fillConfig(updateStats) {
     findById("accessPointPassword").value = "******";
     findById("apiPassword").value = "******";
     findById("mqttPassword").value = "******";
-    if (lastVersion > parseFloat(config.firmware)) {
-        findById("btn-auto-update").classList.remove("hide");
-        findById("btn-auto-update").textContent = getI18n("update_to") + " " + lastVersion;
+    const updateButton = findById("btn-auto-update");
+    if (updateButton && compareVersions(lastVersion, config.firmware) > 0) {
+        updateButton.classList.remove("hide");
+        updateButton.textContent = getI18n("update_to") + " " + lastVersion;
+    } else if (updateButton) {
+        updateButton.classList.add("hide");
     }
 }
 
@@ -380,12 +419,14 @@ function fillDevices() {
 async function loadConfig() {
     const response = await fetch(baseUrl + "/config");
     config = await response.json();
-    const vR = await fetch("https://update.bhonofre.pt/firmware/latest-version/" + config.mcu, {
-        mode: "cors"
-    });
-    lastVersion = parseFloat(await vR.text());
-
-
+    try {
+        const vR = await fetch("https://update.bhonofre.pt/firmware/latest-version/" + config.mcu, {
+            mode: "cors"
+        });
+        lastVersion = (await vR.text()).trim();
+    } catch (e) {
+        lastVersion = "";
+    }
 }
 
 function detectLang() {
