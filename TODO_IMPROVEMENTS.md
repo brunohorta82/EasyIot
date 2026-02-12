@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 11.02.2026  
+Updated: 12.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -13,9 +13,8 @@ Current version: 9.17-dev
 
 ## Firmware & Versioning (P1)
 
-1. [ ] Fix firmware version compare in webpanel for `-dev` formats (replace `parseFloat` logic). File: `webpanel/js/index.js`
-2. [ ] Add version/OTA metadata validation before release.
-3. [ ] Add `CHANGELOG.md` with version-by-version entries.
+1. [ ] Add version/OTA metadata validation before release.
+2. [ ] Add `CHANGELOG.md` with version-by-version entries.
 
 ## Security & OTA (P1)
 
@@ -25,9 +24,8 @@ Current version: 9.17-dev
 
 ## Webpanel UX (P1/P2)
 
-1. [ ] Remove hardcoded `baseUrl` and use same-origin requests. File: `webpanel/js/index.js`
-2. [ ] Add automatic version banner in webpanel footer.
-3. [ ] Add firmware build date in API/system info payload.
+1. [ ] Add automatic version banner in webpanel footer.
+2. [ ] Add firmware build date in API/system info payload.
 
 ## Testing & CI (P2)
 
@@ -57,6 +55,11 @@ Current version: 9.17-dev
 ## Security
 
 1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+
+## Webpanel
+
+1. [x] Fixed firmware version comparison for `-dev` formats (replaced `parseFloat` logic). File: `webpanel/js/index.js`
+2. [x] Removed hardcoded `baseUrl` and switched to same-origin requests. File: `webpanel/js/index.js`
 
 ## Quick Release Flow
 
