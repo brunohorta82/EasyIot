@@ -69,7 +69,11 @@ def run_release_validation(source, target, env):
     print("")
 
     cmd = ["/bin/bash", script_path]
-    if "RELEASE" in env.get("PIOENV", ""):
+    pioenv = env.get("PIOENV", "")
+    if pioenv:
+        cmd.extend(["--env", pioenv])
+
+    if "RELEASE" in pioenv:
         cmd.extend(["--release"])
 
     subprocess.run(cmd, check=True)
