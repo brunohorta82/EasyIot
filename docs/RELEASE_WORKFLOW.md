@@ -29,17 +29,20 @@ This document defines the standard flow for development, upstream cherry-pick PR
 
 1. Confirm version string in `platformio.ini` (`[extra] version = ...`).
 2. Ensure local secrets stay in `platformio_override.ini` only.
-3. Build release targets:
+3. Validate release metadata:
+   - `tools/validate_release.sh`
+   - strict release mode: `tools/validate_release.sh --release --fail-on-http`
+4. Build release targets:
    - `platformio run -e ESP8266_RELEASE`
    - `platformio run -e ESP32_RELEASE`
-4. Validate key runtime checks on device:
+5. Validate key runtime checks on device:
    - Wi-Fi connect
    - CloudIO HTTP result
    - MQTT connect
    - basic actuator/sensor control
-5. Update `CHANGELOG.md` for the release/dev line.
-6. Push `development` and prepare required CP PR(s).
-7. Keep open CP PRs minimal and grouped by scope.
+6. Update `CHANGELOG.md` for the release/dev line.
+7. Push `development` and prepare required CP PR(s).
+8. Keep open CP PRs minimal and grouped by scope.
 
 ## Practical Notes
 

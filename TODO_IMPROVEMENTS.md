@@ -13,8 +13,6 @@ Current version: 9.17-dev
 
 ## Firmware & Versioning (P1)
 
-1. [ ] Add version/OTA metadata validation before release.
-
 ## Security & OTA (P1)
 
 1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
@@ -44,6 +42,7 @@ Current version: 9.17-dev
 4. [x] Updated code/version reporting to use string `VERSION`.
 5. [x] Improved `extra_script.py` handling for quoted `VERSION` values.
 6. [x] Added `CHANGELOG.md` as the single release-history file.
+7. [x] Added pre-release metadata validator (version/changelog/env/OTA URL checks). File: `tools/validate_release.sh`
 
 ## Security
 
