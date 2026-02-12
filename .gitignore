@@ -4,12 +4,5 @@ node_modules
 .DS_Store
 .pio
 platformio_override.ini
-.DS_Store
-.gitignore
 .vscode
-.gitignore
-.vscode/launch.json
-.vscode/c_cpp_properties.json
-
-
-.DS_Store
+RELEASE_NOTES_DRAFT.md
