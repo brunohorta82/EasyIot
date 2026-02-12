@@ -407,7 +407,7 @@ ConfigOnofre &ConfigOnofre::save()
   }
   file.close();
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s ConfigOnofre stored." CR, tags::config);
+  Log.notice("%s Config Onofre stored." CR, tags::config);
 #endif
   doc.clear();
   return *this;
