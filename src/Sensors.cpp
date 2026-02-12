@@ -907,5 +907,11 @@ void Sensor::loop()
 #endif
     }
     break;
+#ifndef ESP32
+  case TMF882X:
+  case LD2410:
+    // These drivers are ESP32-only and intentionally no-op on ESP8266 builds.
+    break;
+#endif
   }
 }

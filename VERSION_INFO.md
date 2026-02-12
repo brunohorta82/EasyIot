@@ -22,6 +22,8 @@ cleaner build flags, and consistent firmware version reporting.
 - CloudIO: normalize firmware value in cloud config payload (strip `-dev` suffix for backend compatibility). - 12.02.2026
 - Webpanel: replace `parseFloat` firmware compare with robust version parsing for `-dev` formats. - 12.02.2026
 - Webpanel: remove hardcoded API base URL and use same-origin requests. - 12.02.2026
+- Firmware: replace deprecated ArduinoJson `containsKey()` checks in config update path with `isNull()` guards. - 12.02.2026
+- Firmware: add explicit ESP8266 no-op switch cases for ESP32-only drivers (`TMF882X`, `LD2410`) to clear switch warnings. - 12.02.2026
 
 ### Version 9.163 - Stable Release
 - Baseline before `9.17-dev` maintenance and build-flow updates. - 

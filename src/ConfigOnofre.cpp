@@ -474,7 +474,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
   dhcp = root["dhcp"] | true;
   String mqttPasswordStr = root["mqttPassword"] | "";
-  if (root.containsKey("mqttPassword") && mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (!root["mqttPassword"].isNull() && mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(mqttPassword, mqttPasswordStr.c_str(), sizeof(mqttPassword));
 #ifdef DEBUG_ONOFRE
@@ -483,7 +483,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
 
   String wifiSecretStr = root["wifiSecret"] | "";
-  if (root.containsKey("wifiSecret") && wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (!root["wifiSecret"].isNull() && wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(wifiSecret, wifiSecretStr.c_str(), sizeof(wifiSecret));
 #ifdef DEBUG_ONOFRE
@@ -492,7 +492,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
 
   String accessPointPasswordStr = root["accessPointPassword"] | constantsConfig::apSecret;
-  if (root.containsKey("accessPointPassword") && accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (!root["accessPointPassword"].isNull() && accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(accessPointPassword, accessPointPasswordStr.c_str(), sizeof(accessPointPassword));
 #ifdef DEBUG_ONOFRE
@@ -501,7 +501,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
 
   String apiPasswordStr = root["apiPassword"] | constantsConfig::apiPassword;
-  if (root.containsKey("apiPassword") && apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (!root["apiPassword"].isNull() && apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(apiPassword, apiPasswordStr.c_str(), sizeof(apiPassword));
 #ifdef DEBUG_ONOFRE
