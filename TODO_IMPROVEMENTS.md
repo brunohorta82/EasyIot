@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 11.02.2026  
+Updated: 12.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -13,20 +13,17 @@ Current version: 9.17-dev
 
 ## Firmware & Versioning (P1)
 
-1. [ ] Fix firmware version compare in webpanel for `-dev` formats (replace `parseFloat` logic). File: `webpanel/js/index.js`
-2. [ ] Add version/OTA metadata validation before release.
-3. [ ] Add `CHANGELOG.md` with version-by-version entries.
+1. [ ] Add version/OTA metadata validation before release.
+2. [ ] Add `CHANGELOG.md` with version-by-version entries.
 
 ## Security & OTA (P1)
 
 1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
-2. [ ] Remove Wi-Fi password from debug logs (never print secrets). File: `src/CoreWiFi.cpp`
-3. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
-4. [ ] Ensure release profiles enforce `WEB_SECURE_ON` and avoid debug defaults in production builds. File: `platformio.ini`
-5. [ ] Remove password logging for AP/API changes in debug logs. File: `src/ConfigOnofre.cpp`
-6. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with first-boot forced change flow. File: `include/Constants.h`
-7. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
-8. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
+2. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
+3. [ ] Ensure release profiles enforce `WEB_SECURE_ON` and avoid debug defaults in production builds. File: `platformio.ini`
+4. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with first-boot forced change flow. File: `include/Constants.h`
+5. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
+6. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
 
 ## Dependencies & Library Updates (P1/P2)
 
@@ -38,10 +35,9 @@ Current version: 9.17-dev
 
 ## Webpanel UX (P1/P2)
 
-1. [ ] Remove hardcoded `baseUrl` and use same-origin requests. File: `webpanel/js/index.js`
-2. [ ] Add automatic version banner in webpanel footer.
-3. [ ] Add firmware build date in API/system info payload.
-4. [ ] Avoid external hard dependency for core UI assets (icons/fonts) by hosting fallback assets locally. Files: `webpanel/index.html`, `webpanel/js/index.js`
+1. [ ] Add automatic version banner in webpanel footer.
+2. [ ] Add firmware build date in API/system info payload.
+3. [ ] Avoid external hard dependency for core UI assets (icons/fonts) by hosting fallback assets locally. Files: `webpanel/index.html`, `webpanel/js/index.js`
 
 ## Testing & CI (P2)
 
@@ -70,6 +66,14 @@ Current version: 9.17-dev
 4. [x] Updated code/version reporting to use string `VERSION`.
 5. [x] Improved `extra_script.py` handling for quoted `VERSION` values.
 
+## Security
+
+1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+
+## Webpanel
+
+1. [x] Fixed firmware version comparison for `-dev` formats (replaced `parseFloat` logic). File: `webpanel/js/index.js`
+2. [x] Removed hardcoded `baseUrl` and switched to same-origin requests. File: `webpanel/js/index.js`
 ## Quick Release Flow
 
 1. Bump version in `platformio.ini`.
