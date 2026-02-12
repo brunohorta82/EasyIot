@@ -94,7 +94,7 @@ if [[ -n "$version" ]]; then
 fi
 
 if [[ -n "$version" ]]; then
-  if rg -q "## \\[${version}\\]" CHANGELOG.md; then
+  if grep -Fq "## [${version}]" CHANGELOG.md; then
     ok "CHANGELOG.md contains entry for version ${version}."
   else
     fail "CHANGELOG.md is missing section header: ## [${version}]"
@@ -107,7 +107,7 @@ required_envs=(
 )
 
 for env_name in "${required_envs[@]}"; do
-  if rg -q "^\\[${env_name}\\]" platformio.ini; then
+  if grep -Fq "[${env_name}]" platformio.ini; then
     ok "Found required PlatformIO environment: ${env_name}"
   else
     fail "Missing required PlatformIO environment: ${env_name}"
@@ -118,8 +118,8 @@ constants_file="include/Constants.h"
 if [[ ! -f "$constants_file" ]]; then
   fail "Missing ${constants_file}"
 else
-  config_url="$(rg -o 'configUrl\{"[^"]+"' "$constants_file" | sed -E 's/.*\{"([^"]+)"/\1/' | head -n1 || true)"
-  ota_url="$(rg -o 'otaUrl\{"[^"]+"' "$constants_file" | sed -E 's/.*\{"([^"]+)"/\1/' | head -n1 || true)"
+  config_url="$(awk -F'"' '/configUrl\{"/ { print $2; exit }' "$constants_file" || true)"
+  ota_url="$(awk -F'"' '/otaUrl\{"/ { print $2; exit }' "$constants_file" || true)"
 
   if [[ -n "$config_url" ]]; then
     ok "Found CloudIO config URL: ${config_url}"
