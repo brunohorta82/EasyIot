@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 11.02.2026  
+Updated: 12.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -13,50 +13,22 @@ Current version: 9.17-dev
 
 ## Firmware & Versioning (P1)
 
-1. [ ] Fix firmware version compare in webpanel for `-dev` formats (replace `parseFloat` logic). File: `webpanel/js/index.js`
-2. [ ] Add version/OTA metadata validation before release.
-3. [ ] Add `CHANGELOG.md` with version-by-version entries.
-
 ## Security & OTA (P1)
 
 1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
-2. [ ] Remove Wi-Fi password from debug logs (never print secrets). File: `src/CoreWiFi.cpp`
-3. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
-4. [ ] Ensure release profiles enforce `WEB_SECURE_ON` and avoid debug defaults in production builds. File: `platformio.ini`
-5. [ ] Remove password logging for AP/API changes in debug logs. File: `src/ConfigOnofre.cpp`
-6. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with first-boot forced change flow. File: `include/Constants.h`
-7. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
-8. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
-
-## Dependencies & Library Updates (P1/P2)
-
-1. [ ] Pin PlatformIO platforms to known-good versions (`espressif32@...`, `espressif8266@...`) for reproducible builds. File: `platformio.ini`
-2. [ ] Pin GitHub-based `lib_deps` to tags/commits (avoid floating `master/main`). File: `platformio.ini`
-3. [ ] Add periodic dependency audit task (`pio pkg outdated` + compatibility notes per env).
-4. [ ] Create dependency update policy doc (how to test + rollback by env).
-5. [ ] Normalize `lib_deps` formatting and identifiers (remove ambiguous specs / spacing inconsistencies). File: `platformio.ini`
+2. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
+3. [ ] Ensure release profiles enforce `WEB_SECURE_ON` and avoid debug defaults in production builds. File: `platformio.ini`
 
 ## Webpanel UX (P1/P2)
 
-1. [ ] Remove hardcoded `baseUrl` and use same-origin requests. File: `webpanel/js/index.js`
-2. [ ] Add automatic version banner in webpanel footer.
-3. [ ] Add firmware build date in API/system info payload.
-4. [ ] Avoid external hard dependency for core UI assets (icons/fonts) by hosting fallback assets locally. Files: `webpanel/index.html`, `webpanel/js/index.js`
+1. [ ] Add automatic version banner in webpanel footer.
+2. [ ] Add firmware build date in API/system info payload.
 
 ## Testing & CI (P2)
 
 1. [ ] Add CI build checks for main envs (ESP8266 + ESP32).
 2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
 3. [ ] Add quick rollback notes for failed release/update.
-4. [ ] Add CI checks for formatting/sanity of `platformio.ini` (flags, env inheritance, unsafe defaults).
-
-## Process & Release (P2)
-
-1. [ ] Add a short PR workflow guide (development -> cherry-pick branch -> upstream PR).
-2. [ ] Add branch naming convention for external PRs.
-3. [ ] Add a release checklist document in repo docs.
-4. [ ] Add a small script to prepare release notes draft.
-5. [ ] Add pre-release checklist item for credential and transport-security review.
 
 #
 
@@ -69,6 +41,30 @@ Current version: 9.17-dev
 3. [x] Updated firmware version format support (example: `9.17-dev`).
 4. [x] Updated code/version reporting to use string `VERSION`.
 5. [x] Improved `extra_script.py` handling for quoted `VERSION` values.
+6. [x] Added `CHANGELOG.md` as the single release-history file.
+7. [x] Added pre-release metadata validator (version/changelog/env/OTA URL checks). File: `tools/validate_release.sh`
+8. [x] Added automatic pre-build hooks for HTML conversion and release validation with skip flags. Files: `tools/extra_script.py`, `platformio.ini`
+
+## Security
+
+1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+
+## Webpanel
+
+1. [x] Fixed firmware version comparison for `-dev` formats (replaced `parseFloat` logic). File: `webpanel/js/index.js`
+2. [x] Removed hardcoded `baseUrl` and switched to same-origin requests. File: `webpanel/js/index.js`
+
+## Code Quality
+
+1. [x] Replaced deprecated ArduinoJson `containsKey()` checks in config update path with `isNull()` guards. File: `src/ConfigOnofre.cpp`
+2. [x] Added explicit ESP8266 no-op switch cases for ESP32-only sensor drivers (`TMF882X`, `LD2410`) to remove compiler switch warnings. File: `src/Sensors.cpp`
+
+## Process & Release
+
+1. [x] Added PR workflow guide (development -> cherry-pick branch -> upstream PR). File: `docs/RELEASE_WORKFLOW.md`
+2. [x] Added branch naming convention for external CP branches. File: `docs/RELEASE_WORKFLOW.md`
+3. [x] Added release checklist document in repo docs. File: `docs/RELEASE_WORKFLOW.md`
+4. [x] Added script to generate release notes draft from commits. File: `tools/generate_release_notes.sh`
 
 ## Quick Release Flow
 

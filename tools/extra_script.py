@@ -1,28 +1,99 @@
 import datetime
-from SCons.Script import Import, DefaultEnvironment # type: ignore
+import os
+import subprocess
+from SCons.Script import Action, DefaultEnvironment  # type: ignore
 
-# Import the environment
 env = DefaultEnvironment()
 
-try:
-    my_flags = env.ParseFlags(env['BUILD_FLAGS'])
-except Exception:
-    my_flags = {}
 
-# Extract version
-version = None
+def _parse_flags():
+    try:
+        return env.ParseFlags(env.get("BUILD_FLAGS", ""))
+    except Exception:
+        return {}
+
+
+def _has_define(name):
+    flags = _parse_flags()
+    for define in flags.get("CPPDEFINES", []):
+        if define == name:
+            return True
+        if isinstance(define, (list, tuple)) and len(define) == 2 and define[0] == name:
+            return True
+    return False
+
+
+def run_html_converter(source, target, env):
+    if _has_define("SKIP_HTML_CONVERT") or _has_define("NO_WEB_UI"):
+        print("")
+        print("Skipping html_converter.sh (SKIP_HTML_CONVERT or NO_WEB_UI defined)")
+        print("")
+        return 0
+
+    project_dir = env["PROJECT_DIR"]
+    print("")
+    script_path = os.path.join(project_dir, "tools", "html_converter.sh")
+    print("")
+    print("Running html_converter.sh ...")
+    print("")
+    print("Script path:", script_path)
+    print("")
+
+    if not os.path.exists(script_path):
+        print("html_converter.sh not found!")
+        return 1
+
+    subprocess.run(["/bin/bash", script_path], check=True)
+    print("")
+    return 0
+
+
+def run_release_validation(source, target, env):
+    if _has_define("SKIP_RELEASE_VALIDATE"):
+        print("")
+        print("Skipping validate_release.sh (SKIP_RELEASE_VALIDATE defined)")
+        print("")
+        return 0
+
+    project_dir = env["PROJECT_DIR"]
+    script_path = os.path.join(project_dir, "tools", "validate_release.sh")
+
+    if not os.path.exists(script_path):
+        print("validate_release.sh not found, skipping validation.")
+        return 0
+
+    print("")
+    print("Running validate_release.sh ...")
+    print("")
+    print("Script path:", script_path)
+    print("")
+
+    cmd = ["/bin/bash", script_path]
+    if "RELEASE" in env.get("PIOENV", ""):
+        cmd.extend(["--release"])
+
+    subprocess.run(cmd, check=True)
+    print("")
+    print("--- Pre-build checks complete ---")
+    print("")
+    return 0
+
+
+# Run before firmware link/build output is generated.
+env.AddPreAction("$PROGPATH", Action(run_html_converter, "Pre-build: HTML convert"))
+env.AddPreAction("$PROGPATH", Action(run_release_validation, "Pre-build: release validation"))
+
+# Firmware naming
+my_flags = _parse_flags()
+version = "unknown"
 for define in my_flags.get("CPPDEFINES", []):
-    if isinstance(define, (list, tuple)) and define[0] == "VERSION":
+    if isinstance(define, (list, tuple)) and len(define) == 2 and define[0] == "VERSION":
         version = define[1]
         if isinstance(version, str):
             version = version.strip('"')
+        break
 
-if not version:
-    version = "unknown"
-
-# Generate firmware name with date in DD.MM.YYYY format
 timestamp = datetime.datetime.now().strftime("%d.%m.%Y")
-firmware_name = f"Firmware_{env['PIOENV']}_{version} - {timestamp}"
-
-# Replace the program name
-env.Replace(PROGNAME=firmware_name)
+print("")
+env.Replace(PROGNAME=f"Firmware_{env['PIOENV']}_{version} - {timestamp}")
+print("")
