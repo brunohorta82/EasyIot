@@ -30,7 +30,9 @@ require_cmd xxd
 require_cmd sed
 
 echo "== Building webpanel assets =="
+echo "" # add space betwen lines
 echo "ROOT: $ROOT"
+echo "" # add space betwen lines
 
 # 1) Prepare JS temp: drop first line, inject baseUrl line.
 tail -n +2 "$JS_SRC" > "$JS_TMP"
@@ -81,3 +83,4 @@ rm -f "$JS_TMP" "$HTML_MIN" "$CSS_MIN" "$JS_MIN" \
   "$HTML_MIN.gz" "$CSS_MIN.gz" "$JS_MIN.gz"
 
 echo "== Done. Generated: include/IndexHtml.h include/IndexJs.h include/StylesMinCss.h =="
+echo "" # add space betwen lines

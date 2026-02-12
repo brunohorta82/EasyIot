@@ -66,7 +66,9 @@ ok() {
 }
 
 warn() {
+  echo
   echo "[WARN] $1"
+  echo
   warnings=$((warnings + 1))
 }
 
@@ -149,11 +151,18 @@ else
 fi
 
 echo
+echo "=============================================="
 echo "Validation summary: ${failures} failure(s), ${warnings} warning(s)."
+echo "=============================================="
+echo
 
 if [[ $failures -gt 0 ]]; then
+  echo
   echo "Release metadata validation failed."
+  echo
   exit 1
 fi
 
+echo
 echo "Release metadata validation passed."
+echo
