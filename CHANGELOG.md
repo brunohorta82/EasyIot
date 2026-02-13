@@ -19,6 +19,7 @@ All notable changes to this project are documented in this file.
   - `SKIP_HTML_CONVERT`
   - `SKIP_RELEASE_VALIDATE`
 - Enforced `WEB_SECURE_ON` in production/non-debug profiles and removed debug defaults from release builds (`platformio.ini`).
+- Automated webpanel asset cache token versioning during HTML conversion using project version (`[extra] version`), removing manual hardcoded `?v=` updates.
 
 ### Security
 - Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
