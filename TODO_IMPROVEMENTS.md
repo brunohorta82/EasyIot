@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 11.02.2026  
+Updated: 13.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -69,6 +69,7 @@ Current version: 9.17-dev
 3. [x] Updated firmware version format support (example: `9.17-dev`).
 4. [x] Updated code/version reporting to use string `VERSION`.
 5. [x] Improved `extra_script.py` handling for quoted `VERSION` values.
+6. [x] Automated webpanel asset cache version (`?v=`) from project version during build conversion (no manual hardcoded value updates). Files: `webpanel/index.html`, `tools/html_converter.sh`
 
 ## Quick Release Flow
 
