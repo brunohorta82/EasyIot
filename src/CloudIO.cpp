@@ -191,6 +191,15 @@ void connectToCloudIO()
   JsonDocument doc;
   JsonVariant root = doc.to<JsonVariant>();
   config.json(root, false);
+  // CloudIO backend expects numeric firmware format (e.g. 9.17).
+  // Keep local/UI version tags (e.g. 9.17-dev), but strip suffix for this API call.
+  String firmwareForCloud = String(VERSION);
+  int versionSuffixIndex = firmwareForCloud.indexOf('-');
+  if (versionSuffixIndex > 0)
+  {
+    firmwareForCloud = firmwareForCloud.substring(0, versionSuffixIndex);
+  }
+  root["firmware"] = firmwareForCloud;
   serializeJson(doc, payload);
   http.begin(client, constanstsCloudIO::configUrl);
   http.addHeader("Content-Type", "application/json");
