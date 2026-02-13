@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 11.02.2026  
+Updated: 13.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -21,7 +21,6 @@ Current version: 9.17-dev
 
 1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
 2. [ ] Remove Wi-Fi password from debug logs (never print secrets). File: `src/CoreWiFi.cpp`
-3. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
 4. [ ] Ensure release profiles enforce `WEB_SECURE_ON` and avoid debug defaults in production builds. File: `platformio.ini`
 5. [ ] Remove password logging for AP/API changes in debug logs. File: `src/ConfigOnofre.cpp`
 6. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with first-boot forced change flow. File: `include/Constants.h`
@@ -69,6 +68,10 @@ Current version: 9.17-dev
 3. [x] Updated firmware version format support (example: `9.17-dev`).
 4. [x] Updated code/version reporting to use string `VERSION`.
 5. [x] Improved `extra_script.py` handling for quoted `VERSION` values.
+
+## Security & API
+
+1. [x] Converted state-changing endpoints to support `POST` (`/reboot`, `/load-defaults`, `/templates/change`) and switched webpanel calls to `POST` while keeping temporary `GET` compatibility. Files: `src/WebServer.cpp`, `webpanel/js/index.js`
 
 ## Quick Release Flow
 
