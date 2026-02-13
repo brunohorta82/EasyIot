@@ -20,8 +20,7 @@ Current version: 9.17-dev
 
 ## Webpanel UX (P1/P2)
 
-1. [ ] Add automatic version banner in webpanel footer.
-2. [ ] Add firmware build date in API/system info payload.
+1. [ ] Add firmware build date in API/system info payload.
 
 ## Testing & CI (P2)
 
@@ -54,6 +53,7 @@ Current version: 9.17-dev
 
 1. [x] Fixed firmware version comparison for `-dev` formats (replaced `parseFloat` logic). File: `webpanel/js/index.js`
 2. [x] Removed hardcoded `baseUrl` and switched to same-origin requests. File: `webpanel/js/index.js`
+3. [x] Added automatic firmware version display in webpanel footer (`version_lbl` from `/config`). Files: `webpanel/index.html`, `webpanel/js/index.js`
 
 ## Code Quality
 
