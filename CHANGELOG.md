@@ -22,6 +22,7 @@ All notable changes to this project are documented in this file.
 
 ### Security
 - Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+- Switched state-changing API routes to `POST` (`/reboot`, `/load-defaults`, `/templates/change`) and updated webpanel calls; temporary `GET` compatibility remains for older clients.
 
 ### CloudIO
 - Normalized firmware version in cloud config payload (strip `-dev` suffix for backend compatibility).
