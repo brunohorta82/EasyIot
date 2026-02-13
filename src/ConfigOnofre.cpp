@@ -478,7 +478,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   {
     strlcpy(mqttPassword, mqttPasswordStr.c_str(), sizeof(mqttPassword));
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Mqtt Password changed: %s" CR, tags::config, mqttPassword);
+    Log.notice("%s Mqtt Password changed." CR, tags::config);
 #endif
   }
 
@@ -487,7 +487,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   {
     strlcpy(wifiSecret, wifiSecretStr.c_str(), sizeof(wifiSecret));
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Wifi Password changed: %s" CR, tags::config, wifiSecret);
+    Log.notice("%s Wifi Password changed." CR, tags::config);
 #endif
   }
 
@@ -496,7 +496,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   {
     strlcpy(accessPointPassword, accessPointPasswordStr.c_str(), sizeof(accessPointPassword));
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Access Point Password changed: %s" CR, tags::config, accessPointPassword);
+    Log.notice("%s Access Point Password changed." CR, tags::config);
 #endif
   }
 
@@ -505,7 +505,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   {
     strlcpy(apiPassword, apiPasswordStr.c_str(), sizeof(apiPassword));
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Api Password changed: %s" CR, tags::config, apiPassword);
+    Log.notice("%s Api Password changed." CR, tags::config);
 #endif
   }
 
