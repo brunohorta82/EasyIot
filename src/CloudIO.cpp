@@ -8,9 +8,11 @@
 #include "Sensors.h"
 #ifdef ESP8266
 #include <ESP8266HTTPClient.h>
+#include <WiFiClientSecureBearSSL.h>
 #endif
 #ifdef ESP32
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #endif
 extern ConfigOnofre config;
 AsyncMqttClient mqttClient;
@@ -185,16 +187,73 @@ void connectToCloudIO()
 #endif
     return;
   }
-  HTTPClient http;
-  WiFiClient client;
   String payload = "";
   JsonDocument doc;
   JsonVariant root = doc.to<JsonVariant>();
   config.json(root, false);
   serializeJson(doc, payload);
-  http.begin(client, constanstsCloudIO::configUrl);
-  http.addHeader("Content-Type", "application/json");
-  int httpCode = http.POST(payload.c_str());
+  String responsePayload = "";
+  int httpCode = -1;
+  String requestUrl = String(constanstsCloudIO::configUrl);
+  bool usedHttpFallback = false;
+
+  for (uint8_t attempt = 0; attempt < 2; attempt++)
+  {
+    const bool useHttps = requestUrl.startsWith("https://");
+    HTTPClient request;
+    bool beginOk = false;
+
+    if (useHttps)
+    {
+#ifdef ESP8266
+      BearSSL::WiFiClientSecure client;
+#else
+      WiFiClientSecure client;
+#endif
+      client.setInsecure();
+      beginOk = request.begin(client, requestUrl);
+      if (beginOk)
+      {
+        request.addHeader("Content-Type", "application/json");
+        httpCode = request.POST(payload.c_str());
+        if (httpCode == HTTP_CODE_OK)
+        {
+          responsePayload = request.getString();
+        }
+      }
+      request.end();
+    }
+    else
+    {
+      WiFiClient client;
+      beginOk = request.begin(client, requestUrl);
+      if (beginOk)
+      {
+        request.addHeader("Content-Type", "application/json");
+        httpCode = request.POST(payload.c_str());
+        if (httpCode == HTTP_CODE_OK)
+        {
+          responsePayload = request.getString();
+        }
+      }
+      request.end();
+    }
+
+    if (!beginOk)
+    {
+      httpCode = -1;
+    }
+
+    // If HTTPS handshake/connection fails, retry once over HTTP for compatibility.
+    if (httpCode < 0 && useHttps && !usedHttpFallback)
+    {
+      usedHttpFallback = true;
+      requestUrl.replace("https://", "http://");
+      continue;
+    }
+
+    break;
+  }
   doc.clear();
   config.cloudIOReady = false;
 #ifdef DEBUG_ONOFRE
@@ -214,9 +273,8 @@ void connectToCloudIO()
   }
   else if (httpCode == HTTP_CODE_OK)
   {
-    String payload = http.getString();
     JsonDocument resp;
-    DeserializationError error = deserializeJson(doc, payload);
+    DeserializationError error = deserializeJson(doc, responsePayload);
     strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
     strlcpy(config.cloudIOPassword, doc["password"] | "", sizeof(config.cloudIOPassword));
     config.cloudIOReady = true;
@@ -244,6 +302,4 @@ void connectToCloudIO()
       tryMqttCloudConnection();
     }
   }
-  client.stop();
-  http.end();
 }

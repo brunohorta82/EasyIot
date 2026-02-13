@@ -125,13 +125,13 @@ namespace constanstsCloudIO
 {
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
-    constexpr const char *configUrl{"http://cloudio.bhonofre.pt/devices/config"};
+    constexpr const char *configUrl{"https://cloudio.bhonofre.pt/devices/config"};
 #ifdef HAN_MODE
-    constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
+    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
 #elif ESP32_MAKER_4MB
-    constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-MAKER-4MB"};
+    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-MAKER-4MB"};
 #else
-    constexpr const char *otaUrl{"http://cloudio.bhonofre.pt/firmware/update/latest"};
+    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest"};
 #endif
 }
 
