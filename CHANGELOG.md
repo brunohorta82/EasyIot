@@ -18,6 +18,7 @@ All notable changes to this project are documented in this file.
 - Added skip toggles in `platformio.ini`:
   - `SKIP_HTML_CONVERT`
   - `SKIP_RELEASE_VALIDATE`
+- Enforced `WEB_SECURE_ON` in production/non-debug profiles and removed debug defaults from release builds (`platformio.ini`).
 
 ### Security
 - Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).

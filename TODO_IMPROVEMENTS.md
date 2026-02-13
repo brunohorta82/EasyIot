@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 12.02.2026  
+Updated: 13.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -17,7 +17,6 @@ Current version: 9.17-dev
 
 1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
 2. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
-3. [ ] Ensure release profiles enforce `WEB_SECURE_ON` and avoid debug defaults in production builds. File: `platformio.ini`
 
 ## Webpanel UX (P1/P2)
 
@@ -44,6 +43,7 @@ Current version: 9.17-dev
 6. [x] Added `CHANGELOG.md` as the single release-history file.
 7. [x] Added pre-release metadata validator (version/changelog/env/OTA URL checks). File: `tools/validate_release.sh`
 8. [x] Added automatic pre-build hooks for HTML conversion and release validation with skip flags. Files: `tools/extra_script.py`, `platformio.ini`
+9. [x] Enforced `WEB_SECURE_ON` for production/non-debug profiles and removed debug defaults from release builds. File: `platformio.ini`
 
 ## Security
 
