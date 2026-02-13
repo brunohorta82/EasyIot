@@ -643,6 +643,7 @@ async function backup() {
 
 function reboot() {
     fetch(baseUrl + "/reboot", {
+        method: "POST",
         headers: {
             'Content-Type': 'text/plain; charset=utf-8',
             'Accept': 'application/json'
@@ -671,6 +672,7 @@ function reboot() {
 
 function loadDefaults() {
     fetch(baseUrl + "/load-defaults", {
+        method: "POST",
         headers: {
             'Content-Type': 'text/plain; charset=utf-8',
             'Accept': 'application/json'
