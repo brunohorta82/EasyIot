@@ -11,6 +11,7 @@ CSS_SRC="$WEB/css/styles.css"
 HTML_SRC="$WEB/index.html"
 
 JS_TMP="$WEB/js/index.tmp.js"
+HTML_TMP="$WEB/index.tmp.html"
 HTML_MIN="$WEB/index.min.html"
 JS_MIN="$WEB/js/index.min.js"
 CSS_MIN="$WEB/css/styles.min.css"
@@ -34,13 +35,41 @@ echo "" # add space betwen lines
 echo "ROOT: $ROOT"
 echo "" # add space betwen lines
 
+ASSET_VERSION="$(
+  awk '
+    $0 ~ /^\[extra\]/ { in_extra=1; next }
+    in_extra && /^\[/ { in_extra=0 }
+    in_extra {
+      line=$0
+      sub(/[;#].*$/, "", line)
+      if (line ~ /^[[:space:]]*version[[:space:]]*=/) {
+        sub(/^[[:space:]]*version[[:space:]]*=[[:space:]]*/, "", line)
+        gsub(/[[:space:]]+$/, "", line)
+        print line
+        exit
+      }
+    }
+  ' "$ROOT/platformio.ini"
+)"
+
+if [[ -z "$ASSET_VERSION" ]]; then
+  echo "Could not read [extra] version from platformio.ini" >&2
+  exit 1
+fi
+
+echo "ASSET_VERSION: $ASSET_VERSION"
+echo "" # add space betwen lines
+
 # 1) Prepare JS temp: drop first line, inject baseUrl line.
 tail -n +2 "$JS_SRC" > "$JS_TMP"
 { printf 'let baseUrl = "";\n'; cat "$JS_TMP"; } > "$JS_TMP.new"
 mv "$JS_TMP.new" "$JS_TMP"
 
+# 1b) Prepare HTML temp: inject cache-busting version into asset URLs.
+sed "s/__ASSET_VERSION__/${ASSET_VERSION}/g" "$HTML_SRC" > "$HTML_TMP"
+
 # 2) Minify assets.
-html-minifier --collapse-whitespace "$HTML_SRC" -o "$HTML_MIN"
+html-minifier --collapse-whitespace "$HTML_TMP" -o "$HTML_MIN"
 uglifyjs --compress --mangle -o "$JS_MIN" "$JS_TMP"
 uglifycss "$CSS_SRC" > "$CSS_MIN"
 
@@ -79,7 +108,7 @@ sed_inplace 's/^unsigned char /const uint8_t /' "$INC/StylesMinCss.h"
 prepend_include "$INC/StylesMinCss.h"
 
 # 5) Cleanup temporary/minified artifacts.
-rm -f "$JS_TMP" "$HTML_MIN" "$CSS_MIN" "$JS_MIN" \
+rm -f "$JS_TMP" "$HTML_TMP" "$HTML_MIN" "$CSS_MIN" "$JS_MIN" \
   "$HTML_MIN.gz" "$CSS_MIN.gz" "$JS_MIN.gz"
 
 echo "== Done. Generated: include/IndexHtml.h include/IndexJs.h include/StylesMinCss.h =="
