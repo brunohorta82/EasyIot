@@ -194,29 +194,66 @@ void connectToCloudIO()
   serializeJson(doc, payload);
   String responsePayload = "";
   int httpCode = -1;
-  HTTPClient request;
-  bool beginOk = false;
-#ifdef ESP8266
-  BearSSL::WiFiClientSecure client;
-#else
-  WiFiClientSecure client;
-#endif
-  client.setInsecure();
-  beginOk = request.begin(client, constanstsCloudIO::configUrl);
-  if (beginOk)
+  String requestUrl = String(constanstsCloudIO::configUrl);
+  bool usedHttpFallback = false;
+
+  for (uint8_t attempt = 0; attempt < 2; attempt++)
   {
-    request.addHeader("Content-Type", "application/json");
-    httpCode = request.POST(payload.c_str());
-    if (httpCode == HTTP_CODE_OK)
+    const bool useHttps = requestUrl.startsWith("https://");
+    HTTPClient request;
+    bool beginOk = false;
+
+    if (useHttps)
     {
-      responsePayload = request.getString();
+#ifdef ESP8266
+      BearSSL::WiFiClientSecure client;
+#else
+      WiFiClientSecure client;
+#endif
+      client.setInsecure();
+      beginOk = request.begin(client, requestUrl);
+      if (beginOk)
+      {
+        request.addHeader("Content-Type", "application/json");
+        httpCode = request.POST(payload.c_str());
+        if (httpCode == HTTP_CODE_OK)
+        {
+          responsePayload = request.getString();
+        }
+      }
+      request.end();
     }
+    else
+    {
+      WiFiClient client;
+      beginOk = request.begin(client, requestUrl);
+      if (beginOk)
+      {
+        request.addHeader("Content-Type", "application/json");
+        httpCode = request.POST(payload.c_str());
+        if (httpCode == HTTP_CODE_OK)
+        {
+          responsePayload = request.getString();
+        }
+      }
+      request.end();
+    }
+
+    if (!beginOk)
+    {
+      httpCode = -1;
+    }
+
+    // Retry once over HTTP only when HTTPS connection/TLS setup fails.
+    if (httpCode < 0 && useHttps && !usedHttpFallback)
+    {
+      usedHttpFallback = true;
+      requestUrl.replace("https://", "http://");
+      continue;
+    }
+
+    break;
   }
-  else
-  {
-    httpCode = -1;
-  }
-  request.end();
 
   doc.clear();
   config.cloudIOReady = false;
