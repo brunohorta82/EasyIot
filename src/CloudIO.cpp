@@ -8,9 +8,11 @@
 #include "Sensors.h"
 #ifdef ESP8266
 #include <ESP8266HTTPClient.h>
+#include <WiFiClientSecureBearSSL.h>
 #endif
 #ifdef ESP32
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #endif
 extern ConfigOnofre config;
 AsyncMqttClient mqttClient;
@@ -186,7 +188,12 @@ void connectToCloudIO()
     return;
   }
   HTTPClient http;
-  WiFiClient client;
+#ifdef ESP8266
+  BearSSL::WiFiClientSecure client;
+#else
+  WiFiClientSecure client;
+#endif
+  client.setInsecure();
   String payload = "";
   JsonDocument doc;
   JsonVariant root = doc.to<JsonVariant>();
@@ -215,17 +222,12 @@ void connectToCloudIO()
     Log.info("%s [HTTP] Device not adopted" CR, tags::cloudIO);
 #endif
     config.stopCloudIOWatchdog();
-    return;
-  }
-  if (httpCode != HTTP_CODE_OK)
-  {
-    return;
   }
   else if (httpCode == HTTP_CODE_OK)
   {
-    String payload = http.getString();
+    String responsePayload = http.getString();
     JsonDocument resp;
-    DeserializationError error = deserializeJson(doc, payload);
+    DeserializationError error = deserializeJson(doc, responsePayload);
     strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
     strlcpy(config.cloudIOPassword, doc["password"] | "", sizeof(config.cloudIOPassword));
     config.cloudIOReady = true;
