@@ -24,9 +24,12 @@ All notable changes to this project are documented in this file.
 ### Security
 - Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
 - Switched state-changing API routes to `POST` (`/reboot`, `/load-defaults`, `/templates/change`) and updated webpanel calls; temporary `GET` compatibility remains for older clients.
+- Migrated CloudIO config and OTA endpoints from `http://` to `https://` in firmware constants (`include/Constants.h`).
 
 ### CloudIO
 - Normalized firmware version in cloud config payload (strip `-dev` suffix for backend compatibility).
+- Updated CloudIO config request to use secure client for HTTPS and added one-time silent HTTP fallback on connection/TLS failure to prevent restart loops (`src/CloudIO.cpp`).
+- Kept serial logs clean by removing fallback/URL noise while preserving request status output (`src/CloudIO.cpp`).
 
 ### Webpanel
 - Replaced `parseFloat` version compare with robust parser/comparator for `-dev` formats.

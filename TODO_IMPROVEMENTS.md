@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 13.02.2026  
+Updated: 14.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -15,8 +15,8 @@ Current version: 9.17-dev
 
 ## Security & OTA (P1)
 
-1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
-2. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
+1. [ ] Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices. File: `src/CloudIO.cpp`
+2. [ ] Validate OTA update flow over HTTPS on real devices/variants. File: `src/WebServer.cpp`
 
 ## Webpanel UX (P1/P2)
 
@@ -48,6 +48,9 @@ Current version: 9.17-dev
 ## Security
 
 1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+2. [x] Migrated CloudIO config and OTA endpoints from `http://` to `https://` and validated runtime behavior on device. Files: `include/Constants.h`, `src/CloudIO.cpp`, `src/WebServer.cpp`
+3. [x] Converted state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
+4. [x] Added HTTPS-first CloudIO config request with one-time silent HTTP fallback to prevent restart loops when TLS path fails. File: `src/CloudIO.cpp`
 
 ## Webpanel
 
