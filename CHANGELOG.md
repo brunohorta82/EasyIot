@@ -30,6 +30,7 @@ All notable changes to this project are documented in this file.
 - Normalized firmware version in cloud config payload (strip `-dev` suffix for backend compatibility).
 - Updated CloudIO config request to use secure client for HTTPS and added one-time silent HTTP fallback on connection/TLS failure to prevent restart loops (`src/CloudIO.cpp`).
 - Kept serial logs clean by removing fallback/URL noise while preserving request status output (`src/CloudIO.cpp`).
+- Validated OTA update flow over HTTPS on ESP8266 (`Update Success`) with successful reconnect to CloudIO/MQTT after reboot.
 
 ### Webpanel
 - Replaced `parseFloat` version compare with robust parser/comparator for `-dev` formats.
