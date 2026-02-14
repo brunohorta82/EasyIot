@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.17] - 2026-02-14
+
+### Release
+- Promoted stable release from `9.17-dev`.
+- Includes CloudIO/webpanel/build-flow improvements from the 9.17 development cycle.
+- Added `## [9.17]` release section to satisfy strict release validation checks.
+- Verified all configured PlatformIO environments build successfully for the 9.17 release snapshot.
+
 ## [9.17-dev] - 2026-02-12
 
 ### Build and Versioning

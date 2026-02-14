@@ -44,6 +44,7 @@ Current version: 9.17-dev
 8. [x] Added automatic pre-build hooks for HTML conversion and release validation with skip flags. Files: `tools/extra_script.py`, `platformio.ini`
 9. [x] Enforced `WEB_SECURE_ON` for production/non-debug profiles and removed debug defaults from release builds. File: `platformio.ini`
 10. [x] Automated webpanel asset cache version (`?v=`) from project version during build conversion (no manual hardcoded value updates). Files: `webpanel/index.html`, `tools/html_converter.sh`
+11. [x] Resolved strict release-validation mismatch for `9.17` by adding matching changelog header and confirmed full all-env build pass for release snapshot.
 
 ## Security
 
