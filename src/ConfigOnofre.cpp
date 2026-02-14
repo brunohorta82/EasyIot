@@ -9,6 +9,9 @@
 #include "Images.hpp"
 #include <PZEM004Tv30.h>
 #include "HomeAssistantMqttDiscovery.h"
+
+static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
+
 void actuatoresCallback(message_t const &msg, void *arg);
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, int io, size_t maxSize)
 {
@@ -642,6 +645,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["wifiMask"] = WiFi.subnetMask().toString();
   root["wifiGw"] = WiFi.gatewayIP().toString();
   root["firmware"] = String(VERSION);
+  root["buildDate"] = kFirmwareBuildDate;
 #ifdef ESP32
 #ifdef ESP32_MAKER_4MB
   root["mcu"] = "ESP32-MAKER-4MB";

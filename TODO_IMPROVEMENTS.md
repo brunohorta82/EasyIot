@@ -20,7 +20,7 @@ Current version: 9.17-dev
 
 ## Webpanel UX (P1/P2)
 
-1. [ ] Add firmware build date in API/system info payload.
+- None.
 
 ## Testing & CI (P2)
 
@@ -45,6 +45,7 @@ Current version: 9.17-dev
 9. [x] Enforced `WEB_SECURE_ON` for production/non-debug profiles and removed debug defaults from release builds. File: `platformio.ini`
 10. [x] Automated webpanel asset cache version (`?v=`) from project version during build conversion (no manual hardcoded value updates). Files: `webpanel/index.html`, `tools/html_converter.sh`
 11. [x] Resolved strict release-validation mismatch for `9.17` by adding matching changelog header and confirmed full all-env build pass for release snapshot.
+12. [x] Added firmware build date/time (`buildDate`) to `/config` API payload for runtime build verification. File: `src/ConfigOnofre.cpp`
 
 ## Security
 

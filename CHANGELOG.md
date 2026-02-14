@@ -17,6 +17,7 @@ All notable changes to this project are documented in this file.
 - Added `${extra.wifi_flags}` injection so local Wi-Fi settings stay out of git.
 - Switched version define to string format: `VERSION='"${extra.version}"'`.
 - Updated firmware reporting to use `String(VERSION)` for API, mDNS, and Home Assistant metadata.
+- Added firmware build timestamp (`buildDate`) to `/config` API payload for easier OTA/build verification (`src/ConfigOnofre.cpp`).
 - Improved `tools/extra_script.py` parsing for quoted `VERSION` values.
 - Kept `platformio_override.ini` ignored as a local-only file.
 - Added `tools/validate_release.sh` for pre-release metadata validation (version, changelog, release envs, OTA/config URL checks).
