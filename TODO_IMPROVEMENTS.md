@@ -43,12 +43,13 @@ Current version: 9.17-dev
 3. [ ] Add firmware build date in API/system info payload.
 4. [ ] Avoid external hard dependency for core UI assets (icons/fonts) by hosting fallback assets locally. Files: `webpanel/index.html`, `webpanel/js/index.js`
 
-## Testing & CI (P2)
+## Testing & CI (P2 - Deferred / Later)
 
-1. [ ] Add CI build checks for main envs (ESP8266 + ESP32).
-2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
-3. [ ] Add quick rollback notes for failed release/update.
-4. [ ] Add CI checks for formatting/sanity of `platformio.ini` (flags, env inheritance, unsafe defaults).
+- Deferred by owner for now (no Git CI setup in current phase).
+1. [ ] (Deferred) Add CI build checks for main envs (ESP8266 + ESP32).
+2. [ ] (Deferred) Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
+3. [ ] (Deferred) Add quick rollback notes for failed release/update.
+4. [ ] (Deferred) Add CI checks for formatting/sanity of `platformio.ini` (flags, env inheritance, unsafe defaults).
 
 ## Process & Release (P2)
 
