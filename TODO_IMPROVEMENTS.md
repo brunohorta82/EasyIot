@@ -15,7 +15,7 @@ Current version: 9.17-dev
 
 ## Security & OTA (P1)
 
-1. [ ] Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices. File: `src/CloudIO.cpp`
+1. [ ] (Blocked) Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices (including weak-signal scenarios). File: `src/CloudIO.cpp`
 2. [ ] Validate OTA update flow over HTTPS on remaining device variants (ESP32 / ESP32C3 / HAN). File: `src/WebServer.cpp`
 
 ## Webpanel UX (P1/P2)
@@ -55,6 +55,7 @@ Current version: 9.17-dev
 3. [x] Converted state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
 4. [x] Added HTTPS-first CloudIO config request with one-time silent HTTP fallback to prevent restart loops when TLS path fails. File: `src/CloudIO.cpp`
 5. [x] Validated OTA update flow over HTTPS on ESP8266 (`Update Success` + reconnect to CloudIO/MQTT). File: `src/WebServer.cpp`
+6. [x] Re-tested TLS-only CloudIO path on device and restored one-time HTTP fallback after observed HTTPS request failures (`httpCode=-1`) under weak RSSI conditions. File: `src/CloudIO.cpp`
 
 ## Webpanel
 
