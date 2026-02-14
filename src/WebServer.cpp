@@ -289,8 +289,10 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     config.json(root,true);
-    response->setLength();
-    request->send(response); });
+    String payload;
+    serializeJsonPretty(root, payload);
+    delete response;
+    request->send(200, "application/json", payload); });
 
   /*SAVE CONFIG*/
   server
