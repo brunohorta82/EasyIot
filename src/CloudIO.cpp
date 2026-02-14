@@ -187,13 +187,6 @@ void connectToCloudIO()
 #endif
     return;
   }
-  HTTPClient http;
-#ifdef ESP8266
-  BearSSL::WiFiClientSecure client;
-#else
-  WiFiClientSecure client;
-#endif
-  client.setInsecure();
   String payload = "";
   JsonDocument doc;
   JsonVariant root = doc.to<JsonVariant>();
@@ -208,9 +201,68 @@ void connectToCloudIO()
   }
   root["firmware"] = firmwareForCloud;
   serializeJson(doc, payload);
-  http.begin(client, constanstsCloudIO::configUrl);
-  http.addHeader("Content-Type", "application/json");
-  int httpCode = http.POST(payload.c_str());
+  String responsePayload = "";
+  int httpCode = -1;
+  String requestUrl = String(constanstsCloudIO::configUrl);
+  bool usedHttpFallback = false;
+
+  for (uint8_t attempt = 0; attempt < 2; attempt++)
+  {
+    const bool useHttps = requestUrl.startsWith("https://");
+    HTTPClient request;
+    bool beginOk = false;
+
+    if (useHttps)
+    {
+#ifdef ESP8266
+      BearSSL::WiFiClientSecure client;
+#else
+      WiFiClientSecure client;
+#endif
+      client.setInsecure();
+      beginOk = request.begin(client, requestUrl);
+      if (beginOk)
+      {
+        request.addHeader("Content-Type", "application/json");
+        httpCode = request.POST(payload.c_str());
+        if (httpCode == HTTP_CODE_OK)
+        {
+          responsePayload = request.getString();
+        }
+      }
+      request.end();
+    }
+    else
+    {
+      WiFiClient client;
+      beginOk = request.begin(client, requestUrl);
+      if (beginOk)
+      {
+        request.addHeader("Content-Type", "application/json");
+        httpCode = request.POST(payload.c_str());
+        if (httpCode == HTTP_CODE_OK)
+        {
+          responsePayload = request.getString();
+        }
+      }
+      request.end();
+    }
+
+    if (!beginOk)
+    {
+      httpCode = -1;
+    }
+
+    // Retry once over HTTP only when HTTPS connection/TLS setup fails.
+    if (httpCode < 0 && useHttps && !usedHttpFallback)
+    {
+      usedHttpFallback = true;
+      requestUrl.replace("https://", "http://");
+      continue;
+    }
+
+    break;
+  }
   doc.clear();
   config.cloudIOReady = false;
 #ifdef DEBUG_ONOFRE
@@ -225,7 +277,6 @@ void connectToCloudIO()
   }
   else if (httpCode == HTTP_CODE_OK)
   {
-    String responsePayload = http.getString();
     JsonDocument resp;
     DeserializationError error = deserializeJson(doc, responsePayload);
     strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
