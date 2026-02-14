@@ -306,6 +306,4 @@ void connectToCloudIO()
       tryMqttCloudConnection();
     }
   }
-  client.stop();
-  http.end();
 }
