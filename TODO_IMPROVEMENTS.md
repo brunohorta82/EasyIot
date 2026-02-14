@@ -22,11 +22,12 @@ Current version: 9.17-dev
 
 - None.
 
-## Testing & CI (P2)
+## Testing & CI (P2 - Deferred / Later)
 
-1. [ ] Add CI build checks for main envs (ESP8266 + ESP32).
-2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
-3. [ ] Add quick rollback notes for failed release/update.
+- Deferred by owner for now (no Git CI setup in current phase).
+1. [ ] (Deferred) Add CI build checks for main envs (ESP8266 + ESP32).
+2. [ ] (Deferred) Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
+3. [ ] (Deferred) Add quick rollback notes for failed release/update.
 
 #
 
