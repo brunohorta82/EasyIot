@@ -56,6 +56,7 @@ Current version: 9.17-dev
 4. [x] Added HTTPS-first CloudIO config request with one-time silent HTTP fallback to prevent restart loops when TLS path fails. File: `src/CloudIO.cpp`
 5. [x] Validated OTA update flow over HTTPS on ESP8266 (`Update Success` + reconnect to CloudIO/MQTT). File: `src/WebServer.cpp`
 6. [x] Re-tested TLS-only CloudIO path on device and restored one-time HTTP fallback after observed HTTPS request failures (`httpCode=-1`) under weak RSSI conditions. File: `src/CloudIO.cpp`
+7. [x] Improved CloudIO config reliability with HTTPS retry/backoff, timeout tuning, and attempt-level diagnostics (`errorToString` + RSSI) before fallback. File: `src/CloudIO.cpp`
 
 ## Webpanel
 
