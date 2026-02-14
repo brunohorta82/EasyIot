@@ -194,66 +194,30 @@ void connectToCloudIO()
   serializeJson(doc, payload);
   String responsePayload = "";
   int httpCode = -1;
-  String requestUrl = String(constanstsCloudIO::configUrl);
-  bool usedHttpFallback = false;
-
-  for (uint8_t attempt = 0; attempt < 2; attempt++)
-  {
-    const bool useHttps = requestUrl.startsWith("https://");
-    HTTPClient request;
-    bool beginOk = false;
-
-    if (useHttps)
-    {
+  HTTPClient request;
+  bool beginOk = false;
 #ifdef ESP8266
-      BearSSL::WiFiClientSecure client;
+  BearSSL::WiFiClientSecure client;
 #else
-      WiFiClientSecure client;
+  WiFiClientSecure client;
 #endif
-      client.setInsecure();
-      beginOk = request.begin(client, requestUrl);
-      if (beginOk)
-      {
-        request.addHeader("Content-Type", "application/json");
-        httpCode = request.POST(payload.c_str());
-        if (httpCode == HTTP_CODE_OK)
-        {
-          responsePayload = request.getString();
-        }
-      }
-      request.end();
-    }
-    else
+  client.setInsecure();
+  beginOk = request.begin(client, constanstsCloudIO::configUrl);
+  if (beginOk)
+  {
+    request.addHeader("Content-Type", "application/json");
+    httpCode = request.POST(payload.c_str());
+    if (httpCode == HTTP_CODE_OK)
     {
-      WiFiClient client;
-      beginOk = request.begin(client, requestUrl);
-      if (beginOk)
-      {
-        request.addHeader("Content-Type", "application/json");
-        httpCode = request.POST(payload.c_str());
-        if (httpCode == HTTP_CODE_OK)
-        {
-          responsePayload = request.getString();
-        }
-      }
-      request.end();
+      responsePayload = request.getString();
     }
-
-    if (!beginOk)
-    {
-      httpCode = -1;
-    }
-
-    // If HTTPS handshake/connection fails, retry once over HTTP for compatibility.
-    if (httpCode < 0 && useHttps && !usedHttpFallback)
-    {
-      usedHttpFallback = true;
-      requestUrl.replace("https://", "http://");
-      continue;
-    }
-
-    break;
   }
+  else
+  {
+    httpCode = -1;
+  }
+  request.end();
+
   doc.clear();
   config.cloudIOReady = false;
 #ifdef DEBUG_ONOFRE
@@ -265,11 +229,6 @@ void connectToCloudIO()
     Log.info("%s [HTTP] Device not adopted" CR, tags::cloudIO);
 #endif
     config.stopCloudIOWatchdog();
-    return;
-  }
-  if (httpCode != HTTP_CODE_OK)
-  {
-    return;
   }
   else if (httpCode == HTTP_CODE_OK)
   {
