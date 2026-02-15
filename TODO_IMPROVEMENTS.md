@@ -19,22 +19,8 @@ Current version: 9.17-dev
 
 ## Security & OTA (P1)
 
-1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
-2. [ ] Remove Wi-Fi password from debug logs (never print secrets). File: `src/CoreWiFi.cpp`
-3. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
-4. [ ] Ensure release profiles enforce `WEB_SECURE_ON` and avoid debug defaults in production builds. File: `platformio.ini`
-5. [ ] Remove password logging for AP/API changes in debug logs. File: `src/ConfigOnofre.cpp`
-6. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with first-boot forced change flow. File: `include/Constants.h`
-7. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
-8. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
-
-## Dependencies & Library Updates (P1/P2)
-
-1. [ ] Pin PlatformIO platforms to known-good versions (`espressif32@...`, `espressif8266@...`) for reproducible builds. File: `platformio.ini`
-2. [ ] Pin GitHub-based `lib_deps` to tags/commits (avoid floating `master/main`). File: `platformio.ini`
-3. [ ] Add periodic dependency audit task (`pio pkg outdated` + compatibility notes per env).
-4. [ ] Create dependency update policy doc (how to test + rollback by env).
-5. [ ] Normalize `lib_deps` formatting and identifiers (remove ambiguous specs / spacing inconsistencies). File: `platformio.ini`
+1. [ ] (Blocked) Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices (including weak-signal scenarios). File: `src/CloudIO.cpp`
+2. [ ] (Blocked - no boards available) Validate OTA update flow over HTTPS on remaining device variants (ESP32 / ESP32C3 / HAN). File: `src/WebServer.cpp`
 
 ## Webpanel UX (P1/P2)
 
