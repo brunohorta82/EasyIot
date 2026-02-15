@@ -180,7 +180,7 @@ void infoWifi()
   {
     connectedOn = millis();
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s MODE STA -------------------------------------" CR, tags::wifi);
+    Log.notice("%s MODE STA" CR, tags::wifi);
     Log.notice("%s SSID  %s  " CR, tags::wifi, WiFi.SSID().c_str());
     Log.notice("%s CH    %d   " CR, tags::wifi, WiFi.channel());
     Log.notice("%s RSSI  %d " CR, tags::wifi, WiFi.RSSI());
@@ -197,7 +197,7 @@ void infoWifi()
   if (WiFi.getMode() & WIFI_AP)
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s MODE AP --------------------------------------" CR, tags::wifi);
+    Log.notice("%s MODE AP" CR, tags::wifi);
     Log.notice("%s SSID %s " CR, tags::wifi, jw.getAPSSID().c_str());
     Log.notice("%s IP  %s  " CR, tags::wifi, WiFi.softAPIP().toString().c_str());
     Log.notice("%s MAC  %s " CR, tags::wifi, WiFi.softAPmacAddress().c_str());

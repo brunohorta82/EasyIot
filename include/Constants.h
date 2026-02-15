@@ -42,6 +42,7 @@ namespace Payloads
 namespace tags
 {
     constexpr const char *system{"[SYSTEM]"};
+    constexpr const char *build{"[BUILD]"};
     constexpr const char *config{"[CONFIG]"};
     constexpr const char *mqtt{"[MQTT]"};
     constexpr const char *wifi{"[WIFI]"};
@@ -160,8 +161,8 @@ namespace Family
 
 namespace I18N
 {
-    constexpr const char *SWICTH_ONE{"Swithch 1"};
-    constexpr const char *SWICTH_TWO{"Swithch 2"};
+    constexpr const char *SWICTH_ONE{"Switch 1"};
+    constexpr const char *SWICTH_TWO{"Switch 2"};
     constexpr const char *VALVE_ONE{"Valve 1"};
     constexpr const char *VALVE_TWO{"Valve 2"};
     constexpr const char *VALVE_THREE{"Valve 3"};
