@@ -68,6 +68,7 @@ void onMqttConnect(bool sessionPresent)
 {
 #ifdef DEBUG_ONOFRE
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
+  Log.info("----------------------------------------------" CR);
 #endif
   mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1\0");
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
@@ -102,6 +103,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   char msg[len + 1];
   strlcpy(msg, payload, sizeof(msg));
 #ifdef DEBUG_ONOFRE
+  Log.info("----------------------------------------------" CR);
   Log.info("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, msg);
 #endif
   if (strcmp(topic, config.cloudIOwriteTopic) == 0)
@@ -331,6 +333,7 @@ void connectToCloudIO()
   config.cloudIOReady = false;
 #ifdef DEBUG_ONOFRE
   Log.info("%s [HTTP] Request result: %d (fallback=%d)" CR, tags::cloudIO, httpCode, usedHttpFallback ? 1 : 0);
+  Log.info("----------------------------------------------" CR);
 #endif
   if (httpCode == HTTP_CODE_NO_CONTENT)
   {

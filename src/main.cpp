@@ -77,6 +77,7 @@ String resetReasonText()
 void logBootBanner()
 {
   const String firmwareVersion = String(VERSION);
+  const String firmwareBuildDate = String(__DATE__ " " __TIME__);
   const String resetReason = resetReasonText();
 
   Log.info("----------------------------------------------" CR);
@@ -85,6 +86,7 @@ void logBootBanner()
   Log.info("----------------------------------------------" CR);
   Log.info("%s Device: %s" CR, tags::build, config.nodeId);
   Log.info("%s Version: %s" CR, tags::build, firmwareVersion.c_str());
+  Log.info("%s buildDate: %s" CR, tags::build, firmwareBuildDate.c_str());
 #ifdef ESP8266
   Log.info("%s MCU: ESP8266" CR, tags::build);
 #else
@@ -104,6 +106,7 @@ void checkInternalRoutines()
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s CloudIO requested." CR, tags::system);
+    Log.info("----------------------------------------------" CR);
 #endif
     connectToCloudIO();
   }
