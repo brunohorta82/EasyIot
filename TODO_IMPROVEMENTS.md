@@ -16,7 +16,7 @@ Current version: 9.17-dev
 ## Security & OTA (P1)
 
 1. [ ] (Blocked) Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices (including weak-signal scenarios). File: `src/CloudIO.cpp`
-2. [ ] Validate OTA update flow over HTTPS on remaining device variants (ESP32 / ESP32C3 / HAN). File: `src/WebServer.cpp`
+2. [ ] (Blocked - no boards available) Validate OTA update flow over HTTPS on remaining device variants (ESP32 / ESP32C3 / HAN). File: `src/WebServer.cpp`
 
 ## Webpanel UX (P1/P2)
 
