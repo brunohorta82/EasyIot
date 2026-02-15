@@ -183,7 +183,7 @@ void connectToCloudIO()
   if (!wifiConnected())
   {
 #ifdef DEBUG_ONOFRE
-    Log.error("%s WIFI DISCONECTED" CR, tags::cloudIO);
+    Log.error("%s WIFI DISCONNECTED" CR, tags::cloudIO);
 #endif
     return;
   }
