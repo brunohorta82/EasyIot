@@ -218,11 +218,11 @@ ConfigOnofre &ConfigOnofre::load()
   {
     chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
-  templateId = doc["templateId"];
   strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
   sprintf(provisionId, "ONOFRE%s", chipId);
 
 #endif
+  templateId = doc["templateId"] | 0;
   strlcpy(nodeId,
           doc["nodeId"] | chipId,
           sizeof(nodeId));
