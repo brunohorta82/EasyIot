@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 Created by: Alexandru Hauzman  
-Updated: 13.02.2026  
+Updated: 16.02.2026  
 Current version: 9.17-dev
 
 ## Important Notes
@@ -48,6 +48,7 @@ Current version: 9.17-dev
 ## Security
 
 1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+2. [x] Validated OTA update flow over HTTPS on ESP32 (`Update Success` + reboot + reconnect to CloudIO/MQTT; `HTTPS result: 200`, `fallback=0`). File: `src/WebServer.cpp`
 
 ## Webpanel
 
