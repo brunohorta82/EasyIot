@@ -24,6 +24,21 @@ def _has_define(name):
     return False
 
 
+def _subprocess_env():
+    env_copy = os.environ.copy()
+    if os.name == "nt":
+        path_parts = env_copy.get("PATH", "").split(os.pathsep)
+        extras = [
+            r"C:\Program Files\nodejs",
+            os.path.join(os.environ.get("APPDATA", ""), "npm"),
+        ]
+        for p in extras:
+            if p and os.path.isdir(p) and p not in path_parts:
+                path_parts.append(p)
+        env_copy["PATH"] = os.pathsep.join(path_parts)
+    return env_copy
+
+
 def run_html_converter(source, target, env):
     if _has_define("SKIP_HTML_CONVERT") or _has_define("NO_WEB_UI"):
         print("")
@@ -44,7 +59,7 @@ def run_html_converter(source, target, env):
         print("html_converter.py not found!")
         return 1
 
-    subprocess.run([sys.executable, script_path], check=True)
+    subprocess.run([sys.executable, script_path], check=True, env=_subprocess_env())
     print("")
     return 0
 
@@ -77,7 +92,7 @@ def run_release_validation(source, target, env):
     if "RELEASE" in pioenv:
         cmd.extend(["--release"])
 
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=_subprocess_env())
     print("")
     print("--- Pre-build checks complete ---")
     print("")

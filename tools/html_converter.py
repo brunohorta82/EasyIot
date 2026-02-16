@@ -68,8 +68,13 @@ def _require_cmd(cmd: str) -> None:
         sys.exit(1)
 
 
+def _resolve_cmd(cmd: str) -> str:
+    resolved = shutil.which(cmd)
+    return resolved if resolved is not None else cmd
+
+
 def _run(cmd: List[str]) -> None:
-    subprocess.run(cmd, cwd=ROOT, check=True)
+    subprocess.run([_resolve_cmd(cmd[0]), *cmd[1:]], cwd=ROOT, check=True)
 
 
 def _gzip_deterministic(src: Path, dst: Path) -> None:
@@ -135,7 +140,7 @@ def main() -> int:
     _run(["html-minifier", "--collapse-whitespace", str(HTML_TMP), "-o", str(HTML_MIN)])
     _run(["uglifyjs", "--compress", "--mangle", "-o", str(JS_MIN), str(JS_TMP)])
     with CSS_MIN.open("w", encoding="utf-8", newline="\n") as css_out:
-        subprocess.run(["uglifycss", str(CSS_SRC)], cwd=ROOT, check=True, text=True, stdout=css_out)
+        subprocess.run([_resolve_cmd("uglifycss"), str(CSS_SRC)], cwd=ROOT, check=True, text=True, stdout=css_out)
 
     # 3) Gzip (deterministic).
     _gzip_deterministic(HTML_MIN, HTML_GZ)
