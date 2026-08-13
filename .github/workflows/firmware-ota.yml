@@ -1,0 +1,89 @@
+name: Build & Publish Firmware (OTA)
+
+# Deliberate releases only — NOT on every push, so we never mass-OTA by accident.
+# Trigger by pushing a tag (v9.17) or running the workflow manually with a version.
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 9.17). Empty = use platformio.ini [extra].version"
+        required: false
+      deploy:
+        description: "Publish to the OTA folder (devices will update). false = build only."
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { env: ESP8266_RELEASE,          mcu: ESP8266 }
+          - { env: ESP8266-HAN_RELEASE,      mcu: ESP8266-HAN }
+          - { env: ESP32_RELEASE,            mcu: ESP32 }
+          - { env: ESP32-MAKER-4MB_RELEASE,  mcu: ESP32-MAKER-4MB }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+
+      - name: Install PlatformIO
+        run: pip install -U platformio
+
+      - name: Resolve version
+        id: ver
+        run: |
+          V="${{ github.event.inputs.version }}"
+          if [ -z "$V" ]; then
+            V=$(grep -E '^\s*version\s*=' platformio.ini | head -1 | sed -E 's/.*=\s*//' | tr -d ' ')
+          fi
+          V="${V%-dev}"            # a release must not carry the -dev suffix
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Building version $V for ${{ matrix.mcu }}"
+
+      - name: Ensure local override exists
+        run: touch platformio_override.ini
+
+      - name: Build ${{ matrix.env }}
+        run: pio run -e ${{ matrix.env }}
+
+      - name: Rename binary
+        id: bin
+        run: |
+          NAME="ONOFRE_${{ matrix.mcu }}_RELEASE_${{ steps.ver.outputs.version }}.bin"
+          mkdir -p out
+          cp ".pio/build/${{ matrix.env }}/firmware.bin" "out/$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          ls -l "out/$NAME"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.bin.outputs.name }}
+          path: out/${{ steps.bin.outputs.name }}
+
+      - name: Publish to OTA folder
+        if: ${{ github.event_name == 'push' || github.event.inputs.deploy == 'true' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "out/${{ steps.bin.outputs.name }}"
+          target: "/mnt/HC_Volume_34871065/v01/CLOUDIO/FIRMWARE/${{ matrix.mcu }}/"
+          strip_components: 1
