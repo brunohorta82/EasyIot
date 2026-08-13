@@ -139,6 +139,12 @@ bool tryMqttCloudConnection()
   }
   return true;
 }
+// Watchdog backoff after an HTTP 204 ("not adopted") config response. A 204 can
+// be transient (server deploy, database pressure, device row being migrated), so
+// the watchdog must NEVER stop permanently — it just waits this many ticks
+// (1 tick = 60 s) before asking again. 0 = no backoff.
+static uint8_t cloudSyncBackoffTicks = 0;
+
 void watchdogTimer()
 {
 #ifdef DEBUG_ONOFRE
@@ -155,6 +161,14 @@ void watchdogTimer()
   {
 #ifdef DEBUG_ONOFRE
     Log.info("%s CloudIO OK." CR, tags::cloudIO);
+#endif
+    return;
+  }
+  if (cloudSyncBackoffTicks > 0)
+  {
+    cloudSyncBackoffTicks--;
+#ifdef DEBUG_ONOFRE
+    Log.info("%s CloudIO sync backoff: %d min left." CR, tags::cloudIO, cloudSyncBackoffTicks);
 #endif
     return;
   }
@@ -264,7 +278,10 @@ void connectToCloudIO()
 #ifdef DEBUG_ONOFRE
     Log.info("%s [HTTP] Device not adopted" CR, tags::cloudIO);
 #endif
-    config.stopCloudIOWatchdog();
+    // Not adopted (or a transient server condition reported as 204). Never stop
+    // the watchdog permanently — that stranded devices offline until a manual
+    // power cycle. Back off for ~30 min and let the watchdog ask again.
+    cloudSyncBackoffTicks = 30;
     return;
   }
   if (httpCode != HTTP_CODE_OK)
@@ -273,6 +290,7 @@ void connectToCloudIO()
   }
   else if (httpCode == HTTP_CODE_OK)
   {
+    cloudSyncBackoffTicks = 0;
     JsonDocument resp;
     DeserializationError error = deserializeJson(doc, responsePayload);
     strlcpy(config.cloudIOUsername, doc["username"] | "", sizeof(config.cloudIOUsername));
