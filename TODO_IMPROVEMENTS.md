@@ -22,6 +22,12 @@ Current version: 9.161
 5. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
 6. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
 
+## Dependencies & Library Updates (P1/P2)
+
+1. [ ] Pin PlatformIO platforms to known-good versions (`espressif32@...`, `espressif8266@...`) for reproducible builds. File: `platformio.ini`
+2. [x] Pin GitHub-based `lib_deps` to tags/registry versions (avoid floating `master/main`) — SHT4x pinned to 1.1.2 after upstream renamed a header and broke every Linux build; the remaining git URLs are still unpinned. File: `platformio.ini`
+3. [ ] Add periodic dependency audit task (`pio pkg outdated` + compatibility notes per env).
+
 ## Webpanel UX (P1/P2)
 
 1. [ ] Add firmware build date in API/system info payload.

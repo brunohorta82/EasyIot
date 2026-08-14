@@ -18,6 +18,10 @@ cleaner build flags, and consistent firmware version reporting.
 - Firmware: use `String(VERSION)` for API, mDNS, and Home Assistant firmware metadata. - 11.02.2026
 - Build script: improve `tools/extra_script.py` parsing for quoted `VERSION` values. - 11.02.2026
 - Git: keep `platformio_override.ini` ignored as a local-only file. - 11.02.2026
+- Security: stop logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`). - 11.02.2026
+- CloudIO: normalize firmware value in cloud config payload (strip `-dev` suffix for backend compatibility). - 12.02.2026
+- Webpanel: replace `parseFloat` firmware compare with robust version parsing for `-dev` formats. - 12.02.2026
+- Webpanel: remove hardcoded API base URL and use same-origin requests. - 12.02.2026
 - Webpanel build: auto-inject asset cache version (`?v=`) from project version during HTML conversion (no manual hardcoded value updates). - 13.02.2026
 - Security/API: switched state-changing endpoints to `POST` (`/reboot`, `/load-defaults`, `/templates/change`); webpanel now calls `POST` and backend keeps temporary `GET` compatibility. - 13.02.2026
 
