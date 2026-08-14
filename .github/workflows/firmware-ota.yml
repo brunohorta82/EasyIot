@@ -78,10 +78,21 @@ jobs:
       - name: Rename binary
         id: bin
         run: |
+          BUILD_DIR=".pio/build/${{ matrix.env }}"
           NAME="ONOFRE_${{ matrix.mcu }}_RELEASE_${{ steps.ver.outputs.version }}.bin"
           mkdir -p out
-          cp ".pio/build/${{ matrix.env }}/firmware.bin" "out/$NAME"
+          # tools/extra_script.py renames the output to
+          # "Firmware_<env>_<version> - <date>.bin", so plain firmware.bin does not
+          # exist. Match that first and keep firmware.bin as a fallback. Never glob
+          # *.bin blindly: ESP32 build dirs also hold bootloader.bin/partitions.bin.
+          SRC=$(find "$BUILD_DIR" -maxdepth 1 -name 'Firmware_*.bin' -print -quit)
+          [ -n "$SRC" ] || SRC="$BUILD_DIR/firmware.bin"
+          if [ ! -f "$SRC" ]; then
+            echo "No firmware binary found in $BUILD_DIR:"; ls -la "$BUILD_DIR"; exit 1
+          fi
+          cp "$SRC" "out/$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Built from: $SRC"
           ls -l "out/$NAME"
 
       - name: Upload build artifact
