@@ -2,7 +2,7 @@
 
 Created by: Alexandru Hauzman  
 Updated: 16.02.2026  
-Current version: 9.17-dev
+Current version: 9.161
 
 ## Important Notes
 
@@ -15,8 +15,9 @@ Current version: 9.17-dev
 
 ## Security & OTA (P1)
 
-1. [ ] Move cloud config/OTA URLs from `http://` to secure transport and validate update path. File: `include/Constants.h`
+1. [ ] Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices. Blocked: the whole fleet must be on >= 9.161 first, otherwise devices that fail the TLS handshake have no way to sync. File: `src/CloudIO.cpp`
 2. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
+3. [ ] Validate OTA update flow over HTTPS on remaining device variants (ESP32 / ESP32C3 / HAN). File: `src/WebServer.cpp`
 
 ## Webpanel UX (P1/P2)
 
@@ -44,11 +45,16 @@ Current version: 9.17-dev
 8. [x] Added automatic pre-build hooks for HTML conversion and release validation with skip flags. Files: `tools/extra_script.py`, `platformio.ini`
 9. [x] Enforced `WEB_SECURE_ON` for production/non-debug profiles and removed debug defaults from release builds. File: `platformio.ini`
 10. [x] Automated webpanel asset cache version (`?v=`) from project version during build conversion (no manual hardcoded value updates). Files: `webpanel/index.html`, `tools/html_converter.sh`
+11. [x] Resolved strict release-validation mismatch for `9.17` by adding matching changelog header and confirmed full all-env build pass for release snapshot.
 
 ## Security
 
 1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
-2. [x] Validated OTA update flow over HTTPS on ESP32 (`Update Success` + reboot + reconnect to CloudIO/MQTT; `HTTPS result: 200`, `fallback=0`). File: `src/WebServer.cpp`
+2. [x] Migrated CloudIO config and OTA endpoints from `http://` to `https://` and validated runtime behavior on device. Files: `include/Constants.h`, `src/CloudIO.cpp`, `src/WebServer.cpp`
+3. [x] Converted state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
+4. [x] Added HTTPS-first CloudIO config request with one-time silent HTTP fallback to prevent restart loops when TLS path fails. File: `src/CloudIO.cpp`
+5. [x] Validated OTA update flow over HTTPS on ESP8266 (`Update Success` + reconnect to CloudIO/MQTT). File: `src/WebServer.cpp`
+6. [x] Validated OTA update flow over HTTPS on ESP32 (`Update Success` + reboot + reconnect to CloudIO/MQTT; `HTTPS result: 200`, `fallback=0`). File: `src/WebServer.cpp`
 
 ## Webpanel
 
