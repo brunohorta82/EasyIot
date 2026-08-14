@@ -23,9 +23,9 @@ Current version: 9.161
 
 1. [ ] Add firmware build date in API/system info payload.
 
-## Testing & CI (P2)
+## Testing & CI (P2 - Deferred / Later)
 
-1. [ ] Add CI build checks for main envs (ESP8266 + ESP32).
+1. [x] CI build checks for main envs — `.github/workflows/firmware-ota.yml` builds all four release envs (ESP8266, ESP8266-HAN, ESP32, ESP32-MAKER-4MB) and publishes them to the OTA folder on tag/dispatch.
 2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
 3. [ ] Add quick rollback notes for failed release/update.
 
