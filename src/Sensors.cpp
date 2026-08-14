@@ -10,7 +10,7 @@
 #include "CloudIO.h"
 #include <DallasTemperature.h>
 #include "HanOnofre.hpp"
-#include <SensirionI2CSht4x.h>
+#include <SensirionI2cSht4x.h>
 #include <LTR303.h>
 #include "DHT.h"
 #include <NewPing.h>
