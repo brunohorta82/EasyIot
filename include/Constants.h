@@ -42,6 +42,7 @@ namespace Payloads
 namespace tags
 {
     constexpr const char *system{"[SYSTEM]"};
+    constexpr const char *build{"[BUILD]"};
     constexpr const char *config{"[CONFIG]"};
     constexpr const char *mqtt{"[MQTT]"};
     constexpr const char *wifi{"[WIFI]"};
