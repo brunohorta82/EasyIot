@@ -44,6 +44,20 @@ jobs:
       - name: Install PlatformIO
         run: pip install -U platformio
 
+      # tools/html_converter.sh (run by extra_script.py during the build) embeds the
+      # gzipped web panel into headers and needs these CLI minifiers plus xxd.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install web panel build tools
+        run: |
+          npm install -g html-minifier uglify-js uglifycss
+          command -v xxd >/dev/null || sudo apt-get install -y -qq xxd
+          for c in html-minifier uglifyjs uglifycss gzip xxd; do
+            command -v "$c" >/dev/null || { echo "missing required command: $c"; exit 1; }
+          done
+
       - name: Resolve version
         id: ver
         run: |
