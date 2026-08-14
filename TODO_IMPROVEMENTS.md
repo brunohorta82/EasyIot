@@ -15,9 +15,9 @@ Current version: 9.161
 
 ## Security & OTA (P1)
 
-1. [ ] Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices. Blocked: the whole fleet must be on >= 9.161 first, otherwise devices that fail the TLS handshake have no way to sync. File: `src/CloudIO.cpp`
+1. [ ] (Blocked) Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices, including weak-signal scenarios. Blocked: the whole fleet must be on >= 9.161 first, otherwise devices that fail the TLS handshake have no way to sync. File: `src/CloudIO.cpp`
 2. [x] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`); temporary GET compatibility kept for older clients. File: `src/WebServer.cpp`
-3. [ ] Validate OTA update flow over HTTPS on remaining device variants (ESP32C3 / HAN). File: `src/WebServer.cpp`
+3. [ ] (Blocked - no boards available) Validate OTA update flow over HTTPS on remaining device variants (ESP32C3 / HAN). File: `src/WebServer.cpp`
 4. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with a first-boot forced change flow. File: `include/Constants.h`
 5. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
 6. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
