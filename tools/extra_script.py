@@ -1,6 +1,7 @@
 import datetime
 import os
 import subprocess
+import sys
 from SCons.Script import Action, DefaultEnvironment  # type: ignore
 
 env = DefaultEnvironment()
@@ -23,27 +24,42 @@ def _has_define(name):
     return False
 
 
+def _subprocess_env():
+    env_copy = os.environ.copy()
+    if os.name == "nt":
+        path_parts = env_copy.get("PATH", "").split(os.pathsep)
+        extras = [
+            r"C:\Program Files\nodejs",
+            os.path.join(os.environ.get("APPDATA", ""), "npm"),
+        ]
+        for p in extras:
+            if p and os.path.isdir(p) and p not in path_parts:
+                path_parts.append(p)
+        env_copy["PATH"] = os.pathsep.join(path_parts)
+    return env_copy
+
+
 def run_html_converter(source, target, env):
     if _has_define("SKIP_HTML_CONVERT") or _has_define("NO_WEB_UI"):
         print("")
-        print("Skipping html_converter.sh (SKIP_HTML_CONVERT or NO_WEB_UI defined)")
+        print("Skipping html_converter.py (SKIP_HTML_CONVERT or NO_WEB_UI defined)")
         print("")
         return 0
 
     project_dir = env["PROJECT_DIR"]
     print("")
-    script_path = os.path.join(project_dir, "tools", "html_converter.sh")
+    script_path = os.path.join(project_dir, "tools", "html_converter.py")
     print("")
-    print("Running html_converter.sh ...")
+    print("Running html_converter.py ...")
     print("")
     print("Script path:", script_path)
     print("")
 
     if not os.path.exists(script_path):
-        print("html_converter.sh not found!")
+        print("html_converter.py not found!")
         return 1
 
-    subprocess.run(["/bin/bash", script_path], check=True)
+    subprocess.run([sys.executable, script_path], check=True, env=_subprocess_env())
     print("")
     return 0
 
@@ -51,24 +67,24 @@ def run_html_converter(source, target, env):
 def run_release_validation(source, target, env):
     if _has_define("SKIP_RELEASE_VALIDATE"):
         print("")
-        print("Skipping validate_release.sh (SKIP_RELEASE_VALIDATE defined)")
+        print("Skipping validate_release.py (SKIP_RELEASE_VALIDATE defined)")
         print("")
         return 0
 
     project_dir = env["PROJECT_DIR"]
-    script_path = os.path.join(project_dir, "tools", "validate_release.sh")
+    script_path = os.path.join(project_dir, "tools", "validate_release.py")
 
     if not os.path.exists(script_path):
-        print("validate_release.sh not found, skipping validation.")
+        print("validate_release.py not found, skipping validation.")
         return 0
 
     print("")
-    print("Running validate_release.sh ...")
+    print("Running validate_release.py ...")
     print("")
     print("Script path:", script_path)
     print("")
 
-    cmd = ["/bin/bash", script_path]
+    cmd = [sys.executable, script_path]
     pioenv = env.get("PIOENV", "")
     if pioenv:
         cmd.extend(["--env", pioenv])
@@ -76,7 +92,7 @@ def run_release_validation(source, target, env):
     if "RELEASE" in pioenv:
         cmd.extend(["--release"])
 
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=_subprocess_env())
     print("")
     print("--- Pre-build checks complete ---")
     print("")
