@@ -81,6 +81,14 @@ Current version: 9.161
 
 1. [x] Converted state-changing endpoints to support `POST` (`/reboot`, `/load-defaults`, `/templates/change`) and switched webpanel calls to `POST` while keeping temporary `GET` compatibility. Files: `src/WebServer.cpp`, `webpanel/js/index.js`
 
+## Security
+
+1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+
+## Webpanel
+
+1. [x] Fixed firmware version comparison for `-dev` formats (replaced `parseFloat` logic). File: `webpanel/js/index.js`
+2. [x] Removed hardcoded `baseUrl` and switched to same-origin requests. File: `webpanel/js/index.js`
 ## Quick Release Flow
 
 1. Bump version in `platformio.ini`.
