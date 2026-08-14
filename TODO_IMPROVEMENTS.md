@@ -16,8 +16,11 @@ Current version: 9.161
 ## Security & OTA (P1)
 
 1. [ ] Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices. Blocked: the whole fleet must be on >= 9.161 first, otherwise devices that fail the TLS handshake have no way to sync. File: `src/CloudIO.cpp`
-2. [ ] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`). File: `src/WebServer.cpp`
-3. [ ] Validate OTA update flow over HTTPS on remaining device variants (ESP32 / ESP32C3 / HAN). File: `src/WebServer.cpp`
+2. [x] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`); temporary GET compatibility kept for older clients. File: `src/WebServer.cpp`
+3. [ ] Validate OTA update flow over HTTPS on remaining device variants (ESP32C3 / HAN). File: `src/WebServer.cpp`
+4. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with a first-boot forced change flow. File: `include/Constants.h`
+5. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
+6. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
 
 ## Webpanel UX (P1/P2)
 
@@ -73,6 +76,10 @@ Current version: 9.161
 2. [x] Added branch naming convention for external CP branches. File: `docs/RELEASE_WORKFLOW.md`
 3. [x] Added release checklist document in repo docs. File: `docs/RELEASE_WORKFLOW.md`
 4. [x] Added script to generate release notes draft from commits. File: `tools/generate_release_notes.sh`
+
+## Security & API
+
+1. [x] Converted state-changing endpoints to support `POST` (`/reboot`, `/load-defaults`, `/templates/change`) and switched webpanel calls to `POST` while keeping temporary `GET` compatibility. Files: `src/WebServer.cpp`, `webpanel/js/index.js`
 
 ## Quick Release Flow
 
