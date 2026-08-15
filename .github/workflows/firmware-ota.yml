@@ -22,10 +22,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { env: ESP8266_RELEASE,          mcu: ESP8266 }
-          - { env: ESP8266-HAN_RELEASE,      mcu: ESP8266-HAN }
-          - { env: ESP32_RELEASE,            mcu: ESP32 }
-          - { env: ESP32-MAKER-4MB_RELEASE,  mcu: ESP32-MAKER-4MB }
+          - { env: ESP8266_RELEASE,          mcu: ESP8266,         chip: esp8266, flash_size: 4MB }
+          - { env: ESP8266-HAN_RELEASE,      mcu: ESP8266-HAN,     chip: esp8266, flash_size: 4MB }
+          - { env: ESP32_RELEASE,            mcu: ESP32,           chip: esp32,   flash_size: 8MB }
+          - { env: ESP32-MAKER-4MB_RELEASE,  mcu: ESP32-MAKER-4MB, chip: esp32,   flash_size: 4MB }
     steps:
       - uses: actions/checkout@v4
 
@@ -95,6 +95,35 @@ jobs:
           echo "Built from: $SRC"
           ls -l "out/$NAME"
 
+      # The OTA binary holds only the application partition, so it cannot program a
+      # blank chip. Build the image the browser installer at /flash/ serves: ESP8266
+      # builds are already complete, ESP32 ones need bootloader/partitions/boot_app0.
+      - name: Build full-flash image
+        id: webflash
+        run: |
+          BUILD_DIR=".pio/build/${{ matrix.env }}"
+          NAME="ONOFRE_${{ matrix.mcu }}_WEBFLASH_${{ steps.ver.outputs.version }}.bin"
+          APP=$(find "$BUILD_DIR" -maxdepth 1 -name 'Firmware_*.bin' -print -quit)
+          [ -n "$APP" ] || APP="$BUILD_DIR/firmware.bin"
+          mkdir -p webflash
+          if [ "${{ matrix.chip }}" = "esp8266" ]; then
+            cp "$APP" "webflash/$NAME"
+          else
+            ESPTOOL=$(find "$HOME/.platformio/packages" -name esptool.py -path '*tool-esptoolpy*' -print -quit)
+            BOOT_APP0=$(find "$HOME/.platformio/packages" -name boot_app0.bin -print -quit)
+            for f in "$ESPTOOL" "$BOOT_APP0" "$BUILD_DIR/bootloader.bin" "$BUILD_DIR/partitions.bin"; do
+              [ -n "$f" ] && [ -f "$f" ] || { echo "missing input for merge: '$f'"; exit 1; }
+            done
+            python3 "$ESPTOOL" --chip ${{ matrix.chip }} merge_bin -o "webflash/$NAME" \
+              --flash_mode dio --flash_freq 40m --flash_size ${{ matrix.flash_size }} \
+              0x1000 "$BUILD_DIR/bootloader.bin" \
+              0x8000 "$BUILD_DIR/partitions.bin" \
+              0xe000 "$BOOT_APP0" \
+              0x10000 "$APP"
+          fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          ls -l "webflash/$NAME"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -111,4 +140,16 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           source: "out/${{ steps.bin.outputs.name }}"
           target: "/mnt/HC_Volume_34871065/v01/CLOUDIO/FIRMWARE/${{ matrix.mcu }}/"
+          strip_components: 1
+
+      - name: Publish full-flash image (browser installer)
+        if: ${{ github.event_name == 'push' || github.event.inputs.deploy == 'true' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "webflash/${{ steps.webflash.outputs.name }}"
+          target: "/mnt/HC_Volume_34871065/v01/CLOUDIO/FIRMWARE/WEBFLASH/${{ matrix.mcu }}/"
           strip_components: 1
