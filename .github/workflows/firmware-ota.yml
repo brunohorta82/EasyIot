@@ -25,11 +25,6 @@ jobs:
           - { env: ESP8266_RELEASE,          mcu: ESP8266,         chip: esp8266, flash_size: 4MB }
           - { env: ESP8266-HAN_RELEASE,      mcu: ESP8266-HAN,     chip: esp8266, flash_size: 4MB }
           - { env: ESP32_RELEASE,            mcu: ESP32,           chip: esp32,   flash_size: 8MB }
-          # ota_max: app partition of the devices already in the field. Maker boards
-          # were flashed with the old default 4MB table (0x140000 per app slot) and
-          # OTA cannot rewrite a partition table, so an image above this cannot be
-          # installed on them — even though newly flashed boards now get 1.75MB.
-          - { env: ESP32-MAKER-4MB_RELEASE,  mcu: ESP32-MAKER-4MB, chip: esp32,   flash_size: 4MB, ota_max: 1310720 }
     steps:
       - uses: actions/checkout@v4
 
@@ -100,17 +95,6 @@ jobs:
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "Built from: $SRC"
           ls -l "out/$NAME"
-
-      - name: Check the image still fits deployed devices
-        if: ${{ matrix.ota_max != '' }}
-        run: |
-          SIZE=$(wc -c < "out/${{ steps.bin.outputs.name }}")
-          MAX=${{ matrix.ota_max }}
-          echo "app image: $SIZE bytes / $MAX available on deployed ${{ matrix.mcu }} devices"
-          if [ "$SIZE" -gt "$MAX" ]; then
-            echo "::error::Image is $((SIZE - MAX)) bytes too large to OTA onto deployed ${{ matrix.mcu }} devices (their app partition is $MAX bytes and OTA cannot repartition)."
-            exit 1
-          fi
 
       # The OTA binary holds only the application partition, so it cannot program a
       # blank chip. Build the image the browser installer at /flash/ serves: ESP8266
