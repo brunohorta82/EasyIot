@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.167] - 2026-08-15
+
+### Added
+- **A PZEM v3's accumulated energy can be reset from the panel**, so the counter
+  no longer needs the button on the meter itself. `POST /sensors/reset-energy
+  {id}` queues the request rather than performing it: the meter sits on a serial
+  bus the sensor's loop owns, and reaching for it from the web handler's context
+  would corrupt a reading in flight. The reset runs on the next poll and the
+  counter reads zero from that reading onwards.
+
+  Only PZEM v3 offers the command, so the endpoint is gated and the panel draws
+  the button only on those cards. The HAN is the utility's meter and has no such
+  command — asking for one returns 404.
+
 ## [9.166] - 2026-08-15
 
 ### Added
