@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.165] - 2026-08-15
+
+### Added
+- **The on-device web panel was rebuilt.** It is what people reach for when the
+  cloud is unreachable, which is exactly when it mattered least before. Five
+  tabs — overview, pinout, features, diagnostics, system. The pinout is drawn
+  from the board's own pin list, so it never offers a GPIO the firmware would
+  refuse, and it names the feature holding each one.
+- **Energy meters get a card of their own.** A HAN publishes around twenty
+  fields and the panel showed only instantaneous power, dropping voltage,
+  tariff and the export reading. Exporting to the grid now reads negative and
+  green, matching the cloud panel.
+- **Feature wiring is editable.** `ConfigOnofre::update()` re-maps a pin only
+  when it is valid for the board and owned by no other feature, and parks the
+  pins a feature gives up so no relay stays latched on a GPIO nothing drives.
+- **Diagnostics on the local API** — free heap, fragmentation, largest free
+  block, uptime, reset reason, sketch size and the board's usable pins.
+
+### Fixed
+- **Creating a feature on a pin already in use is refused.** `prepareNewFeature`
+  checked only that a pin exists on the board, never that it was free, so a
+  second feature could be created on top of the first and both drivers ended up
+  on one GPIO. Sensors skipped validation entirely — a bogus pin was accepted
+  and surfaced only as a driver that never read anything. Both paths validate
+  now and return the new code 5 for a pin already in use.
+- **Destructive buttons no longer depend on `confirm()`**, which sandboxed
+  frames block silently — the template buttons looked dead — and which is easy
+  to misfire on a phone. They ask for a second click on the button itself.
+
+### Notes
+- Pin arrays stay optional on `POST /config`: a payload without them leaves the
+  wiring untouched, so v9 panels, the mobile apps and restored backups behave
+  exactly as before. Updates remain non-destructive to stored configuration.
+
 ## [9.164] - 2026-08-15
 
 ### Fixed
