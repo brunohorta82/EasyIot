@@ -222,10 +222,15 @@ void setup()
 #endif
   setupMQTT(false);
 #ifdef ESP32
+// Priority 100 is above configMAX_PRIORITIES, so FreeRTOS clamped it to the top of
+// the range — putting sensor polling above the WiFi and TCP/IP tasks, which then
+// only ran when this one happened to yield. Sensor reads are background work; keep
+// them below the network stack. Arduino's own loop runs at 1.
+#define FEATURES_TASK_PRIORITY 2
 #ifdef HAN_MODE
-  xTaskCreate(featuresTask, "Features-Task", 4048, NULL, 100, NULL);
+  xTaskCreate(featuresTask, "Features-Task", 4048, NULL, FEATURES_TASK_PRIORITY, NULL);
 #else
-  xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
+  xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, FEATURES_TASK_PRIORITY, NULL, 1);
 #endif
 #endif
 }

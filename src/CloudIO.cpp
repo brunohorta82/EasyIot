@@ -100,8 +100,21 @@ bool cloudIOConnected()
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
-  char msg[len + 1];
-  strlcpy(msg, payload, sizeof(msg));
+  // Everything this handler accepts is a short command or state value, so a fixed
+  // buffer replaces the old variable-length array: `len` comes from the broker and
+  // could reach MQTT_MAX_PACKET_SIZE, which is far too much to put on the stack of
+  // an async callback.
+  char msg[64];
+  // A payload larger than one packet is delivered in chunks; treating a chunk as a
+  // whole message would act on a fragment. Nothing we handle is ever that big.
+  if (index != 0 || len != total || len >= sizeof(msg))
+  {
+    return;
+  }
+  // The payload is a raw buffer, not a C string: strlcpy would read past `len`
+  // looking for a terminator that need not be there.
+  memcpy(msg, payload, len);
+  msg[len] = '\0';
 #ifdef DEBUG_ONOFRE
   Log.info("----------------------------------------------" CR);
   Log.info("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, msg);

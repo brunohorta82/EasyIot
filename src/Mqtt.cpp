@@ -15,7 +15,16 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Message received" CR, tags::mqtt);
 #endif
+    // Under a fragmented heap this allocation can fail, and writing to the null it
+    // returns took the device down with it. Drop the message instead of rebooting.
     char *payload_as_string = (char *)malloc(length + 1);
+    if (payload_as_string == nullptr)
+    {
+#ifdef DEBUG_ONOFRE
+        Log.error("%s Out of memory for a %d byte payload; message dropped" CR, tags::mqtt, length);
+#endif
+        return;
+    }
     memcpy(payload_as_string, (char *)payload, length);
     payload_as_string[length] = 0;
 #ifdef DEBUG_ONOFRE
