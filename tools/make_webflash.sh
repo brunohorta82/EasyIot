@@ -5,6 +5,9 @@
 # needs to update itself but not enough to program a blank chip. ESP8266 images
 # are already complete (they start at offset 0), while ESP32 images must be
 # merged with the bootloader, the partition table and boot_app0.
+#
+# Requires a completed `pio run` per environment and, for ESP32, the `intelhex`
+# module that the bundled esptool.py imports: pip3 install --user intelhex
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

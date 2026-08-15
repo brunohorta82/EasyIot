@@ -42,7 +42,9 @@ jobs:
           key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
 
       - name: Install PlatformIO
-        run: pip install -U platformio
+        # intelhex is imported by the bundled esptool.py, which the full-flash merge
+        # step runs directly; PlatformIO does not pull it in for its own builds.
+        run: pip install -U platformio intelhex
 
       # tools/html_converter.sh (run by extra_script.py during the build) embeds the
       # gzipped web panel into headers and needs these CLI minifiers plus xxd.
