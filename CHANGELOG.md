@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.168] - 2026-08-15
+
+### Fixed
+- **Saving worked again.** Moving the save button into the header left it
+  disabled with nothing to enable it, so pressing it did nothing at all — a
+  changed device or feature name was simply lost. markDirty()/clearDirty() now
+  drive the button, and it reports progress on itself instead of writing to a
+  status element that the same change had deleted; that write sat outside the
+  try block, so it threw before the request was ever sent and left the button
+  stuck disabled with no way to retry.
+
 ## [9.167] - 2026-08-15
 
 ### Added

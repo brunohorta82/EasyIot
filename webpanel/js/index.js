@@ -111,8 +111,18 @@ function toast(msg, kind) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => { t.className = ""; }, 3200);
 }
-function markDirty() { dirty = true; $("dirty").classList.remove("hide"); }
-function clearDirty() { dirty = false; $("dirty").classList.add("hide"); }
+/* The save button lives in the header and starts disabled, so both of these
+   have to drive it — otherwise there is nothing to press. */
+function markDirty() {
+  dirty = true;
+  $("dirty").classList.remove("hide");
+  $("save-btn").disabled = false;
+}
+function clearDirty() {
+  dirty = false;
+  $("dirty").classList.add("hide");
+  $("save-btn").disabled = true;
+}
 
 function duration(sec) {
   sec = Math.floor(sec || 0);
@@ -543,20 +553,22 @@ async function save() {
   if ($("s-apiPw").value) body.apiPassword = $("s-apiPw").value;
   if (removed.length) body.featuresToRemove = removed;
 
-  $("save-btn").disabled = true;
-  $("save-note").textContent = "a guardar…";
+  const btn = $("save-btn");
+  btn.disabled = true;
+  btn.textContent = "A guardar…";
   try {
     config = await api("/config", { method: "POST", body: JSON.stringify(body) });
     removed = [];
     clearDirty();
-    $("save-note").textContent = "";
     toast("Guardado", "ok");
     renderHeader(); renderOverview(); renderPinout(); renderFeatures(); renderDiag(); fillSystem(); fillNewFeatureForm();
   } catch (e) {
-    $("save-note").textContent = "";
     toast("Não foi possível guardar", "err");
   } finally {
-    $("save-btn").disabled = false;
+    // Always restore the button: leaving it disabled strands the page with no
+    // way to retry, which is how a failed save looked like a silent one.
+    btn.textContent = "Guardar";
+    btn.disabled = !dirty;
   }
 }
 
