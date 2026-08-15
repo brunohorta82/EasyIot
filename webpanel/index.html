@@ -164,6 +164,20 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <div class="note">Deixa a palavra-passe em branco para a manter como está.</div>
   </div>
 
+  <div class="sec">ATUALIZAR POR FICHEIRO</div>
+  <div class="card">
+    <p class="note" style="margin:0 0 11px">
+      Envia um <b>.bin</b> diretamente para o dispositivo, sem passar pela cloud — é a via
+      de recurso quando não há internet. Tem de ser a imagem da variante
+      <b id="u-mcu">—</b>: outra qualquer deixa o dispositivo inacessível e só se recupera
+      por cabo USB. Não desligues a corrente durante o envio.
+    </p>
+    <div class="field"><input type="file" id="u-file" accept=".bin"></div>
+    <div class="bar hide" id="u-bar"><i style="width:0%"></i></div>
+    <div class="btns" style="margin-top:10px"><button class="btn" id="u-send">Enviar firmware</button></div>
+    <div class="note" id="u-msg"></div>
+  </div>
+
   <div class="sec">AÇÕES</div>
   <div class="btns">
     <button class="btn" id="a-reboot">Reiniciar</button>

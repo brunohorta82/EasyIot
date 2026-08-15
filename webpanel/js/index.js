@@ -414,6 +414,8 @@ function fillSystem() {
   $("s-mqttPw").value = "";
   $("s-apiUser").value = config.apiUser || "";
   $("s-apiPw").value = "";
+  // Name the variant on the upload warning so the right .bin is picked.
+  $("u-mcu").textContent = config.mcu || "desconhecida";
 }
 
 function fillNewFeatureForm() {
@@ -567,6 +569,61 @@ async function applyTemplate(v) {
   } catch (e) { toast("Não foi possível aplicar", "err"); }
 }
 
+/* Manual firmware upload — the recovery path when the cloud is unreachable.
+   POST /update takes a multipart body and reboots the device when it ends. */
+function uploadFirmware(btn) {
+  const file = ($("u-file").files || [])[0];
+  const msg = $("u-msg");
+  if (!file) {
+    msg.className = "note err";
+    msg.textContent = "Escolhe primeiro o ficheiro .bin.";
+    return;
+  }
+  // Both ESP8266 and ESP32 application images start with 0xE9. Refusing anything
+  // else here costs nothing and saves a USB recovery after an accidental pick.
+  const head = new FileReader();
+  head.onload = () => {
+    if (new Uint8Array(head.result)[0] !== 0xe9) {
+      msg.className = "note err";
+      msg.textContent = "Isto não parece uma imagem de firmware. Envio cancelado.";
+      return;
+    }
+    if (!armed(btn, "Confirmar envio?")) return;
+    send();
+  };
+  head.readAsArrayBuffer(file.slice(0, 1));
+
+  function send() {
+    const bar = $("u-bar");
+    const fill = bar.querySelector("i");
+    bar.classList.remove("hide");
+    $("u-send").disabled = true;
+    msg.className = "note";
+    msg.textContent = "A enviar… não desligues o dispositivo.";
+
+    const form = new FormData();
+    form.append("update", file, file.name);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", baseUrl + "/update");
+    // fetch() reports no upload progress, and this can be a slow minute on WiFi.
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) fill.style.width = Math.round(e.loaded / e.total * 100) + "%";
+    };
+    const done = (ok) => {
+      $("u-send").disabled = false;
+      msg.className = ok ? "note ok" : "note err";
+      msg.textContent = ok
+        ? "Enviado. O dispositivo está a reiniciar — volta a abrir esta página daqui a pouco."
+        : "O envio falhou. O dispositivo reinicia com o firmware anterior.";
+    };
+    // The device closes its web server as it answers, so a dropped connection
+    // after a complete upload is the expected ending, not a failure.
+    xhr.onload = () => done(xhr.status === 200);
+    xhr.onerror = () => done(fill.style.width === "100%");
+    xhr.send(form);
+  }
+}
+
 function exportConfig() {
   const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -704,6 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
     navigator.clipboard.writeText(logLines.join("\n")).then(
       () => toast("Registo copiado", "ok"), () => toast("Não foi possível copiar", "err"));
   };
+  $("u-send").onclick = (e) => uploadFirmware(e.currentTarget);
   $("a-reboot").onclick = async (e) => {
     if (!armed(e.currentTarget, "Reiniciar?")) return;
     try { await api("/reboot", { method: "POST" }); toast("A reiniciar…", "ok"); } catch (err) { toast("Falhou", "err"); }
