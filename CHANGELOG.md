@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.164] - 2026-08-15
+
+### Fixed
+- **MQTT callbacks no longer read past a payload or reboot on a failed allocation.**
+  The CloudIO handler built a variable-length array on an async callback's stack
+  from the broker-supplied length (up to MQTT_MAX_PACKET_SIZE) and filled it with
+  `strlcpy`, which walks the source looking for a terminator a raw payload need not
+  have. It now uses a fixed buffer and copies exactly the bytes received; payloads
+  split across packets are ignored rather than acted on as fragments. The local
+  broker handler wrote into whatever `malloc` returned — on a fragmented heap that
+  is null, and the device rebooted instead of dropping one message.
+- **Sensor polling no longer outranks the network stack on ESP32.** The task asked
+  for priority 100; FreeRTOS clamps that to the top of the range, which placed it
+  above the WiFi and TCP/IP tasks. It now runs at 2, below them.
+
+### Build
+- Registry dependencies are pinned to the versions in use (ArduinoJson 7.4.3,
+  PubSubClient 2.8, AsyncMqttClient 0.9.0, DallasTemperature 4.0.6, PZEM004T 1.1.5).
+  Twelve of eighteen dependencies previously floated, which is how a renamed header
+  in an unpinned SHT4x broke every Linux build. The remaining git URLs still track
+  their default branch.
+
 ## [9.163] - 2026-08-15
 
 ### Fixed
