@@ -124,6 +124,15 @@ function clearDirty() {
   $("save-btn").disabled = true;
 }
 
+/* A diagnostics refresh returns the complete config, including features. Those
+   feature objects may contain unsaved name, pin, or timing edits, so replacing
+   them here would make the later Save silently send the old device values. */
+function applyDiagnosticsSnapshot(snapshot) {
+  Object.keys(snapshot || {}).forEach((key) => {
+    if (key !== "features") config[key] = snapshot[key];
+  });
+}
+
 function duration(sec) {
   sec = Math.floor(sec || 0);
   const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
@@ -878,7 +887,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Diagnostics are a snapshot; refresh them while the tab is open.
   setInterval(() => {
     if ($("v-diag").classList.contains("on")) {
-      api("/config").then((c) => { config = Object.assign(config, c); renderHeader(); renderDiag(); }).catch(() => {});
+      api("/config").then((c) => { applyDiagnosticsSnapshot(c); renderHeader(); renderDiag(); }).catch(() => {});
     }
   }, 10000);
 });
