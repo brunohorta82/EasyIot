@@ -253,6 +253,11 @@ function energyCard(f) {
     (o.tarif != null ? '<div class="kv"><span>tarifa</span><b>' +
       esc(TARIFF[o.tarif] || o.tarif) + "</b></div>" : "") +
     (bad ? '<div class="note err">' + esc(bad) + "</div>" : "") +
+    // Only a PZEM's own counter can be zeroed; the HAN is the utility's meter.
+    (f.driver.indexOf("PZEM") === 0
+      ? '<div class="btns" style="margin-top:10px">' +
+        '<button class="btn" data-reset="' + esc(f.id) + '">Repor energia</button></div>'
+      : "") +
     "</div>";
 }
 
@@ -764,6 +769,14 @@ document.addEventListener("click", (ev) => {
   const tpl = ev.target.closest("[data-tpl]");
   if (tpl) {
     if (armed(tpl, "Substituir tudo?")) applyTemplate(parseInt(tpl.dataset.tpl, 10));
+    return;
+  }
+  const rst = ev.target.closest("[data-reset]");
+  if (rst) {
+    if (!armed(rst, "Repor a zero?")) return;
+    api("/sensors/reset-energy", { method: "POST", body: JSON.stringify({ id: rst.dataset.reset }) })
+      .then(() => toast("Contador reposto — o novo valor aparece na próxima leitura", "ok"))
+      .catch(() => toast("Não foi possível repor o contador", "err"));
     return;
   }
   const del = ev.target.closest("[data-del]");

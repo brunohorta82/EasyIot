@@ -348,6 +348,35 @@ void loadAPI()
     response->setLength();
     request->send(response); }));
 
+  /*RESET A METER'S ACCUMULATED ENERGY*/
+  server
+      .addHandler(new AsyncCallbackJsonWebHandler("/sensors/reset-energy", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    const String id = json["id"] | "";
+    bool found = false;
+    for (auto &sensor : config.sensors)
+    {
+      if (id.equals(sensor.uniqueId) && sensor.supportsEnergyReset())
+      {
+        // Queued, not performed here: the meter is on a serial bus the sensor
+        // loop owns, and reaching for it from this context corrupts a read.
+        sensor.requestEnergyReset();
+        found = true;
+        break;
+      }
+    }
+    root["result"] = found ? "Energy reset requested" : "Unknown meter";
+    if (!found)
+      response->setCode(404);
+    response->setLength();
+    request->send(response); }));
+
   auto rebootHandler = [](AsyncWebServerRequest *request)
   {
 #if WEB_SECURE_ON

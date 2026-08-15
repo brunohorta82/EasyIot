@@ -142,6 +142,19 @@ public:
     initialized = false;
   };
 
+  // Zeroing a PZEM's accumulated energy talks to it over the same serial bus the
+  // reader owns, so the request is queued here and carried out inside the
+  // sensor's own loop rather than from the web handler's context.
+  bool resetEnergyRequested = false;
+  bool supportsEnergyReset() const
+  {
+    return driver == SensorDriver::PZEM_004T_V03;
+  };
+  void requestEnergyReset()
+  {
+    resetEnergyRequested = true;
+  };
+
   const void clearError()
   {
     error = false;

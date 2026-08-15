@@ -705,6 +705,18 @@ void Sensor::loop()
       PZEM004Tv30 pzemv03(Serial1, inputs[0], inputs[1], hwAddress);
 #endif
       lastRead = millis();
+      // Serviced here because the meter is only reachable while this object owns
+      // the bus; the counter reads zero from the next poll onwards.
+      if (resetEnergyRequested)
+      {
+        resetEnergyRequested = false;
+        const bool ok = pzemv03.resetEnergy();
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s Energy reset for %s: %s" CR, tags::sensors, uniqueId, ok ? "ok" : "failed");
+#else
+        (void)ok;
+#endif
+      }
       JsonDocument doc;
       JsonObject obj = doc.to<JsonObject>();
       state.clear();
