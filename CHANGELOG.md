@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.166] - 2026-08-15
+
+### Added
+- **Light and dark themes**, remembered per browser. The panel was dark-only,
+  which is unreadable on a phone in daylight next to a distribution board. It
+  follows the system preference until told otherwise, and the choice is applied
+  before the first paint so the page never flashes the wrong theme. It lives in
+  the browser rather than device config: it belongs to whoever is looking, and
+  storing it on the device would burn flash for a preference the next browser
+  would not share.
+
+### Fixed
+- **Manual firmware upload is back.** The rebuilt panel dropped the file upload
+  to `POST /update`, which is the recovery path when the cloud cannot be
+  reached — the situation the on-device panel exists for. It returns with
+  upload progress, the device's own variant named in the warning, and a
+  magic-byte check: both ESP8266 and ESP32 images start with `0xE9`, and
+  refusing anything else saves a USB recovery after an accidental pick.
+- **Configuration restore is back**, alongside export. The exported file again
+  carries `backup: true`, which is what makes `POST /config` rebuild features
+  instead of editing them — without it an exported file did not restore
+  properly. A restore is refused if the file belongs to a different chip.
+- **Input mode is editable again** (momentary button vs latching switch). The
+  firmware derives an actuator's driver from it on every save, so it decides
+  how a wall switch behaves on identical wiring.
+
+### Build
+- **The embedded panel is always regenerated.** `run_html_converter` hung off a
+  PreAction on `$PROGPATH`, which only fires when a link happens. Changing
+  `webpanel/` alone left nothing to recompile, so the link was skipped, the
+  converter never ran, and the build reported success while embedding the
+  previous panel. CI was never affected — a fresh checkout always relinks — but
+  a local build could quietly produce firmware whose panel did not match source.
+
 ## [9.165] - 2026-08-15
 
 ### Added

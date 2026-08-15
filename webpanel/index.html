@@ -164,6 +164,19 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <div class="note">Deixa a palavra-passe em branco para a manter como está.</div>
   </div>
 
+  <div class="sec">CÓPIA DE SEGURANÇA</div>
+  <div class="card">
+    <p class="note" style="margin:0 0 11px">
+      Guarda ou repõe toda a configuração — funções, Wi-Fi e MQTT. Restaurar substitui
+      o que está no dispositivo.
+    </p>
+    <div class="btns"><button class="btn" id="a-export">Exportar configuração</button></div>
+    <div class="field" style="margin:11px 0 0"><label>RESTAURAR DE UM FICHEIRO</label>
+      <input type="file" id="r-file" accept=".json"></div>
+    <div class="btns"><button class="btn" id="r-send">Restaurar</button></div>
+    <div class="note" id="r-msg"></div>
+  </div>
+
   <div class="sec">ATUALIZAR POR FICHEIRO</div>
   <div class="card">
     <p class="note" style="margin:0 0 11px">
@@ -182,7 +195,6 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   <div class="btns">
     <button class="btn" id="a-reboot">Reiniciar</button>
     <button class="btn" id="a-update">Procurar atualização</button>
-    <button class="btn" id="a-export">Exportar configuração</button>
     <button class="btn d" id="a-defaults">Repor de origem</button>
   </div>
   <div class="note">Repor de origem apaga tudo: funções, Wi-Fi e MQTT.</div>

@@ -340,6 +340,22 @@ function pinEditor(f, i) {
   return block("SAÍDAS (relé)", "out", outs) + block("ENTRADAS (botão/sensor)", "in", ins) + warn;
 }
 
+/* How the physical input behaves. The firmware derives the driver from this on
+   every save (findDriver), so it decides whether a wall switch is a momentary
+   button or a latching one — the same wiring, two different behaviours. */
+const INPUT_MODES = [
+  { v: 0, n: "botão de pressão (momentâneo)" },
+  { v: 1, n: "interruptor (mantém posição)" },
+];
+function inputModeField(f, i) {
+  if (!isActuator(f) || f.inputMode == null) return "";
+  const opts = INPUT_MODES.map((m) =>
+    '<option value="' + m.v + '"' + (m.v === f.inputMode ? " selected" : "") + ">" +
+    m.n + "</option>").join("");
+  return '<div class="field"><label>MODO DE ENTRADA</label>' +
+    '<select data-f="inputMode" data-i="' + i + '" data-num="1">' + opts + "</select></div>";
+}
+
 function renderFeatures() {
   const feats = config.features || [];
   $("feat-list").innerHTML = feats.length ? feats.map((f, i) => {
@@ -347,6 +363,7 @@ function renderFeatures() {
     return '<div class="card" style="margin-bottom:9px" data-fi="' + i + '">' +
       '<div class="field"><label>NOME</label><input data-f="name" data-i="' + i + '" maxlength="23" value="' + esc(f.name) + '"></div>' +
       '<div class="kv"><span>tipo</span><b>' + esc(driverLabel(f.driver)) + "</b></div>" +
+      inputModeField(f, i) +
       pinEditor(f, i) +
       (cover ? '<div class="row2"><div class="field"><label>SUBIDA (s)</label>' +
         '<input type="number" min="1" max="300" data-f="upCourseTime" data-i="' + i + '" value="' + (f.upCourseTime || 0) + '"></div>' +
@@ -624,13 +641,58 @@ function uploadFirmware(btn) {
   }
 }
 
+/* The exported file carries backup:true, which is what makes POST /config take
+   the restore path and rebuild features rather than edit the current ones. */
 function exportConfig() {
-  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+  const snapshot = Object.assign({}, config, { backup: true });
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = (config.nodeId || "onofre") + "-config.json";
+  a.download = "CONFIG_" + (config.nodeId || "onofre") + "_ONOFRE_" + (config.firmware || "") + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+function restoreConfig(file, btn) {
+  const msg = $("r-msg");
+  const reader = new FileReader();
+  reader.onload = async () => {
+    let restored;
+    try {
+      restored = JSON.parse(reader.result);
+    } catch (e) {
+      msg.className = "note err";
+      msg.textContent = "O ficheiro não é uma configuração válida.";
+      return;
+    }
+    if (!restored.features) {
+      msg.className = "note err";
+      msg.textContent = "Falta a lista de funções — não parece uma cópia de segurança.";
+      return;
+    }
+    if (restored.chipId && config.chipId && restored.chipId !== config.chipId) {
+      msg.className = "note err";
+      msg.textContent = "Esta cópia é do dispositivo " + esc(restored.chipId) +
+        ", não deste (" + esc(config.chipId) + ").";
+      return;
+    }
+    if (!armed(btn, "Substituir tudo?")) return;
+    restored.backup = true;   // force the restore path even on an older export
+    msg.className = "note";
+    msg.textContent = "A restaurar…";
+    try {
+      config = await api("/config", { method: "POST", body: JSON.stringify(restored) });
+      clearDirty();
+      load();
+      msg.className = "note ok";
+      msg.textContent = "Configuração restaurada.";
+      toast("Configuração restaurada", "ok");
+    } catch (e) {
+      msg.className = "note err";
+      msg.textContent = "O dispositivo recusou a configuração.";
+    }
+  };
+  reader.readAsText(file);
 }
 
 /* ---------------- live updates ---------------- */
@@ -732,7 +794,10 @@ document.addEventListener("change", (ev) => {
   if (f) {
     const i = parseInt(f.dataset.i, 10);
     const key = f.dataset.f;
-    const val = f.type === "number" ? (parseInt(f.value, 10) || 0) : f.value;
+    // A <select> reports type "select-one", so numeric ones say so explicitly:
+    // the firmware reads inputMode as an int and falls back to PUSH otherwise.
+    const numeric = f.type === "number" || f.dataset.num === "1";
+    const val = numeric ? (parseInt(f.value, 10) || 0) : f.value;
     if (config.features[i]) { config.features[i][key] = val; markDirty(); }
     return;
   }
@@ -762,6 +827,15 @@ document.addEventListener("DOMContentLoaded", () => {
       () => toast("Registo copiado", "ok"), () => toast("Não foi possível copiar", "err"));
   };
   $("u-send").onclick = (e) => uploadFirmware(e.currentTarget);
+  $("r-send").onclick = (e) => {
+    const f = ($("r-file").files || [])[0];
+    if (!f) {
+      $("r-msg").className = "note err";
+      $("r-msg").textContent = "Escolhe primeiro o ficheiro .json.";
+      return;
+    }
+    restoreConfig(f, e.currentTarget);
+  };
   $("a-reboot").onclick = async (e) => {
     if (!armed(e.currentTarget, "Reiniciar?")) return;
     try { await api("/reboot", { method: "POST" }); toast("A reiniciar…", "ok"); } catch (err) { toast("Falhou", "err"); }
