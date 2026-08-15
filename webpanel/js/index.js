@@ -10,6 +10,7 @@ var heapHistory = [];     // free heap samples, for the sparkline
 var logPaused = false;
 var logLines = [];
 var source = null;
+var featureEventHandlers = [];
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
@@ -179,6 +180,7 @@ async function load() {
   renderDiag();
   fillSystem();
   fillNewFeatureForm();
+  wireFeatureEvents();
 }
 
 function renderHeader() {
@@ -527,6 +529,7 @@ async function addFeature() {
     $("nf-name").value = "";
     msg.className = "note ok"; msg.textContent = "Criada.";
     renderOverview(); renderPinout(); renderFeatures(); fillNewFeatureForm();
+    wireFeatureEvents();
     toast("Função criada", "ok");
   } catch (e) {
     msg.className = "note err";
@@ -571,6 +574,7 @@ async function save() {
     clearDirty();
     toast("Guardado", "ok");
     renderHeader(); renderOverview(); renderPinout(); renderFeatures(); renderDiag(); fillSystem(); fillNewFeatureForm();
+    wireFeatureEvents();
   } catch (e) {
     toast("Não foi possível guardar", "err");
   } finally {
@@ -753,9 +757,16 @@ function connectEvents() {
   wireFeatureEvents();
 }
 function wireFeatureEvents() {
+  if (!source) return;
+  // Config responses replace the feature objects. Remove the old closures so
+  // events update the current objects and newly added/restored ids are wired.
+  for (const entry of featureEventHandlers) {
+    source.removeEventListener(entry.id, entry.handler);
+  }
+  featureEventHandlers = [];
   for (const f of config.features || []) {
     (function (feat) {
-      source.addEventListener(feat.id, (e) => {
+      const handler = (e) => {
         feat.state = e.data;
         if (isActuator(feat)) {
           const sw = document.querySelector('[data-toggle="' + feat.id + '"]');
@@ -772,7 +783,9 @@ function wireFeatureEvents() {
           if (el) el.textContent = sensorText(e.data);
         }
         addLog("i", "[" + feat.name + "] " + String(e.data).slice(0, 90));
-      });
+      };
+      source.addEventListener(feat.id, handler);
+      featureEventHandlers.push({ id: feat.id, handler: handler });
     })(f);
   }
 }
