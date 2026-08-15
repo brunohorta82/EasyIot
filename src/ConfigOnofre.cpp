@@ -13,6 +13,31 @@
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 
 void actuatoresCallback(message_t const &msg, void *arg);
+
+// Kept out of any debug guard: the web panel shows this in release builds, where it
+// is the first thing worth knowing when a device has been misbehaving.
+String deviceResetReason()
+{
+#ifdef ESP8266
+  return ESP.getResetReason();
+#else
+  switch (esp_reset_reason())
+  {
+  case ESP_RST_POWERON:   return "Power-on";
+  case ESP_RST_EXT:       return "External reset";
+  case ESP_RST_SW:        return "Software reset";
+  case ESP_RST_PANIC:     return "Exception/Panic";
+  case ESP_RST_INT_WDT:   return "Interrupt watchdog";
+  case ESP_RST_TASK_WDT:  return "Task watchdog";
+  case ESP_RST_WDT:       return "Other watchdog";
+  case ESP_RST_DEEPSLEEP: return "Deep sleep wake";
+  case ESP_RST_BROWNOUT:  return "Brownout";
+  case ESP_RST_SDIO:      return "SDIO reset";
+  default:                return "Unknown";
+  }
+#endif
+}
+
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, int io, size_t maxSize)
 {
   id.reserve(maxSize);
@@ -640,7 +665,20 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["dhcp"] = dhcp;
   // DYNAMIC VALUES
   if (allFields)
+  {
     root["mqttConnected"] = mqttConnected();
+    // Diagnostics for the local panel. Deliberately not sent to the cloud sync,
+    // which has no use for them and is posted far more often.
+    root["freeHeap"] = ESP.getFreeHeap();
+#ifdef ESP8266
+    root["heapFrag"] = ESP.getHeapFragmentation();
+    root["maxFreeBlock"] = ESP.getMaxFreeBlockSize();
+#endif
+    root["uptime"] = millis() / 1000;
+    root["resetReason"] = deviceResetReason();
+    root["sketchSize"] = ESP.getSketchSize();
+    root["freeSketchSpace"] = ESP.getFreeSketchSpace();
+  }
   root["wifiIp"] = WiFi.localIP().toString();
   root["wifiMask"] = WiFi.subnetMask().toString();
   root["wifiGw"] = WiFi.gatewayIP().toString();

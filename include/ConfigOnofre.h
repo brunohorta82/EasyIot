@@ -10,6 +10,9 @@
 #endif
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+/** Why the device last restarted, in plain text. Available in release builds too. */
+String deviceResetReason();
+
 class ConfigOnofre
 {
 public:
