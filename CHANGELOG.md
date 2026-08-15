@@ -2,6 +2,36 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.162] - 2026-08-15
+
+### Changed
+- Web panel API: state-changing routes (`/reboot`, `/load-defaults`,
+  `/templates/change`) moved from `GET` to `POST`, with temporary `GET`
+  compatibility kept for older clients (#100).
+- Web panel now calls its own origin instead of a hardcoded API base URL, so it
+  works on whatever address the device is reached at (#93).
+- CloudIO config sync: per-attempt timeouts and HTTPS retries with backoff before
+  the one-time plain-HTTP fallback, which is still in place for devices whose TLS
+  handshake fails (#105).
+- Firmware build date exposed in the config/system API payload (#104).
+- `WEB_SECURE_ON` enforced on the remaining release profiles, so the on-device web
+  panel always requires its credentials (#99).
+
+### Fixed
+- Cleared config/sensor compiler warnings: deprecated ArduinoJson `containsKey()`
+  replaced with `isNull()` guards, and explicit no-op cases added for ESP32-only
+  drivers on ESP8266 (#94).
+
+### Build
+- Release builds also produce full-flash images for the browser installer at
+  `/flash/` (ESP8266 as-is, ESP32 merged with bootloader/partitions/boot_app0).
+- Cross-platform build tooling: the HTML converter and release validator are now
+  Python, so builds no longer depend on a bash/macOS-specific toolchain (#108).
+
+### Notes
+- Serial-console improvements (boot banner, reset reason, cleaner logs) ship in
+  #107 but are compiled out of release builds, which unflag `DEBUG_ONOFRE`.
+
 ## [9.161] - 2026-08-14
 
 ### Fixed
