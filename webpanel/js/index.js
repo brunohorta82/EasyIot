@@ -269,38 +269,45 @@ function renderPinout() {
     '<button class="btn" data-tpl="' + t.v + '">' + esc(t.n) + "</button>").join("");
 }
 
-/* Pins already spoken for by some OTHER feature; those must stay off the menu
-   or two drivers would end up fighting over one GPIO. */
-function pinsTakenByOthers(selfId) {
-  const taken = {};
+/* Which feature drives a given pin, ignoring the one being edited. Every pin
+   stays on the menu — an occupied one is named, not hidden, so it is obvious
+   what has to be freed first. */
+function pinOwners(selfId) {
+  const owner = {};
   for (const o of config.features || []) {
     if (o.id === selfId) continue;
-    for (const p of o.outputs || []) taken[p] = 1;
-    for (const p of o.inputs || []) taken[p] = 1;
+    for (const p of o.outputs || []) owner[p] = o.name;
+    for (const p of o.inputs || []) owner[p] = o.name;
   }
-  return taken;
+  return owner;
 }
 
-function pinSelect(f, fi, kind, slot, current) {
-  const taken = pinsTakenByOthers(f.id);
-  const opts = (config.usablePins || [])
-    .filter((p) => !taken[p] || p === current)
-    .map((p) => '<option value="' + p + '"' + (p === current ? " selected" : "") + ">GPIO" + p + "</option>")
-    .join("");
+function pinSelect(f, fi, kind, slot, current, owner) {
+  const opts = (config.usablePins || []).map((p) =>
+    '<option value="' + p + '"' + (p === current ? " selected" : "") + ">GPIO" + p +
+    (owner[p] ? " · ocupado (" + esc(owner[p]) + ")" : "") + "</option>").join("");
   return '<select data-pin="' + kind + '" data-i="' + fi + '" data-k="' + slot + '">' + opts + "</select>";
 }
 
-/* Editable wiring. The firmware only re-maps pins it can validate, so a refused
-   change simply comes back unchanged on the next read. */
+/* Editable wiring. The device refuses a pin it cannot give away, so a clash is
+   flagged here rather than letting the save look like it worked. */
 function pinEditor(f, i) {
   const outs = f.outputs || [];
   const ins = f.inputs || [];
   if (!outs.length && !ins.length) return "";
+  const owner = pinOwners(f.id);
   const block = (label, kind, pins) => !pins.length ? "" :
     '<div class="field"><label>' + label + "</label>" +
     '<div class="row2" style="grid-template-columns:repeat(' + Math.min(pins.length, 3) + ',1fr)">' +
-    pins.map((p, k) => pinSelect(f, i, kind, k, p)).join("") + "</div></div>";
-  return block("SAÍDAS (relé)", "out", outs) + block("ENTRADAS (botão/sensor)", "in", ins);
+    pins.map((p, k) => pinSelect(f, i, kind, k, p, owner)).join("") + "</div></div>";
+  const clashes = outs.concat(ins).filter((p) => owner[p]);
+  const warn = clashes.length
+    ? '<div class="note err">GPIO' + clashes.join(", GPIO") + " já " +
+      (clashes.length > 1 ? "estão a ser usados" : "está a ser usado") +
+      " por <b>" + esc(owner[clashes[0]]) + "</b>. O dispositivo recusa a alteração até libertares " +
+      (clashes.length > 1 ? "esses pinos" : "esse pino") + ".</div>"
+    : "";
+  return block("SAÍDAS (relé)", "out", outs) + block("ENTRADAS (botão/sensor)", "in", ins) + warn;
 }
 
 function renderFeatures() {
@@ -383,32 +390,43 @@ function fillNewFeatureForm() {
   const sel = $("nf-driver");
   sel.innerHTML = DRIVERS.map((g) => '<optgroup label="' + esc(g.g) + '">' +
     g.items.map((d) => '<option value="' + d.v + '">' + esc(d.n) + "</option>").join("") + "</optgroup>").join("");
-  const used = {};
-  for (const f of config.features || []) {
-    for (const o of f.outputs || []) used[o] = 1;
-    for (const i of f.inputs || []) used[i] = 1;
-  }
+  // Every usable pin is listed; an occupied one names its owner instead of
+  // disappearing, so it is clear what is in the way.
+  const owner = pinOwners(null);
   const pins = config.usablePins || [];
   const opts = pins.map((p) =>
-    '<option value="' + p + '"' + (used[p] ? " disabled" : "") + ">GPIO" + p + (used[p] ? " (ocupado)" : "") + "</option>").join("");
+    '<option value="' + p + '">GPIO' + p +
+    (owner[p] ? " · ocupado (" + esc(owner[p]) + ")" : "") + "</option>").join("");
+  const first = pins.find((p) => !owner[p]);
   $("nf-p1").innerHTML = opts;
   $("nf-p2").innerHTML = opts;
-  // A select whose options are all disabled just renders blank; say why.
-  const free = pins.filter((p) => !used[p]).length;
-  const msg = $("nf-msg");
-  $("nf-add").disabled = free === 0;
-  if (free === 0) {
-    msg.className = "note err";
-    msg.textContent = "Não há pinos livres. Liberta um pino noutra função para poder criar mais.";
-  } else if (msg.textContent.indexOf("pinos livres") >= 0) {
-    msg.className = "note";
-    msg.textContent = "";
-  }
+  if (first != null) $("nf-p1").value = String(first);
   onDriverChange();
+  onNewPinChange();
 }
 function onDriverChange() {
   const d = driverInfo(parseInt($("nf-driver").value, 10));
   $("nf-p2-box").classList.toggle("hide", !d || d.pins < 2);
+  onNewPinChange();
+}
+
+/* Warn before the device refuses the pin, rather than after. */
+function onNewPinChange() {
+  const d = driverInfo(parseInt($("nf-driver").value, 10));
+  const owner = pinOwners(null);
+  const chosen = [parseInt($("nf-p1").value, 10)];
+  if (d && d.pins > 1) chosen.push(parseInt($("nf-p2").value, 10));
+  const busy = chosen.filter((p) => !isNaN(p) && owner[p]);
+  const msg = $("nf-msg");
+  if (busy.length) {
+    msg.className = "note err";
+    msg.innerHTML = "GPIO" + busy.join(", GPIO") + " já " +
+      (busy.length > 1 ? "estão ocupados" : "está ocupado") +
+      " por <b>" + esc(owner[busy[0]]) + "</b>. Escolhe outro ou liberta-o primeiro.";
+  } else if (msg.className.indexOf("err") >= 0) {
+    msg.className = "note";
+    msg.textContent = "";
+  }
 }
 
 /* ---------------- actions ---------------- */
@@ -449,7 +467,8 @@ function featureError(e) {
   if (code === 1) return "Dá um nome à função.";
   if (code === 2) return "Esse pino não serve nesta placa — escolhe outro.";
   if (code === 3) return "Tipo de função inválido para este firmware.";
-  if (code === 4) return "Este tipo precisa de dois pinos.";
+  if (code === 4) return "Este tipo precisa de dois pinos válidos.";
+  if (code === 5) return "Esse pino já está a ser usado por outra função.";
   return "O dispositivo recusou a função.";
 }
 
@@ -631,6 +650,7 @@ document.addEventListener("change", (ev) => {
     return;
   }
   if (ev.target.id === "nf-driver") { onDriverChange(); return; }
+  if (ev.target.id === "nf-p1" || ev.target.id === "nf-p2") { onNewPinChange(); return; }
   if (ev.target.id === "s-dhcp") { $("s-static").classList.toggle("hide", ev.target.checked); markDirty(); return; }
   if (ev.target.closest("#v-system")) markDirty();
 });

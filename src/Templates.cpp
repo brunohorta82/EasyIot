@@ -183,6 +183,25 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
     }
     else
     {
+        // Sensors used to skip validation entirely, so a bogus or already-taken
+        // pin was accepted and only showed up as a driver that never reads.
+        if (name.isEmpty())
+            return 1;
+        if (!config.validPin(input1))
+            return 2;
+        if (config.pinInUse(input1))
+            return 5;
+        const bool dualPin = driverCode == SensorDriver::HCSR04 ||
+                             driverCode == SensorDriver::LD2410 ||
+                             driverCode == SensorDriver::PZEM_004T_V03 ||
+                             driverCode == SensorDriver::PZEM_004T_V01;
+        if (dualPin)
+        {
+            if (!config.validPin(input2))
+                return 4;
+            if (input1 == input2 || config.pinInUse(input2))
+                return 5;
+        }
         switch (driverCode)
         {
         case SensorDriver::DHT_11:
@@ -227,6 +246,8 @@ int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, 
         return 2;
     if (ActuatorDriver::INVALID == driver)
         return 3;
+    if (config.pinInUse(input1))
+        return 5;
     Actuator actuator;
     actuator.driver = driver;
     actuator.inputs.push_back(input1);
@@ -236,6 +257,8 @@ int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, 
     }
     else if (actuator.requireDualInputs())
     {
+        if (input1 == input2 || config.pinInUse(input2))
+            return 5;
         actuator.inputs.push_back(input2);
     }
     strncpy(actuator.name, name.c_str(), sizeof(actuator.name));

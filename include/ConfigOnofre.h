@@ -101,6 +101,27 @@ public:
     }
     return false;
   }
+  // True when a feature already drives this pin. Without this a second feature
+  // could be created on top of the first, leaving two drivers on one GPIO.
+  bool pinInUse(unsigned int pin)
+  {
+    for (auto &a : actuatores)
+    {
+      for (auto p : a.inputs)
+        if (p == pin)
+          return true;
+      for (auto p : a.outputs)
+        if (p == pin)
+          return true;
+    }
+    for (auto &s : sensors)
+    {
+      for (auto p : s.inputs)
+        if (p == pin)
+          return true;
+    }
+    return false;
+  }
   void requestReloadWifi();
   bool isReloadWifiRequested();
   void controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result);
