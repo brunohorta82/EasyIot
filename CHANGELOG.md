@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.163] - 2026-08-15
+
+### Fixed
+- **A silent HAN meter no longer resets the device.** Three defects on the meter
+  read path combined into a reboot loop whenever a meter stopped answering,
+  which matches the MQTT reconnect flapping seen on HAN units:
+  - the clock read filled a six-word array with an `i <= available()` loop,
+    writing one element past the end and corrupting the stack
+    (`std::array::operator[]` does not bounds-check, so it failed silently);
+  - `setError()` was commented out in the first read's error branch, so a meter
+    that stopped answering was polled another seven times instead of once, each
+    blocking for the full 2 s Modbus timeout;
+  - that timeout was a tight spin with no yield, holding the CPU outright — past
+    the ESP8266 software watchdog at ~3.2 s, resetting the device and dropping
+    its MQTT session.
+
 ## [9.162] - 2026-08-15
 
 ### Changed
@@ -105,6 +121,8 @@ All notable changes to this project are documented in this file.
 - Added release checklist in repo docs.
 - Added `tools/generate_release_notes.sh` to create `RELEASE_NOTES_DRAFT.md` from git history.
 
-## [9.163] - Stable baseline
+## Baseline - before 9.17-dev
 
-- Baseline before `9.17-dev` maintenance and build-flow updates.
+- Snapshot before the `9.17-dev` maintenance and build-flow updates. Labelled
+  `9.163` at the time, renamed here so it cannot be mistaken for the released
+  9.163 above.
