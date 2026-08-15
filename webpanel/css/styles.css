@@ -5,7 +5,27 @@
   --bg: #080b0f; --panel: #0f151c; --panel2: #151d26; --line: #1e2833;
   --txt: #dfe7ee; --dim: #7c8b9a; --grn: #97d700; --grn2: #43c78a;
   --amb: #f5a623; --red: #e5484d; --blu: #5b9bd5;
+  --sunk: #1b232c;      /* wells: track bars, inactive tags */
+  --knob: #5b6b7d;      /* switch knob when off */
+  --swoff: #243040;     /* switch body when off */
+  --logbg: #05080b;     /* console is darker than the cards it sits among */
+  --logts: #4a5866;
+  --hover: #34455a;
+  --brand: #97d700;     /* the mark itself; --grn shifts for contrast */
   --r: 10px;
+}
+/* Light theme. The brand green is kept for the logo but darkened wherever it
+   carries text or a border, which it cannot do legibly on white. */
+:root[data-theme="light"] {
+  --bg: #eef1f4; --panel: #ffffff; --panel2: #f4f7f9; --line: #d8e0e7;
+  --txt: #16202b; --dim: #5b6a78; --grn: #5c8a00; --grn2: #1f8f5f;
+  --amb: #a86400; --red: #c62a2f; --blu: #2f6ea8;
+  --sunk: #e2e8ee;
+  --knob: #ffffff;
+  --swoff: #c3ced9;
+  --logbg: #f7f9fb;
+  --logts: #8494a3;
+  --hover: #9fb0bf;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -24,7 +44,8 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
   position: sticky; top: 0; z-index: 20;
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: .16em; color: var(--grn); }
-.brand svg { width: 20px; height: 20px; }
+/* The mark keeps the true brand green even where text has to darken. */
+.brand svg { width: 20px; height: 20px; color: var(--brand); }
 .hid { color: var(--dim); font-size: 11.5px; }
 .spacer { flex: 1; }
 .pill {
@@ -65,10 +86,10 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
 /* ---------- feature rows ---------- */
 .frow { display: flex; align-items: center; gap: 11px; padding: 9px 11px; background: var(--panel);
   border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 7px; }
-.sw { width: 44px; height: 24px; border-radius: 999px; background: #243040; position: relative;
+.sw { width: 44px; height: 24px; border-radius: 999px; background: var(--swoff); position: relative;
   flex: none; border: 1px solid var(--line); cursor: pointer; }
 .sw i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
-  background: #5b6b7d; transition: left .18s, background .18s; }
+  background: var(--knob); transition: left .18s, background .18s; }
 .sw.on { background: rgba(151,215,0,.25); border-color: var(--grn); }
 .sw.on i { left: 22px; background: var(--grn); }
 .fname { flex: 1; min-width: 100px; }
@@ -76,7 +97,7 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
 .fname span { font-size: 11px; color: var(--dim); }
 .pins { font-size: 10.5px; color: var(--dim); background: var(--panel2); border: 1px solid var(--line);
   border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
-.bar { height: 5px; background: #1b232c; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.bar { height: 5px; background: var(--sunk); border-radius: 3px; overflow: hidden; margin-top: 6px; }
 .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--grn), var(--grn2)); }
 input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .fval { font-size: 15px; font-weight: 700; }
@@ -96,14 +117,14 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .tag { font-size: 9.5px; letter-spacing: .05em; border-radius: 4px; padding: 2px 6px; font-weight: 700; white-space: nowrap; }
 .t-out { background: rgba(151,215,0,.16); color: var(--grn); }
 .t-in { background: rgba(91,155,213,.18); color: var(--blu); }
-.t-free { background: #1b232c; color: #6b7a89; }
+.t-free { background: var(--sunk); color: var(--dim); }
 .t-res { background: rgba(229,72,77,.15); color: var(--red); }
 
 /* ---------- log ---------- */
-.log { background: #05080b; border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px;
+.log { background: var(--logbg); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px;
   font-size: 11px; line-height: 1.7; max-height: 240px; overflow: auto; }
 .log div { white-space: pre-wrap; word-break: break-word; }
-.log .t { color: #4a5866; } .log .i { color: var(--grn2); } .log .w { color: var(--amb); } .log .e { color: var(--red); }
+.log .t { color: var(--logts); } .log .i { color: var(--grn2); } .log .w { color: var(--amb); } .log .e { color: var(--red); }
 .spark { width: 100%; height: 36px; display: block; margin-top: 6px; }
 
 /* ---------- forms ---------- */
@@ -117,7 +138,7 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .btn { display: inline-block; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
   padding: 7px 13px; font-size: 11.5px; cursor: pointer; }
-.btn:hover { border-color: #34455a; }
+.btn:hover { border-color: var(--hover); }
 .btn.p { background: rgba(151,215,0,.15); border-color: var(--grn); color: var(--grn); }
 .btn.d { border-color: rgba(229,72,77,.5); color: var(--red); }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
@@ -130,6 +151,9 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 #toast.err { border-color: var(--red); color: var(--red); }
 #toast.ok { border-color: var(--grn); color: var(--grn); }
+
+.btn.ico { padding: 4px 8px; line-height: 0; }
+.btn.ico svg { width: 15px; height: 15px; display: block; }
 
 /* ---------- save ---------- */
 /* Lives in the header so it never shifts as tabs of different heights swap in. */

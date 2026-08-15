@@ -73,6 +73,36 @@ const TEMPLATES = [
   { v: 4, n: "Portão" }, { v: 5, n: "Contador HAN" }, { v: 6, n: "Rega" },
 ];
 
+/* ---------------- theme ---------------- */
+/* The choice lives in localStorage, not in the device config: it belongs to
+   whoever is looking, and writing it to the device would burn flash on a
+   preference the next browser would not share. The <head> applies it before
+   the first paint; this only handles the toggle. */
+const THEME_KEY = "onofre-theme";
+const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+  '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>';
+
+function currentTheme() {
+  return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+}
+function applyTheme(name) {
+  document.documentElement.setAttribute("data-theme", name);
+  try { localStorage.setItem(THEME_KEY, name); } catch (e) { /* private mode */ }
+  const btn = $("theme-btn");
+  if (btn) {
+    // Show what the click will do, not what is on screen.
+    btn.innerHTML = name === "light" ? MOON : SUN;
+    btn.title = name === "light" ? "Tema escuro" : "Tema claro";
+  }
+  drawSpark("d-heap-spark", heapHistory, accent());
+}
+/* Charts are drawn, not styled, so they have to read the token themselves. */
+function accent() {
+  return getComputedStyle(document.documentElement).getPropertyValue("--grn").trim() || "#97d700";
+}
+
 /* ---------------- helpers ---------------- */
 function toast(msg, kind) {
   const t = $("toast");
@@ -339,7 +369,7 @@ function renderDiag() {
     heapHistory.push(heap);
     if (heapHistory.length > 40) heapHistory.shift();
     $("d-heap").innerHTML = (heap / 1024).toFixed(1) + "<small>KB</small>";
-    drawSpark("d-heap-spark", heapHistory, "#97d700");
+    drawSpark("d-heap-spark", heapHistory, accent());
     const frag = config.heapFrag;
     $("d-heap-note").textContent = frag != null
       ? "fragmentação " + frag + "% · maior bloco livre " + Math.round((config.maxFreeBlock || 0) / 1024) + " KB"
@@ -660,6 +690,8 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
+  applyTheme(currentTheme());        // paints the button for the theme already applied
+  $("theme-btn").onclick = () => applyTheme(currentTheme() === "light" ? "dark" : "light");
   $("save-btn").onclick = save;
   $("nf-add").onclick = addFeature;
   $("a-export").onclick = exportConfig;

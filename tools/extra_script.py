@@ -99,8 +99,13 @@ def run_release_validation(source, target, env):
     return 0
 
 
-# Run before firmware link/build output is generated.
-env.AddPreAction("$PROGPATH", Action(run_html_converter, "Pre-build: HTML convert"))
+# The web panel is embedded as generated headers, so it has to be rebuilt before
+# the compiler reads them. A PreAction on $PROGPATH is not enough: when only
+# webpanel/ changed there is nothing to recompile, SCons skips the link, and the
+# action never fires — the build then reports SUCCESS while embedding the
+# previous panel. Regenerating at script-load time runs on every invocation.
+run_html_converter(None, None, env)
+
 env.AddPreAction("$PROGPATH", Action(run_release_validation, "Pre-build: release validation"))
 
 # Firmware naming

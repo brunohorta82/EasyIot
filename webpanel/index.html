@@ -5,12 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OnOfre</title>
 <link rel="stylesheet" href="css/styles.css?v=__ASSET_VERSION__">
+<script>/* Applied before the first paint, otherwise the page flashes the wrong theme. */
+try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-scheme:light)").matches?"light":"dark");document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 </head>
 <body>
 
 <div class="hdr">
   <div class="brand">
-    <svg viewBox="0 0 69 67" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.93 67c-1.37 0-2.48-1.13-2.48-2.52V34.87c0-3.69 1.59-7.19 4.36-9.58l15.6-13.51c4.69-4.05 11.59-4.01 16.23.09l15.18 13.44a12.63 12.63 0 0 1 4.25 9.49v5.88c3.44 1.07 5.93 4.28 5.93 8.08a8.45 8.45 0 0 1-8.44 8.46 8.45 8.45 0 0 1-8.44-8.46c0-3.82 2.52-7.04 5.98-8.1v-5.86c0-2.18-.93-4.26-2.55-5.69L40.37 15.67a6.6 6.6 0 0 0-9.73-.05l-15.61 13.5a7.55 7.55 0 0 0-2.59 5.75v29.61c0 1.39-1.11 2.52-2.48 2.52Z" fill="#97D700"/><path d="M8.44 16.92a8.45 8.45 0 0 0 8.44-8.46A8.45 8.45 0 0 0 8.44 0 8.45 8.45 0 0 0 0 8.46a8.45 8.45 0 0 0 8.44 8.46Z" fill="#97D700"/></svg>
+    <svg viewBox="0 0 69 67" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.93 67c-1.37 0-2.48-1.13-2.48-2.52V34.87c0-3.69 1.59-7.19 4.36-9.58l15.6-13.51c4.69-4.05 11.59-4.01 16.23.09l15.18 13.44a12.63 12.63 0 0 1 4.25 9.49v5.88c3.44 1.07 5.93 4.28 5.93 8.08a8.45 8.45 0 0 1-8.44 8.46 8.45 8.45 0 0 1-8.44-8.46c0-3.82 2.52-7.04 5.98-8.1v-5.86c0-2.18-.93-4.26-2.55-5.69L40.37 15.67a6.6 6.6 0 0 0-9.73-.05l-15.61 13.5a7.55 7.55 0 0 0-2.59 5.75v29.61c0 1.39-1.11 2.52-2.48 2.52Z" fill="currentColor"/><path d="M8.44 16.92a8.45 8.45 0 0 0 8.44-8.46A8.45 8.45 0 0 0 8.44 0 8.45 8.45 0 0 0 0 8.46a8.45 8.45 0 0 0 8.44 8.46Z" fill="currentColor"/></svg>
     ONOFRE
   </div>
   <span class="hid"><b id="h-name">…</b> · <span id="h-chip"></span> · <span id="h-mcu"></span></span>
@@ -19,6 +21,7 @@
   <span class="pill" id="h-mqtt">MQTT <b>—</b></span>
   <span class="pill" id="h-up">ligado há <b>—</b></span>
   <span class="dirty hide" id="dirty">por guardar</span>
+  <button class="btn ico" id="theme-btn" title="Mudar tema" aria-label="Mudar tema"></button>
   <button class="btn p" id="save-btn" disabled>Guardar</button>
 </div>
 
