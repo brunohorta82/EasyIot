@@ -1,707 +1,675 @@
-const baseUrl = (window.location.origin && window.location.origin !== "null") ? window.location.origin : "";
-var config;
-var lastVersion = "";
-let source = null;
-var currentPage = "node"
-var WORDS_PT = {
-    "dual_push": "Pulsador Duplo",
-    "dual_latch": "Normal Duplo",
-    "single_latch": "Normal",
-    "pin_input": "Pino Entrada",
-    "pin_up": "Pino Abrir",
-    "pin_down": "Pino Fechar",
-    "single_push": "Pulsador",
-    "trigger": "Trigger",
-    "echo": "Echo",
-    "update_to": "Atualizar automáticamente para a versão",
-    "config_save_error": "Não foi possivel guardar a configuração atual, por favor tenta novamente.",
-    "config_save_ok": "Configuração Guardada",
-    "device_reboot_ok": "O dispositivo está a reiniciar, ficará disponivel dentro de 10 segundos.",
-    "device_error": "Não foi possivel finalizar a acção, verifique se está correctamente ligado à rede. Se o problema persistir tente desligar da energia e voltar a ligar.",
-    "device_update_ok": "O dispositivo está a atualizar, ficará disponivel dentro de 20 segundos.",
-    "defaults_ok": "Configuração de fábrica aplicada com sucesso. Por favor volte a ligar-se ao Access Point e aceda ao painel de controlo pelo endereço http://192.168.4.1 no seu browser.",
+let baseUrl = (location.origin && location.origin !== "null") ? location.origin : "";
+/* OnOfre device panel.
+   The build strips this first line and injects `let baseUrl = ""` so the embedded
+   copy talks to whatever address the device was reached at. */
+
+var config = {};          // last config read from the device
+var dirty = false;        // unsaved edits in the forms
+var removed = [];         // feature ids queued for removal
+var heapHistory = [];     // free heap samples, for the sparkline
+var logPaused = false;
+var logLines = [];
+var source = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* Drivers the firmware can create, grouped for the picker. `pins` is how many
+   GPIOs prepareNewFeature() expects — the form follows it. */
+const DRIVERS = [
+  { g: "Luzes e tomadas", items: [
+    { v: 7, t: "LIGHT_PUSH", n: "Luz · botão de pressão", pins: 1 },
+    { v: 8, t: "LIGHT_LATCH", n: "Luz · interruptor", pins: 1 },
+    { v: 1, t: "SWITCH_PUSH", n: "Tomada · botão de pressão", pins: 1 },
+    { v: 2, t: "SWITCH_LATCH", n: "Tomada · interruptor", pins: 1 },
+  ]},
+  { g: "Estores e portões", items: [
+    { v: 3, t: "COVER_SINGLE_PUSH", n: "Estore · um botão", pins: 1 },
+    { v: 4, t: "COVER_DUAL_PUSH", n: "Estore · dois botões", pins: 2 },
+    { v: 5, t: "COVER_DUAL_LATCH", n: "Estore · dois interruptores", pins: 2 },
+    { v: 9, t: "GARAGE_PUSH", n: "Portão", pins: 1 },
+    { v: 10, t: "GARDEN_VALVE", n: "Válvula de rega", pins: 1 },
+  ]},
+  { g: "Sensores", items: [
+    { v: 111, t: "DHT_11", n: "DHT11 · temperatura e humidade", pins: 1 },
+    { v: 121, t: "DHT_21", n: "DHT21 · temperatura e humidade", pins: 1 },
+    { v: 122, t: "DHT_22", n: "DHT22 · temperatura e humidade", pins: 1 },
+    { v: 90, t: "DS18B20", n: "DS18B20 · temperatura", pins: 1 },
+    { v: 84, t: "DOOR", n: "Sensor de porta", pins: 1 },
+    { v: 85, t: "WINDOW", n: "Sensor de janela", pins: 1 },
+    { v: 82, t: "PIR", n: "Movimento (PIR)", pins: 1 },
+    { v: 83, t: "RAIN", n: "Chuva", pins: 1 },
+    { v: 93, t: "HCSR04", n: "Distância (HC-SR04)", pins: 2 },
+    { v: 94, t: "LD2410", n: "Presença (LD2410)", pins: 2 },
+    { v: 71, t: "PZEM_004T_V03", n: "Contador PZEM v3", pins: 2 },
+    { v: 72, t: "PZEM_004T_V01", n: "Contador PZEM v1", pins: 2 },
+  ]},
+];
+const driverInfo = (v) => {
+  for (const g of DRIVERS) for (const d of g.items) if (d.v === v) return d;
+  return null;
+};
+
+/* Drivers a device may report but the panel cannot create — a template or an
+   older firmware put them there, and they still deserve a readable name. */
+const EXTRA_DRIVER_LABELS = {
+  HAN_MODBUS: "Contador de energia HAN",
+  HAN_MODBUS_8N2: "Contador de energia HAN (8N2)",
+  SHT4X: "SHT4x · temperatura e humidade",
+  LTR303: "Sensor de luminosidade",
+  TMF882X: "Distância (TMF882x)",
+  LOCK_PUSH: "Fechadura",
+  INVALID: "desconhecido",
+};
+/* /config reports the driver as a token; show it in the words the apps use. */
+function driverLabel(token) {
+  if (!token) return "—";
+  for (const g of DRIVERS) for (const d of g.items) if (d.t === token) return d.n;
+  return EXTRA_DRIVER_LABELS[token] || token;
+}
+const TEMPLATES = [
+  { v: 1, n: "Duas luzes" }, { v: 2, n: "Duas tomadas" }, { v: 3, n: "Estore" },
+  { v: 4, n: "Portão" }, { v: 5, n: "Contador HAN" }, { v: 6, n: "Rega" },
+];
+
+/* ---------------- helpers ---------------- */
+function toast(msg, kind) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "on " + (kind || "");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.className = ""; }, 3200);
+}
+function markDirty() { dirty = true; $("dirty").classList.remove("hide"); }
+function clearDirty() { dirty = false; $("dirty").classList.add("hide"); }
+
+function duration(sec) {
+  sec = Math.floor(sec || 0);
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  if (d) return d + "d " + String(h).padStart(2, "0") + "h";
+  if (h) return h + "h " + String(m).padStart(2, "0") + "m";
+  return m + "m";
+}
+function rssiText(dbm) {
+  if (dbm == null) return "—";
+  const q = dbm >= -60 ? "bom" : dbm >= -70 ? "razoável" : dbm >= -80 ? "fraco" : "muito fraco";
+  return dbm + " dBm · " + q;
+}
+function rssiClass(dbm) { return dbm == null ? "" : dbm >= -70 ? "ok" : dbm >= -80 ? "warn" : "bad"; }
+
+async function api(path, opts) {
+  const res = await fetch(baseUrl + path, Object.assign(
+    { headers: { "Content-Type": "application/json", "Accept": "application/json" } }, opts || {}));
+  const txt = await res.text();
+  let body = null;
+  try { body = txt ? JSON.parse(txt) : null; } catch (e) { /* not JSON */ }
+  if (!res.ok) {
+    // A refusal carries {result:<code>}; keep it so callers can explain why.
+    const err = new Error("HTTP " + res.status);
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
+  return body;
 }
 
-function parseVersion(version) {
-    const raw = (version || "").toString().trim();
-    const parts = raw.split("-", 2);
-    const core = parts[0]
-        .split(".")
-        .map((value) => {
-            const numeric = value.replace(/[^0-9]/g, "");
-            return numeric.length ? parseInt(numeric, 10) : 0;
-        });
-    const suffix = (parts[1] || "").toLowerCase();
-    return {core, suffix};
+/* ---------------- load & render ---------------- */
+async function load() {
+  try {
+    config = await api("/config");
+  } catch (e) {
+    toast("Não foi possível ler a configuração", "err");
+    return;
+  }
+  removed = [];
+  renderHeader();
+  renderOverview();
+  renderPinout();
+  renderFeatures();
+  renderDiag();
+  fillSystem();
+  fillNewFeatureForm();
 }
 
-function compareVersions(leftVersion, rightVersion) {
-    const left = parseVersion(leftVersion);
-    const right = parseVersion(rightVersion);
-    const maxLength = Math.max(left.core.length, right.core.length);
-    for (let i = 0; i < maxLength; i++) {
-        const leftPart = left.core[i] || 0;
-        const rightPart = right.core[i] || 0;
-        if (leftPart !== rightPart) {
-            return leftPart > rightPart ? 1 : -1;
-        }
+function renderHeader() {
+  $("h-name").textContent = config.nodeId || "—";
+  $("h-chip").textContent = config.chipId || "";
+  $("h-mcu").textContent = config.mcu || "";
+  const w = $("h-wifi");
+  w.className = "pill " + rssiClass(config.signal);
+  w.innerHTML = "WiFi <b>" + esc(rssiText(config.signal)) + "</b>";
+  setMqttPill(config.mqttConnected);
+  $("h-up").innerHTML = "ligado há <b>" + duration(config.uptime) + "</b>";
+}
+function setMqttPill(on) {
+  const m = $("h-mqtt");
+  m.className = "pill " + (on ? "ok" : "bad");
+  m.innerHTML = "MQTT <b>" + (on ? "ligado" : "desligado") + "</b>";
+}
+
+const isActuator = (f) => f.group === "ACTUATOR";
+const isCover = (f) => (f.driver || "").indexOf("COVER") === 0;
+
+function renderOverview() {
+  const feats = config.features || [];
+  const acts = feats.filter(isActuator);
+  const sens = feats.filter((f) => !isActuator(f));
+
+  $("ov-actuators").innerHTML = acts.length ? acts.map((f) => {
+    const pins = (f.outputs || []).length ? "OUT " + f.outputs.join(",") : "";
+    const ins = (f.inputs || []).length ? "IN " + f.inputs.join(",") : "";
+    const state = parseInt(f.state, 10) || 0;
+    if (isCover(f)) {
+      return '<div class="frow"><div class="fname"><b>' + esc(f.name) + "</b><span>estore · " +
+        state + '% aberto</span><input type="range" min="0" max="100" value="' + state +
+        '" data-cover="' + esc(f.id) + '"></div>' +
+        '<span class="pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span></div>";
     }
-    if (left.suffix === right.suffix) {
-        return 0;
-    }
-    if (!left.suffix) {
-        return 1;
-    }
-    if (!right.suffix) {
-        return -1;
-    }
-    return left.suffix.localeCompare(right.suffix);
+    return '<div class="frow"><div class="sw ' + (state > 0 ? "on" : "") + '" data-toggle="' + esc(f.id) + '"><i></i></div>' +
+      '<div class="fname"><b>' + esc(f.name) + "</b><span>" + esc(f.family || "") + "</span></div>" +
+      '<span class="pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span></div>";
+  }).join("") : '<div class="note">Sem acessórios configurados.</div>';
+
+  $("ov-sensors-title").classList.toggle("hide", !sens.length);
+  $("ov-sensors").innerHTML = sens.map((f) => isEnergy(f) ? energyCard(f) :
+    '<div class="card"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
+    esc(sensorText(f.state)) + "</div></div>").join("");
 }
 
-function create() {
-    let s = {};
-    s.name = getValue("f-n-name", "sem nome");
-    s.driver = parseInt(getValue("f-n-driver", 999));
-    s.input1 = parseInt(getValue("f-n-pin-1", 999));
-    s.input2 = parseInt(getValue("f-n-pin-2", 999));
-    fetch(baseUrl + "/features", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify(s)
-    }).then(response => response.json()).then(json => config = json).then(() => {
-        showMessage("config_save_ok");
-        refreshFeatures();
-        clearCreate();
-        closeModal("wizard");
+/* Energy meters report a dozen fields; a one-line summary would throw away
+   everything that matters, so they get a card of their own. */
+const ENERGY_DRIVERS = ["HAN_MODBUS", "HAN_MODBUS_8N2", "PZEM_004T_V03", "PZEM_004T_V01"];
+const isEnergy = (f) => ENERGY_DRIVERS.indexOf(f.driver) >= 0;
 
+const ENERGY_FIELDS = [
+  { k: "voltage", n: "tensão", u: " V", d: 1 },
+  { k: "current", n: "corrente", u: " A", d: 2 },
+  { k: "powerFactor", n: "fator de potência", u: "", d: 2 },
+  { k: "frequency", n: "frequência", u: " Hz", d: 1 },
+  { k: "energy", n: "energia", u: " kWh", d: 2 },
+  { k: "powerImport", n: "importado", u: " kWh", d: 1 },
+  { k: "powerExport", n: "exportado", u: " kWh", d: 1 },
+  { k: "rate1", n: "vazio", u: " kWh", d: 1 },
+  { k: "rate2", n: "cheias", u: " kWh", d: 1 },
+  { k: "rate3", n: "ponta", u: " kWh", d: 1 },
+];
+const TARIFF = { 1: "vazio", 2: "cheias", 3: "ponta" };
 
-    }).catch(() =>
-        showMessage("config_save_error")
-    );
-
+function parseState(state) {
+  if (state == null || state === "") return null;
+  let o = state;
+  if (typeof o === "string") { try { o = JSON.parse(o); } catch (e) { return null; } }
+  return typeof o === "object" ? o : null;
 }
 
-function getI18n(key) {
-    return WORDS_PT[key];
+/* Importing reads positive; exporting to the grid reads negative and green. */
+function energyCard(f) {
+  const o = parseState(f.state) || {};
+  const imp = Number(o.power || 0);
+  const exp = Number(o.export || 0);
+  const net = exp > 0 && imp <= 0 ? -exp : imp;
+  const rows = ENERGY_FIELDS
+    .filter((x) => o[x.k] != null)
+    .map((x) => '<div class="kv"><span>' + x.n + "</span><b>" +
+      Number(o[x.k]).toFixed(x.d) + x.u + "</b></div>").join("");
+  const bad = o.status || (o.error ? "erro de leitura" : "");
+  return '<div class="card"><h4>' + esc(f.name) + "</h4>" +
+    '<div class="big ' + (net < 0 ? "grn" : "") + '" id="sv-' + esc(f.id) + '">' +
+      (net < 0 ? "−" : "") + Math.abs(Math.round(net)) + "<small>W</small></div>" +
+    '<div class="note" style="margin:2px 0 8px">' +
+      (net < 0 ? "a exportar para a rede" : "a consumir da rede") + "</div>" +
+    rows +
+    (o.tarif != null ? '<div class="kv"><span>tarifa</span><b>' +
+      esc(TARIFF[o.tarif] || o.tarif) + "</b></div>" : "") +
+    (bad ? '<div class="note err">' + esc(bad) + "</div>" : "") +
+    "</div>";
 }
 
-function toggleActive(menu) {
-    findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.remove("active");
-    findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.remove("active");
-    if (menu === "devices") {
-        findByClass("onofre-menu").getElementsByTagName("li").item(0).classList.add("active");
-        findById("node-pn").classList.add("hide");
-        findById("feature-pn").classList.remove("hide");
-        findById("w-add").classList.remove("hide");
-    } else {
-        findByClass("onofre-menu").getElementsByTagName("li").item(1).classList.add("active");
-        findById("node-pn").classList.remove("hide");
-        findById("feature-pn").classList.add("hide");
-        findById("w-add").classList.add("hide");
-    }
-
+/* Sensor state arrives as JSON for most drivers and as a bare value for others. */
+function sensorText(state) {
+  if (state == null || state === "") return "—";
+  let o = state;
+  if (typeof o === "string") { try { o = JSON.parse(o); } catch (e) { return o; } }
+  if (typeof o !== "object") return String(o);
+  const bits = [];
+  if (o.temperature != null) bits.push(Number(o.temperature).toFixed(1) + "°C");
+  if (o.humidity != null) bits.push(Math.round(o.humidity) + "%");
+  if (o.power != null) bits.push(Math.round(o.power) + "W");
+  if (o.distance != null) bits.push(Math.round(o.distance) + "cm");
+  if (o.illuminance != null) bits.push(Math.round(o.illuminance) + "lx");
+  if (o.state != null && !bits.length) bits.push(o.state ? "ativo" : "livre");
+  return bits.length ? bits.join(" · ") : "—";
 }
 
-function findByClass(c) {
-    return document.getElementsByClassName(c).item(0);
+function renderPinout() {
+  const usable = config.usablePins || [];
+  const inputOnly = config.inputOnlyPins || [];
+  const used = {};
+  for (const f of config.features || []) {
+    for (const o of f.outputs || []) used[o] = { n: f.name, k: "out" };
+    for (const i of f.inputs || []) used[i] = { n: f.name, k: "in" };
+  }
+  const all = usable.concat(inputOnly).sort((a, b) => a - b);
+  const half = Math.ceil(all.length / 2);
+  const draw = (pins, right) => pins.map((p) => {
+    const u = used[p];
+    const only = inputOnly.indexOf(p) >= 0;
+    const tag = u ? (u.k === "out" ? '<span class="tag t-out">SAÍDA</span>' : '<span class="tag t-in">ENTRADA</span>')
+                  : '<span class="tag t-free">LIVRE</span>';
+    const what = u ? esc(u.n) : (only ? "livre · só entrada" : "livre");
+    return '<div class="pin' + (right ? " r" : "") + '"><span class="n">GPIO' + p + '</span>' +
+      '<span class="u">' + what + "</span>" + tag + "</div>";
+  }).join("");
+  $("pin-left").innerHTML = draw(all.slice(0, half), false);
+  $("pin-right").innerHTML = draw(all.slice(half), true);
+  $("pin-board").textContent = config.mcu || "—";
+  $("pin-mcu").textContent = (usable.length + inputOnly.length) + " pinos";
+  $("tpl-btns").innerHTML = TEMPLATES.map((t) =>
+    '<button class="btn" data-tpl="' + t.v + '">' + esc(t.n) + "</button>").join("");
 }
 
-function findById(id) {
-    const a = document.getElementById(id);
-    if (!a)
-        console.log("NOT_FOUND " + id)
-    return a;
+/* Pins already spoken for by some OTHER feature; those must stay off the menu
+   or two drivers would end up fighting over one GPIO. */
+function pinsTakenByOthers(selfId) {
+  const taken = {};
+  for (const o of config.features || []) {
+    if (o.id === selfId) continue;
+    for (const p of o.outputs || []) taken[p] = 1;
+    for (const p of o.inputs || []) taken[p] = 1;
+  }
+  return taken;
 }
 
-function fillConfig(updateStats) {
-    if (!config) return;
-    document.title = 'OnOfre ' + config.nodeId;
-    if (updateStats) {
-        let percentage = Math.min(2 * (parseInt(config.signal) + 100), 100);
-        findById("wifi-signal").textContent = percentage + "%";
-        findById("version_lbl").textContent = config.firmware + " - " + config.mcu;
-        findById("lbl-chip").textContent = "ID " + config.chipId;
-        findById("lbl-mac").textContent = "MAC: " + config.mac;
-        findById("ssid_lbl").textContent = config.wifiSSID;
-        if (config.mqttConnected) {
-            findById("mqtt_state").classList.add("online")
+function pinSelect(f, fi, kind, slot, current) {
+  const taken = pinsTakenByOthers(f.id);
+  const opts = (config.usablePins || [])
+    .filter((p) => !taken[p] || p === current)
+    .map((p) => '<option value="' + p + '"' + (p === current ? " selected" : "") + ">GPIO" + p + "</option>")
+    .join("");
+  return '<select data-pin="' + kind + '" data-i="' + fi + '" data-k="' + slot + '">' + opts + "</select>";
+}
+
+/* Editable wiring. The firmware only re-maps pins it can validate, so a refused
+   change simply comes back unchanged on the next read. */
+function pinEditor(f, i) {
+  const outs = f.outputs || [];
+  const ins = f.inputs || [];
+  if (!outs.length && !ins.length) return "";
+  const block = (label, kind, pins) => !pins.length ? "" :
+    '<div class="field"><label>' + label + "</label>" +
+    '<div class="row2" style="grid-template-columns:repeat(' + Math.min(pins.length, 3) + ',1fr)">' +
+    pins.map((p, k) => pinSelect(f, i, kind, k, p)).join("") + "</div></div>";
+  return block("SAÍDAS (relé)", "out", outs) + block("ENTRADAS (botão/sensor)", "in", ins);
+}
+
+function renderFeatures() {
+  const feats = config.features || [];
+  $("feat-list").innerHTML = feats.length ? feats.map((f, i) => {
+    const cover = isCover(f);
+    return '<div class="card" style="margin-bottom:9px" data-fi="' + i + '">' +
+      '<div class="field"><label>NOME</label><input data-f="name" data-i="' + i + '" maxlength="23" value="' + esc(f.name) + '"></div>' +
+      '<div class="kv"><span>tipo</span><b>' + esc(driverLabel(f.driver)) + "</b></div>" +
+      pinEditor(f, i) +
+      (cover ? '<div class="row2"><div class="field"><label>SUBIDA (s)</label>' +
+        '<input type="number" min="1" max="300" data-f="upCourseTime" data-i="' + i + '" value="' + (f.upCourseTime || 0) + '"></div>' +
+        '<div class="field"><label>DESCIDA (s)</label>' +
+        '<input type="number" min="1" max="300" data-f="downCourseTime" data-i="' + i + '" value="' + (f.downCourseTime || 0) + '"></div></div>' : "") +
+      (isActuator(f) ? '<div class="field"><label>DESLIGAR SOZINHO (segundos, 0 = nunca)</label>' +
+        '<input type="number" min="0" data-f="autoOff" data-i="' + i + '" value="' + (f.autoOff || 0) + '"></div>' +
+        '<div class="field"><label>ENDEREÇO KNX (área / linha / membro)</label><div class="row2" style="grid-template-columns:1fr 1fr 1fr">' +
+        '<input type="number" min="0" max="31" data-f="area" data-i="' + i + '" value="' + (f.area || 0) + '">' +
+        '<input type="number" min="0" max="7" data-f="line" data-i="' + i + '" value="' + (f.line || 0) + '">' +
+        '<input type="number" min="0" max="255" data-f="member" data-i="' + i + '" value="' + (f.member || 0) + '">' +
+        "</div></div>" : "") +
+      '<div class="btns"><button class="btn d" data-del="' + esc(f.id) + '">Remover</button></div></div>';
+  }).join("") : '<div class="note">Ainda não há funções configuradas.</div>';
+}
+
+function renderDiag() {
+  const heap = config.freeHeap;
+  if (heap != null) {
+    heapHistory.push(heap);
+    if (heapHistory.length > 40) heapHistory.shift();
+    $("d-heap").innerHTML = (heap / 1024).toFixed(1) + "<small>KB</small>";
+    drawSpark("d-heap-spark", heapHistory, "#97d700");
+    const frag = config.heapFrag;
+    $("d-heap-note").textContent = frag != null
+      ? "fragmentação " + frag + "% · maior bloco livre " + Math.round((config.maxFreeBlock || 0) / 1024) + " KB"
+      : "";
+  }
+  $("d-reset").textContent = config.resetReason || "—";
+  $("d-uptime").textContent = duration(config.uptime);
+  $("d-fw").textContent = (config.firmware || "—") + (config.buildDate ? " · " + config.buildDate : "");
+  $("d-sketch").textContent = config.sketchSize
+    ? Math.round(config.sketchSize / 1024) + " KB · livre " + Math.round((config.freeSketchSpace || 0) / 1024) + " KB" : "—";
+  $("d-ssid").textContent = config.wifiSSID || "—";
+  $("d-rssi").textContent = rssiText(config.signal);
+  $("d-ip").textContent = config.wifiIp || "—";
+  $("d-net").textContent = (config.wifiMask || "—") + " / " + (config.wifiGw || "—");
+  $("d-mqtt").textContent = config.mqttConnected ? "ligado" : "desligado";
+  $("d-broker").textContent = (config.mqttIpDns || "—") + ":" + (config.mqttPort || "");
+  $("d-cloud").textContent = config.cloudIOUsername ? "configurada" : "não configurada";
+}
+
+function drawSpark(id, values, colour) {
+  const el = $(id);
+  if (!el || values.length < 2) return;
+  const min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+  const span = (max - min) || 1;
+  const pts = values.map((v, i) =>
+    (i / (values.length - 1) * 200).toFixed(1) + "," + (34 - (v - min) / span * 30).toFixed(1)).join(" ");
+  el.innerHTML = '<polyline fill="none" stroke="' + colour + '" stroke-width="1.5" points="' + pts + '"/>';
+}
+
+function fillSystem() {
+  $("s-nodeId").value = config.nodeId || "";
+  $("s-ssid").value = config.wifiSSID || "";
+  $("s-wpw").value = "";
+  $("s-dhcp").checked = config.dhcp !== false;
+  $("s-static").classList.toggle("hide", $("s-dhcp").checked);
+  $("s-ip").value = config.wifiIp || "";
+  $("s-mask").value = config.wifiMask || "";
+  $("s-gw").value = config.wifiGw || "";
+  $("s-mqttHost").value = config.mqttIpDns || "";
+  $("s-mqttPort").value = config.mqttPort || 1883;
+  $("s-mqttUser").value = config.mqttUsername || "";
+  $("s-mqttPw").value = "";
+  $("s-apiUser").value = config.apiUser || "";
+  $("s-apiPw").value = "";
+}
+
+function fillNewFeatureForm() {
+  const sel = $("nf-driver");
+  sel.innerHTML = DRIVERS.map((g) => '<optgroup label="' + esc(g.g) + '">' +
+    g.items.map((d) => '<option value="' + d.v + '">' + esc(d.n) + "</option>").join("") + "</optgroup>").join("");
+  const used = {};
+  for (const f of config.features || []) {
+    for (const o of f.outputs || []) used[o] = 1;
+    for (const i of f.inputs || []) used[i] = 1;
+  }
+  const pins = config.usablePins || [];
+  const opts = pins.map((p) =>
+    '<option value="' + p + '"' + (used[p] ? " disabled" : "") + ">GPIO" + p + (used[p] ? " (ocupado)" : "") + "</option>").join("");
+  $("nf-p1").innerHTML = opts;
+  $("nf-p2").innerHTML = opts;
+  // A select whose options are all disabled just renders blank; say why.
+  const free = pins.filter((p) => !used[p]).length;
+  const msg = $("nf-msg");
+  $("nf-add").disabled = free === 0;
+  if (free === 0) {
+    msg.className = "note err";
+    msg.textContent = "Não há pinos livres. Liberta um pino noutra função para poder criar mais.";
+  } else if (msg.textContent.indexOf("pinos livres") >= 0) {
+    msg.className = "note";
+    msg.textContent = "";
+  }
+  onDriverChange();
+}
+function onDriverChange() {
+  const d = driverInfo(parseInt($("nf-driver").value, 10));
+  $("nf-p2-box").classList.toggle("hide", !d || d.pins < 2);
+}
+
+/* ---------------- actions ---------------- */
+async function control(id, state) {
+  try { await api("/actuators/control", { method: "POST", body: JSON.stringify({ id: id, state: state }) }); }
+  catch (e) { toast("Não foi possível comandar", "err"); }
+}
+
+async function addFeature() {
+  const name = $("nf-name").value.trim();
+  const driver = parseInt($("nf-driver").value, 10);
+  const d = driverInfo(driver);
+  const msg = $("nf-msg");
+  if (!name) { msg.className = "note err"; msg.textContent = "Dá um nome à função."; return; }
+  const p1 = parseInt($("nf-p1").value, 10);
+  const p2 = d && d.pins > 1 ? parseInt($("nf-p2").value, 10) : undefined;
+  if (d && d.pins > 1 && p1 === p2) {
+    msg.className = "note err"; msg.textContent = "Os dois pinos têm de ser diferentes."; return;
+  }
+  msg.className = "note"; msg.textContent = "A criar…";
+  const body = { name: name, driver: driver, input1: p1 };
+  if (p2 !== undefined) body.input2 = p2;
+  try {
+    config = await api("/features", { method: "POST", body: JSON.stringify(body) });
+    $("nf-name").value = "";
+    msg.className = "note ok"; msg.textContent = "Criada.";
+    renderOverview(); renderPinout(); renderFeatures(); fillNewFeatureForm();
+    toast("Função criada", "ok");
+  } catch (e) {
+    msg.className = "note err";
+    msg.textContent = featureError(e);
+  }
+}
+
+/* prepareNewFeature() refuses with a numeric code; say which one it was. */
+function featureError(e) {
+  const code = e && e.body && e.body.result;
+  if (code === 1) return "Dá um nome à função.";
+  if (code === 2) return "Esse pino não serve nesta placa — escolhe outro.";
+  if (code === 3) return "Tipo de função inválido para este firmware.";
+  if (code === 4) return "Este tipo precisa de dois pinos.";
+  return "O dispositivo recusou a função.";
+}
+
+async function save() {
+  const body = JSON.parse(JSON.stringify(config));
+  body.nodeId = $("s-nodeId").value.trim();
+  body.wifiSSID = $("s-ssid").value.trim();
+  if ($("s-wpw").value) body.wifiSecret = $("s-wpw").value;
+  body.dhcp = $("s-dhcp").checked;
+  body.wifiIp = $("s-ip").value.trim();
+  body.wifiMask = $("s-mask").value.trim();
+  body.wifiGw = $("s-gw").value.trim();
+  body.mqttIpDns = $("s-mqttHost").value.trim();
+  body.mqttPort = parseInt($("s-mqttPort").value, 10) || 1883;
+  body.mqttUsername = $("s-mqttUser").value.trim();
+  if ($("s-mqttPw").value) body.mqttPassword = $("s-mqttPw").value;
+  body.apiUser = $("s-apiUser").value.trim();
+  if ($("s-apiPw").value) body.apiPassword = $("s-apiPw").value;
+  if (removed.length) body.featuresToRemove = removed;
+
+  $("save-btn").disabled = true;
+  $("save-note").textContent = "a guardar…";
+  try {
+    config = await api("/config", { method: "POST", body: JSON.stringify(body) });
+    removed = [];
+    clearDirty();
+    $("save-note").textContent = "";
+    toast("Guardado", "ok");
+    renderHeader(); renderOverview(); renderPinout(); renderFeatures(); renderDiag(); fillSystem(); fillNewFeatureForm();
+  } catch (e) {
+    $("save-note").textContent = "";
+    toast("Não foi possível guardar", "err");
+  } finally {
+    $("save-btn").disabled = false;
+  }
+}
+
+/* confirm() is silently blocked inside sandboxed frames and is easy to misfire
+   on a phone, so destructive buttons ask for a second click on themselves. */
+function armed(btn, label) {
+  if (btn.dataset.armed === "1") {
+    clearTimeout(btn._disarm);
+    btn.dataset.armed = "";
+    btn.textContent = btn.dataset.label;
+    btn.classList.remove("d");
+    return true;
+  }
+  btn.dataset.label = btn.textContent;
+  btn.dataset.armed = "1";
+  btn.textContent = label;
+  btn.classList.add("d");
+  clearTimeout(btn._disarm);
+  btn._disarm = setTimeout(() => {
+    btn.dataset.armed = "";
+    btn.textContent = btn.dataset.label;
+    btn.classList.remove("d");
+  }, 4000);
+  return false;
+}
+
+async function applyTemplate(v) {
+  try {
+    await api("/templates/change?t=" + v, { method: "POST" });
+    toast("Predefinição aplicada", "ok");
+    setTimeout(load, 600);
+  } catch (e) { toast("Não foi possível aplicar", "err"); }
+}
+
+function exportConfig() {
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (config.nodeId || "onofre") + "-config.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------------- live updates ---------------- */
+function addLog(kind, text) {
+  if (logPaused) return;
+  const now = new Date().toTimeString().slice(0, 8);
+  logLines.push(now + "  " + text);
+  if (logLines.length > 200) logLines.shift();
+  const el = $("d-log");
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+  el.innerHTML = logLines.map((l) => {
+    const k = l.indexOf("[erro]") >= 0 ? "e" : l.indexOf("[aviso]") >= 0 ? "w" : "i";
+    return '<div><span class="t">' + esc(l.slice(0, 8)) + '</span> <span class="' + k + '">' +
+      esc(l.slice(10)) + "</span></div>";
+  }).join("");
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+function connectEvents() {
+  if (!window.EventSource) return;
+  source = new EventSource(baseUrl + "/events");
+  source.addEventListener("mqtt_health", (e) => {
+    const on = e.data === "online";
+    setMqttPill(on);
+    $("d-mqtt").textContent = on ? "ligado" : "desligado";
+    addLog("i", "[mqtt] " + (on ? "ligado" : "desligado"));
+  });
+  // Every feature publishes its state under its own id.
+  source.onmessage = () => {};
+  source.addEventListener("error", () => addLog("i", "[aviso] ligação de eventos interrompida"));
+  // Feature events are named after the uniqueId, so they are wired per feature.
+  wireFeatureEvents();
+}
+function wireFeatureEvents() {
+  for (const f of config.features || []) {
+    (function (feat) {
+      source.addEventListener(feat.id, (e) => {
+        feat.state = e.data;
+        if (isActuator(feat)) {
+          const sw = document.querySelector('[data-toggle="' + feat.id + '"]');
+          if (sw) sw.classList.toggle("on", (parseInt(e.data, 10) || 0) > 0);
+          const rng = document.querySelector('[data-cover="' + feat.id + '"]');
+          if (rng) rng.value = parseInt(e.data, 10) || 0;
+        } else if (isEnergy(feat)) {
+          // The whole card is derived from the payload, so redraw it in place.
+          const el = $("sv-" + feat.id);
+          const card = el && el.closest(".card");
+          if (card) card.outerHTML = energyCard(feat);
         } else {
-            findById("mqtt_state").classList.remove("online")
+          const el = $("sv-" + feat.id);
+          if (el) el.textContent = sensorText(e.data);
         }
+        addLog("i", "[" + feat.name + "] " + String(e.data).slice(0, 90));
+      });
+    })(f);
+  }
+}
+
+/* ---------------- wiring ---------------- */
+document.addEventListener("click", (ev) => {
+  const tab = ev.target.closest("[data-view]");
+  if (tab) {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === tab));
+    document.querySelectorAll(".view").forEach((v) => v.classList.toggle("on", v.id === "v-" + tab.dataset.view));
+    return;
+  }
+  const sw = ev.target.closest("[data-toggle]");
+  if (sw) { sw.classList.toggle("on"); control(sw.dataset.toggle, 102); return; }
+  const tpl = ev.target.closest("[data-tpl]");
+  if (tpl) {
+    if (armed(tpl, "Substituir tudo?")) applyTemplate(parseInt(tpl.dataset.tpl, 10));
+    return;
+  }
+  const del = ev.target.closest("[data-del]");
+  if (del) {
+    if (!armed(del, "Confirmar?")) return;
+    removed.push(del.dataset.del);
+    config.features = (config.features || []).filter((f) => f.id !== del.dataset.del);
+    renderFeatures(); renderOverview(); renderPinout(); markDirty();
+    return;
+  }
+});
+
+document.addEventListener("change", (ev) => {
+  const cover = ev.target.closest("[data-cover]");
+  if (cover) { control(cover.dataset.cover, Math.abs(parseInt(cover.value, 10) - 100)); return; }
+  const pin = ev.target.closest("[data-pin]");
+  if (pin) {
+    const feat = config.features[parseInt(pin.dataset.i, 10)];
+    if (feat) {
+      const list = pin.dataset.pin === "out" ? feat.outputs : feat.inputs;
+      list[parseInt(pin.dataset.k, 10)] = parseInt(pin.value, 10);
+      renderFeatures();   // other selects must drop the pin just claimed
+      markDirty();
     }
-    findById("dhcp").checked = config.dhcp;
-    let nodeIn = findById("nodeId")
-    nodeIn.value = config.nodeId;
-    nodeIn.size = nodeIn.value.length + 4
-    findById("mqttIpDns").value = config.mqttIpDns;
-    findById("mqttUsername").value = config.mqttUsername;
-    findById("wifiSSID").value = config.wifiSSID;
-    findById("wifiIp").value = config.wifiIp;
-    findById("wifiMask").value = config.wifiMask;
-    findById("wifiGw").value = config.wifiGw;
-    findById("apiUser").value = config.apiUser;
-    findById("wifiIp").value = config.wifiIp;
-    findById("wifiSecret").value = "******";
-    findById("accessPointPassword").value = "******";
-    findById("apiPassword").value = "******";
-    findById("mqttPassword").value = "******";
-    const updateButton = findById("btn-auto-update");
-    if (updateButton && compareVersions(lastVersion, config.firmware) > 0) {
-        updateButton.classList.remove("hide");
-        updateButton.textContent = getI18n("update_to") + " " + lastVersion;
-    } else if (updateButton) {
-        updateButton.classList.add("hide");
-    }
-}
+    return;
+  }
+  const f = ev.target.closest("[data-f]");
+  if (f) {
+    const i = parseInt(f.dataset.i, 10);
+    const key = f.dataset.f;
+    const val = f.type === "number" ? (parseInt(f.value, 10) || 0) : f.value;
+    if (config.features[i]) { config.features[i][key] = val; markDirty(); }
+    return;
+  }
+  if (ev.target.id === "nf-driver") { onDriverChange(); return; }
+  if (ev.target.id === "s-dhcp") { $("s-static").classList.toggle("hide", ev.target.checked); markDirty(); return; }
+  if (ev.target.closest("#v-system")) markDirty();
+});
 
-function applyState(id, state) {
-    if (state === undefined || state.length == 0) return;
-    const j = JSON.parse(state);
-    if (j) {
-        const label1 = findById("f-" + id).getElementsByClassName("feature-value").item(0);
-        const label2 = findById("f-" + id).getElementsByClassName("feature-value").item(1);
-        const icon1 = findById("i1-" + id);
-        if (label1) {
-            if (j.error !== undefined)
-                label1.textContent = "Error";
-            if (j.state !== undefined) {
-                label1.textContent = j.state;
-                if (j.state === "open") {
-                    icon1.src = icon1.src.replace("closed", j.state);
-                } else {
-                    icon1.src = icon1.src.replace("open", j.state);
-                }
-            }
-            if (j.lux !== undefined) {
-                label1.textContent = Math.round(j.lux * 100) / 100 + " lux";
-            }
-            if (j.temperature !== undefined)
-                label1.textContent = Math.trunc(j.temperature) + "º";
-            if (j.rain !== undefined) {
-                label1.textContent = j.rain;
-                icon1.src = "https://cloudio.bhonofre.pt/img/" + j.rain + ".svg";
-            }
-            if (j.distance !== undefined) {
-                label1.textContent = j.distance + " cm";
-            }
-            if (j.motion !== undefined) {
-                label1.textContent = j.motion;
-            }
-            if (j.stationaryTargetDistance !== undefined && j.movingTargetDistance !== undefined) {
-                label1.textContent = j.stationaryTargetDistance+" cm";
-                label2.textContent = j.movingTargetDistance+" cm";;
-            }
-            if (j.temperature !== undefined && j.humidity !== undefined) {
-                label1.textContent = Math.trunc(j.temperature) + "º";
-                label2.textContent = Math.trunc(j.humidity) + "%";
-            }
-            if (j.power !== undefined && j.voltage !== undefined) {
-                label1.textContent = Math.trunc(j.voltage) + "V";
-                label2.textContent = Math.trunc(j.power) + "W";
-            }
-        }
-    }
-}
-
-async function refreshFeatures() {
-    findById("actuators_config").innerHTML = '';
-    findById("sensors_config").innerHTML = '';
-    fillDevices();
-}
-
-function showWizard() {
-    findById("wizard").style.display = "block";
-}
-
-function tarif(num) {
-    if (1 === num) return "Vazio";
-    if (2 === num) return "Ponta";
-    if (3 === num) return "Cheias";
-}
-
-function fillDevices() {
-    var inUsePins = [];
-    let temp, item, a;
-    const modal = findById("modal");
-    const wizard = findById("wizard");
-    for (const f of config.features) {
-        if (f.driver.includes("HAN")) {
-            temp = findById("HAN");
-        } else {
-            temp = findById(f.group);
-        }
-        if (f.outputs)
-            for (const o of f.outputs) {
-                inUsePins.push({name: f.name + " (out)", pin: o});
-            }
-        if (f.inputs)
-            for (const i of f.inputs) {
-                inUsePins.push({name: f.name + " (in)", pin: i});
-            }
-
-        item = temp.content.querySelector("div");
-        a = document.importNode(item, true);
-        a.id = "f-" + f.id;
-        a.getElementsByClassName("feature-name").item(0).textContent = f.name ? f.name : "...";
-
-        let clickArea = "feature-box";
-        if ("ACTUATOR" === f.group) {
-            findById("actuators_config").appendChild(a);
-            let control = a;
-            control.id = f.id;
-            control.classList.remove("OFF");
-            control.classList.remove("ON");
-            a.getElementsByTagName("input").item(0).value = Math.abs(parseInt(f.state) - 100);
-            a.getElementsByTagName("input").item(0).id = f.id;
-            if ("SWITCH" === f.family) {
-                control.onclick = () => toggleSwitch(f.id);
-                a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/PLUG.svg";
-                control.classList.add(f.state > 0 ? "ON" : "OFF");
-                a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
-            }
-            if ( "GARDEN" === f.family) {
-                control.onclick = () => toggleSwitch(f.id);
-                a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/GARDEN.svg";
-                control.classList.add(f.state > 0 ? "ON" : "OFF");
-                a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
-            }else if ("LIGHT" === f.family) {
-                control.onclick = () => toggleSwitch(f.id);
-                control.classList.add(f.state > 0 ? "ON" : "OFF");
-                a.light = true;
-                a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/" + f.family + (f.state > 0 ? "_ON" : "") + ".svg";
-                a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
-            } else if ("SECURITY" === f.family) {
-                control.classList.add("OFF");
-                a.cover = true;
-                a.getElementsByClassName("shutter-slider").item(0).onclick = () => toggleSwitch(f.id);
-                a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/GARAGE.svg";
-            } else if ("CLIMATE" === f.family) {
-                a.getElementsByClassName("shutter-slider").item(0).addEventListener("change", (event) => {
-                    shutterPercentage(event.target);
-                });
-                a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/COVER.svg";
-                a.cover = true;
-                control.classList.add("OFF");
-            }
-            source.addEventListener(f.id, (s) => {
-                const box = findById(f.id);
-                if (box.cover) {
-                    box.getElementsByTagName("input").item(0).value = Math.abs(parseInt(s.data) - 100);
-                } else {
-                    box.classList.remove("ON");
-                    box.classList.remove("OFF");
-                    if (box.light) {
-                        box.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/" + f.family + (s.data > 0 ? "_ON" : "") + ".svg";
-                    }
-                    box.classList.add(s.data > 0 ? "ON" : "OFF");
-                }
-
-            });
-        } else if (!f.driver.includes("HAN")) {
-            findById("sensors_config").appendChild(a);
-            const label1 = a.getElementsByClassName("feature-value").item(0);
-            const label2 = a.getElementsByClassName("feature-value").item(1);
-            a.getElementsByClassName("sensor-icon").item(0).id = "i1-" + f.id;
-            const icon1 = a.getElementsByClassName("sensor-icon").item(0);
-            const icon2 = a.getElementsByClassName("sensor-icon").item(1);
-            icon2.classList.add("hide");
-            if (f.driver === 'SHT4X' || f.driver === 'DHT_11' || f.driver === 'DHT_21' || f.driver === 'DHT_22') {
-                icon1.classList.remove("hide");
-                icon2.classList.remove("hide");
-                icon1.src = "https://cloudio.bhonofre.pt/img/TEMPERATURE.svg";
-                icon2.src = "https://cloudio.bhonofre.pt/img/HUMIDITY.svg";
-            } else if (f.driver === 'DS18B20') {
-                icon1.src = "https://cloudio.bhonofre.pt/img/TEMPERATURE.svg";
-            } else if (f.driver === 'LTR303') {
-                icon1.src = "https://cloudio.bhonofre.pt/img/LUX.svg";
-            } else if (f.driver === 'PIR' ) {
-                icon1.src = "https://cloudio.bhonofre.pt/img/MOTION.svg";
-            }else if(f.driver === 'LD2410'){
-                icon2.classList.remove("hide");
-                icon1.src = "https://cloudio.bhonofre.pt/img/MOTION.svg";
-                icon2.src = "https://cloudio.bhonofre.pt/img/MOTION.svg";
-            } else if (f.driver === 'RAIN') {
-                icon1.src = "https://cloudio.bhonofre.pt/img/rain.svg";
-            } else if (f.driver === 'PZEM_004T_V03') {
-                icon2.classList.remove("hide");
-                icon1.src = "https://cloudio.bhonofre.pt/img/voltage.svg";
-                icon2.src = "https://cloudio.bhonofre.pt/img/ENERGY.svg";
-            } else if (f.driver === 'DOOR') {
-                icon1.src = "https://cloudio.bhonofre.pt/img/door_closed.svg";
-            } else if (f.driver === 'WINDOW') {
-                icon1.src = "https://cloudio.bhonofre.pt/img/window_closed.svg";
-            } else if (f.driver === 'HCSR04' || f.driver === 'TMF880X') {
-                icon1.src = "https://cloudio.bhonofre.pt/img/distance.svg";
-            }
-            if (f.state !== undefined) {
-                applyState(f.id, f.state);
-            }
-            source.addEventListener(f.id, (s) => {
-                applyState(f.id, s.data);
-            })
-        } else if (f.driver.includes("HAN")) {
-            findById("han_config").appendChild(a);
-            source.addEventListener(f.id, (s) => {
-                const j = JSON.parse(s.data);
-                if (j)
-                    Object.keys(j).forEach(function (key) {
-                            let v = findById(key);
-                            if (v) {
-                                v.textContent = j[key];
-                                if ('tarif' === key) {
-                                    v.textContent = tarif(j[key]);
-                                }
-                                if ('power' === key) {
-                                    findById('power_1').textContent = j[key];
-                                }
-
-                                if (j['status'] != 'OK') {
-                                    findById('status').textContent = j[key];
-                                }
-                                if (j['error'] === 0) {
-                                    findById('error').textContent = "-";
-                                }
-                            }
-                        }
-                    );
-            });
-        }
-        createModal(a, modal, f);
-    }
-    const span = document.getElementsByClassName("close")[0];
-    span.onclick = function () {
-        modal.style.display = "none";
-    }
-    window.onclick = function (event) {
-        if (event.target === modal) {
-            modal.style.display = "none";
-        }
-        if (event.target === wizard) {
-            wizard.style.display = "none";
-        }
-    }
-    if ("ESP8266-HAN" === config.mcu) {
-        findById("wizard").innerHTML = '';
-        findById("w-add").innerHTML = '';
-    } else {
-        let p1 = findById("f-n-pin-1");
-        let p2 = findById("f-n-pin-2");
-        for (const p of config.outInPins) {
-            let option = document.createElement("option");
-            option.text = p;
-            option.value = p;
-            p1.add(option);
-        }
-        for (const p of config.outInPins) {
-            let option = document.createElement("option");
-            option.text = p;
-            option.value = p;
-            p2.add(option);
-        }
-
-        if (config.inPins) {
-            for (const p of config.inPins) {
-                let option = document.createElement("option");
-                option.text = p;
-                option.value = p;
-                p1.add(option);
-            }
-            for (const p of config.inPins) {
-                let option = document.createElement("option");
-                option.text = p;
-                option.value = p;
-                p2.add(option);
-            }
-        }
-    }
-}
-
-async function loadConfig() {
-    const response = await fetch(baseUrl + "/config");
-    config = await response.json();
-    try {
-        const vR = await fetch("https://update.bhonofre.pt/firmware/latest-version/" + config.mcu, {
-            mode: "cors"
-        });
-        lastVersion = (await vR.text()).trim();
-    } catch (e) {
-        lastVersion = "";
-    }
-}
-
-function detectLang() {
-    let lang = "PT";
-    if (/^en/.test(navigator.language)) {
-        lang = "EN";
-    } else if (/^ro/.test(navigator.language)) {
-        lang = "RO";
-    }
-    return window['WORDS_' + lang];
-}
-
-function applyNodeChanges() {
-    config.nodeId = getValue("nodeId", config.nodeId).trim();
-    config.mqttIpDns = getValue("mqttIpDns", config.mqttIpDns).trim();
-    config.mqttUsername = getValue("mqttUsername", config.mqttUsername).trim();
-    config.mqttPassword = getValue("mqttPassword", config.mqttPassword).trim();
-    config.wifiSSID = getValue("wifiSSID", config.wifiSSID).trim();
-    config.wifiSecret = getValue("wifiSecret", config.wifiSecret).trim();
-    config.wifiIp = getValue("wifiIp", config.wifiIp).trim();
-    config.wifiMask = getValue("wifiMask", config.wifiMask).trim();
-    config.wifiGw = getValue("wifiGw", config.wifiGw).trim();
-    config.dhcp = findById("dhcp", config.dhcp).checked;
-    config.accessPointPassword = getValue("accessPointPassword", config.accessPointPassword).trim();
-    config.apiPassword = getValue("apiPassword", config.apiPassword).trim();
-    config.apiUser = getValue("apiUser", config.apiUser).trim();
-}
-
-function saveConfig(update) {
-    if (currentPage === "node") {
-        applyNodeChanges();
-    }
-    fetch(baseUrl + "/config", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify(config)
-    }).then(response => response.json()).then(json => config = json).then(() => {
-        showMessage("config_save_ok");
-        if (update) {
-            update();
-        }
-    }).catch(() =>
-        showMessage("config_save_error")
-    );
-}
-
-function closeModal(id) {
-    const modal = findById(id);
-    if (modal)
-        modal.style.display = 'none';
-}
-
-function applyFeatureChanges(e) {
-    const index = config.features
-        .indexOf(config.features
-            .filter(f => f.id === e.featureId)[0]);
-    if (index < 0) return;
-    let feature = config.features[index];
-    feature.name = getValue("f-name", feature.name).trim();
-    if ("ACTUATOR" === feature.group) {
-        feature.inputMode = parseInt(document.querySelector('input[name="f-in-mode"]:checked').value);
-        feature.upCourseTime = parseInt(getValue("f-up", feature.upCourseTime).trim());
-        feature.downCourseTime = parseInt(getValue("f-down", feature.downCourseTime).trim());
-        feature.area = parseInt(getValue("f-area", feature.area).trim());
-        feature.line = parseInt(getValue("f-line", feature.line).trim());
-        feature.member = parseInt(getValue("f-member", feature.member).trim());
-        feature.autoOff = parseInt(getValue("f-autoOff", feature.autoOff).trim());
-    }
-    saveConfig(refreshFeatures);
-    closeModal("modal");
-}
-
-function deleteFeature(e) {
-    const index = config.features
-        .indexOf(config.features
-            .filter(f => f.id === e.featureId)[0]);
-    config.features.splice(index, 1);
-    if (!config.featuresToRemove) config.featuresToRemove = [];
-    config.featuresToRemove.push(e.featureId)
-    saveConfig(refreshFeatures);
-    closeModal("modal");
-}
-
-function getValue(id, f) {
-    let v = findById(id);
-    return v ? v.value : f;
-}
-function setValue(id, value) {
-    let v = findById(id);
-    if(v)
-        v.value = value;
-}
-function shutterPercentage(arg) {
-    const action = {
-        id: arg.id,
-        state: Math.abs(parseInt(arg.value) - 100)
-    };
-    fetch(baseUrl + "/actuators/control", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify(action)
-    }).catch(() =>
-        showMessage("control_state_error")
-    );
-}
-
-function toggleSwitch(arg) {
-    const action = {
-        id: arg,
-        state: 102
-    };
-    fetch(baseUrl + "/actuators/control", {
-        method: "POST",
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-        body: JSON.stringify(action)
-    }).catch(() =>
-        showMessage("control_state_error")
-    );
-}
-
-function createModal(a, modal, f) {
-    if (a.getElementsByClassName("feature-edit").item(0) === null) return;
-    a.getElementsByClassName("feature-edit").item(0).onclick = function (ev) {
-        ev.stopPropagation();
-        modal.style.display = "block";
-        modal.getElementsByClassName("f-name").item(0).value = f.name;
-        findById("f-knx").classList.remove("hide");
-           findById("f-auto").classList.add("hide");
-        modal.getElementsByClassName("f-ac").item(0).classList.remove("hide");
-        findById("f-autoOff").value = f.autoOff;
-        if (f.driver.includes("COVER")) {
-            findById("f-calibration").classList.remove("hide")
-            findById("f-in-mode-push-lbl").outerHTML = getI18n("dual_push");
-            findById("f-in-mode-latch-lbl").outerHTML = getI18n("dual_latch");
-            findById("f-in-mode-push-toggle-lbl").classList.remove("hide");
-            findById("f-in-mode-push-toggle-lbl").outerHTML = getI18n("single_push");
-        } else {
-            if(f.typeControl == 1 && (f.driver.includes("LIGHT") || f.driver.includes("SWITCH") || f.driver.includes("GARDEN"))) {
-                findById("f-auto").classList.remove("hide");
-            }
-            findById("f-push-t").classList.add("hide");
-        }
-        if (f.group === "SENSOR") {
-            findById("f-knx").classList.add("hide");
-            modal.getElementsByClassName("f-ac").item(0).classList.add("hide");
-        }
-
-        findById("f-up").value = f.upCourseTime;
-        findById("f-down").value = f.downCourseTime;
-        findById("f-area").value = f.area;
-        findById("f-line").value = f.line;
-        findById("f-member").value = f.member;
-        findById("f-in-mode-push").checked = f.inputMode === 0;
-        findById("f-in-mode-latch").checked = f.inputMode === 1;
-        findById("f-in-mode-push-toggle").checked = f.inputMode === 2;
-        findById("btn-delete").featureId = f.id;
-        findById("btn-update").featureId = f.id;
-    }
-}
-
-function clearCreate(a) {
-    setValue("f-n-name",null);
-    setValue("f-n-pin-1", 7);
-    setValue("f-n-pin-2", 7);
-    setValue("f-n-driver", 7);
-    let p2 = findById("f-n-pin-2-g");
-    p2.classList.remove("hide");
-    p2.classList.add("hide");
-}
-
-function driverSelect(a) {
-    let p2 = findById("f-n-pin-2-g");
-    let p1l = findById("pin-up-l");
-    let p2l = findById("pin-down-l");
-    p1l.textContent = getI18n("pin_input")
-    p2l.textContent = getI18n("pin_input")
-    if (parseInt(a.value) === 4 || parseInt(a.value) === 5) {
-        p2.classList.remove("hide");
-        p1l.textContent = getI18n("pin_up")
-        p2l.textContent = getI18n("pin_down")
-    } else if (parseInt(a.value) === 72 ||parseInt(a.value) === 71 || parseInt(a.value) === 94) {
-        p2.classList.remove("hide");
-        p1l.textContent = 'RX'
-        p2l.textContent = 'TX'
-    } else if (parseInt(a.value) === 93) {
-        p2.classList.remove("hide");
-        p1l.textContent = getI18n("trigger")
-        p2l.textContent = getI18n("echo")
-    } else {
-        p2.classList.add("hide");
-    }
-
-}
-
-function showMessage(key) {
-    const lanSet = detectLang();
-    const v = lanSet[key];
-    v ? alert(v) : alert(key);
-}
-
-async function backup() {
-    const a = document.createElement("a");
-    config.backup = true;
-    a.href = URL.createObjectURL(
-        new Blob([JSON.stringify(config, null, 2)], {
-            type: "application/json"
-        })
-    );
-    a.setAttribute("download", "CONFIG_" + config.nodeId + "_ONOFRE_" + config.firmware + ".json");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-
-function reboot() {
-    fetch(baseUrl + "/reboot", {
-        method: "POST",
-        headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Accept': 'application/json'
-        }
-    }).then(response => response.status === 200 ?
-        showMessage("device_reboot_ok")
-        : showMessage("device_error"))
-}
-
-(function () {
-    function onChange(event) {
-        var reader = new FileReader();
-        reader.onload = onReaderLoad;
-        reader.readAsText(event.target.files[0]);
-    }
-
-    function onReaderLoad(event) {
-        config = JSON.parse(event.target.result);
-        fillConfig(false);
-        refreshFeatures();
-    }
-
-    document.getElementById('restore').addEventListener('change', onChange);
-
-}());
-
-function loadDefaults() {
-    fetch(baseUrl + "/load-defaults", {
-        method: "POST",
-        headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Accept': 'application/json'
-        }
-    }).then(response => response.status === 200 ?
-        showMessage("defaults_ok")
-        : showMessage("device_error"))
-}
-
+window.addEventListener("beforeunload", (e) => {
+  if (dirty) { e.preventDefault(); e.returnValue = ""; }
+});
 
 document.addEventListener("DOMContentLoaded", () => {
-    findById('features-btn').onclick = function (e) {
-        toggleActive("devices");
-    };
-    findById('node-btn').onclick = function (e) {
-        toggleActive("node");
+  $("save-btn").onclick = save;
+  $("nf-add").onclick = addFeature;
+  $("a-export").onclick = exportConfig;
+  $("d-log-pause").onclick = (e) => {
+    logPaused = !logPaused;
+    e.target.textContent = logPaused ? "Retomar" : "Pausar";
+  };
+  $("d-log-clear").onclick = () => { logLines = []; $("d-log").innerHTML = ""; };
+  $("d-log-copy").onclick = () => {
+    navigator.clipboard.writeText(logLines.join("\n")).then(
+      () => toast("Registo copiado", "ok"), () => toast("Não foi possível copiar", "err"));
+  };
+  $("a-reboot").onclick = async (e) => {
+    if (!armed(e.currentTarget, "Reiniciar?")) return;
+    try { await api("/reboot", { method: "POST" }); toast("A reiniciar…", "ok"); } catch (err) { toast("Falhou", "err"); }
+  };
+  $("a-update").onclick = async (e) => {
+    if (!armed(e.currentTarget, "Atualizar?")) return;
+    try { await api("/auto-update", { method: "POST" }); toast("A atualizar — não desligues", "ok"); }
+    catch (err) { toast("Falhou", "err"); }
+  };
+  $("a-defaults").onclick = async (e) => {
+    if (!armed(e.currentTarget, "Apagar tudo?")) return;
+    try { await api("/load-defaults", { method: "POST" }); toast("A repor…", "ok"); } catch (err) { toast("Falhou", "err"); }
+  };
+  load().then(connectEvents);
+  // Diagnostics are a snapshot; refresh them while the tab is open.
+  setInterval(() => {
+    if ($("v-diag").classList.contains("on")) {
+      api("/config").then((c) => { config = Object.assign(config, c); renderHeader(); renderDiag(); }).catch(() => {});
     }
-    loadConfig().then(() => toggleActive("devices")).then(() => {
-        fillConfig(true);
-        fillDevices();
-    });
-    if (!!window.EventSource) {
-        source = new EventSource(baseUrl + '/events');
-    }
-    source.addEventListener("mqtt_health", (s) => {
-        if (s.data === "online") {
-            findById("mqtt_state").classList.add("online")
-        } else {
-            findById("mqtt_state").classList.remove("online")
-        }
-    })
+  }, 10000);
 });

@@ -492,6 +492,69 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
   }
 }
 
+namespace
+{
+// Pin re-mapping on an existing feature. Absent keys mean "leave the wiring
+// alone", so a payload that predates this (v9 panels, the mobile apps, a
+// restored backup) keeps behaving exactly as before.
+bool readPinArray(JsonVariant feature, const char *key, std::vector<unsigned int> &out)
+{
+  if (!feature[key].is<JsonArray>())
+    return false;
+  out.clear();
+  for (auto p : feature[key].as<JsonArray>())
+    out.push_back(p | 0u);
+  return true;
+}
+
+// Every pin must be usable on this board, appear once, and belong to no other
+// feature — otherwise two drivers would drive the same GPIO.
+bool pinsAvailable(ConfigOnofre &cfg, const String &selfId, const std::vector<unsigned int> &pins,
+                   const std::vector<Actuator> &actuatores, const std::vector<Sensor> &sensors)
+{
+  for (size_t i = 0; i < pins.size(); i++)
+  {
+    if (!cfg.validPin(pins[i]))
+      return false;
+    for (size_t j = i + 1; j < pins.size(); j++)
+      if (pins[i] == pins[j])
+        return false;
+    for (const auto &a : actuatores)
+    {
+      if (selfId.equals(a.uniqueId))
+        continue;
+      for (auto p : a.inputs)
+        if (p == pins[i])
+          return false;
+      for (auto p : a.outputs)
+        if (p == pins[i])
+          return false;
+    }
+    for (const auto &s : sensors)
+    {
+      if (selfId.equals(s.uniqueId))
+        continue;
+      for (auto p : s.inputs)
+        if (p == pins[i])
+          return false;
+    }
+  }
+  return true;
+}
+
+// Park the pins a feature is giving up so a relay does not stay latched on a
+// GPIO nothing owns any more.
+void releasePins(const std::vector<unsigned int> &pins)
+{
+  for (auto p : pins)
+  {
+    configPIN(p, OUTPUT);
+    writeToPIN(p, 0);
+    configPIN(p, INPUT);
+  }
+}
+} // namespace
+
 ConfigOnofre &ConfigOnofre::update(JsonObject &root)
 {
   bool restore = root["backup"] | false;
@@ -625,6 +688,31 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
             actuator.knxAddress[1] = feature["line"] | 0;
             actuator.knxAddress[2] = feature["member"] | 0;
             actuator.autoOff = feature["autoOff"] | 0ul;
+
+            std::vector<unsigned int> newInputs, newOutputs;
+            const bool wantsInputs = readPinArray(feature, "inputs", newInputs);
+            const bool wantsOutputs = readPinArray(feature, "outputs", newOutputs);
+            if (wantsInputs || wantsOutputs)
+            {
+              std::vector<unsigned int> candidate = wantsInputs ? newInputs : actuator.inputs;
+              const std::vector<unsigned int> &outs = wantsOutputs ? newOutputs : actuator.outputs;
+              candidate.insert(candidate.end(), outs.begin(), outs.end());
+              if (pinsAvailable(*this, id, candidate, actuatores, sensors))
+              {
+                releasePins(actuator.inputs);
+                releasePins(actuator.outputs);
+                if (wantsInputs)
+                  actuator.inputs = newInputs;
+                if (wantsOutputs)
+                  actuator.outputs = newOutputs;
+              }
+#ifdef DEBUG_ONOFRE
+              else
+              {
+                Log.warning("%s Pin change refused for %s." CR, tags::config, actuator.uniqueId);
+              }
+#endif
+            }
             actuator.setup();
           }
         }
@@ -643,6 +731,16 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
           {
             if (strlen(feature["name"] | I18N::NO_NAME) > 0)
               strlcpy(sensor.name, feature["name"] | I18N::NO_NAME, sizeof(sensor.name));
+
+            std::vector<unsigned int> newInputs;
+            if (readPinArray(feature, "inputs", newInputs) &&
+                pinsAvailable(*this, id, newInputs, actuatores, sensors))
+            {
+              releasePins(sensor.inputs);
+              sensor.inputs = newInputs;
+              // Drivers configure their pin behind isInitialized(); force it.
+              sensor.reInit();
+            }
           }
         }
       }
@@ -678,6 +776,16 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     root["resetReason"] = deviceResetReason();
     root["sketchSize"] = ESP.getSketchSize();
     root["freeSketchSpace"] = ESP.getFreeSketchSpace();
+    // The board's usable GPIOs, so the panel draws its pin map from what the
+    // firmware actually accepts instead of keeping a copy that drifts.
+    JsonArray usable = root["usablePins"].to<JsonArray>();
+    for (auto pin : DefaultPins::outputInputPins)
+      usable.add(pin);
+#ifdef ESP32
+    JsonArray inputOnly = root["inputOnlyPins"].to<JsonArray>();
+    for (auto pin : DefaultPins::intputOnlyPins)
+      inputOnly.add(pin);
+#endif
   }
   root["wifiIp"] = WiFi.localIP().toString();
   root["wifiMask"] = WiFi.subnetMask().toString();
