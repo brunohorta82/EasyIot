@@ -418,7 +418,7 @@ function renderDiag() {
   $("d-net").textContent = (config.wifiMask || "—") + " / " + (config.wifiGw || "—");
   $("d-mqtt").textContent = config.mqttConnected ? "ligado" : "desligado";
   $("d-broker").textContent = (config.mqttIpDns || "—") + ":" + (config.mqttPort || "");
-  $("d-cloud").textContent = config.cloudIOUsername ? "configurada" : "não configurada";
+  $("d-cloud").textContent = config.cloudConfigured ? "configurada" : "não configurada";
 }
 
 function drawSpark(id, values, colour) {
