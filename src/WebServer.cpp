@@ -360,20 +360,28 @@ void loadAPI()
     JsonVariant &root = response->getRoot();
     const String id = json["id"] | "";
     bool found = false;
-    for (auto &sensor : config.sensors)
+
+    if (id.length() == 0)
     {
-      if (id.equals(sensor.uniqueId) && sensor.supportsEnergyReset())
-      {
-        // Queued, not performed here: the meter is on a serial bus the sensor
-        // loop owns, and reaching for it from this context corrupts a read.
-        sensor.requestEnergyReset();
-        found = true;
-        break;
-      }
+      root["result"] = "Meter id is required";
+      response->setCode(400);
     }
-    root["result"] = found ? "Energy reset requested" : "Unknown meter";
-    if (!found)
-      response->setCode(404);
+    else
+    {
+      for (auto &sensor : config.sensors)
+      {
+        if (id.equals(sensor.uniqueId) && sensor.supportsEnergyReset())
+        {
+          // Queued, not performed here: the meter is on a serial bus the sensor
+          // loop owns, and reaching for it from this context corrupts a read.
+          sensor.requestEnergyReset();
+          found = true;
+          break;
+        }
+      }
+      root["result"] = found ? "Energy reset queued" : "Unknown or unsupported meter";
+      response->setCode(found ? 202 : 404);
+    }
     response->setLength();
     request->send(response); }));
 

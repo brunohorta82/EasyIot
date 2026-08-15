@@ -707,9 +707,8 @@ void Sensor::loop()
       lastRead = millis();
       // Serviced here because the meter is only reachable while this object owns
       // the bus; the counter reads zero from the next poll onwards.
-      if (resetEnergyRequested)
+      if (takeEnergyResetRequest())
       {
-        resetEnergyRequested = false;
         const bool ok = pzemv03.resetEnergy();
 #ifdef DEBUG_ONOFRE
         Log.notice("%s Energy reset for %s: %s" CR, tags::sensors, uniqueId, ok ? "ok" : "failed");
