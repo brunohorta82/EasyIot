@@ -792,6 +792,14 @@ uint8_t ModbusMaster::ModbusMasterTransaction(uint8_t u8MBFunction)
         break;
       }
     }
+    else
+    {
+      // Nothing to read yet. Without this the wait is a tight spin: on a meter
+      // that stops answering it holds the CPU for the full 2 s timeout, which
+      // starves the network stack and trips the ESP8266 software watchdog
+      // (~3.2 s) — the device resets and drops its MQTT session.
+      yield();
+    }
     if ((millis() - u32StartTime) > ku16MBResponseTimeout)
     {
       u8MBStatus = ku8MBResponseTimedOut;

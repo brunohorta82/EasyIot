@@ -1,4 +1,5 @@
 #include "Sensors.h"
+#include <algorithm> // std::min, used to bound the HAN clock read
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
 #include "ConfigOnofre.h"
@@ -440,8 +441,12 @@ void Sensor::loop()
       uint8_t rsl = modbus->readInputRegisters(CLOCK, 1);
       if (rsl == modbus->ku8MBSuccess)
       {
-        std::array<uint16_t, 6> buffer;
-        for (size_t i = 0; i <= modbus->available(); ++i)
+        // The clock is six 16-bit words. Never index past the array: `available()`
+        // returns a count, so the loop must stop before it (it used to run one
+        // element too far and corrupt the stack).
+        std::array<uint16_t, 6> buffer{};
+        const size_t words = std::min<size_t>(modbus->available(), buffer.size());
+        for (size_t i = 0; i < words; ++i)
         {
           buffer[i] = modbus->getResponseBuffer(i);
         }
@@ -473,7 +478,11 @@ void Sensor::loop()
         {
           obj["status"] = "Erro desconhecido";
         }
-        //  setError();
+        // Stop the read cycle here. Every later read is guarded by `!error`, so
+        // leaving this out meant a meter that stopped answering was polled another
+        // seven times, each blocking for the full 2 s Modbus timeout — long enough
+        // for the watchdog to reset the device and drop its MQTT session.
+        setError();
 #ifdef DEBUG_ONOFRE
         Log.info("%s HAN  Error: %d. " CR, tags::sensors, rsl);
 #endif
