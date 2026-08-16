@@ -206,9 +206,10 @@ function renderOverview() {
         '" data-cover="' + esc(f.id) + '"></div>' +
         '<span class="pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span></div>";
     }
-    return '<div class="frow"><div class="sw ' + (state > 0 ? "on" : "") + '" data-toggle="' + esc(f.id) + '"><i></i></div>' +
-      '<div class="fname"><b>' + esc(f.name) + "</b><span>" + esc(f.family || "") + "</span></div>" +
-      '<span class="pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span></div>";
+    return '<button type="button" class="frow frow-toggle ' + (state > 0 ? "on" : "") + '" data-toggle="' +
+      esc(f.id) + '" aria-pressed="' + (state > 0 ? "true" : "false") + '"><span class="sw" aria-hidden="true"><i></i></span>' +
+      '<span class="fname"><b>' + esc(f.name) + "</b><span>" + esc(f.family || "") + "</span></span>" +
+      '<span class="pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span></button>";
   }).join("") : '<div class="note">Sem acessórios configurados.</div>';
 
   $("ov-sensors-title").classList.toggle("hide", !sens.length);
@@ -750,7 +751,11 @@ function wireFeatureEvents() {
         feat.state = e.data;
         if (isActuator(feat)) {
           const sw = document.querySelector('[data-toggle="' + feat.id + '"]');
-          if (sw) sw.classList.toggle("on", (parseInt(e.data, 10) || 0) > 0);
+          if (sw) {
+            const on = (parseInt(e.data, 10) || 0) > 0;
+            sw.classList.toggle("on", on);
+            sw.setAttribute("aria-pressed", String(on));
+          }
           const rng = document.querySelector('[data-cover="' + feat.id + '"]');
           if (rng) rng.value = parseInt(e.data, 10) || 0;
         } else if (isEnergy(feat)) {
@@ -777,7 +782,12 @@ document.addEventListener("click", (ev) => {
     return;
   }
   const sw = ev.target.closest("[data-toggle]");
-  if (sw) { sw.classList.toggle("on"); control(sw.dataset.toggle, 102); return; }
+  if (sw) {
+    const on = sw.classList.toggle("on");
+    sw.setAttribute("aria-pressed", String(on));
+    control(sw.dataset.toggle, 102);
+    return;
+  }
   const tpl = ev.target.closest("[data-tpl]");
   if (tpl) {
     if (armed(tpl, "Substituir tudo?")) applyTemplate(parseInt(tpl.dataset.tpl, 10));

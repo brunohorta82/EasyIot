@@ -86,12 +86,17 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
 /* ---------- feature rows ---------- */
 .frow { display: flex; align-items: center; gap: 11px; padding: 9px 11px; background: var(--panel);
   border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 7px; }
+.frow-toggle { width: 100%; color: var(--txt); font: inherit; text-align: left; cursor: pointer;
+  appearance: none; border-left: 3px solid var(--line); transition: background .15s, border-color .15s; }
+.frow-toggle:hover { background: var(--panel2); }
+.frow-toggle:focus-visible { outline: 2px solid var(--grn); outline-offset: 2px; }
+.frow-toggle.on { border-left-color: var(--grn); }
 .sw { width: 44px; height: 24px; border-radius: 999px; background: var(--swoff); position: relative;
-  flex: none; border: 1px solid var(--line); cursor: pointer; }
+  flex: none; border: 1px solid var(--line); }
 .sw i { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
   background: var(--knob); transition: left .18s, background .18s; }
-.sw.on { background: rgba(151,215,0,.25); border-color: var(--grn); }
-.sw.on i { left: 22px; background: var(--grn); }
+.frow-toggle.on .sw { background: rgba(151,215,0,.25); border-color: var(--grn); }
+.frow-toggle.on .sw i { left: 22px; background: var(--grn); }
 .fname { flex: 1; min-width: 100px; }
 .fname b { display: block; font-weight: 600; }
 .fname span { font-size: 11px; color: var(--dim); }
