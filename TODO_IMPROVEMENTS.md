@@ -1,8 +1,8 @@
 # EasyIot - To Do
 
-Created by: Alexandru Hauzman  
-Updated: 16.02.2026  
-Current version: 9.161
+- Created by: Alexandru Hauzman
+- Updated: 16.08.2026
+- Current upstream version: 9.168
 
 ## Important Notes
 
@@ -30,7 +30,8 @@ Current version: 9.161
 
 ## Webpanel UX (P1/P2)
 
-1. [ ] Add firmware build date in API/system info payload.
+1. [ ] Improve the Functions tab layout: make the add-function form clearer and more compact, visually delimit each configured feature as its own card, and use a responsive two-column grid on wider screens that stacks to one column on phones. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
+2. [ ] Add a subtle left-edge health indicator to relevant status badges and diagnostic cards: green for healthy/connected, orange for degraded/retrying, red only for actual errors/disconnection, and gray for disabled/unknown. Keep the existing text or icon so status never relies on color alone; normal actuator OFF states and intentionally disabled MQTT must not appear as errors. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
 
 ## Testing & CI (P2 - Deferred / Later)
 
@@ -70,6 +71,9 @@ Current version: 9.161
 1. [x] Fixed firmware version comparison for `-dev` formats (replaced `parseFloat` logic). File: `webpanel/js/index.js`
 2. [x] Removed hardcoded `baseUrl` and switched to same-origin requests. File: `webpanel/js/index.js`
 3. [x] Added automatic firmware version display in webpanel footer (`version_lbl` from `/config`). Files: `webpanel/index.html`, `webpanel/js/index.js`
+4. [x] Added firmware build date to the API/system information payload. File: `src/ConfigOnofre.cpp`
+5. [x] Made binary actuator Overview rows full-width native controls with keyboard and `aria-pressed` support, plus green ON and neutral OFF accents. Files: `webpanel/css/styles.css`, `webpanel/js/index.js`
+6. [x] Restored the running firmware version in the persistent header beside the device metadata. Files: `webpanel/index.html`, `webpanel/js/index.js`
 
 ## Code Quality
 
