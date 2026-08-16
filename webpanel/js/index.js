@@ -176,6 +176,7 @@ function renderHeader() {
   $("h-name").textContent = config.nodeId || "—";
   $("h-chip").textContent = config.chipId || "";
   $("h-mcu").textContent = config.mcu || "";
+  $("h-fw").textContent = config.firmware || "—";
   const w = $("h-wifi");
   w.className = "pill " + rssiClass(config.signal);
   w.innerHTML = "WiFi <b>" + esc(rssiText(config.signal)) + "</b>";

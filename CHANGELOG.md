@@ -9,6 +9,9 @@ All notable changes to this project are documented in this file.
   The row is a keyboard-accessible pressed button instead of limiting control
   to the small switch graphic, with a green left accent when on and a neutral
   accent when off.
+- **The firmware version is visible again in the persistent header.** Device
+  name, chip ID, board type, and the running firmware version now stay together
+  so the installed build can be identified without opening Diagnostics.
 
 ## [9.168] - 2026-08-15
 
