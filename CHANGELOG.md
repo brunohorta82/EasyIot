@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Binary actuators can now be controlled from their complete Overview row.**
+  The row is a keyboard-accessible pressed button instead of limiting control
+  to the small switch graphic, with a green left accent when on and a neutral
+  accent when off.
+
 ## [9.168] - 2026-08-15
 
 ### Fixed
