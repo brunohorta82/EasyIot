@@ -452,17 +452,23 @@ void loadAPI()
   server.on("/load-defaults", HTTP_POST, loadDefaultsHandler);
   server.on("/load-defaults", HTTP_GET, loadDefaultsHandler);
 
-  server
-      .on("/auto-update", HTTP_POST, [](AsyncWebServerRequest *request)
-          {
+  // The only sibling without a GET: /reboot, /load-defaults and
+  // /templates/change all accept both, so pasting this one into a browser
+  // answered 404 — the obvious thing to try when talking someone through an
+  // update over the phone.
+  auto autoUpdateHandler = [](AsyncWebServerRequest *request)
+  {
 #if WEB_SECURE_ON
-       if (!request->authenticate(config.apiUser, config.apiPassword,REALM))
-       return request->requestAuthentication(REALM);
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
 #endif
-       AsyncWebServerResponse *response = request->beginResponse(200, "text/html", REDIRECT_PAGE);
-       response->addHeader("Connection", "close");
-       request->send(response);
-       config.requestAutoUpdate(); });
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", REDIRECT_PAGE);
+    response->addHeader("Connection", "close");
+    request->send(response);
+    config.requestAutoUpdate();
+  };
+  server.on("/auto-update", HTTP_POST, autoUpdateHandler);
+  server.on("/auto-update", HTTP_GET, autoUpdateHandler);
 
   server
       .on(

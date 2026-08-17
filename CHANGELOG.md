@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.175] - 2026-08-17
+
+### Fixed
+- **`/auto-update` accepts GET**, like `/reboot`, `/load-defaults` and
+  `/templates/change` already did. It was the only one registered for POST
+  alone, so pasting it into a browser answered 404 — which is exactly what
+  someone does when talking a user through an update remotely.
+
 ## [9.174] - 2026-08-17
 
 ### Fixed
