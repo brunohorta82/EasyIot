@@ -75,6 +75,26 @@ const TEMPLATES = [
   { v: 4, n: "Portão" }, { v: 5, n: "Contador HAN" }, { v: 6, n: "Rega" },
 ];
 
+/* Inline so the panel keeps working with no network: an icon set is the first
+   thing a remote stylesheet would take away. */
+const COG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">' +
+  '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.6H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.7 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H10a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V10a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>';
+const ICONS = {
+  light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/></svg>',
+  socket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="10" r="1.4"/><circle cx="15" cy="10" r="1.4"/><path d="M8 16h8"/></svg>',
+  cover: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 12h18M3 16h18"/></svg>',
+  garage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 21V9l9-5 9 5v12M7 21v-7h10v7M7 17h10"/></svg>',
+  valve: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 22a5 5 0 0 0 5-5c0-3.5-5-11-5-11S7 13.5 7 17a5 5 0 0 0 5 5Z"/></svg>',
+};
+function tileIcon(f) {
+  const d = String(f.driver || "");
+  if (d.indexOf("COVER") === 0) return ICONS.cover;
+  if (d.indexOf("GARAGE") === 0) return ICONS.garage;
+  if (d.indexOf("GARDEN") === 0) return ICONS.valve;
+  if (d.indexOf("LIGHT") === 0) return ICONS.light;
+  return ICONS.socket;
+}
+
 /* ---------------- theme ---------------- */
 /* The choice lives in localStorage, not in the device config: it belongs to
    whoever is looking, and writing it to the device would burn flash on a
@@ -204,26 +224,52 @@ function setMqttPill(on) {
 const isActuator = (f) => f.group === "ACTUATOR";
 const isCover = (f) => (f.driver || "").indexOf("COVER") === 0;
 
+/* Jump from a tile straight to that feature's settings, highlighted so it is
+   obvious which of a long list was meant. */
+function openFeatureConfig(id) {
+  document.querySelector('[data-view="features"]').click();
+  const idx = (config.features || []).findIndex((f) => f.id === id);
+  if (idx < 0) return;
+  const card = document.querySelector('[data-fi="' + idx + '"]');
+  if (!card) return;
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.add("flash");
+  setTimeout(() => card.classList.remove("flash"), 1600);
+  const name = card.querySelector('[data-f="name"]');
+  if (name) name.focus();
+}
+
 function renderOverview() {
   const feats = config.features || [];
   const acts = feats.filter(isActuator);
   const sens = feats.filter((f) => !isActuator(f));
 
-  $("ov-actuators").innerHTML = acts.length ? acts.map((f) => {
+  // Tiles rather than full-width rows: an accessory is a small thing and reads
+  // better as a grid, the way a phone's home app lays them out. Each tile is
+  // wrapped because the cog cannot live inside the button that toggles it.
+  $("ov-actuators").innerHTML = acts.length ? '<div class="tiles">' + acts.map((f) => {
+    const state = parseInt(f.state, 10) || 0;
     const pins = (f.outputs || []).length ? "OUT " + f.outputs.join(",") : "";
     const ins = (f.inputs || []).length ? "IN " + f.inputs.join(",") : "";
-    const state = parseInt(f.state, 10) || 0;
-    if (isCover(f)) {
-      return '<div class="frow"><div class="fname"><b>' + esc(f.name) + "</b><span>estore · " +
-        state + '% aberto</span><input type="range" min="0" max="100" value="' + state +
-        '" data-cover="' + esc(f.id) + '"></div>' +
-        '<span class="pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span></div>";
-    }
-    return '<button type="button" class="frow frow-toggle ' + (state > 0 ? "on" : "") + '" data-toggle="' +
-      esc(f.id) + '" aria-pressed="' + (state > 0 ? "true" : "false") + '"><span class="sw" aria-hidden="true"><i></i></span>' +
-      '<span class="fname"><b>' + esc(f.name) + "</b><span>" + esc(f.family || "") + "</span></span>" +
-      '<span class="pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span></button>";
-  }).join("") : '<div class="note">Sem acessórios configurados.</div>';
+    const meta = '<span class="tile-pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span>";
+    const cog = '<button type="button" class="cog" data-config="' + esc(f.id) +
+      '" title="Configurar" aria-label="Configurar ' + esc(f.name) + '">' + COG + "</button>";
+    const body = isCover(f)
+      ? '<div class="tile cover' + (state > 0 ? " on" : "") + '">' +
+        '<span class="tile-top">' + tileIcon(f) + "</span>" +
+        "<b>" + esc(f.name) + "</b>" +
+        '<span class="tile-sub">' + state + "% aberto</span>" +
+        '<input type="range" min="0" max="100" value="' + state + '" data-cover="' + esc(f.id) + '">' +
+        meta + "</div>"
+      // The tile itself is the switch, so the whole surface is the target.
+      : '<button type="button" class="tile tap' + (state > 0 ? " on" : "") + '" data-toggle="' +
+        esc(f.id) + '" aria-pressed="' + (state > 0 ? "true" : "false") + '">' +
+        '<span class="tile-top">' + tileIcon(f) + "</span>" +
+        "<b>" + esc(f.name) + "</b>" +
+        '<span class="tile-sub">' + (state > 0 ? "ligado" : "desligado") + "</span>" +
+        meta + "</button>";
+    return '<div class="tile-wrap">' + body + cog + "</div>";
+  }).join("") + "</div>" : '<div class="note">Sem acessórios configurados.</div>';
 
   $("ov-sensors-title").classList.toggle("hide", !sens.length);
   $("ov-sensors").innerHTML = sens.map((f) => isEnergy(f) ? energyCard(f) :
@@ -311,11 +357,20 @@ function energyCard(f) {
     "</div>";
 
   const periods = TARIFF_PERIODS.filter((p) => o[p.k] != null);
+  // Contracted power beside the real reading, as the meter's own panel shows it:
+  // the pair only means something read together.
+  const contracted = o.demandControlT1 != null || o.demandControlT2 != null || o.demandControlT3 != null;
   const periodBlock = periods.length
     ? '<div class="sub">Contrato e leituras</div>' +
-      periods.map((p) => '<div class="period' + (o.tarif === p.t ? " now" : "") + '">' +
-        '<i></i><span>' + p.n + "</span>" +
-        '<b>' + Number(o[p.k]).toFixed(3) + "<small> kWh</small></b></div>").join("")
+      '<div class="period head"><i></i><span></span>' +
+      (contracted ? "<em>contratado</em>" : "") + "<b>consumo real</b></div>" +
+      periods.map((p) => {
+        const limit = o["demandControlT" + p.t];
+        return '<div class="period' + (o.tarif === p.t ? " now" : "") + '">' +
+          '<i></i><span>' + p.n + "</span>" +
+          (contracted ? "<em>" + (limit != null ? Number(limit).toFixed(1) + " kVA" : "—") + "</em>" : "") +
+          '<b>' + Number(o[p.k]).toFixed(3) + "<small> kWh</small></b></div>";
+      }).join("")
     : "";
 
   const totals = fieldRows(o, TOTALS_FIELDS);
@@ -1023,6 +1078,12 @@ document.addEventListener("click", (ev) => {
   if (tab) {
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === tab));
     document.querySelectorAll(".view").forEach((v) => v.classList.toggle("on", v.id === "v-" + tab.dataset.view));
+    return;
+  }
+  // The cog is inside the tile, so it must claim the click before the toggle.
+  const cfg = ev.target.closest("[data-config]");
+  if (cfg) {
+    openFeatureConfig(cfg.dataset.config);
     return;
   }
   const sw = ev.target.closest("[data-toggle]");

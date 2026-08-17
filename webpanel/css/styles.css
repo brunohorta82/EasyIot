@@ -231,3 +231,41 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .period b small { color: var(--dim); font-weight: 500; }
 .period.now i { background: var(--grn); border-color: var(--grn); }
 .period.now span { color: var(--txt); font-weight: 600; }
+
+/* ---------- accessory tiles ---------- */
+/* Small tiles in a grid instead of full-width rows: an accessory is a small
+   thing, and a phone shows a whole room at once this way. */
+.tiles { display: grid; gap: 9px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.tile-wrap { position: relative; }
+.tile { display: block; width: 100%; text-align: left; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px 10px;
+  color: var(--txt); font: inherit; transition: background .15s, border-color .15s; }
+.tile.tap { cursor: pointer; }
+.tile.tap:hover { border-color: var(--hover); }
+.tile.tap:focus-visible { outline: 2px solid var(--grn); outline-offset: 2px; }
+.tile b { display: block; font-weight: 600; margin-top: 8px; line-height: 1.25;
+  padding-right: 22px;                     /* clears the cog */ }
+.tile-sub { display: block; font-size: 11px; color: var(--dim); margin-top: 1px; }
+.tile-pins { display: block; font-size: 9.5px; color: var(--dim); margin-top: 7px; letter-spacing: .04em; }
+.tile-top { display: block; color: var(--dim); }
+.tile-top svg { width: 21px; height: 21px; display: block; }
+/* On means lit: the icon and the surface both carry it. */
+.tile.on { background: rgba(151,215,0,.10); border-color: rgba(151,215,0,.45); }
+.tile.on .tile-top { color: var(--grn); }
+.tile.on .tile-sub { color: var(--grn2); }
+.tile.cover input[type=range] { margin-top: 8px; }
+/* The cog sits over the tile because a button cannot nest inside a button. */
+.cog { position: absolute; top: 7px; right: 7px; padding: 4px; line-height: 0;
+  background: none; border: 0; border-radius: 7px; color: var(--dim); cursor: pointer; opacity: .55; }
+.cog svg { width: 15px; height: 15px; display: block; }
+.cog:hover { opacity: 1; color: var(--txt); background: var(--panel2); }
+.cog:focus-visible { outline: 2px solid var(--grn); outline-offset: 1px; opacity: 1; }
+/* Arriving from a tile's cog, say which card was meant. */
+.card.flash { border-color: var(--grn); box-shadow: 0 0 0 3px rgba(151,215,0,.14); }
+/* Contracted power and real reading in their own columns, so a period reads as
+   one line: which tariff, what it allows, what it used. */
+.period em { font-style: normal; color: var(--dim); min-width: 62px; text-align: right; white-space: nowrap; }
+.period.head { border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.period.head em, .period.head b { font-size: 9.5px; letter-spacing: .14em; color: var(--grn);
+  font-weight: 700; text-transform: uppercase; }
+.period.head i { visibility: hidden; }

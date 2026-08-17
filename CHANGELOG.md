@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.172] - 2026-08-15
+
+### Changed
+- **Accessories are tiles, not full-width rows.** A switch is a small thing and
+  a row per accessory wasted most of the screen; a grid shows a whole
+  installation at once, with an icon per type, its state in words, and a green
+  tint when on. Each tile carries a cog that jumps straight to that feature's
+  settings, highlighted on arrival, instead of hunting a long list.
+- **The meter card shows contracted power beside each period's reading**, the
+  way the meter's own panel presents them — the pair only means something read
+  together. The tariff being billed keeps its traffic light.
+
 ## [9.171] - 2026-08-15
 
 ### Changed
