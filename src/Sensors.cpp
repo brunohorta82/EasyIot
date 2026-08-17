@@ -441,11 +441,12 @@ void Sensor::loop()
       uint8_t rsl = modbus->readInputRegisters(CLOCK, 1);
       if (rsl == modbus->ku8MBSuccess)
       {
-        // The clock is six 16-bit words. Never index past the array: `available()`
-        // returns a count, so the loop must stop before it (it used to run one
-        // element too far and corrupt the stack).
+        // This bundled ModbusMaster stores the last valid response index rather
+        // than a word count. Add one, then clamp to the six-word clock buffer.
+        // Using `i < available()` here drops the final word.
         std::array<uint16_t, 6> buffer{};
-        const size_t words = std::min<size_t>(modbus->available(), buffer.size());
+        const size_t words = std::min<size_t>(
+            static_cast<size_t>(modbus->available()) + 1U, buffer.size());
         for (size_t i = 0; i < words; ++i)
         {
           buffer[i] = modbus->getResponseBuffer(i);
@@ -478,10 +479,8 @@ void Sensor::loop()
         {
           obj["status"] = "Erro desconhecido";
         }
-        // Stop the read cycle here. Every later read is guarded by `!error`, so
-        // leaving this out meant a meter that stopped answering was polled another
-        // seven times, each blocking for the full 2 s Modbus timeout — long enough
-        // for the watchdog to reset the device and drop its MQTT session.
+        // Stop the read cycle here. Without this, the next guarded read waits for
+        // another full Modbus timeout before it records the error.
         setError();
 #ifdef DEBUG_ONOFRE
         Log.info("%s HAN  Error: %d. " CR, tags::sensors, rsl);
@@ -559,9 +558,9 @@ void Sensor::loop()
         setError();
       }
 
-      if (modbus->readLastProfile(0x06, 0x01) == modbus->ku8MBSuccess)
+      if (!error && modbus->readLastProfile(0x06, 0x01) == modbus->ku8MBSuccess)
       {
-        std::array<uint16_t, 6> buffer;
+        std::array<uint16_t, 6> buffer{};
         for (size_t i = 0; i <= 3; ++i)
         {
           buffer[i] = modbus->getResponseBuffer(i);

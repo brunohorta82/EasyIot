@@ -739,6 +739,10 @@ uint8_t ModbusMaster::ModbusMasterTransaction(uint8_t u8MBFunction)
       {
         _idle();
       }
+      // Let the Wi-Fi/TCP stack and watchdog run while a meter is silent or a
+      // partial response has stalled. This must be in the no-data branch: tying
+      // it to a particular ADU length leaves that exact length spinning.
+      yield();
 #if __MODBUSMASTER_DEBUG__
       digitalWrite(__MODBUSMASTER_DEBUG_PIN_B__, false);
 #endif
@@ -791,14 +795,6 @@ uint8_t ModbusMaster::ModbusMasterTransaction(uint8_t u8MBFunction)
         u8BytesLeft = 5;
         break;
       }
-    }
-    else
-    {
-      // Nothing to read yet. Without this the wait is a tight spin: on a meter
-      // that stops answering it holds the CPU for the full 2 s timeout, which
-      // starves the network stack and trips the ESP8266 software watchdog
-      // (~3.2 s) — the device resets and drops its MQTT session.
-      yield();
     }
     if ((millis() - u32StartTime) > ku16MBResponseTimeout)
     {
