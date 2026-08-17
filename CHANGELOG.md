@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Unsaved feature edits now survive Diagnostics refreshes.** The periodic
+  diagnostics update no longer replaces locally edited feature data with the
+  last configuration stored on the device.
+- **Live feature events stay attached after configuration changes.** Event
+  listeners are removed and rebound to the current features after loading,
+  adding, or saving configuration, so new names and features update without a
+  browser reload.
+
 ## [9.168] - 2026-08-15
 
 ### Fixed
