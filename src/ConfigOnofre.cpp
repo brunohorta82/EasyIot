@@ -990,7 +990,16 @@ void ConfigOnofre::requestAutoUpdate()
 {
   autoUpdate = true;
 }
+// Asking must not consume: loop() calls this only to decide whether to skip its
+// normal work, and it used to clear the flag doing so. When the MQTT command
+// landed after checkInternalRoutines() had already run — loopWiFi() yields in
+// between — that guard ate the request and no update ever happened.
 bool ConfigOnofre::isAutoUpdateRequested()
+{
+  return autoUpdate;
+}
+// Taken once, by whoever actually performs the update.
+bool ConfigOnofre::takeAutoUpdateRequest()
 {
   if (autoUpdate)
   {

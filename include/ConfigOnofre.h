@@ -84,6 +84,7 @@ public:
 
   void requestAutoUpdate();
   bool isAutoUpdateRequested();
+  bool takeAutoUpdateRequest();
 
   void requestLoadDefaults();
   bool isLoadDefaultsRequested();

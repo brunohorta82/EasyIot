@@ -106,7 +106,7 @@ void checkInternalRoutines()
     config.requestRestart();
   }
 
-  if (config.isAutoUpdateRequested())
+  if (config.takeAutoUpdateRequest())
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Auto Update Request." CR, tags::system);

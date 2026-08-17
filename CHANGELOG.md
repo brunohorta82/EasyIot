@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.174] - 2026-08-17
+
+### Fixed
+- **A remote UPDATE command was often swallowed.** `isAutoUpdateRequested()`
+  cleared the flag as it answered, and `loop()` called it twice per iteration:
+  once through `checkInternalRoutines()`, which performs the update, and again as
+  a guard deciding whether to skip normal work. When the MQTT command arrived
+  after the first call — `loopWiFi()` yields in between, so the async callback
+  lands there routinely — the guard consumed the request and the update never
+  ran. Pressing the button appeared to do nothing at all. Asking is now
+  non-destructive and only the code that performs the update takes the request.
+
 ## [9.173] - 2026-08-15
 
 ### Changed
