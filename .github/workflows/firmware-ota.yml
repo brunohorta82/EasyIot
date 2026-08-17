@@ -8,12 +8,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 9.17). Empty = use platformio.ini [extra].version"
+        description: "Expected release version; must match platformio.ini. Empty = use project version."
+        type: string
         required: false
       deploy:
         description: "Publish to the OTA folder (devices will update). false = build only."
         type: boolean
-        default: true
+        default: false
 
 jobs:
   build:
@@ -45,7 +46,7 @@ jobs:
         # step runs directly; PlatformIO does not pull it in for its own builds.
         run: pip install -U platformio intelhex
 
-      # tools/html_converter.sh (run by extra_script.py during the build) embeds the
+      # tools/html_converter.py (run by extra_script.py during the build) embeds the
       # gzipped web panel into headers and needs these CLI minifiers plus xxd.
       - uses: actions/setup-node@v4
         with:
@@ -59,16 +60,75 @@ jobs:
             command -v "$c" >/dev/null || { echo "missing required command: $c"; exit 1; }
           done
 
-      - name: Resolve version
+      - name: Resolve and verify version
         id: ver
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          INPUT_DEPLOY: ${{ github.event.inputs.deploy }}
         run: |
-          V="${{ github.event.inputs.version }}"
-          if [ -z "$V" ]; then
-            V=$(grep -E '^\s*version\s*=' platformio.ini | head -1 | sed -E 's/.*=\s*//' | tr -d ' ')
+          set -euo pipefail
+
+          PROJECT_VERSION="$(
+            awk '
+              /^[[:space:]]*\[extra\][[:space:]]*$/ {
+                in_extra = 1
+                next
+              }
+              /^[[:space:]]*\[/ {
+                in_extra = 0
+              }
+              in_extra && /^[[:space:]]*version[[:space:]]*=/ {
+                value = $0
+                sub(/^[^=]*=[[:space:]]*/, "", value)
+                sub(/[[:space:]]*[;#].*$/, "", value)
+                sub(/[[:space:]]+$/, "", value)
+                print value
+                exit
+              }
+            ' platformio.ini
+          )"
+
+          if [ -z "$PROJECT_VERSION" ]; then
+            echo "::error::Could not read [extra] version from platformio.ini"
+            exit 1
           fi
-          V="${V%-dev}"            # a release must not carry the -dev suffix
-          echo "version=$V" >> "$GITHUB_OUTPUT"
-          echo "Building version $V for ${{ matrix.mcu }}"
+          if ! [[ "$PROJECT_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}(-[A-Za-z0-9._-]+)?$ ]]; then
+            echo "::error::Invalid version format in platformio.ini"
+            exit 1
+          fi
+
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+              echo "::error::Push release was not triggered by a tag"
+              exit 1
+            fi
+            REQUESTED_VERSION="${GITHUB_REF_NAME#v}"
+            DEPLOY=true
+          else
+            REQUESTED_VERSION="${INPUT_VERSION:-$PROJECT_VERSION}"
+            DEPLOY="${INPUT_DEPLOY:-false}"
+          fi
+
+          case "$DEPLOY" in
+            true|false) ;;
+            *)
+              echo "::error::Invalid deploy input"
+              exit 1
+              ;;
+          esac
+
+          if [ "$REQUESTED_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "::error::Tag/input version does not match platformio.ini version $PROJECT_VERSION"
+            exit 1
+          fi
+          if [[ "$PROJECT_VERSION" == *-dev* ]]; then
+            echo "::error::Release workflow refuses development version $PROJECT_VERSION"
+            exit 1
+          fi
+
+          printf 'version=%s\n' "$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
+          printf 'deploy=%s\n' "$DEPLOY" >> "$GITHUB_OUTPUT"
+          printf 'Building version %s for %s\n' "$PROJECT_VERSION" '${{ matrix.mcu }}'
 
       - name: Ensure local override exists
         run: touch platformio_override.ini
@@ -104,8 +164,8 @@ jobs:
         run: |
           BUILD_DIR=".pio/build/${{ matrix.env }}"
           NAME="ONOFRE_${{ matrix.mcu }}_WEBFLASH_${{ steps.ver.outputs.version }}.bin"
-          APP=$(find "$BUILD_DIR" -maxdepth 1 -name 'Firmware_*.bin' -print -quit)
-          [ -n "$APP" ] || APP="$BUILD_DIR/firmware.bin"
+          APP="out/${{ steps.bin.outputs.name }}"
+          [ -f "$APP" ] || { echo "missing OTA application: $APP"; exit 1; }
           mkdir -p webflash
           if [ "${{ matrix.chip }}" = "esp8266" ]; then
             cp "$APP" "webflash/$NAME"
@@ -131,8 +191,14 @@ jobs:
           name: ${{ steps.bin.outputs.name }}
           path: out/${{ steps.bin.outputs.name }}
 
+      - name: Upload full-flash artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.webflash.outputs.name }}
+          path: webflash/${{ steps.webflash.outputs.name }}
+
       - name: Publish to OTA folder
-        if: ${{ github.event_name == 'push' || github.event.inputs.deploy == 'true' }}
+        if: ${{ steps.ver.outputs.deploy == 'true' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -144,7 +210,7 @@ jobs:
           strip_components: 1
 
       - name: Publish full-flash image (browser installer)
-        if: ${{ github.event_name == 'push' || github.event.inputs.deploy == 'true' }}
+        if: ${{ steps.ver.outputs.deploy == 'true' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
