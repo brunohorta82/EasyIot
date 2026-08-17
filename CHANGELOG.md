@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [9.170] - 2026-08-15
 
 ### Added
 - **Climate sensors now have compact live history graphs in Overview.**
