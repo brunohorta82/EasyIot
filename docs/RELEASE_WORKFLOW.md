@@ -67,10 +67,12 @@ This document defines the standard flow for development, upstream cherry-pick PR
 ## Release Notes Draft
 
 - Generate a draft from recent commits:
-  - `tools/generate_release_notes.sh`
+  - `python tools/generate_release_notes.py` (Windows: `py -3 tools/generate_release_notes.py`)
 - Generate from a specific range:
-  - `tools/generate_release_notes.sh --range <from..to>`
+  - `python tools/generate_release_notes.py --range <from..to>`
 - Change output file:
-  - `tools/generate_release_notes.sh --count 25 --output RELEASE_NOTES_DRAFT.md`
+  - `python tools/generate_release_notes.py --count 25 --output RELEASE_NOTES_DRAFT.md`
 - Default output path is repo root:
   - `RELEASE_NOTES_DRAFT.md`
+- Shell wrapper (macOS/Linux):
+  - `tools/generate_release_notes.sh`
