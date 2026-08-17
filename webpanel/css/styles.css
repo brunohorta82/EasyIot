@@ -107,6 +107,39 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
 input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .fval { font-size: 15px; font-weight: 700; }
 
+/* ---------- live climate history ---------- */
+.climate-card { min-width: 0; }
+.climate-values { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.climate-value { display: inline-flex; align-items: baseline; gap: 3px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--panel2); padding: 4px 9px; font-size: 20px; font-weight: 700; }
+.climate-value small { font-size: 11px; }
+.climate-value.temperature, .climate-series-head .temperature { color: var(--grn); }
+.climate-value.humidity, .climate-series-head .humidity { color: var(--blu); }
+.climate-series { margin-top: 9px; }
+.climate-series-head { display: flex; justify-content: space-between; gap: 10px; margin: 0 2px 4px;
+  color: var(--dim); font-size: 10px; }
+.climate-series-head span:first-child { font-weight: 700; letter-spacing: .05em; }
+.climate-chart { display: block; width: 100%; height: 56px; overflow: hidden; }
+.climate-chart .guide { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5;
+  vector-effect: non-scaling-stroke; }
+.climate-area.temperature { fill: var(--grn); fill-opacity: .1; }
+.climate-area.humidity { fill: var(--blu); fill-opacity: .1; }
+.climate-line { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.climate-line.temperature, .climate-latest.temperature { stroke: var(--grn); }
+.climate-line.humidity, .climate-latest.humidity { stroke: var(--blu); }
+.climate-latest { stroke-width: 3; stroke-linecap: round; vector-effect: non-scaling-stroke;
+  animation: climate-sample .65s ease-out; }
+.climate-time { display: flex; justify-content: space-between; margin: 1px 2px 0; color: var(--dim);
+  font-size: 9px; }
+@keyframes climate-sample {
+  from { opacity: .2; stroke-width: 8; }
+  to { opacity: 1; stroke-width: 3; }
+}
+@media (prefers-reduced-motion: reduce) { .climate-latest { animation: none; } }
+.climate-collecting { min-height: 56px; display: grid; place-items: center; border: 1px dashed var(--line);
+  border-radius: 7px; color: var(--dim); font-size: 10.5px; }
+.climate-caption { color: var(--dim); font-size: 9.5px; text-align: right; margin-top: 6px; }
+
 /* ---------- pinout ---------- */
 .board { display: grid; grid-template-columns: 1fr auto 1fr; gap: 9px; align-items: start; }
 @media (max-width: 620px) { .board { grid-template-columns: 1fr; } .chip { order: -1; } }

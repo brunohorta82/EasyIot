@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Climate sensors now have compact live history graphs in Overview.**
+  DS18B20, DHT11/21/22, and SHT4x readings keep a bounded browser-only history
+  with separate temperature and humidity scales, min/max or stable-state
+  context, sample timestamps, and a visible newest-reading marker. History
+  resets when the page is reloaded and never writes samples to device flash.
+
 ## [9.169] - 2026-08-15
 
 ### Added

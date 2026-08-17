@@ -7,6 +7,7 @@ var config = {};          // last config read from the device
 var dirty = false;        // unsaved edits in the forms
 var removed = [];         // feature ids queued for removal
 var heapHistory = [];     // free heap samples, for the sparkline
+var climateHistory = {};  // browser-only samples, keyed by feature id
 var logPaused = false;
 var logLines = [];
 var source = null;
@@ -226,8 +227,9 @@ function renderOverview() {
 
   $("ov-sensors-title").classList.toggle("hide", !sens.length);
   $("ov-sensors").innerHTML = sens.map((f) => isEnergy(f) ? energyCard(f) :
-    '<div class="card"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
-    esc(sensorText(f.state)) + "</div></div>").join("");
+    isClimate(f) ? climateCard(f, true) :
+      '<div class="card"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
+      esc(sensorText(f.state)) + "</div></div>").join("");
 }
 
 /* Energy meters report a dozen fields; a one-line summary would throw away
@@ -298,6 +300,96 @@ function sensorText(state) {
   if (o.illuminance != null) bits.push(Math.round(o.illuminance) + "lx");
   if (o.state != null && !bits.length) bits.push(o.state ? "ativo" : "livre");
   return bits.length ? bits.join(" · ") : "—";
+}
+
+const CLIMATE_DRIVERS = ["DS18B20", "SHT4X", "DHT_11", "DHT_21", "DHT_22"];
+const CLIMATE_MAX_SAMPLES = 360;
+const isClimate = (f) => CLIMATE_DRIVERS.indexOf(f.driver) >= 0;
+
+function climateReading(state) {
+  const o = parseState(state);
+  if (!o || typeof o !== "object") return null;
+  const temperature = Number(o.temperature);
+  const humidity = Number(o.humidity);
+  const hasTemperature = o.temperature != null && isFinite(temperature);
+  const hasHumidity = o.humidity != null && isFinite(humidity);
+  if (!hasTemperature && !hasHumidity) return null;
+  return {
+    temperature: hasTemperature ? temperature : null,
+    humidity: hasHumidity ? humidity : null,
+  };
+}
+
+function recordClimate(f) {
+  const reading = climateReading(f.state);
+  if (!reading) return null;
+  const now = Date.now();
+  const history = climateHistory[f.id] || { samples: [], truncated: false };
+  const last = history.samples[history.samples.length - 1];
+  // renderOverview() can run again after a save; do not duplicate the reading
+  // that the live event just recorded.
+  if (!last || now - last.at > 1000) {
+    history.samples.push({ at: now, temperature: reading.temperature, humidity: reading.humidity });
+    if (history.samples.length > CLIMATE_MAX_SAMPLES) {
+      history.samples.shift();
+      history.truncated = true;
+    }
+  }
+  climateHistory[f.id] = history;
+  return history;
+}
+
+function climateSeries(samples, key, label, unit, digits, cls) {
+  const validSamples = samples.filter((sample) => sample[key] != null && isFinite(sample[key]));
+  const values = validSamples.map((sample) => sample[key]);
+  if (values.length < 2) return "";
+  const rawMin = Math.min.apply(null, values), rawMax = Math.max.apply(null, values);
+  const padding = Math.max((rawMax - rawMin) * .12, key === "temperature" ? .2 : 1);
+  const min = rawMin - padding, max = rawMax + padding, span = max - min || 1;
+  const plotted = values.map((value, i) => ({
+    x: i / (values.length - 1) * 300,
+    y: 50 - (value - min) / span * 44,
+  }));
+  const points = plotted.map((point) => point.x.toFixed(1) + "," + point.y.toFixed(1)).join(" ");
+  const area = "0,54 " + points + " 300,54";
+  const latest = plotted[plotted.length - 1];
+  const range = rawMin === rawMax
+    ? "estável · " + rawMax.toFixed(digits) + unit
+    : "mín " + rawMin.toFixed(digits) + unit + " · máx " + rawMax.toFixed(digits) + unit;
+  const clock = (sample) => new Date(sample.at).toLocaleTimeString([], {
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  return '<div class="climate-series"><div class="climate-series-head"><span class="' + cls + '">' +
+    label + '</span><span>' + range +
+    '</span></div><svg class="climate-chart" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="' +
+    esc(label + " desde que a página foi aberta") + '"><line class="guide" x1="0" y1="14" x2="300" y2="14"></line>' +
+    '<line class="guide" x1="0" y1="38" x2="300" y2="38"></line>' +
+    '<polygon class="climate-area ' + cls + '" points="' + area + '"></polygon>' +
+    '<polyline class="climate-line ' + cls + '" points="' + points + '"></polyline>' +
+    '<line class="climate-latest ' + cls + '" x1="298" y1="' + (latest.y - 4).toFixed(1) +
+    '" x2="298" y2="' + (latest.y + 4).toFixed(1) + '"></line></svg>' +
+    '<div class="climate-time"><span>' + clock(validSamples[0]) + '</span><span>' +
+    clock(validSamples[validSamples.length - 1]) + '</span></div></div>';
+}
+
+function climateCard(f, shouldRecord) {
+  const reading = climateReading(f.state);
+  const history = shouldRecord ? recordClimate(f) : climateHistory[f.id];
+  const samples = history ? history.samples : [];
+  const temperature = reading && reading.temperature != null
+    ? '<span class="climate-value temperature">' + reading.temperature.toFixed(1) + '<small>°C</small></span>' : "";
+  const humidity = reading && reading.humidity != null
+    ? '<span class="climate-value humidity">' + Math.round(reading.humidity) + '<small>%</small></span>' : "";
+  const temperatureGraph = climateSeries(samples, "temperature", "temperatura", "°C", 1, "temperature");
+  const humidityGraph = climateSeries(samples, "humidity", "humidade", "%", 0, "humidity");
+  const collecting = !temperatureGraph && !humidityGraph
+    ? '<div class="climate-collecting">A recolher leituras…</div>' : "";
+  const scope = history && history.truncated ? "leituras recentes" : "desde que abriu esta página";
+  return '<div class="card climate-card" id="climate-' + esc(f.id) + '"><h4>' + esc(f.name) + '</h4>' +
+    '<div class="climate-values" id="sv-' + esc(f.id) + '">' + (temperature || humidity || "—") + '</div>' +
+    collecting + temperatureGraph + humidityGraph +
+    '<div class="climate-caption">' + scope + (samples.length ? " · " + samples.length +
+      (samples.length === 1 ? " leitura" : " leituras") : "") + "</div></div>";
 }
 
 function renderPinout() {
@@ -835,6 +927,10 @@ function wireFeatureEvents() {
           const el = $("sv-" + feat.id);
           const card = el && el.closest(".card");
           if (card) card.outerHTML = energyCard(feat);
+        } else if (isClimate(feat)) {
+          recordClimate(feat);
+          const card = $("climate-" + feat.id);
+          if (card) card.outerHTML = climateCard(feat, false);
         } else {
           const el = $("sv-" + feat.id);
           if (el) el.textContent = sensorText(e.data);

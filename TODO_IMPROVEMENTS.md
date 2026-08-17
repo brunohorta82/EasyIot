@@ -74,6 +74,7 @@
 4. [x] Added firmware build date to the API/system information payload. File: `src/ConfigOnofre.cpp`
 5. [x] Made binary actuator Overview rows full-width native controls with keyboard and `aria-pressed` support, plus green ON and neutral OFF accents. Files: `webpanel/css/styles.css`, `webpanel/js/index.js`
 6. [x] Restored the running firmware version in the persistent header beside the device metadata. Files: `webpanel/index.html`, `webpanel/js/index.js`
+7. [x] Added bounded browser-only climate history graphs for DS18B20, DHT11/21/22, and SHT4x sensors with separate temperature/humidity scales, stable-state context, timestamps, and no device flash writes. Persistent day/week history remains a separate storage/API design. Files: `webpanel/css/styles.css`, `webpanel/js/index.js`
 
 ## Code Quality
 
