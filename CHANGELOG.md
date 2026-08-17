@@ -2,7 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [9.169] - 2026-08-15
+
+### Added
+- **The panel announces an available update and offers it in one click**, naming
+  the version, as the old panel did. The device only knows its own version, so
+  the panel asks the release server; without this nobody discovers that a fix
+  exists. Versions are compared component by component as numbers — string
+  comparison ranks 9.99 above 9.100.
+
+### Fixed
+- **HAN demand-control values reach Home Assistant again.** The meter's registers
+  are read as a chain of nine guarded steps, and 9.163 re-enabled `setError()` on
+  a failed read to stop a silent meter from resetting the device. That also meant
+  a single failed register aborted every later step, so `demandControlT1..T3` —
+  the eighth read — silently vanished from the payload and the Home Assistant
+  templates found nothing. A miss now costs only its own field; two misses in a
+  row still end the pass and pause polling, which is what protects the device.
 
 ### Changed
 - **Binary actuators can now be controlled from their complete Overview row.**

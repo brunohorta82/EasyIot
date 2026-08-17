@@ -618,6 +618,57 @@ async function applyTemplate(v) {
   } catch (e) { toast("Não foi possível aplicar", "err"); }
 }
 
+/* Update availability. The device only knows its own version, so the panel asks
+   the release server and offers the update when there is one — otherwise nobody
+   discovers a fix exists. Compared component by component as numbers: string
+   comparison would rank 9.99 above 9.100. */
+const UPDATE_HOST = "https://update.bhonofre.pt";
+
+function versionParts(v) {
+  return String(v == null ? "" : v).trim().split("-")[0].split(".")
+    .map((p) => parseInt(p.replace(/[^0-9]/g, ""), 10) || 0);
+}
+function isNewer(candidate, current) {
+  const a = versionParts(candidate), b = versionParts(current);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+
+async function checkForUpdate() {
+  const btn = $("a-update");
+  const note = $("u-avail");
+  if (!config.mcu) return;
+  let latest = "";
+  try {
+    // Cross-origin by design; an https fetch from this http page is allowed.
+    const res = await fetch(UPDATE_HOST + "/firmware/latest-version/" + encodeURIComponent(config.mcu),
+      { mode: "cors" });
+    latest = (await res.text()).trim();
+  } catch (e) {
+    // Offline, or no route to the release server — say so instead of implying
+    // the firmware is current.
+    note.className = "note";
+    note.textContent = "Não foi possível verificar se há atualização.";
+    return;
+  }
+  if (isNewer(latest, config.firmware)) {
+    note.className = "note ok";
+    note.textContent = "Está disponível a versão " + latest + ".";
+    btn.textContent = "Atualizar para a " + latest;
+    btn.classList.add("p");
+  } else {
+    note.className = "note";
+    note.textContent = latest
+      ? "Já tens a versão mais recente (" + latest + ")."
+      : "";
+    btn.textContent = "Procurar atualização";
+    btn.classList.remove("p");
+  }
+}
+
 /* Manual firmware upload — the recovery path when the cloud is unreachable.
    POST /update takes a multipart body and reboots the device when it ends. */
 function uploadFirmware(btn) {
@@ -907,7 +958,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!armed(e.currentTarget, "Apagar tudo?")) return;
     try { await api("/load-defaults", { method: "POST" }); toast("A repor…", "ok"); } catch (err) { toast("Falhou", "err"); }
   };
-  load().then(connectEvents);
+  // Announce an available update on arrival; the old panel did and people
+  // relied on it to know a fix existed.
+  load().then(connectEvents).then(checkForUpdate);
   // Diagnostics are a snapshot; refresh them while the tab is open.
   setInterval(() => {
     if ($("v-diag").classList.contains("on")) {

@@ -486,79 +486,76 @@ void Sensor::loop()
         Log.info("%s HAN  Error: %d. " CR, tags::sensors, rsl);
 #endif
       }
-      if (!error && modbus->readInputRegisters(INSTANTANEOUS_VOLTAGE_L1, 2) == modbus->ku8MBSuccess)
+      // A single register may fail without costing the rest of the payload:
+      // skip that field and carry on. Two failures in a row mean the meter has
+      // gone quiet, so the pass stops rather than blocking 2 s on each of the
+      // remaining registers — which is what reset the device before 9.163.
+      // The clock read above already counts: if it failed, the meter is halfway
+      // to being declared silent and one more miss ends the pass.
+      int hanMisses = error ? 1 : 0;
+      auto hanRead = [&](uint16_t address, uint8_t words) {
+        if (hanMisses >= 2)
+          return false;
+        if (modbus->readInputRegisters(address, words) == modbus->ku8MBSuccess)
+        {
+          hanMisses = 0;
+          return true;
+        }
+        hanMisses++;
+        return false;
+      };
+      if (hanRead(INSTANTANEOUS_VOLTAGE_L1, 2))
       {
         obj["voltage"] = modbus->getResponseBuffer(0) / 10.0;
         obj["current"] = modbus->getResponseBuffer(1) / 10.0;
         delay(50);
       }
-      else
-      {
-        setError();
-      }
-      if (!error && modbus->readInputRegisters(ACTIVE_ENERGY_IMPORT_PLUS_A, 2) == modbus->ku8MBSuccess)
+      // A miss here costs only this field; hanRead() tracks it.
+      if (hanRead(ACTIVE_ENERGY_IMPORT_PLUS_A, 2))
       {
         obj["powerImport"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
         obj["powerExport"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
         delay(50);
       }
-      else
-      {
-        setError();
-      }
-      if (!error && modbus->readInputRegisters(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3) == modbus->ku8MBSuccess)
+      // A miss here costs only this field; hanRead() tracks it.
+      if (hanRead(RATE_1_CONTRACT_1_ACTIVE_ENERGY_PLUS_A, 3))
       {
         obj["rate1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
         obj["rate2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
         obj["rate3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
         delay(50);
       }
-      else
-      {
-        setError();
-      }
-      if (!error && modbus->readInputRegisters(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3) == modbus->ku8MBSuccess)
+      // A miss here costs only this field; hanRead() tracks it.
+      if (hanRead(INSTANTANEOUS_ACTIVE_POWER_PLUS_SUM_OF_ALL_PHASES, 3))
       {
         obj["power"] = modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16;
         obj["export"] = modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16;
         obj["powerFactor"] = modbus->getResponseBuffer(4) / 1000.0;
         delay(50);
       }
-      else
-      {
-        setError();
-      }
-      if (!error && modbus->readInputRegisters(INSTANTANEOUS_FREQUENCY, 1) == modbus->ku8MBSuccess)
+      // A miss here costs only this field; hanRead() tracks it.
+      if (hanRead(INSTANTANEOUS_FREQUENCY, 1))
       {
         obj["frequency"] = modbus->getResponseBuffer(0) / 10.0;
         delay(50);
       }
-      else
-      {
-        setError();
-      }
-      if (!error && modbus->readInputRegisters(CURRENTLY_ACTIVE_TARIFF, 1) == modbus->ku8MBSuccess)
+      // A miss here costs only this field; hanRead() tracks it.
+      if (hanRead(CURRENTLY_ACTIVE_TARIFF, 1))
       {
         obj["tarif"] = modbus->getResponseBuffer(0) >> 8;
         delay(50);
       }
-      else
-      {
-        setError();
-      }
-      if (!error && modbus->readInputRegisters(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3) == modbus->ku8MBSuccess)
+      // A miss here costs only this field; hanRead() tracks it.
+      if (hanRead(ACTIVE_DEMAND_CONTROL_THRESHOLD_T1, 3))
       {
         obj["demandControlT1"] = (modbus->getResponseBuffer(1) | modbus->getResponseBuffer(0) << 16) / 1000.0;
         obj["demandControlT2"] = (modbus->getResponseBuffer(3) | modbus->getResponseBuffer(2) << 16) / 1000.0;
         obj["demandControlT3"] = (modbus->getResponseBuffer(5) | modbus->getResponseBuffer(4) << 16) / 1000.0;
         delay(50);
       }
-      else
-      {
-        setError();
-      }
+      // A miss here costs only this field; hanRead() tracks it.
 
-      if (!error && modbus->readLastProfile(0x06, 0x01) == modbus->ku8MBSuccess)
+      if (hanMisses < 2 && modbus->readLastProfile(0x06, 0x01) == modbus->ku8MBSuccess)
       {
         std::array<uint16_t, 6> buffer{};
         for (size_t i = 0; i <= 3; ++i)
@@ -580,6 +577,14 @@ void Sensor::loop()
                                      modbus->getResponseBuffer(13) << 16;
       }
 
+      // Escalate once, after the pass: two misses in a row is a meter that has
+      // stopped answering, and that is what should pause polling. A single bad
+      // register must not, or every field after it disappears from Home
+      // Assistant — which is how demandControl was lost between 9.163 and 9.168.
+      if (hanMisses >= 2)
+      {
+        setError();
+      }
       obj["errorCount"] = errorCounter;
       if (!error)
       {
