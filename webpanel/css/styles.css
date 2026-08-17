@@ -73,9 +73,13 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
 /* ---------- cards ---------- */
 .grid { display: grid; gap: 9px; }
 .g2 { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
-.g3 { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-.card.energy { grid-column: span 2; }
-@media (max-width: 700px) { .card.energy { grid-column: auto; } }
+/* Same column basis as the accessory tiles, so a sensor card can be sized in
+   whole tiles: a reading with units needs three, a one-word state needs one. */
+.g3 { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: min-content; }
+.card.energy, .card.climate-card, .card.wide { grid-column: span 3; }
+@media (max-width: 700px) {
+  .card.energy, .card.climate-card, .card.wide { grid-column: 1 / -1; }
+}
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
 .card h4 { margin: 0 0 8px; font-size: 10.5px; letter-spacing: .12em; color: var(--dim); font-weight: 700; }
 .big { font-size: 25px; font-weight: 700; letter-spacing: -.5px; }
@@ -235,9 +239,14 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 /* ---------- accessory tiles ---------- */
 /* Small tiles in a grid instead of full-width rows: an accessory is a small
    thing, and a phone shows a whole room at once this way. */
-.tiles { display: grid; gap: 9px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.tile-wrap { position: relative; }
-.tile { display: block; width: 100%; text-align: left; background: var(--panel);
+/* Equal-height tiles: a wrapped name or a cover's slider must not make one tile
+   taller than its neighbours. Rows are stretched to match and the pin line is
+   pushed to the bottom, so every tile lines up whatever it holds. */
+.tiles { display: grid; gap: 9px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-auto-rows: 1fr; }
+.tile-wrap { position: relative; display: flex; }
+.tile { display: flex; flex-direction: column; width: 100%; min-height: 136px;
+  text-align: left; background: var(--panel);
   border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px 10px;
   color: var(--txt); font: inherit; transition: background .15s, border-color .15s; }
 .tile.tap { cursor: pointer; }
@@ -245,8 +254,11 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .tile.tap:focus-visible { outline: 2px solid var(--grn); outline-offset: 2px; }
 .tile b { display: block; font-weight: 600; margin-top: 8px; line-height: 1.25;
   padding-right: 22px;                     /* clears the cog */ }
+.tile.cover input[type=range] { margin-top: 8px; }
 .tile-sub { display: block; font-size: 11px; color: var(--dim); margin-top: 1px; }
-.tile-pins { display: block; font-size: 9.5px; color: var(--dim); margin-top: 7px; letter-spacing: .04em; }
+/* margin-top:auto anchors the pins to the bottom edge of every tile. */
+.tile-pins { display: block; font-size: 9.5px; color: var(--dim); margin-top: auto;
+  padding-top: 7px; letter-spacing: .04em; }
 .tile-top { display: block; color: var(--dim); }
 .tile-top svg { width: 21px; height: 21px; display: block; }
 /* On means lit: the icon and the surface both carry it. */

@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.173] - 2026-08-15
+
+### Changed
+- **Sensor cards are measured in accessory tiles.** The sensor grid now shares the
+  tiles' column basis, so a card can be sized in whole tiles: a reading with
+  units — temperature, humidity, light, distance — and a meter take three, while
+  a door, window, motion or rain sensor is one word and keeps one.
+
+### Fixed
+- **Accessory tiles all share one height.** A name that wrapped to two lines or a
+  cover's slider made its tile taller than its neighbours, leaving the grid
+  ragged. Rows stretch to match and the pin line is anchored to the bottom edge,
+  so every tile lines up regardless of what it holds.
+
 ## [9.172] - 2026-08-15
 
 ### Changed

@@ -274,7 +274,10 @@ function renderOverview() {
   $("ov-sensors-title").classList.toggle("hide", !sens.length);
   $("ov-sensors").innerHTML = sens.map((f) => isEnergy(f) ? energyCard(f) :
     isClimate(f) ? climateCard(f, true) :
-      '<div class="card"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
+      // A reading with a unit gets the same room as a climate card; a door or a
+      // motion sensor is one word and stays narrow.
+      '<div class="card' + (MEASURE_DRIVERS.indexOf(f.driver) >= 0 ? " wide" : "") +
+      '"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
       esc(sensorText(f.state, f.driver)) + "</div></div>").join("");
 }
 
@@ -427,6 +430,8 @@ function sensorText(state, driver) {
   return bits.length ? bits.join(" · ") : "—";
 }
 
+/* Numeric readings deserve the width; binary states do not. */
+const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "TMF882X"];
 const CLIMATE_DRIVERS = ["DS18B20", "SHT4X", "DHT_11", "DHT_21", "DHT_22"];
 const CLIMATE_MAX_SAMPLES = 360;
 const isClimate = (f) => CLIMATE_DRIVERS.indexOf(f.driver) >= 0;
