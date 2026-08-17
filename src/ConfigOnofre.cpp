@@ -765,6 +765,9 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   if (allFields)
   {
     root["mqttConnected"] = mqttConnected();
+    // Expose configuration state without returning CloudIO credentials to the
+    // browser. The panel cannot inspect the deliberately omitted username.
+    root["cloudConfigured"] = cloudIOUsername[0] != '\0';
     // Diagnostics for the local panel. Deliberately not sent to the cloud sync,
     // which has no use for them and is posted far more often.
     root["freeHeap"] = ESP.getFreeHeap();
