@@ -9,6 +9,7 @@
 #include "Images.hpp"
 #include <PZEM004Tv30.h>
 #include "HomeAssistantMqttDiscovery.h"
+#include "CloudIO.h"
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 
@@ -768,6 +769,9 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     // Expose configuration state without returning CloudIO credentials to the
     // browser. The panel cannot inspect the deliberately omitted username.
     root["cloudConfigured"] = cloudIOUsername[0] != '\0';
+    // Credentials present is not the same as a working link: a device can be
+    // adopted and still be offline. The panel needs to tell those apart.
+    root["cloudConnected"] = cloudIOConnected();
     // Diagnostics for the local panel. Deliberately not sent to the cloud sync,
     // which has no use for them and is posted far more often.
     root["freeHeap"] = ESP.getFreeHeap();

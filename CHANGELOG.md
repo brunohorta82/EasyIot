@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.171] - 2026-08-15
+
+### Changed
+- **The meter card was rebuilt around what a meter actually reads.** Import,
+  meter health and export now lead as three figures side by side, the tariff
+  periods carry a traffic light so the one being billed is findable at a glance,
+  and the raw instantaneous values follow. It was a flat key/value list before,
+  which buried exactly the numbers people open the panel for. A meter card is
+  also given two columns: readings carry units and were wrapping mid-value.
+
+### Fixed
+- **Binary sensors say what they mean.** A door read "ativo" instead of open or
+  closed, and motion and rain showed nothing at all because their payloads were
+  never handled. Each driver now gets its own words, matching the values the
+  firmware publishes.
+- **Cloud status distinguishes three states** — no credentials (never adopted),
+  adopted but disconnected, and connected. It previously reported only whether
+  credentials existed, so "não configurada" on a working device sent people
+  looking for a problem that was not there.
+
 ## [9.170] - 2026-08-15
 
 ### Added

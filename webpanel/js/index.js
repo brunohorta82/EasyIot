@@ -229,7 +229,7 @@ function renderOverview() {
   $("ov-sensors").innerHTML = sens.map((f) => isEnergy(f) ? energyCard(f) :
     isClimate(f) ? climateCard(f, true) :
       '<div class="card"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
-      esc(sensorText(f.state)) + "</div></div>").join("");
+      esc(sensorText(f.state, f.driver)) + "</div></div>").join("");
 }
 
 /* Energy meters report a dozen fields; a one-line summary would throw away
@@ -259,26 +259,81 @@ function parseState(state) {
 }
 
 /* Importing reads positive; exporting to the grid reads negative and green. */
+/* A meter reads as three things at once — what it draws, what it returns, and
+   which period it is billing — so the card leads with those instead of burying
+   them in a list. Import and export sit either side of the meter's own health,
+   the tariff periods carry a traffic light against the contracted power, and the
+   raw instantaneous values follow for whoever wants them. */
+const TARIFF_PERIODS = [
+  { k: "rate1", n: "Vazio", t: 1 },
+  { k: "rate2", n: "Cheias", t: 2 },
+  { k: "rate3", n: "Ponta", t: 3 },
+];
+const ADVANCED_FIELDS = [
+  { k: "power", n: "potência", u: " W", d: 0 },
+  { k: "voltage", n: "tensão", u: " V", d: 1 },
+  { k: "current", n: "corrente", u: " A", d: 2 },
+  { k: "frequency", n: "frequência", u: " Hz", d: 1 },
+  { k: "powerFactor", n: "fator de potência", u: "", d: 3 },
+  { k: "energy", n: "energia", u: " kWh", d: 2 },
+];
+const TOTALS_FIELDS = [
+  { k: "powerImport", n: "energia importada", u: " kWh", d: 2 },
+  { k: "powerExport", n: "energia exportada", u: " kWh", d: 2 },
+];
+
+function metric(value, unit, label, cls) {
+  return '<div class="metric ' + (cls || "") + '">' +
+    '<b>' + esc(value) + '<small>' + unit + "</small></b>" +
+    '<span>' + esc(label) + "</span></div>";
+}
+function fieldRows(o, fields) {
+  return fields.filter((x) => o[x.k] != null).map((x) =>
+    '<div class="kv"><span>' + x.n + "</span><b>" +
+    Number(o[x.k]).toFixed(x.d) + x.u + "</b></div>").join("");
+}
+
 function energyCard(f) {
   const o = parseState(f.state) || {};
   const imp = Number(o.power || 0);
   const exp = Number(o.export || 0);
-  const net = exp > 0 && imp <= 0 ? -exp : imp;
-  const rows = ENERGY_FIELDS
-    .filter((x) => o[x.k] != null)
-    .map((x) => '<div class="kv"><span>' + x.n + "</span><b>" +
-      Number(o[x.k]).toFixed(x.d) + x.u + "</b></div>").join("");
-  const bad = o.status || (o.error ? "erro de leitura" : "");
-  return '<div class="card"><h4>' + esc(f.name) + "</h4>" +
-    '<div class="big ' + (net < 0 ? "grn" : "") + '" id="sv-' + esc(f.id) + '">' +
-      (net < 0 ? "−" : "") + Math.abs(Math.round(net)) + "<small>W</small></div>" +
-    '<div class="note" style="margin:2px 0 8px">' +
-      (net < 0 ? "a exportar para a rede" : "a consumir da rede") + "</div>" +
-    rows +
-    (o.tarif != null ? '<div class="kv"><span>tarifa</span><b>' +
-      esc(TARIFF[o.tarif] || o.tarif) + "</b></div>" : "") +
-    (bad ? '<div class="note err">' + esc(bad) + "</div>" : "") +
-    // Only a PZEM's own counter can be zeroed; the HAN is the utility's meter.
+  const exporting = exp > 0 && imp <= 0;
+  const bad = o.status && o.status !== "HAN OK" ? o.status : (o.error ? "erro de leitura" : "");
+
+  // Headline: drawn, health, returned. The live value the SSE handler tracks is
+  // whichever direction is active.
+  const head = '<div class="metrics">' +
+    metric(Math.round(imp), "W", "importado", imp > 0 ? "hot" : "") +
+    '<div class="metric health">' +
+      '<b class="' + (bad ? "red" : "grn") + '">' + (bad ? "!" : "OK") + "</b>" +
+      '<span>' + esc(bad || "medidor") + "</span></div>" +
+    metric(Math.round(exp), "W", "exportado", exporting ? "grn" : "") +
+    "</div>";
+
+  const periods = TARIFF_PERIODS.filter((p) => o[p.k] != null);
+  const periodBlock = periods.length
+    ? '<div class="sub">Contrato e leituras</div>' +
+      periods.map((p) => '<div class="period' + (o.tarif === p.t ? " now" : "") + '">' +
+        '<i></i><span>' + p.n + "</span>" +
+        '<b>' + Number(o[p.k]).toFixed(3) + "<small> kWh</small></b></div>").join("")
+    : "";
+
+  const totals = fieldRows(o, TOTALS_FIELDS);
+  const advanced = fieldRows(o, ADVANCED_FIELDS);
+
+  return '<div class="card energy"><h4>' + esc(f.name) +
+    (o.tarif != null ? '<span class="chip">' + esc(TARIFF[o.tarif] || o.tarif) + "</span>" : "") +
+    "</h4>" +
+    // Kept for the live handler, which addresses the card by this id.
+    '<span class="hide" id="sv-' + esc(f.id) + '"></span>' +
+    head +
+    '<div class="note" style="margin:0 0 10px">' +
+      (exporting ? "a exportar para a rede" : imp > 0 ? "a consumir da rede" : "sem trânsito") +
+    "</div>" +
+    periodBlock +
+    (totals ? '<div class="sub">Acumulado</div>' + totals : "") +
+    (advanced ? '<div class="sub">Instantâneo</div>' + advanced : "") +
+    (o.dateTime ? '<div class="note">leitura de ' + esc(o.dateTime) + "</div>" : "") +
     (f.driver === "PZEM_004T_V03"
       ? '<div class="btns" style="margin-top:10px">' +
         '<button class="btn" data-reset="' + esc(f.id) + '">Repor energia</button></div>'
@@ -286,19 +341,34 @@ function energyCard(f) {
     "</div>";
 }
 
-/* Sensor state arrives as JSON for most drivers and as a bare value for others. */
-function sensorText(state) {
-  if (state == null || state === "") return "—";
-  let o = state;
-  if (typeof o === "string") { try { o = JSON.parse(o); } catch (e) { return o; } }
-  if (typeof o !== "object") return String(o);
+/* Sensor state arrives as JSON whose shape depends on the driver, and each
+   deserves its own words: a door is open or closed, not "active". The payload
+   values are the firmware's own (constants.h: "closed"/"open", "detected"/
+   "clear", "rain"/"clear"). */
+const BINARY_WORDS = {
+  DOOR: { closed: "fechada", open: "aberta" },
+  WINDOW: { closed: "fechada", open: "aberta" },
+};
+function sensorText(state, driver) {
+  const o = parseState(state);
+  if (o == null) {
+    // Not an object: a bare value, or nothing yet.
+    if (state == null || state === "") return "—";
+    return typeof state === "string" ? state : String(state);
+  }
   const bits = [];
   if (o.temperature != null) bits.push(Number(o.temperature).toFixed(1) + "°C");
   if (o.humidity != null) bits.push(Math.round(o.humidity) + "%");
   if (o.power != null) bits.push(Math.round(o.power) + "W");
-  if (o.distance != null) bits.push(Math.round(o.distance) + "cm");
-  if (o.illuminance != null) bits.push(Math.round(o.illuminance) + "lx");
-  if (o.state != null && !bits.length) bits.push(o.state ? "ativo" : "livre");
+  if (o.distance != null) bits.push(Math.round(o.distance) + " cm");
+  if (o.illuminance != null) bits.push(Math.round(o.illuminance) + " lx");
+  if (o.motion != null) bits.push(o.motion === "detected" ? "movimento" : "sem movimento");
+  if (o.rain != null) bits.push(o.rain === "rain" ? "a chover" : "sem chuva");
+  if (o.state != null && !bits.length) {
+    const words = BINARY_WORDS[driver];
+    bits.push(words && words[o.state] ? words[o.state] : String(o.state));
+  }
+  if (o.error && !bits.length) bits.push("erro de leitura");
   return bits.length ? bits.join(" · ") : "—";
 }
 
@@ -523,7 +593,11 @@ function renderDiag() {
   $("d-net").textContent = (config.wifiMask || "—") + " / " + (config.wifiGw || "—");
   $("d-mqtt").textContent = config.mqttConnected ? "ligado" : "desligado";
   $("d-broker").textContent = (config.mqttIpDns || "—") + ":" + (config.mqttPort || "");
-  $("d-cloud").textContent = config.cloudConfigured ? "configurada" : "não configurada";
+  // Three distinct states, because "não configurada" on a working device sent
+  // people looking for a problem that was not there.
+  $("d-cloud").textContent = !config.cloudConfigured
+    ? "sem credenciais (não adotado)"
+    : config.cloudConnected ? "ligada" : "adotado, sem ligação";
 }
 
 function drawSpark(id, values, colour) {
@@ -933,7 +1007,7 @@ function wireFeatureEvents() {
           if (card) card.outerHTML = climateCard(feat, false);
         } else {
           const el = $("sv-" + feat.id);
-          if (el) el.textContent = sensorText(e.data);
+          if (el) el.textContent = sensorText(e.data, feat.driver);
         }
         addLog("i", "[" + feat.name + "] " + String(e.data).slice(0, 90));
       };
