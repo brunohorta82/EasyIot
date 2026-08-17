@@ -145,14 +145,20 @@ public:
   // Zeroing a PZEM's accumulated energy talks to it over the same serial bus the
   // reader owns, so the request is queued here and carried out inside the
   // sensor's own loop rather than from the web handler's context.
-  bool resetEnergyRequested = false;
+  // Inverted flag semantics let GCC's atomic-flag primitives provide a
+  // copyable cross-task handoff without making Sensor non-copyable.
+  bool energyResetRequestConsumed = true;
   bool supportsEnergyReset() const
   {
     return driver == SensorDriver::PZEM_004T_V03;
   };
   void requestEnergyReset()
   {
-    resetEnergyRequested = true;
+    __atomic_clear(&energyResetRequestConsumed, __ATOMIC_RELEASE);
+  };
+  bool takeEnergyResetRequest()
+  {
+    return !__atomic_test_and_set(&energyResetRequestConsumed, __ATOMIC_ACQ_REL);
   };
 
   const void clearError()
