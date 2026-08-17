@@ -44,6 +44,13 @@ This document defines the standard flow for development, upstream cherry-pick PR
 7. Push `development` and prepare required CP PR(s).
 8. Keep open CP PRs minimal and grouped by scope.
 
+## Local Wi-Fi Override
+
+1. Copy `platformio_override.example.ini` to `platformio_override.ini`.
+2. Uncomment `WIFI_SSID` and `WIFI_SECRET` in the local copy and replace the placeholders.
+3. Never commit `platformio_override.ini`; it is intentionally ignored by Git.
+4. Keep `platformio.ini` free of real Wi-Fi credentials.
+
 ## Practical Notes
 
 - Prefer one CP per logical scope (security, webpanel, docs, etc.).
