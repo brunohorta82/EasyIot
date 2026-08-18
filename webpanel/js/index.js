@@ -232,6 +232,17 @@ function setMqttPill(on) {
 
 const isActuator = (f) => f.group === "ACTUATOR";
 const isCover = (f) => (f.driver || "").indexOf("COVER") === 0;
+const tileAction = (on) => on ? "desligar" : "ligar";
+
+function setToggleTileState(tile, on) {
+  tile.classList.toggle("on", on);
+  tile.setAttribute("aria-pressed", String(on));
+  const action = tileAction(on);
+  const subtitle = tile.querySelector(".tile-sub");
+  if (subtitle) subtitle.textContent = action;
+  const name = tile.querySelector("b");
+  tile.setAttribute("aria-label", action + (name ? " " + name.textContent : " acessório"));
+}
 
 /* Jump from a tile straight to that feature's settings, highlighted so it is
    obvious which of a long list was meant. */
@@ -272,10 +283,11 @@ function renderOverview() {
         meta + "</div>"
       // The tile itself is the switch, so the whole surface is the target.
       : '<button type="button" class="tile tap' + (state > 0 ? " on" : "") + '" data-toggle="' +
-        esc(f.id) + '" aria-pressed="' + (state > 0 ? "true" : "false") + '">' +
+        esc(f.id) + '" aria-pressed="' + (state > 0 ? "true" : "false") +
+        '" aria-label="' + tileAction(state > 0) + " " + esc(f.name) + '">' +
         '<span class="tile-top">' + tileIcon(f) + "</span>" +
         "<b>" + esc(f.name) + "</b>" +
-        '<span class="tile-sub">' + (state > 0 ? "ligado" : "desligado") + "</span>" +
+        '<span class="tile-sub">' + tileAction(state > 0) + "</span>" +
         meta + "</button>";
     return '<div class="tile-wrap">' + body + cog + "</div>";
   }).join("") + "</div>" : '<div class="note">Sem acessórios configurados.</div>';
@@ -1141,8 +1153,7 @@ function wireFeatureEvents() {
           const sw = document.querySelector('[data-toggle="' + feat.id + '"]');
           if (sw) {
             const on = (parseInt(e.data, 10) || 0) > 0;
-            sw.classList.toggle("on", on);
-            sw.setAttribute("aria-pressed", String(on));
+            setToggleTileState(sw, on);
           }
           const rng = document.querySelector('[data-cover="' + feat.id + '"]');
           if (rng) rng.value = parseInt(e.data, 10) || 0;
@@ -1189,7 +1200,7 @@ document.addEventListener("click", (ev) => {
   const sw = ev.target.closest("[data-toggle]");
   if (sw) {
     const on = sw.classList.toggle("on");
-    sw.setAttribute("aria-pressed", String(on));
+    setToggleTileState(sw, on);
     control(sw.dataset.toggle, 102);
     return;
   }
