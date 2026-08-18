@@ -12,6 +12,8 @@
   --logts: #4a5866;
   --hover: #34455a;
   --brand: #97d700;     /* the mark itself; --grn shifts for contrast */
+  --kind-new: #97d700; --kind-actuator: #5b9bd5; --kind-sensor: #43c78a; --kind-cover: #f5a623;
+  --status-ok: #43c78a; --status-warn: #f5a623; --status-bad: #e5484d;
   --r: 10px;
 }
 /* Light theme. The brand green is kept for the logo but darkened wherever it
@@ -26,6 +28,8 @@
   --logbg: #f7f9fb;
   --logts: #8494a3;
   --hover: #9fb0bf;
+  --kind-new: #456b00; --kind-actuator: #2f6ea8; --kind-sensor: #147348; --kind-cover: #8a4e00;
+  --status-ok: #147348; --status-warn: #8a4e00; --status-bad: #a61f24;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -53,7 +57,12 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
   padding: 3px 10px; font-size: 11px; color: var(--dim); white-space: nowrap;
 }
 .pill b { color: var(--txt); font-weight: 600; }
-.pill.ok b { color: var(--grn2); } .pill.warn b { color: var(--amb); } .pill.bad b { color: var(--red); }
+.pill.ok { border-left: 3px solid var(--status-ok); }
+.pill.warn { border-left: 3px solid var(--status-warn); }
+.pill.bad { border-left: 3px solid var(--status-bad); }
+.pill.off { border-left: 3px solid var(--dim); }
+.pill.ok b { color: var(--status-ok); } .pill.warn b { color: var(--status-warn); }
+.pill.bad b { color: var(--status-bad); }
 
 /* ---------- tabs ---------- */
 .tabs { display: flex; gap: 2px; padding: 0 8px; background: var(--panel);
@@ -200,6 +209,75 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 
 .btn.ico { padding: 4px 8px; line-height: 0; }
 .btn.ico svg { width: 15px; height: 15px; display: block; }
+
+/* ---------- function editor ---------- */
+.feature-add { border-left: 3px solid var(--grn); }
+.feature-add-head, .feature-section-head, .feature-card-head, .feature-add-actions {
+  display: flex; align-items: center; gap: 10px;
+}
+.feature-add-head { justify-content: space-between; margin-bottom: 12px; }
+.feature-add-head h3 { margin: 0; font-size: 15px; }
+.feature-add-head .note { margin-top: 2px; }
+.feature-add-grid { display: grid;
+  grid-template-columns: minmax(170px, .85fr) minmax(250px, 1.3fr) minmax(170px, .85fr); gap: 9px; }
+.feature-add-grid.two-pins { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.feature-add-actions { justify-content: space-between; align-items: flex-end; min-height: 33px; }
+.feature-add-actions .note { flex: 1; margin: 0 2px; }
+.feature-section-head { justify-content: space-between; }
+.feature-section-head .sec { margin-right: auto; }
+.feature-count, .feature-badge {
+  border: 1px solid var(--line); border-radius: 999px; white-space: nowrap;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .07em; line-height: 1.4;
+}
+.feature-count { color: var(--dim); background: var(--panel2); padding: 3px 8px; }
+.feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.feature-card { min-width: 0; display: flex; flex-direction: column; }
+.feature-card-head { justify-content: space-between; align-items: flex-start; padding-bottom: 9px;
+  margin-bottom: 11px; border-bottom: 1px solid var(--line); }
+.feature-index { color: var(--dim); font-size: 10px; font-weight: 700; letter-spacing: .12em; padding-top: 3px; }
+.feature-badges { display: flex; justify-content: flex-end; gap: 5px; flex-wrap: wrap; }
+.feature-badge { padding: 2px 7px; }
+.kind-new { color: var(--kind-new); background: rgba(151,215,0,.12); border-color: rgba(151,215,0,.45); }
+.kind-actuator { color: var(--kind-actuator); background: rgba(91,155,213,.13); border-color: rgba(91,155,213,.4); }
+.kind-sensor { color: var(--kind-sensor); background: rgba(67,199,138,.13); border-color: rgba(67,199,138,.4); }
+.kind-cover { color: var(--kind-cover); background: rgba(245,166,35,.13); border-color: rgba(245,166,35,.4); }
+.kind-driver { color: var(--dim); background: var(--panel2); max-width: 240px;
+  white-space: normal; text-align: right; }
+.feature-card-actions { margin-top: auto; padding-top: 11px; border-top: 1px solid var(--line); text-align: right; }
+.diag-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.diag-card-head h4 { margin: 2px 0 0; }
+.status-card { border-left: 3px solid var(--line); }
+.status-card.ok { border-left-color: var(--status-ok); }
+.status-card.warn { border-left-color: var(--status-warn); }
+.status-card.bad { border-left-color: var(--status-bad); }
+.status-badge { display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+  padding: 2px 7px; font-size: 9.5px; font-weight: 700; letter-spacing: .05em;
+  line-height: 1.4; white-space: nowrap; word-break: normal; }
+.status-badge.ok { color: var(--status-ok); background: rgba(67,199,138,.13); border-color: rgba(67,199,138,.4); }
+.status-badge.warn { color: var(--status-warn); background: rgba(245,166,35,.13); border-color: rgba(245,166,35,.4); }
+.status-badge.bad { color: var(--status-bad); background: rgba(229,72,77,.13); border-color: rgba(229,72,77,.4); }
+.status-badge.off { color: var(--dim); background: var(--panel2); }
+.system-tabs { display: flex; gap: 5px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
+.system-tab { flex: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px;
+  background: var(--panel); color: var(--dim); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .07em; cursor: pointer; white-space: nowrap; }
+.system-tab:hover { border-color: var(--hover); color: var(--txt); }
+.system-tab:focus-visible { outline: 2px solid var(--grn); outline-offset: 2px; }
+.system-tab.on { color: var(--grn); border-color: var(--grn); background: rgba(151,215,0,.1); }
+.system-pane { display: none; }
+.system-pane.on { display: block; }
+.system-section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.system-section-head .sec { margin-right: auto; }
+@media (max-width: 720px) {
+  .feature-grid, .feature-add-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .feature-add-head, .feature-add-actions { align-items: stretch; flex-direction: column; }
+  .feature-add-actions .btn { width: 100%; }
+  .feature-card-head { flex-direction: column; }
+  .feature-badges { justify-content: flex-start; }
+  .kind-driver { max-width: none; text-align: left; }
+}
 
 /* ---------- save ---------- */
 /* Lives in the header so it never shifts as tabs of different heights swap in. */
