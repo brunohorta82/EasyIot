@@ -6,3 +6,4 @@ node_modules
 platformio_override.ini
 .vscode
 RELEASE_NOTES_DRAFT.md
+/firmware_bins/
