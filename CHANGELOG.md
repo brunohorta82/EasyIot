@@ -2,6 +2,43 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.177] - 2026-08-19
+
+### Added
+- **An irrigation build for the ESP32-C6 (DevKitC-1).** The C6 exists only in
+  Arduino 3.x / IDF 5.x, so it runs on its own platform and leaves the fleet's
+  environments untouched. Wiring mirrors the ESPHome unit it replaces — valves on
+  GPIO 4/5/2/10/11, buttons on 18-22, rain sensor on 3 — so a board can be
+  reflashed without being rewired. The model topped out at four valves, so a
+  fifth valve, three more inputs and a rain-sensor pin were added, and the
+  irrigation template now builds five zones each bound to its own button.
+  Per-zone watering time needed no new code: an actuator's autoOff already
+  expires a running output and restarts on each turn-on.
+- **Panel: reworked function editor and status layout**, per-function cards with
+  count and category, and clearer system sections (#119).
+- **Tools: `check_project.py`** for repeatable source and build checks (#121),
+  and **`export_firmware.py`** to preserve and promote locally built binaries
+  (#120).
+
+### Fixed
+- **Cover open/closed was inverted in the device panel.** The firmware counts how
+  CLOSED a shutter is (OFF_OPEN=0, ON_CLOSE=100), but the panel printed that
+  straight as "% aberto" and filled the slider with it, while the command path
+  inverted — so a closed cover read "100% aberto" and what you saw was not what
+  you set. The panel now converts once, in both directions.
+- **Artefact names no longer break esptool 5.x.** Builds were named
+  "Firmware_env_version - date"; esptool 5.x parses its CLI with click and reads
+  the lone dash as an option, failing with "Path '-' does not exist". This would
+  have broken any platform upgrade, not just the C6.
+
+### Notes
+- The C6 environment must be built on its own: PlatformIO cannot hold two
+  packages named "espressif32" in one process, so pairing it with an ESP32
+  environment fails inside the platform builder. CI is unaffected — one
+  environment per job.
+- C6 images are not published for OTA yet: the cloud's hardware allowlist and
+  the web-flasher chip family still have to learn the new variant.
+
 ## [9.176] - 2026-08-17
 
 ### Added
