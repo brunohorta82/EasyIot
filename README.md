@@ -44,11 +44,11 @@ O projeto EasyIot, é o firmware oficial para todas as boards OnOfre, no entanto
 
 Antes de criar um commit ou pull request, execute as verificações rápidas:
 
-- `python tools/check_project.py --quick`
+- `python3 tools/check_project.py --quick`
 
 Para incluir uma compilação da configuração atual:
 
-- `python tools/check_project.py --build ESP8266_DEBUG`
+- `python3 tools/check_project.py --build ESP8266_DEBUG`
 
 Consulte [docs/RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md#project-checks)
 para a matriz completa e os detalhes de cada verificação.

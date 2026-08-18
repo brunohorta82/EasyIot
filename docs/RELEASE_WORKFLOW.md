@@ -48,15 +48,15 @@ This document defines the standard flow for development, upstream cherry-pick PR
 
 Run the fast, non-destructive source checks before committing:
 
-- `python tools/check_project.py --quick`
+- `python3 tools/check_project.py --quick`
 
 Run the same checks and one selected PlatformIO environment:
 
-- `python tools/check_project.py --build ESP8266_DEBUG`
+- `python3 tools/check_project.py --build ESP8266_DEBUG`
 
 Run the recommended build matrix for the current version:
 
-- `python tools/check_project.py --all`
+- `python3 tools/check_project.py --all`
 
 For a version containing `-dev`, `--all` builds `ESP8266_DEBUG`,
 `ESP8266-HAN_DEBUG`, and `ESP32_DEBUG`. For a release version, it builds the
