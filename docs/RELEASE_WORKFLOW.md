@@ -75,15 +75,55 @@ rewrite working-tree headers.
 3. Never commit `platformio_override.ini`; it is intentionally ignored by Git.
 4. Keep `platformio.ini` free of real Wi-Fi credentials.
 
+## Local Firmware Binaries
+
+`tools/export_firmware.py` preserves disposable PlatformIO outputs under the
+ignored `firmware_bins/` directory. Each environment has its own candidate slot,
+so ESP8266, HAN, and ESP32 binaries cannot be confused.
+
+Successful environments whose names contain `DEBUG` or `RELEASE` publish their
+candidate automatically at the end of `platformio run`. This post-build step also
+runs when PlatformIO reuses an unchanged cached binary. Environments without an
+explicit channel in their name are not guessed; export those manually with
+`--channel debug` or `--channel release`.
+
+Build a development candidate:
+
+- `platformio run -e ESP8266_DEBUG`
+
+Build a release candidate:
+
+- `platformio run -e ESP8266_RELEASE`
+
+The equivalent manual publish command is:
+
+- `python tools/export_firmware.py publish --env ESP8266_DEBUG`
+
+Verify a candidate without modifying it:
+
+- `python tools/export_firmware.py verify --export-dir firmware_bins/candidate/debug/ESP8266_DEBUG --expected-env ESP8266_DEBUG`
+
+After that exact binary passes hardware testing, deliberately retain it as
+known-good firmware:
+
+- `python tools/export_firmware.py promote --candidate-dir firmware_bins/candidate/debug/ESP8266_DEBUG --hardware-tested-date today`
+
+Candidates are replaceable, but an existing known-good version is immutable: the
+tool refuses to overwrite it with different bytes or metadata. Every export has
+`BUILD_INFO.txt` and `SHA256SUMS.txt`. The ignored local directory is not an
+off-machine backup; archive important known-good firmware separately.
+
 ## Practical Notes
 
 - Prefer one CP per logical scope (security, webpanel, docs, etc.).
 - If a PR is closed or merged, delete local/remote CP branch to keep repo clean.
 - If `git cherry-pick --continue` fails due to editor, use:
   - `GIT_EDITOR=true git cherry-pick --continue`
-- Build hooks are automatic via `tools/extra_script.py`:
+- Build hooks are automatic via `tools/extra_script.py` and
+  `tools/post_extra_script.py`:
   - HTML converter runs before build
   - Release metadata validation runs before build
+  - Local DEBUG/RELEASE candidate export runs after a successful build
 - Optional skip defines in `platformio.ini` (`[extra] default_flags`):
   - `SKIP_HTML_CONVERT`
   - `SKIP_RELEASE_VALIDATE`

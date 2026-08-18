@@ -53,6 +53,20 @@ Para incluir uma compilação da configuração atual:
 Consulte [docs/RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md#project-checks)
 para a matriz completa e os detalhes de cada verificação.
 
+## Binários locais de firmware
+
+Depois de compilar com PlatformIO, `tools/export_firmware.py` pode guardar o
+binário como candidato local, verificá-lo com SHA-256 e, após teste na board,
+preservá-lo como uma versão conhecida e funcional. A pasta gerada
+`firmware_bins/` é local e ignorada pelo Git.
+
+Os ambientes com `DEBUG` ou `RELEASE` no nome guardam automaticamente o seu
+candidato no fim de uma compilação bem-sucedida.
+
+Consulte [docs/RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md#local-firmware-binaries)
+para os comandos de publicação, verificação e promoção.
+
+
 ## Donativos <a name="id6"></a>
 
 Se gostaste do projeto podes fazer o teu donativo :).
