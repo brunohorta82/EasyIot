@@ -40,6 +40,18 @@ O projeto EasyIot, é o firmware oficial para todas as boards OnOfre, no entanto
 - Configurar o `Wi-Fi broker`, `MQTT broker` entre outras coisas como integração automática com `Home Assistant`
 - E tá feito, agora é só curtir :) 
 
+## Verificações do projeto
+
+Antes de criar um commit ou pull request, execute as verificações rápidas:
+
+- `python tools/check_project.py --quick`
+
+Para incluir uma compilação da configuração atual:
+
+- `python tools/check_project.py --build ESP8266_DEBUG`
+
+Consulte [docs/RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md#project-checks)
+para a matriz completa e os detalhes de cada verificação.
 
 ## Donativos <a name="id6"></a>
 
