@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.176] - 2026-08-17
+
+### Added
+- **The firmware section lists every published build for the board and links each
+  one for download.** Getting the right `.bin` meant knowing the device's variant
+  and hand-building a URL, and handing someone the wrong variant is the one
+  mistake here that costs a USB recovery — so the list is filtered to the board's
+  own MCU, newest first, with the running version marked. It reads the release
+  server's existing `all-versions` and `download` routes; no backend change.
+
 ## [9.175] - 2026-08-17
 
 ### Fixed

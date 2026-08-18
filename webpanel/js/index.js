@@ -895,6 +895,52 @@ async function checkForUpdate() {
   }
 }
 
+/* Every published build for THIS board, newest first, each a direct download.
+   Filtering by the device's own MCU is the point: handing someone the wrong
+   variant's image is the one mistake here that costs a USB recovery. */
+async function listFirmwareVersions(btn) {
+  const box = $("u-versions");
+  if (!config.mcu) return;
+  if (box.dataset.open === "1") {          // second press closes it again
+    box.dataset.open = "";
+    box.innerHTML = "";
+    btn.textContent = "Ver versões disponíveis";
+    return;
+  }
+  btn.disabled = true;
+  box.innerHTML = '<div class="note">A consultar…</div>';
+  let list;
+  try {
+    const res = await fetch(UPDATE_HOST + "/firmware/all-versions/" + encodeURIComponent(config.mcu),
+      { mode: "cors" });
+    list = await res.json();
+  } catch (e) {
+    box.innerHTML = '<div class="note err">Não foi possível obter a lista. ' +
+      "Verifica se o dispositivo tem acesso à internet.</div>";
+    btn.disabled = false;
+    return;
+  }
+  btn.disabled = false;
+  if (!Array.isArray(list) || !list.length) {
+    box.innerHTML = '<div class="note">Não há binários publicados para ' + esc(config.mcu) + ".</div>";
+    return;
+  }
+  box.dataset.open = "1";
+  btn.textContent = "Esconder versões";
+  box.innerHTML = '<div class="sub">' + esc(config.mcu) + " · " + list.length +
+    " versões, mais recente primeiro</div>" +
+    list.map((v) => {
+      const installed = v.version === config.firmware;
+      return '<div class="fwrow' + (installed ? " now" : "") + '">' +
+        "<b>" + esc(v.version) + "</b>" +
+        '<span>' + (installed ? "instalada" : "") + "</span>" +
+        // A plain link: the server answers application/octet-stream, so the
+        // browser saves it instead of trying to render it.
+        '<a class="btn" href="' + esc(v.url) + '" download>Descarregar</a></div>';
+    }).join("") +
+    '<div class="note">Descarrega o ficheiro e escolhe-o abaixo em "Escolher ficheiro".</div>';
+}
+
 /* Manual firmware upload — the recovery path when the cloud is unreachable.
    POST /update takes a multipart body and reboots the device when it ends. */
 function uploadFirmware(btn) {
@@ -1172,6 +1218,7 @@ document.addEventListener("DOMContentLoaded", () => {
       () => toast("Registo copiado", "ok"), () => toast("Não foi possível copiar", "err"));
   };
   $("u-send").onclick = (e) => uploadFirmware(e.currentTarget);
+  $("u-list").onclick = (e) => listFirmwareVersions(e.currentTarget);
   $("r-send").onclick = (e) => {
     const f = ($("r-file").files || [])[0];
     if (!f) {

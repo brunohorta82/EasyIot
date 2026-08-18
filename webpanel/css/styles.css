@@ -281,3 +281,15 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .period.head em, .period.head b { font-size: 9.5px; letter-spacing: .14em; color: var(--grn);
   font-weight: 700; text-transform: uppercase; }
 .period.head i { visibility: hidden; }
+/* Published builds for this board: version, whether it is the running one, and
+   a direct download. */
+.fwrow { display: flex; align-items: center; gap: 10px; padding: 6px 0;
+  border-bottom: 1px solid var(--line); }
+.fwrow:last-of-type { border-bottom: 0; }
+.fwrow b { font-weight: 600; min-width: 60px; }
+.fwrow span { flex: 1; font-size: 10.5px; letter-spacing: .12em; color: var(--grn2); font-weight: 700; }
+.fwrow .btn { padding: 4px 10px; font-size: 11px; text-decoration: none; }
+.fwrow.now { background: rgba(151,215,0,.06); }
+/* The full history can run to dozens of builds; keep it scrollable so it does
+   not push the rest of the page out of reach. */
+#u-versions { max-height: 260px; overflow-y: auto; }
