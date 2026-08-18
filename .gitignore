@@ -6,3 +6,7 @@ node_modules
 platformio_override.ini
 .vscode
 RELEASE_NOTES_DRAFT.md
+
+# Written by the pioarduino platform during the build, not source.
+src/idf_component.yml
+src/idf_component.yml.orig

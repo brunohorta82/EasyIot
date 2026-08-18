@@ -254,12 +254,15 @@ function renderOverview() {
     const meta = '<span class="tile-pins">' + esc([pins, ins].filter(Boolean).join(" · ")) + "</span>";
     const cog = '<button type="button" class="cog" data-config="' + esc(f.id) +
       '" title="Configurar" aria-label="Configurar ' + esc(f.name) + '">' + COG + "</button>";
+    // Firmware state for a cover is how CLOSED it is (OFF_OPEN=0, ON_CLOSE=100);
+    // the panel speaks in "% open", so convert here and on the way back.
+    const openPct = isCover(f) ? 100 - state : state;
     const body = isCover(f)
-      ? '<div class="tile cover' + (state > 0 ? " on" : "") + '">' +
+      ? '<div class="tile cover' + (openPct > 0 ? " on" : "") + '">' +
         '<span class="tile-top">' + tileIcon(f) + "</span>" +
         "<b>" + esc(f.name) + "</b>" +
-        '<span class="tile-sub">' + state + "% aberto</span>" +
-        '<input type="range" min="0" max="100" value="' + state + '" data-cover="' + esc(f.id) + '">' +
+        '<span class="tile-sub">' + openPct + "% aberto</span>" +
+        '<input type="range" min="0" max="100" value="' + openPct + '" data-cover="' + esc(f.id) + '">' +
         meta + "</div>"
       // The tile itself is the switch, so the whole surface is the target.
       : '<button type="button" class="tile tap' + (state > 0 ? " on" : "") + '" data-toggle="' +
@@ -1101,7 +1104,7 @@ function wireFeatureEvents() {
             sw.setAttribute("aria-pressed", String(on));
           }
           const rng = document.querySelector('[data-cover="' + feat.id + '"]');
-          if (rng) rng.value = parseInt(e.data, 10) || 0;
+          if (rng) rng.value = 100 - (parseInt(e.data, 10) || 0);
         } else if (isEnergy(feat)) {
           // The whole card is derived from the payload, so redraw it in place.
           const el = $("sv-" + feat.id);
@@ -1169,7 +1172,11 @@ document.addEventListener("click", (ev) => {
 
 document.addEventListener("change", (ev) => {
   const cover = ev.target.closest("[data-cover]");
-  if (cover) { control(cover.dataset.cover, Math.abs(parseInt(cover.value, 10) - 100)); return; }
+  if (cover) {
+    // Slider is % open; the device wants % closed.
+    control(cover.dataset.cover, 100 - (parseInt(cover.value, 10) || 0));
+    return;
+  }
   const pin = ev.target.closest("[data-pin]");
   if (pin) {
     const feat = config.features[parseInt(pin.dataset.i, 10)];

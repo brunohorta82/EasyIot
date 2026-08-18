@@ -120,5 +120,9 @@ for define in my_flags.get("CPPDEFINES", []):
 
 timestamp = datetime.datetime.now().strftime("%d.%m.%Y")
 print("")
-env.Replace(PROGNAME=f"Firmware_{env['PIOENV']}_{version} - {timestamp}")
+# No spaces or a bare " - " in the artefact name: esptool 5.x (used by the
+# Arduino 3.x / IDF 5.x platforms) parses its CLI with click, which reads the
+# lone dash as an option and fails with "Path '-' does not exist". The older
+# argparse-based esptool 4.x tolerated it.
+env.Replace(PROGNAME=f"Firmware_{env['PIOENV']}_{version}_{timestamp}")
 print("")

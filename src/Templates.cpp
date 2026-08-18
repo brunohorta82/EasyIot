@@ -333,11 +333,24 @@ void templateSelect(enum Template _template)
         prepareHAN();
         break;
     case GARDEN:
+#ifdef ESP32C6
+        // Five zones, each with its own wall button, plus a rain sensor. Mirrors
+        // the wiring of the ESPHome unit this replaces, so a board can be
+        // reflashed without touching the panel. Watering time per zone is the
+        // actuator's own autoOff (seconds), which the loop already enforces.
+        prepareActuator(I18N::VALVE_ONE, DefaultPins::OUTPUT_ONE, DefaultPins::INPUT_ONE, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::VALVE_TWO, DefaultPins::OUTPUT_TWO, DefaultPins::INPUT_TWO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::VALVE_THREE, DefaultPins::OUTPUT_VALVE_THREE, DefaultPins::INPUT_THREE, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::VALVE_FOUR, DefaultPins::OUTPUT_VALVE_FOUR, DefaultPins::INPUT_FOUR, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareActuator(I18N::VALVE_FIVE, DefaultPins::OUTPUT_VALVE_FIVE, DefaultPins::INPUT_FIVE, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+        prepareRain(I18N::RAIN_SENSOR_NAME, DefaultPins::RAIN_SENSOR);
+#else
         prepareActuator(I18N::VALVE_ONE, DefaultPins::OUTPUT_ONE, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
         prepareActuator(I18N::VALVE_TWO, DefaultPins::OUTPUT_TWO, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
 #ifdef ESP8266
         prepareActuator(I18N::VALVE_THREE, DefaultPins::OUTPUT_VALVE_THREE, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
         prepareActuator(I18N::VALVE_FOUR, DefaultPins::OUTPUT_VALVE_FOUR, DefaultPins::noGPIO, ActuatorDriver::GARDEN_VALVE, ActuatorControlType::GPIO_OUTPUT);
+#endif
 #endif
         break;
     default:

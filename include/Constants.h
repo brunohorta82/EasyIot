@@ -77,7 +77,7 @@ namespace constantsConfig
     constexpr const char *PW_HIDE{"******"};
     constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{60000};
 }
-#ifdef ESP32
+#if defined(ESP32) && !defined(ESP32C6)
 namespace DefaultPins
 {
     // ESP32 DEFAULT PINS
@@ -100,6 +100,40 @@ namespace DefaultPins
     constexpr unsigned int outputInputPins[] = {4,5,7, 8, 12, 13, 14, 19, 20, 21, 22, 25, 26, 27};
 #endif
     constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
+}
+#endif
+#ifdef ESP32C6
+namespace DefaultPins
+{
+    // ESP32-C6-DevKitC-1, wired for irrigation: five valves, one button each and
+    // a rain sensor. Pins mirror the board that already runs this job, so a unit
+    // can be reflashed from the ESPHome build without rewiring.
+    //   valves  GPIO 4, 5, 2, 10, 11
+    //   buttons GPIO 18, 19, 20, 21, 22   (input, pull-up, active low)
+    //   rain    GPIO 3                    (input, pull-up, active low)
+    // Reserved on this module: 12/13 (USB-JTAG), 16/17 (UART0), 24-30 (flash),
+    // 8/9/15 (strapping). RISC-V parts have no input-only pins.
+    constexpr unsigned int noGPIO{999u};
+    constexpr unsigned int OUTPUT_ONE{4u};
+    constexpr unsigned int OUTPUT_TWO{5u};
+    constexpr unsigned int OUTPUT_VALVE_THREE{2u};
+    constexpr unsigned int OUTPUT_VALVE_FOUR{10u};
+    constexpr unsigned int OUTPUT_VALVE_FIVE{11u};
+    constexpr unsigned int INPUT_ONE{18u};
+    constexpr unsigned int INPUT_TWO{19u};
+    constexpr unsigned int INPUT_THREE{20u};
+    constexpr unsigned int INPUT_FOUR{21u};
+    constexpr unsigned int INPUT_FIVE{22u};
+    constexpr unsigned int RAIN_SENSOR{3u};
+    // Unused here, but referenced by ESP32-wide code paths.
+    constexpr unsigned int PZEM_TX{6u};
+    constexpr unsigned int PZEM_RX{7u};
+    constexpr int SDA{6u};
+    constexpr int SCL{7u};
+    constexpr int HAN_TX{6u};
+    constexpr int HAN_RX{7u};
+    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 18, 19, 20, 21, 22, 23};
+    constexpr unsigned int intputOnlyPins[] = {};
 }
 #endif
 #ifdef ESP8266
@@ -167,6 +201,8 @@ namespace I18N
     constexpr const char *VALVE_TWO{"Válvula 2"};
     constexpr const char *VALVE_THREE{"Válvula 3"};
     constexpr const char *VALVE_FOUR{"Válvula 4"};
+    constexpr const char *VALVE_FIVE{"Válvula 5"};
+    constexpr const char *RAIN_SENSOR_NAME{"Chuva"};
     constexpr const char *GARAGE{"Garagem"};
     constexpr const char *COVER{"Estore"};
     constexpr const char *HAN{"Contador"};

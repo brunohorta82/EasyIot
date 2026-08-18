@@ -83,6 +83,11 @@ ConfigOnofre &ConfigOnofre::init()
 #ifdef HAN_MODE
   templateSelect(Template::HAN_MODULE);
 #endif
+#ifdef IRRIGATION_MODE
+  // A dedicated irrigation board should come up as one, the same way HAN_MODE
+  // works: five zones and the rain sensor, without anyone picking a template.
+  templateSelect(Template::GARDEN);
+#endif
   return save();
 }
 bool ConfigOnofre::isSensorExists(int hwAddress)

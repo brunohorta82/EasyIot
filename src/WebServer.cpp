@@ -12,6 +12,7 @@
 #include "IndexJs.h"
 
 #ifdef ESP32
+#include <WiFi.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
@@ -28,6 +29,27 @@ extern ConfigOnofre config;
 DNSServer dnsServer;
 AsyncWebServer server(80);
 AsyncEventSource events("/events");
+
+/**
+ * Serve a PROGMEM blob (the gzipped web panel) through whichever
+ * ESPAsyncWebServer is linked.
+ *
+ * The archived me-no-dev library only offers beginResponse_P; the maintained
+ * ESP32Async fork dropped the _P variants, because on an ESP32 the flash is
+ * memory-mapped and they no longer buy anything. Detecting the fork by its
+ * version header keeps one source building against both, which matters while
+ * the ESP8266 targets stay on the old one.
+ */
+static AsyncWebServerResponse *beginProgmemResponse(AsyncWebServerRequest *request, int code,
+                                                   const char *contentType,
+                                                   const uint8_t *content, size_t len)
+{
+#if defined(ASYNCWEBSERVER_VERSION_MAJOR)
+  return request->beginResponse(code, contentType, content, len);
+#else
+  return request->beginResponse_P(code, contentType, content, len);
+#endif
+}
 
 void performUpdate()
 {
@@ -246,7 +268,7 @@ void loadWebPanel()
               if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
                 return request->requestAuthentication(REALM);
 #endif
-              AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", index_html, sizeof(index_html));
+              AsyncWebServerResponse *response = beginProgmemResponse(request, 200, "text/html", index_html, sizeof(index_html));
               response->addHeader("Content-Encoding", "gzip");
               response->addHeader("Cache-Control", "max-age=30");
               request->send(response); });
@@ -258,7 +280,7 @@ void loadWebPanel()
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "application/javascript", index_js, sizeof(index_js));
+    AsyncWebServerResponse *response = beginProgmemResponse(request, 200, "application/javascript", index_js, sizeof(index_js));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
     request->send(response); });
@@ -270,7 +292,7 @@ void loadWebPanel()
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", styles_min_css, sizeof(styles_min_css));
+    AsyncWebServerResponse *response = beginProgmemResponse(request, 200, "text/css", styles_min_css, sizeof(styles_min_css));
     response->addHeader("Content-Encoding", "gzip");
     response->addHeader("Cache-Control", "max-age=600");
     request->send(response); });
@@ -405,7 +427,7 @@ void loadAPI()
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
-    AsyncWebParameter *templateParam = nullptr;
+    const AsyncWebParameter *templateParam = nullptr;
     if (request->hasParam("t", true))
       templateParam = request->getParam("t", true);
     else if (request->hasParam("t"))
