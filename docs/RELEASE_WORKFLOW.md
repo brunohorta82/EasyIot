@@ -44,6 +44,30 @@ This document defines the standard flow for development, upstream cherry-pick PR
 7. Push `development` and prepare required CP PR(s).
 8. Keep open CP PRs minimal and grouped by scope.
 
+## Project Checks
+
+Run the fast, non-destructive source checks before committing:
+
+- `python3 tools/check_project.py --quick`
+
+Run the same checks and one selected PlatformIO environment:
+
+- `python3 tools/check_project.py --build ESP8266_DEBUG`
+
+Run the recommended build matrix for the current version:
+
+- `python3 tools/check_project.py --all`
+
+For a version containing `-dev`, `--all` builds `ESP8266_DEBUG`,
+`ESP8266-HAN_DEBUG`, and `ESP32_DEBUG`. For a release version, it builds the
+three environments published by CI: `ESP8266_RELEASE`,
+`ESP8266-HAN_RELEASE`, and `ESP32_RELEASE`.
+
+The quick checks validate Python and JavaScript syntax, host tests, release
+metadata, generated web-header parity, conflict markers, and whitespace. Web
+asset parity is checked in a temporary directory, so the command does not
+rewrite working-tree headers.
+
 ## Local Wi-Fi Override
 
 1. Copy `platformio_override.example.ini` to `platformio_override.ini`.
