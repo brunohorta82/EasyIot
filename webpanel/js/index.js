@@ -215,14 +215,34 @@ function renderHeader() {
   setMqttPill(config.mqttConnected);
   $("h-up").innerHTML = "ligado há <b>" + duration(config.uptime) + "</b>";
 }
+function setStatusBadge(el, state, text) {
+  if (!el) return;
+  el.className = "status-badge " + state;
+  el.textContent = text;
+}
 function setMqttPill(on) {
+  const configured = Boolean((config.mqttIpDns || "").trim());
+  const state = !configured ? "off" : on ? "ok" : "bad";
+  const text = !configured ? "desativado" : on ? "ligado" : "sem ligação";
   const m = $("h-mqtt");
-  m.className = "pill " + (on ? "ok" : "bad");
-  m.innerHTML = "MQTT <b>" + (on ? "ligado" : "desligado") + "</b>";
+  m.className = "pill " + state;
+  m.innerHTML = "MQTT <b>" + text + "</b>";
+  setStatusBadge($("d-mqtt"), state, text);
 }
 
 const isActuator = (f) => f.group === "ACTUATOR";
 const isCover = (f) => (f.driver || "").indexOf("COVER") === 0;
+const tileAction = (on) => on ? "desligar" : "ligar";
+
+function setToggleTileState(tile, on) {
+  tile.classList.toggle("on", on);
+  tile.setAttribute("aria-pressed", String(on));
+  const action = tileAction(on);
+  const subtitle = tile.querySelector(".tile-sub");
+  if (subtitle) subtitle.textContent = action;
+  const name = tile.querySelector("b");
+  tile.setAttribute("aria-label", action + (name ? " " + name.textContent : " acessório"));
+}
 
 /* Jump from a tile straight to that feature's settings, highlighted so it is
    obvious which of a long list was meant. */
@@ -266,10 +286,11 @@ function renderOverview() {
         meta + "</div>"
       // The tile itself is the switch, so the whole surface is the target.
       : '<button type="button" class="tile tap' + (state > 0 ? " on" : "") + '" data-toggle="' +
-        esc(f.id) + '" aria-pressed="' + (state > 0 ? "true" : "false") + '">' +
+        esc(f.id) + '" aria-pressed="' + (state > 0 ? "true" : "false") +
+        '" aria-label="' + tileAction(state > 0) + " " + esc(f.name) + '">' +
         '<span class="tile-top">' + tileIcon(f) + "</span>" +
         "<b>" + esc(f.name) + "</b>" +
-        '<span class="tile-sub">' + (state > 0 ? "ligado" : "desligado") + "</span>" +
+        '<span class="tile-sub">' + tileAction(state > 0) + "</span>" +
         meta + "</button>";
     return '<div class="tile-wrap">' + body + cog + "</div>";
   }).join("") + "</div>" : '<div class="note">Sem acessórios configurados.</div>';
@@ -609,13 +630,23 @@ function inputModeField(f, i) {
     '<select data-f="inputMode" data-i="' + i + '" data-num="1">' + opts + "</select></div>";
 }
 
+function featureKind(f) {
+  if (isCover(f)) return { label: "ESTORE", cls: "kind-cover" };
+  if (isActuator(f)) return { label: "ATUADOR", cls: "kind-actuator" };
+  return { label: "SENSOR", cls: "kind-sensor" };
+}
+
 function renderFeatures() {
   const feats = config.features || [];
+  $("feat-count").textContent = feats.length + (feats.length === 1 ? " função" : " funções");
   $("feat-list").innerHTML = feats.length ? feats.map((f, i) => {
     const cover = isCover(f);
-    return '<div class="card" style="margin-bottom:9px" data-fi="' + i + '">' +
+    const kind = featureKind(f);
+    return '<div class="card feature-card" data-fi="' + i + '">' +
+      '<div class="feature-card-head"><span class="feature-index">FUNÇÃO ' + (i + 1) + '</span>' +
+      '<div class="feature-badges"><span class="feature-badge ' + kind.cls + '">' + kind.label + '</span>' +
+      '<span class="feature-badge kind-driver">' + esc(driverLabel(f.driver)) + '</span></div></div>' +
       '<div class="field"><label>NOME</label><input data-f="name" data-i="' + i + '" maxlength="23" value="' + esc(f.name) + '"></div>' +
-      '<div class="kv"><span>tipo</span><b>' + esc(driverLabel(f.driver)) + "</b></div>" +
       inputModeField(f, i) +
       pinEditor(f, i) +
       (cover ? '<div class="row2"><div class="field"><label>SUBIDA (s)</label>' +
@@ -629,7 +660,7 @@ function renderFeatures() {
         '<input type="number" min="0" max="7" data-f="line" data-i="' + i + '" value="' + (f.line || 0) + '">' +
         '<input type="number" min="0" max="255" data-f="member" data-i="' + i + '" value="' + (f.member || 0) + '">' +
         "</div></div>" : "") +
-      '<div class="btns"><button class="btn d" data-del="' + esc(f.id) + '">Remover</button></div></div>';
+      '<div class="feature-card-actions"><button class="btn d" data-del="' + esc(f.id) + '">Remover função</button></div></div>';
   }).join("") : '<div class="note">Ainda não há funções configuradas.</div>';
 }
 
@@ -652,15 +683,22 @@ function renderDiag() {
     ? Math.round(config.sketchSize / 1024) + " KB · livre " + Math.round((config.freeSketchSpace || 0) / 1024) + " KB" : "—";
   $("d-ssid").textContent = config.wifiSSID || "—";
   $("d-rssi").textContent = rssiText(config.signal);
+  const netState = config.signal == null ? "off" : rssiClass(config.signal);
+  const netLabel = netState === "ok" ? "bom" : netState === "warn" ? "fraco" :
+    netState === "bad" ? "muito fraco" : "desconhecido";
+  $("d-net-card").className = "card status-card " + netState;
+  setStatusBadge($("d-net-status"), netState, netLabel);
   $("d-ip").textContent = config.wifiIp || "—";
   $("d-net").textContent = (config.wifiMask || "—") + " / " + (config.wifiGw || "—");
-  $("d-mqtt").textContent = config.mqttConnected ? "ligado" : "desligado";
+  setMqttPill(config.mqttConnected);
   $("d-broker").textContent = (config.mqttIpDns || "—") + ":" + (config.mqttPort || "");
+  const cloud = config.cloudConfigured;
   // Three distinct states, because "não configurada" on a working device sent
   // people looking for a problem that was not there.
-  $("d-cloud").textContent = !config.cloudConfigured
-    ? "sem credenciais (não adotado)"
-    : config.cloudConnected ? "ligada" : "adotado, sem ligação";
+  const cloudState = !cloud ? "off" : config.cloudConnected ? "ok" : "bad";
+  const cloudText = !cloud ? "sem credenciais (não adotado)" :
+    config.cloudConnected ? "ligada" : "adotado, sem ligação";
+  setStatusBadge($("d-cloud"), cloudState, cloudText);
 }
 
 function drawSpark(id, values, colour) {
@@ -690,6 +728,22 @@ function fillSystem() {
   $("s-apiPw").value = "";
   // Name the variant on the upload warning so the right .bin is picked.
   $("u-mcu").textContent = config.mcu || "desconhecida";
+  updateNameDirty();
+}
+
+function updateNameDirty() {
+  const changed = $("s-nodeId").value.trim() !== (config.nodeId || "");
+  $("s-name-dirty").classList.toggle("hide", !changed);
+}
+
+function showSystemPane(name) {
+  document.querySelectorAll(".system-tab").forEach((tab) => {
+    const on = tab.dataset.systemView === name;
+    tab.classList.toggle("on", on);
+    tab.setAttribute("aria-selected", String(on));
+  });
+  document.querySelectorAll(".system-pane").forEach((pane) =>
+    pane.classList.toggle("on", pane.id === "system-" + name));
 }
 
 function fillNewFeatureForm() {
@@ -712,7 +766,9 @@ function fillNewFeatureForm() {
 }
 function onDriverChange() {
   const d = driverInfo(parseInt($("nf-driver").value, 10));
-  $("nf-p2-box").classList.toggle("hide", !d || d.pins < 2);
+  const singlePin = !d || d.pins < 2;
+  $("nf-p2-box").classList.toggle("hide", singlePin);
+  $("nf-fields").classList.toggle("two-pins", !singlePin);
   onNewPinChange();
 }
 
@@ -1074,8 +1130,8 @@ function connectEvents() {
   source = new EventSource(baseUrl + "/events");
   source.addEventListener("mqtt_health", (e) => {
     const on = e.data === "online";
+    config.mqttConnected = on;
     setMqttPill(on);
-    $("d-mqtt").textContent = on ? "ligado" : "desligado";
     addLog("i", "[mqtt] " + (on ? "ligado" : "desligado"));
   });
   // Every feature publishes its state under its own id.
@@ -1100,8 +1156,7 @@ function wireFeatureEvents() {
           const sw = document.querySelector('[data-toggle="' + feat.id + '"]');
           if (sw) {
             const on = (parseInt(e.data, 10) || 0) > 0;
-            sw.classList.toggle("on", on);
-            sw.setAttribute("aria-pressed", String(on));
+            setToggleTileState(sw, on);
           }
           const rng = document.querySelector('[data-cover="' + feat.id + '"]');
           if (rng) rng.value = 100 - (parseInt(e.data, 10) || 0);
@@ -1128,6 +1183,11 @@ function wireFeatureEvents() {
 
 /* ---------------- wiring ---------------- */
 document.addEventListener("click", (ev) => {
+  const systemTab = ev.target.closest("[data-system-view]");
+  if (systemTab) {
+    showSystemPane(systemTab.dataset.systemView);
+    return;
+  }
   const tab = ev.target.closest("[data-view]");
   if (tab) {
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === tab));
@@ -1143,7 +1203,7 @@ document.addEventListener("click", (ev) => {
   const sw = ev.target.closest("[data-toggle]");
   if (sw) {
     const on = sw.classList.toggle("on");
-    sw.setAttribute("aria-pressed", String(on));
+    setToggleTileState(sw, on);
     control(sw.dataset.toggle, 102);
     return;
   }
@@ -1203,6 +1263,10 @@ document.addEventListener("change", (ev) => {
   if (ev.target.id === "nf-p1" || ev.target.id === "nf-p2") { onNewPinChange(); return; }
   if (ev.target.id === "s-dhcp") { $("s-static").classList.toggle("hide", ev.target.checked); markDirty(); return; }
   if (ev.target.closest("#v-system")) markDirty();
+});
+
+document.addEventListener("input", (ev) => {
+  if (ev.target.id === "s-nodeId") updateNameDirty();
 });
 
 window.addEventListener("beforeunload", (e) => {

@@ -15,7 +15,7 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <svg viewBox="0 0 69 67" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.93 67c-1.37 0-2.48-1.13-2.48-2.52V34.87c0-3.69 1.59-7.19 4.36-9.58l15.6-13.51c4.69-4.05 11.59-4.01 16.23.09l15.18 13.44a12.63 12.63 0 0 1 4.25 9.49v5.88c3.44 1.07 5.93 4.28 5.93 8.08a8.45 8.45 0 0 1-8.44 8.46 8.45 8.45 0 0 1-8.44-8.46c0-3.82 2.52-7.04 5.98-8.1v-5.86c0-2.18-.93-4.26-2.55-5.69L40.37 15.67a6.6 6.6 0 0 0-9.73-.05l-15.61 13.5a7.55 7.55 0 0 0-2.59 5.75v29.61c0 1.39-1.11 2.52-2.48 2.52Z" fill="currentColor"/><path d="M8.44 16.92a8.45 8.45 0 0 0 8.44-8.46A8.45 8.45 0 0 0 8.44 0 8.45 8.45 0 0 0 0 8.46a8.45 8.45 0 0 0 8.44 8.46Z" fill="currentColor"/></svg>
     ONOFRE
   </div>
-  <span class="hid"><b id="h-name">…</b> · <span id="h-chip"></span> · <span id="h-mcu"></span> · FW <span id="h-fw">—</span></span>
+  <span class="hid"><b id="h-name">…</b> · <span id="h-chip"></span> · <span id="h-mcu"></span> · FW <span class="notranslate" id="h-fw" translate="no">—</span></span>
   <span class="spacer"></span>
   <span class="pill" id="h-wifi">WiFi <b>—</b></span>
   <span class="pill" id="h-mqtt">MQTT <b>—</b></span>
@@ -63,25 +63,37 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
 <!-- ============ FUNÇÕES ============ -->
 <div class="view" id="v-features"><div class="wrap">
   <div class="sec">ADICIONAR</div>
-  <div class="card">
-    <div class="field">
-      <label>NOME</label>
-      <input id="nf-name" maxlength="23" placeholder="ex: Luz da cozinha">
+  <div class="card feature-add">
+    <div class="feature-add-head">
+      <div>
+        <h3>Nova função</h3>
+        <p class="note">Escolhe o tipo e os pinos. A placa valida a configuração antes de a criar.</p>
+      </div>
+      <span class="feature-badge kind-new">NOVO</span>
     </div>
-    <div class="field">
-      <label>TIPO</label>
-      <select id="nf-driver"></select>
-    </div>
-    <div class="row2">
+    <div class="feature-add-grid" id="nf-fields">
+      <div class="field">
+        <label>NOME</label>
+        <input id="nf-name" maxlength="23" placeholder="ex: Luz da cozinha">
+      </div>
+      <div class="field">
+        <label>TIPO</label>
+        <select id="nf-driver"></select>
+      </div>
       <div class="field"><label id="nf-p1-lbl">PINO</label><select id="nf-p1"></select></div>
       <div class="field" id="nf-p2-box"><label id="nf-p2-lbl">SEGUNDO PINO</label><select id="nf-p2"></select></div>
     </div>
-    <div class="btns"><button class="btn p" id="nf-add">Adicionar</button></div>
-    <div class="note" id="nf-msg"></div>
+    <div class="feature-add-actions">
+      <div class="note" id="nf-msg"></div>
+      <button class="btn p" id="nf-add">Adicionar função</button>
+    </div>
   </div>
 
-  <div class="sec">CONFIGURADAS</div>
-  <div id="feat-list"></div>
+  <div class="feature-section-head">
+    <div class="sec">CONFIGURADAS</div>
+    <span class="feature-count" id="feat-count">0</span>
+  </div>
+  <div class="feature-grid" id="feat-list"></div>
 </div></div>
 
 <!-- ============ DIAGNÓSTICO ============ -->
@@ -97,11 +109,11 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
       <h4>SISTEMA</h4>
       <div class="kv"><span>último arranque</span><b id="d-reset">—</b></div>
       <div class="kv"><span>ligado há</span><b id="d-uptime">—</b></div>
-      <div class="kv"><span>firmware</span><b id="d-fw">—</b></div>
+      <div class="kv"><span>firmware</span><b class="notranslate" id="d-fw" translate="no">—</b></div>
       <div class="kv"><span>programa</span><b id="d-sketch">—</b></div>
     </div>
-    <div class="card">
-      <h4>REDE</h4>
+    <div class="card status-card" id="d-net-card">
+      <div class="diag-card-head"><h4>REDE</h4><span class="status-badge off" id="d-net-status">—</span></div>
       <div class="kv"><span>rede</span><b id="d-ssid">—</b></div>
       <div class="kv"><span>sinal</span><b id="d-rssi">—</b></div>
       <div class="kv"><span>IP</span><b id="d-ip">—</b></div>
@@ -109,9 +121,9 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     </div>
     <div class="card">
       <h4>LIGAÇÕES</h4>
-      <div class="kv"><span>MQTT local</span><b id="d-mqtt">—</b></div>
+      <div class="kv"><span>MQTT local</span><b class="status-badge off" id="d-mqtt">—</b></div>
       <div class="kv"><span>servidor</span><b id="d-broker">—</b></div>
-      <div class="kv"><span>cloud</span><b id="d-cloud">—</b></div>
+      <div class="kv"><span>cloud</span><b class="status-badge off" id="d-cloud">—</b></div>
     </div>
   </div>
   <div class="sec">REGISTO AO VIVO</div>
@@ -125,10 +137,21 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
 
 <!-- ============ SISTEMA ============ -->
 <div class="view" id="v-system"><div class="wrap">
-  <div class="sec">IDENTIFICAÇÃO</div>
+  <div class="system-tabs" role="tablist" aria-label="Definições do sistema">
+    <button type="button" class="system-tab on" role="tab" aria-selected="true" aria-controls="system-general" data-system-view="general">GERAL</button>
+    <button type="button" class="system-tab" role="tab" aria-selected="false" aria-controls="system-network" data-system-view="network">REDE</button>
+    <button type="button" class="system-tab" role="tab" aria-selected="false" aria-controls="system-access" data-system-view="access">ACESSO E CÓPIA</button>
+    <button type="button" class="system-tab" role="tab" aria-selected="false" aria-controls="system-firmware" data-system-view="firmware">FIRMWARE</button>
+  </div>
+
+  <div class="system-pane on" id="system-general" role="tabpanel">
+  <div class="system-section-head"><div class="sec">IDENTIFICAÇÃO</div>
+    <span class="status-badge warn hide" id="s-name-dirty">ALTERADO</span></div>
   <div class="card"><div class="field"><label>NOME DO DISPOSITIVO</label>
     <input id="s-nodeId" maxlength="30" placeholder="ex: Sala"></div></div>
+  </div>
 
+  <div class="system-pane" id="system-network" role="tabpanel">
   <div class="sec">WI-FI</div>
   <div class="card">
     <div class="field"><label>REDE (SSID)</label><input id="s-ssid" maxlength="23"></div>
@@ -154,7 +177,9 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
       <div class="field"><label>PALAVRA-PASSE</label><input id="s-mqttPw" type="password" maxlength="63"></div>
     </div>
   </div>
+  </div>
 
+  <div class="system-pane" id="system-access" role="tabpanel">
   <div class="sec">ACESSO A ESTE PAINEL</div>
   <div class="card">
     <div class="row2">
@@ -176,7 +201,9 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <div class="btns"><button class="btn" id="r-send">Restaurar</button></div>
     <div class="note" id="r-msg"></div>
   </div>
+  </div>
 
+  <div class="system-pane" id="system-firmware" role="tabpanel">
   <div class="sec">ATUALIZAR POR FICHEIRO</div>
   <div class="card">
     <p class="note" style="margin:0 0 11px">
@@ -203,6 +230,7 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   </div>
   <div class="note" id="u-avail"></div>
   <div class="note">Repor de origem apaga tudo: funções, Wi-Fi e MQTT.</div>
+  </div>
 </div></div>
 
 <div id="toast"></div>
