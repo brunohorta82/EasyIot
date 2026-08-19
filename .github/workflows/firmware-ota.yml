@@ -47,17 +47,23 @@ jobs:
         run: pip install -U platformio intelhex
 
       # tools/html_converter.py (run by extra_script.py during the build) embeds the
-      # gzipped web panel into headers and needs these CLI minifiers plus xxd.
+      # gzipped web panel into headers. The minifiers are pinned devDependencies,
+      # not global installs: their exact output ends up inside the firmware image,
+      # so the release must not depend on whatever version the runner resolves.
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install web panel build tools
         run: |
-          npm install -g html-minifier uglify-js uglifycss
+          npm ci
           command -v xxd >/dev/null || sudo apt-get install -y -qq xxd
-          for c in html-minifier uglifyjs uglifycss gzip xxd; do
+          for c in gzip xxd; do
             command -v "$c" >/dev/null || { echo "missing required command: $c"; exit 1; }
+          done
+          for c in html-minifier-terser uglifyjs uglifycss; do
+            test -x "node_modules/.bin/$c" || { echo "missing build tool: $c (npm ci failed?)"; exit 1; }
           done
 
       - name: Resolve and verify version

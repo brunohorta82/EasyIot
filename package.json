@@ -1,0 +1,14 @@
+{
+  "name": "easyiot-webpanel-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build-time minifiers for the embedded web panel. Not shipped to the device: tools/html_converter.py runs them and embeds the result as PROGMEM headers.",
+  "scripts": {
+    "webpanel": "python3 tools/html_converter.py"
+  },
+  "devDependencies": {
+    "html-minifier-terser": "7.2.0",
+    "uglify-js": "3.19.3",
+    "uglifycss": "0.0.29"
+  }
+}

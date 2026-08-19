@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Build
+- The web panel minifiers are pinned project dependencies (`package.json` +
+  `package-lock.json`, both now tracked — they were in `.gitignore`, which is why
+  they only ever existed as global installs) instead of `npm install -g`, and
+  `tools/html_converter.py` resolves them from `node_modules/.bin` before falling
+  back to `PATH`. Their exact output is embedded in the firmware image, so the
+  build must not depend on whatever version a machine happens to have; `npm ci`
+  from an empty tree reproduces the generated headers byte for byte. Install with
+  `npm ci`; a missing tool now says so and names the command. CI uses `npm ci`
+  with the npm cache instead of a global install.
+- Replaced `html-minifier` with the maintained fork `html-minifier-terser`. The
+  original is unmaintained and carries a ReDoS advisory with no fix available,
+  which is not something to pin permanently. It takes the same arguments and
+  produces byte-identical output for this panel, so the embedded assets match the
+  ones already published in 9.179; the old name is still accepted so an existing
+  global install keeps working.
+
+### Fixed
+- Documented the reproducible ESP32-C6 build failure: the first C6 run after an
+  ESP32 build dies in `arduino.py` with `Path(None)` because both platforms
+  install as `espressif32` and share one directory, leaving the framework package
+  unresolved until the failed run relinks it. Run it again, or isolate the tree
+  with `PLATFORMIO_CORE_DIR`. It was previously noted as intermittent and
+  uncharacterised.
+
 ## [9.179] - 2026-08-19
 
 ### Added

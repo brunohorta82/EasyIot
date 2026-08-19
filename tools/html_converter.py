@@ -62,15 +62,48 @@ def _read_extra_version(lines: Iterable[str]) -> str:
     return ""
 
 
-def _require_cmd(cmd: str) -> None:
-    if shutil.which(cmd) is None:
-        print(f"Missing required command: {cmd}", file=sys.stderr)
-        sys.exit(1)
+# The minifiers are pinned in package.json and installed into the project, not
+# globally: their exact output is embedded in the firmware image, so "whatever
+# version this machine happens to have" is not good enough. A global install is
+# still honoured, for anyone who already had one.
+NODE_BIN = ROOT / "node_modules" / ".bin"
+
+# html-minifier (kangax) is unmaintained and carries an unfixable ReDoS advisory;
+# html-minifier-terser is the maintained fork and takes the same arguments. The
+# old name is still accepted so an existing setup keeps working.
+CMD_ALIASES = {
+    "html-minifier": ("html-minifier-terser", "html-minifier"),
+}
+
+
+def _candidate_names(cmd: str) -> Iterable[str]:
+    return CMD_ALIASES.get(cmd, (cmd,))
 
 
 def _resolve_cmd(cmd: str) -> str:
-    resolved = shutil.which(cmd)
-    return resolved if resolved is not None else cmd
+    for name in _candidate_names(cmd):
+        # Windows installs .cmd shims rather than extensionless executables.
+        for suffix in ("", ".cmd", ".CMD"):
+            local = NODE_BIN / f"{name}{suffix}"
+            if local.exists():
+                return str(local)
+        found = shutil.which(name)
+        if found is not None:
+            return found
+    return cmd
+
+
+def _require_cmd(cmd: str) -> None:
+    for name in _candidate_names(cmd):
+        for suffix in ("", ".cmd", ".CMD"):
+            if (NODE_BIN / f"{name}{suffix}").exists():
+                return
+        if shutil.which(name) is not None:
+            return
+    print(f"Missing build tool: {cmd}", file=sys.stderr)
+    print("The web panel minifiers are project dependencies. Install them with:", file=sys.stderr)
+    print("    npm ci", file=sys.stderr)
+    sys.exit(1)
 
 
 def _run(cmd: List[str]) -> None:

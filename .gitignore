@@ -1,5 +1,5 @@
-package-lock.json
-package.json
+# package.json/package-lock.json are tracked on purpose: the web panel minifiers
+# are pinned build dependencies whose output is embedded in the firmware image.
 node_modules
 .DS_Store
 .pio
