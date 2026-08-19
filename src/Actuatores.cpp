@@ -367,6 +367,25 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   lastChange = millis();
   if (!isGarage() && this->state == state)
     return this;
+  // Only one irrigation zone may run at a time — the supply pressure will not
+  // feed two. The guard belongs here, not in an interface: a wall button, MQTT,
+  // the cloud and the web panel all reach a valve through this one function, so
+  // anywhere else it would be advisory. Closing the others recurses once with
+  // OFF_OPEN, which cannot re-enter this branch.
+  if (isGardenValve() && state == ActuatorState::ON_CLOSE)
+  {
+    for (auto &other : config.actuatores)
+    {
+      if (other.isGardenValve() && strcmp(other.uniqueId, uniqueId) != 0 &&
+          other.state == ActuatorState::ON_CLOSE)
+      {
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s Closing %s: one zone at a time." CR, tags::actuatores, other.name);
+#endif
+        other.changeState(StateOrigin::INTERNAL, ActuatorState::OFF_OPEN);
+      }
+    }
+  }
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
   Log.notice("%s State:     %d" CR, tags::actuatores, state);

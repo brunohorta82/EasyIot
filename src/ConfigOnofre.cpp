@@ -10,6 +10,7 @@
 #include <PZEM004Tv30.h>
 #include "HomeAssistantMqttDiscovery.h"
 #include "CloudIO.h"
+#include "DeviceClock.h"
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 
@@ -777,6 +778,10 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     // Credentials present is not the same as a working link: a device can be
     // adopted and still be offline. The panel needs to tell those apart.
     root["cloudConnected"] = cloudIOConnected();
+    // Shown so the panel can say why a schedule is not running: without a clock
+    // the device deliberately refuses to water rather than guess the hour.
+    root["clockSynced"] = clockSynced();
+    root["clockNow"] = clockNowIso();
     // Diagnostics for the local panel. Deliberately not sent to the cloud sync,
     // which has no use for them and is posted far more often.
     root["freeHeap"] = ESP.getFreeHeap();

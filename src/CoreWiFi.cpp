@@ -1,4 +1,5 @@
 #include "CoreWiFi.h"
+#include "DeviceClock.h"
 #include "Constants.h"
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
 #include <JustWifi.h>
@@ -249,6 +250,9 @@ void infoCallback(justwifi_messages_t code, char *parameter)
       strlcpy(config.wifiSSID, WiFi.SSID().c_str(), sizeof(config.wifiSSID));
       strlcpy(config.wifiSecret, WiFi.psk().c_str(), sizeof(config.wifiSecret));
     }
+    // The clock can only sync once there is a network, and anything scheduled
+    // on the device depends on it.
+    setupDeviceClock();
     setupWebPanel();
     startWebserver();
     knx.start();
