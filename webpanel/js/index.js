@@ -699,6 +699,11 @@ function renderDiag() {
   const cloudText = !cloud ? "sem credenciais (não adotado)" :
     config.cloudConnected ? "ligada" : "adotado, sem ligação";
   setStatusBadge($("d-cloud"), cloudState, cloudText);
+  // Without a synced clock the device refuses to run a schedule rather than
+  // guess the hour, so the panel has to be able to say that out loud.
+  setStatusBadge($("d-clock"),
+    config.clockSynced ? "ok" : "warn",
+    config.clockSynced ? (config.clockNow || "certo").replace("T", " ") : "sem hora (NTP)");
 }
 
 function drawSpark(id, values, colour) {

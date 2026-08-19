@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.178] - 2026-08-19
+
+### Added
+- **The device has a clock.** NTP_SERVER and TZ_INFO had been in the build for a
+  long time but were never applied — nothing called configTime(), so the only
+  real timestamps came from a HAN meter's own clock over Modbus. It syncs when the
+  network comes up, and reports whether it has the time at all: `/config` carries
+  `clockSynced` and `clockNow`, and Diagnostics shows them, because a schedule
+  that refuses to run must be able to say why.
+- **Only one irrigation zone opens at a time.** The supply pressure will not feed
+  two. The guard sits in `Actuator::changeState`, which every path goes through —
+  wall button, MQTT, cloud, web panel — so it cannot be bypassed; anywhere else it
+  would be advice rather than a rule.
+
+### Notes
+- Groundwork for schedules that run on the board rather than in the cloud, so a
+  watering cycle survives an internet outage. The program model and the state
+  machine that walks the zones come next; the cards come after those.
+- Settled while designing: no watering without a synced clock, no resuming a
+  cycle after a reboot, and rain is evaluated when a program starts rather than
+  mid-cycle.
+- Not yet exercised on hardware. This is logic that drives relays connected to
+  water, so a bench test — five LEDs on the valve pins — should come before it
+  reaches a real installation.
+
 ## [9.177] - 2026-08-19
 
 ### Added
