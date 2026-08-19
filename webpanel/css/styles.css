@@ -371,3 +371,29 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 /* The full history can run to dozens of builds; keep it scrollable so it does
    not push the rest of the page out of reach. */
 #u-versions { max-height: 260px; overflow-y: auto; }
+
+/* ---------- irrigation ---------- */
+.irr-state { margin-bottom: 4px; }
+.irr-running { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.irr-running b { font-size: 19px; color: var(--grn); }
+.irr-running.idle b { color: var(--dim); }
+.irr-running span { font-size: 11.5px; color: var(--dim); }
+.irr-toggles { display: flex; flex-direction: column; gap: 7px; margin-top: 11px; }
+.irr-chip { font-size: 10px; letter-spacing: .1em; color: var(--blu); font-weight: 700;
+  border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+.irr-prog { margin-bottom: 9px; }
+.irr-prog-head { display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 11px; }
+/* One toggle per weekday reads faster than a multi-select, and is thumb-sized. */
+.irr-days { display: flex; gap: 4px; margin-top: 4px; }
+.irr-day { width: 30px; height: 32px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--dim); font: inherit; font-size: 11.5px; cursor: pointer; }
+.irr-day.on { background: rgba(151,215,0,.15); border-color: var(--grn); color: var(--grn); font-weight: 700; }
+.irr-zline { display: flex; align-items: center; gap: 10px; padding: 5px 0;
+  border-bottom: 1px solid var(--line); }
+.irr-zline:last-of-type { border-bottom: 0; }
+.irr-zline .f-check { flex: 1; }
+.irr-zline input[type=number] { width: 68px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 5px 8px; color: var(--txt); font: inherit; text-align: right; }
+.irr-zline input[type=number]:disabled { opacity: .4; }
+.irr-zline span { font-size: 11px; color: var(--dim); min-width: 24px; }

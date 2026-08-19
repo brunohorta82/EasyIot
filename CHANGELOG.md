@@ -2,6 +2,47 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.179] - 2026-08-19
+
+### Added
+- **Irrigation runs on the board.** Up to eight programs, each with a start time,
+  the weekdays it runs on, and the minutes to give each zone. The schedule lives
+  in the equipment, not in the cloud: watering has to keep working when the
+  internet is down, and a cycle half-run because MQTT dropped would leave one
+  zone soaked and the rest dry. New in the panel as the REGA tab, which only
+  appears on a board that actually has valves.
+- **Endpoints:** `POST /irrigation` replaces the schedule (and answers with what
+  the device kept, including zones it dropped), `POST /irrigation/run` forces a
+  program now, `/irrigation/stop` closes the open zone — on GET as well as POST,
+  because stopping the water is the one thing someone may need to do from a phone
+  browser bar with a wet lawn and no app. `/config` carries the whole schedule
+  plus what is running, so the panel gets it in one read.
+
+### Rules the feature rests on
+- Nothing is watered without a synced clock. A scheduler guessing the hour is
+  worse than one that refuses to run, and the panel says so instead of looking
+  broken.
+- A cycle interrupted by a power cut is not resumed on the next boot. Coming back
+  at three in the morning to finish a cycle nobody is watching is worse than
+  skipping it.
+- Rain is evaluated when the cycle starts, not per zone, so a shower halfway
+  through does not leave half the garden watered.
+- Closing the running valve — wall button, app, cloud, panel — ends the cycle
+  rather than reopening the valve under the person who just closed it.
+- A valve opened by a program answers to the program's timer, not to its own
+  autoOff: the default 30 minutes would otherwise cut a longer zone short.
+- Forcing a program by hand ignores its days, its on/off switch, the rain sensor
+  and the clock. It is an explicit act.
+
+### Notes
+- Programs are stored in their own file, `/irrigation.json`. An update can never
+  lose a working configuration because of a key it did not recognise, and a device
+  coming from 9.178 simply starts with no programs.
+- A program due while another is still running is skipped for that day rather than
+  queued; two cycles cannot share the water anyway.
+- Not yet validated on hardware: the ESP32-C6 irrigation build compiles and the
+  API was exercised against the simulator, but no board has run a real cycle.
+
 ## [9.178] - 2026-08-19
 
 ### Added

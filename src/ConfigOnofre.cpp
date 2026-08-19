@@ -11,6 +11,7 @@
 #include "HomeAssistantMqttDiscovery.h"
 #include "CloudIO.h"
 #include "DeviceClock.h"
+#include "Irrigation.h"
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 
@@ -341,6 +342,9 @@ ConfigOnofre &ConfigOnofre::load()
     }
   }
   doc.clear();
+  // After the features, never before: a program naming a valve this device does
+  // not have is dropped, which can only be decided once the valves are known.
+  irrigation.load();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
 
@@ -840,6 +844,20 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     outInPins.add(p);
   }
 
+  // The schedule travels with the features it commands, so the panel gets both
+  // in one read. Only on the full payload: the cloud sync does not schedule.
+  if (allFields)
+  {
+    for (auto &a : actuatores)
+    {
+      if (a.isGardenValve())
+      {
+        irrigation.json(root);
+        break;
+      }
+    }
+  }
+
   JsonArray features = root["features"].to<JsonArray>();
   for (auto s : actuatores)
   {
@@ -945,7 +963,11 @@ void ConfigOnofre::loopActuators()
 {
   for (auto &sw : actuatores)
   {
-    if (sw.state == 100 && sw.autoOff > 0 && sw.lastChange > 0 && sw.lastChange + (sw.autoOff * 1000) < millis())
+    // A valve opened by a program answers to the program's timer, not to its own
+    // autoOff: the default 30 minutes would otherwise cut a longer zone short and
+    // the cycle would read that as someone closing the valve by hand.
+    if (sw.state == 100 && sw.autoOff > 0 && sw.lastChange > 0 && sw.lastChange + (sw.autoOff * 1000) < millis() &&
+        !irrigation.isRunningZone(sw.uniqueId))
     {
       sw.changeState(StateOrigin::AUTO, 0);
     }
@@ -973,6 +995,7 @@ void ConfigOnofre::loopActuators()
       }
     }
   }
+  irrigation.loop();
 }
 void ConfigOnofre::requestRestart()
 {

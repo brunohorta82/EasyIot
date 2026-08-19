@@ -95,6 +95,189 @@ function tileIcon(f) {
   return ICONS.socket;
 }
 
+/* ---------------- irrigation ---------------- */
+/* Programs run on the device, not in the cloud: a cycle that stops halfway
+   because MQTT dropped would leave one zone soaked and the rest dry. The panel
+   only edits and shows them. */
+var irrigation = null;      // last state read from the device
+var irrDirty = false;
+
+const WEEKDAY_LABELS = ["D", "S", "T", "Q", "Q", "S", "S"];
+const WEEKDAY_NAMES = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+const isZone = (f) => f.driver === "GARDEN_VALVE";
+const zones = () => (config.features || []).filter(isZone);
+const zoneName = (id) => (zones().find((z) => z.id === id) || {}).name || id;
+
+function hhmm(minuteOfDay) {
+  const m = Math.max(0, Math.min(1439, parseInt(minuteOfDay, 10) || 0));
+  return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+}
+function minutesFromHhmm(v) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || "").trim());
+  if (!m) return null;
+  const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+function markIrrDirty() {
+  irrDirty = true;
+  $("irr-save").disabled = false;
+}
+
+/* The tab only exists on a board that has valves, so a light switch panel is
+   not cluttered with irrigation it will never use. */
+function renderIrrigationTab() {
+  const has = zones().length > 0;
+  $("tab-irrigation").classList.toggle("hide", !has);
+  if (!has) return;
+  irrigation = config.irrigation || { enabled: true, skipOnRain: true, programs: [] };
+  irrDirty = false;
+  $("irr-save").disabled = true;
+  renderIrrStatus();
+  renderIrrZones();
+  renderIrrPrograms();
+}
+
+function renderIrrStatus() {
+  const run = irrigation.running;
+  const rain = (config.features || []).find((f) => f.driver === "RAIN");
+  const raining = rain ? /rain/i.test(String(rain.state)) : false;
+  // A schedule with no clock is the one failure people cannot guess at, so it
+  // leads.
+  const noClock = !config.clockSynced;
+  $("irr-status").innerHTML =
+    '<div class="card irr-state">' +
+    (noClock
+      ? '<div class="note err" style="margin:0 0 10px">Sem hora certa (NTP), os programas não correm. ' +
+        "A rega manual continua disponível.</div>"
+      : "") +
+    (run
+      ? '<div class="irr-running"><b>' + esc(zoneName(run.zone)) + "</b>" +
+        '<span>a regar · faltam ' + duration(run.secondsLeft) + "</span></div>"
+      : '<div class="irr-running idle"><b>Parado</b><span>' +
+        (irrigation.enabled ? "à espera do próximo programa" : "programas desligados") + "</span></div>") +
+    '<div class="irr-toggles">' +
+    '<label class="f-check"><input type="checkbox" id="irr-enabled"' + (irrigation.enabled ? " checked" : "") +
+      "> programas ativos</label>" +
+    '<label class="f-check"><input type="checkbox" id="irr-rain"' + (irrigation.skipOnRain ? " checked" : "") +
+      "> saltar o ciclo se estiver a chover" +
+      (raining ? ' <span class="irr-chip">está a chover</span>' : "") + "</label>" +
+    "</div>" +
+    (run ? '<div class="btns" style="margin-top:11px"><button class="btn d" id="irr-stop">Parar rega</button></div>' : "") +
+    "</div>";
+}
+
+function renderIrrZones() {
+  const run = irrigation.running;
+  $("irr-zones").innerHTML = zones().map((z) => {
+    const on = String(z.state) === "100";
+    const pin = (z.outputs || []).length ? "OUT " + z.outputs.join(",") : "";
+    const btn = String(z.inputs || "") ? " · IN " + z.inputs.join(",") : "";
+    return '<div class="tile-wrap"><div class="tile' + (on ? " on" : "") + '">' +
+      '<span class="tile-top">' + ICONS.valve + "</span>" +
+      "<b>" + esc(z.name) + "</b>" +
+      '<span class="tile-sub">' + (on ? (run && run.zone === z.id ? "a regar · " + duration(run.secondsLeft) : "aberta") : "fechada") + "</span>" +
+      '<div class="btns" style="margin-top:8px">' +
+      '<button class="btn' + (on ? " d" : "") + '" data-zone="' + esc(z.id) + '">' +
+      (on ? "Fechar" : "Regar agora") + "</button></div>" +
+      '<span class="tile-pins">' + esc(pin + btn) + "</span></div></div>";
+  }).join("");
+}
+
+function renderIrrPrograms() {
+  const list = irrigation.programs || [];
+  $("irr-programs").innerHTML = list.length ? list.map((prog, i) => {
+    // A program with no zones or no days is silently dead; say so where the
+    // total would be, which is where the eye already goes.
+    const warn = !(prog.zones || []).length || !prog.weekdays;
+    return '<div class="card irr-prog" data-pi="' + i + '">' +
+    '<div class="irr-prog-head">' +
+      '<label class="f-check"><input type="checkbox" data-ip="enabled" data-pi="' + i + '"' +
+        (prog.enabled ? " checked" : "") + "> Programa " + (i + 1) + "</label>" +
+      '<div class="btns">' +
+      ((prog.zones || []).length
+        ? '<button class="btn" data-iprun="' + prog.id + '">Regar agora</button>' : "") +
+      '<button class="btn d" data-ipdel="' + i + '">Remover</button></div>' +
+    "</div>" +
+    '<div class="row2">' +
+      '<div class="field"><label>HORA DE INÍCIO</label>' +
+      '<input type="time" data-ip="start" data-pi="' + i + '" value="' + hhmm(prog.startMinute) + '"></div>' +
+      '<div class="field"><label>DIAS</label><div class="irr-days">' +
+      WEEKDAY_LABELS.map((lbl, d) =>
+        '<button type="button" class="irr-day' + ((prog.weekdays >> d) & 1 ? " on" : "") +
+        '" data-ipday="' + i + ":" + d + '" title="' + WEEKDAY_NAMES[d] + '">' + lbl + "</button>").join("") +
+      "</div></div>" +
+    "</div>" +
+    '<div class="sub">ZONAS E DURAÇÃO</div>' +
+    zones().map((z) => {
+      const entry = (prog.zones || []).find((x) => x.uniqueId === z.id);
+      return '<div class="irr-zline">' +
+        '<label class="f-check"><input type="checkbox" data-ipz="' + i + ":" + esc(z.id) + '"' +
+          (entry ? " checked" : "") + "> " + esc(z.name) + "</label>" +
+        '<input type="number" min="1" max="240" data-ipmin="' + i + ":" + esc(z.id) + '" value="' +
+          (entry ? entry.minutes : 10) + '"' + (entry ? "" : " disabled") + '><span>min</span></div>';
+    }).join("") +
+    '<div class="note' + (warn ? " err" : "") + '">' +
+    (!(prog.zones || []).length
+      ? "Sem zonas escolhidas — este programa não rega nada."
+      : !prog.weekdays
+        ? "Sem dias escolhidos — este programa não corre."
+        : "Total " + programTotal(prog) + " min, por esta ordem.") +
+    (prog.enabled ? "" : " Programa desligado.") + "</div>" +
+    "</div>";
+  }).join("")
+    : '<div class="note">Ainda não há programas. Cria um para a rega correr sozinha.</div>';
+}
+
+function programTotal(prog) {
+  return (prog.zones || []).reduce((a, z) => a + (parseInt(z.minutes, 10) || 0), 0);
+}
+
+async function saveIrrigation() {
+  const body = {
+    enabled: $("irr-enabled").checked,
+    skipOnRain: $("irr-rain").checked,
+    programs: irrigation.programs || [],
+  };
+  const msg = $("irr-msg");
+  msg.className = "note";
+  msg.textContent = "A guardar…";
+  try {
+    irrigation = await api("/irrigation", { method: "POST", body: JSON.stringify(body) });
+    config.irrigation = irrigation;
+    irrDirty = false;
+    $("irr-save").disabled = true;
+    msg.className = "note ok";
+    msg.textContent = "Programas guardados no equipamento.";
+    renderIrrStatus();
+    renderIrrPrograms();
+  } catch (e) {
+    if (e.auth) return;
+    msg.className = "note err";
+    msg.textContent = "O equipamento recusou os programas.";
+  }
+}
+
+async function runProgramNow(programId) {
+  try {
+    irrigation = await api("/irrigation/run", { method: "POST", body: JSON.stringify({ programId: programId }) });
+    config.irrigation = irrigation;
+    await load();
+    document.querySelector('[data-view="irrigation"]').click();
+  } catch (e) { toast("Não foi possível arrancar o programa", "err"); }
+}
+
+async function stopIrrigation() {
+  try {
+    irrigation = await api("/irrigation/stop", { method: "POST" });
+    config.irrigation = irrigation;
+    await load();
+    document.querySelector('[data-view="irrigation"]').click();
+  } catch (e) { toast("Não foi possível parar", "err"); }
+}
+
 /* ---------------- theme ---------------- */
 /* The choice lives in localStorage, not in the device config: it belongs to
    whoever is looking, and writing it to the device would burn flash on a
@@ -201,6 +384,7 @@ async function load() {
   renderDiag();
   fillSystem();
   fillNewFeatureForm();
+  renderIrrigationTab();
   wireFeatureEvents();
 }
 
@@ -1165,6 +1349,19 @@ function wireFeatureEvents() {
           }
           const rng = document.querySelector('[data-cover="' + feat.id + '"]');
           if (rng) rng.value = 100 - (parseInt(e.data, 10) || 0);
+          // A valve tile carries more than a switch position (open/closed plus
+          // the countdown), so redraw the strip instead of poking one node.
+          if (isZone(feat) && irrigation) {
+            // The device cancels the cycle when a valve is taken over by hand,
+            // so the state card must not keep counting down a dead program.
+            const run = irrigation.running;
+            const open = (parseInt(e.data, 10) || 0) > 0;
+            if (run && ((open && run.zone !== feat.id) || (!open && run.zone === feat.id))) {
+              irrigation.running = null;
+              renderIrrStatus();
+            }
+            renderIrrZones();
+          }
         } else if (isEnergy(feat)) {
           // The whole card is derived from the payload, so redraw it in place.
           const el = $("sv-" + feat.id);
@@ -1217,6 +1414,47 @@ document.addEventListener("click", (ev) => {
     if (armed(tpl, "Substituir tudo?")) applyTemplate(parseInt(tpl.dataset.tpl, 10));
     return;
   }
+  // Irrigation: zone command, day toggle, add/remove program, stop, save.
+  const zbtn = ev.target.closest("[data-zone]");
+  if (zbtn) {
+    const z = zones().find((x) => x.id === zbtn.dataset.zone);
+    if (z) control(z.id, String(z.state) === "100" ? 0 : 100);
+    return;
+  }
+  if (ev.target.closest("#irr-stop")) { stopIrrigation(); return; }
+  if (ev.target.closest("#irr-save")) { saveIrrigation(); return; }
+  const day = ev.target.closest("[data-ipday]");
+  if (day) {
+    const parts = day.dataset.ipday.split(":");
+    const prog = irrigation.programs[Number(parts[0])];
+    prog.weekdays ^= (1 << Number(parts[1]));
+    markIrrDirty();
+    renderIrrPrograms();
+    return;
+  }
+  const prun = ev.target.closest("[data-iprun]");
+  if (prun) {
+    // Forcing a cycle waters the whole garden, so it asks first.
+    if (armed(prun, "Regar tudo?")) runProgramNow(parseInt(prun.dataset.iprun, 10));
+    return;
+  }
+  const pdel = ev.target.closest("[data-ipdel]");
+  if (pdel) {
+    irrigation.programs.splice(Number(pdel.dataset.ipdel), 1);
+    markIrrDirty();
+    renderIrrPrograms();
+    return;
+  }
+  if (ev.target.closest("#irr-add")) {
+    irrigation.programs = irrigation.programs || [];
+    irrigation.programs.push({
+      id: Math.max(0, ...irrigation.programs.map((x) => x.id || 0)) + 1,
+      enabled: true, startMinute: 420, weekdays: 0b0111110, zones: [],
+    });
+    markIrrDirty();
+    renderIrrPrograms();
+    return;
+  }
   const rst = ev.target.closest("[data-reset]");
   if (rst) {
     if (!armed(rst, "Repor a zero?")) return;
@@ -1264,6 +1502,49 @@ document.addEventListener("change", (ev) => {
     if (config.features[i]) { config.features[i][key] = val; markDirty(); }
     return;
   }
+  // Irrigation edits: start time, zone selection, per-zone duration.
+  const ip = ev.target.closest("[data-ip]");
+  if (ip) {
+    const prog = irrigation.programs[Number(ip.dataset.pi)];
+    if (ip.dataset.ip === "enabled") prog.enabled = ip.checked;
+    if (ip.dataset.ip === "start") {
+      const m = minutesFromHhmm(ip.value);
+      if (m == null) { toast("Hora inválida", "err"); return; }
+      prog.startMinute = m;
+    }
+    markIrrDirty();
+    renderIrrPrograms();
+    return;
+  }
+  const ipz = ev.target.closest("[data-ipz]");
+  if (ipz) {
+    const parts = ipz.dataset.ipz.split(":");
+    const prog = irrigation.programs[Number(parts[0])], zid = parts[1];
+    prog.zones = prog.zones || [];
+    if (ipz.checked) {
+      if (!prog.zones.some((z) => z.uniqueId === zid)) prog.zones.push({ uniqueId: zid, minutes: 10 });
+      // The zones run in the order they are stored, so keep that equal to the
+      // order they are listed in: the screen says "por esta ordem" and has to
+      // mean it, whatever order the boxes were ticked in.
+      const order = zones().map((z) => z.id);
+      prog.zones.sort((a, b) => order.indexOf(a.uniqueId) - order.indexOf(b.uniqueId));
+    } else {
+      prog.zones = prog.zones.filter((z) => z.uniqueId !== zid);
+    }
+    markIrrDirty();
+    renderIrrPrograms();
+    return;
+  }
+  const ipmin = ev.target.closest("[data-ipmin]");
+  if (ipmin) {
+    const parts = ipmin.dataset.ipmin.split(":");
+    const entry = (irrigation.programs[Number(parts[0])].zones || []).find((z) => z.uniqueId === parts[1]);
+    if (entry) entry.minutes = Math.max(1, Math.min(240, parseInt(ipmin.value, 10) || 1));
+    markIrrDirty();
+    renderIrrPrograms();
+    return;
+  }
+  if (ev.target.id === "irr-enabled" || ev.target.id === "irr-rain") { markIrrDirty(); return; }
   if (ev.target.id === "nf-driver") { onDriverChange(); return; }
   if (ev.target.id === "nf-p1" || ev.target.id === "nf-p2") { onNewPinChange(); return; }
   if (ev.target.id === "s-dhcp") { $("s-static").classList.toggle("hide", ev.target.checked); markDirty(); return; }
@@ -1326,4 +1607,26 @@ document.addEventListener("DOMContentLoaded", () => {
       api("/config").then((c) => { applyDiagnosticsSnapshot(c); renderHeader(); renderDiag(); }).catch(() => {});
     }
   }, 10000);
+  // The remaining time is counted down here so the tile does not need a push
+  // every second; the device is re-asked now and then in case a program
+  // advanced to the next zone on its own.
+  setInterval(() => {
+    if (!irrigation || !$("v-irrigation").classList.contains("on")) return;
+    const run = irrigation.running;
+    if (run && run.secondsLeft > 0) {
+      run.secondsLeft -= 1;
+      renderIrrStatus();
+      renderIrrZones();
+    }
+  }, 1000);
+  setInterval(() => {
+    if (!irrigation || !$("v-irrigation").classList.contains("on") || irrDirty) return;
+    api("/config").then((c) => {
+      irrigation = c.irrigation || irrigation;
+      config.irrigation = irrigation;
+      // Valve states travel by event; only the cycle itself is re-read.
+      renderIrrStatus();
+      renderIrrZones();
+    }).catch(() => {});
+  }, 15000);
 });
