@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.181] - 2026-08-19
+
+### Fixed
+- **The C6 rebooted at the end of boot, so its access point never came up.**
+  `setup()` created the features task with `xTaskCreatePinnedToCore(..., core 1)`,
+  and the C6 is single-core: FreeRTOS asserts on `xCoreID < configNUMBER_OF_CORES`
+  with assertions enabled, which panics and restarts the board. The task is now
+  pinned only where there is a second core to pin it to. The C3 never hit this
+  because its target defines `HAN_MODE`, which already took the unpinned branch —
+  the condition was the product, not the chip.
+  Anyone who installed 9.180 on a C6 should reinstall from `/flash/`.
+
+### Added
+- `ARDUINO_USB_MODE` / `ARDUINO_USB_CDC_ON_BOOT` on the C6, as the C3 already had:
+  the DevKitC-1's only port is the native USB-Serial/JTAG, so without them `Serial`
+  goes to UART0 pins and the board cannot explain itself over the port it is
+  plugged in by.
+- `ESP32C6_IRRIGATION_DEBUG`: the same image with the logs left in. The release env
+  unflags `DEBUG_ONOFRE`, which is right for a product and useless for bringing a
+  new board up.
+
 ## [9.180] - 2026-08-19
 
 ### Added

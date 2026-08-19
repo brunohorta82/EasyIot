@@ -187,7 +187,12 @@ void setup()
 // only ran when this one happened to yield. Sensor reads are background work; keep
 // them below the network stack. Arduino's own loop runs at 1.
 #define FEATURES_TASK_PRIORITY 2
-#ifdef HAN_MODE
+  // Pin to the second core only where there is one. The C6 and C3 are single-core
+  // (CONFIG_FREERTOS_UNICORE), and asking FreeRTOS for core 1 there trips
+  // configASSERT(xCoreID < configNUMBER_OF_CORES) — the board panics at the end of
+  // setup() and reboots, which looks exactly like a device that never brings its
+  // access point up. HAN_MODE keeps the unpinned task it always had.
+#if defined(CONFIG_FREERTOS_UNICORE) || defined(HAN_MODE)
   xTaskCreate(featuresTask, "Features-Task", 4048, NULL, FEATURES_TASK_PRIORITY, NULL);
 #else
   xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, FEATURES_TASK_PRIORITY, NULL, 1);
