@@ -2,7 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [9.180] - 2026-08-19
+
+### Added
+- **The irrigation controller is a released variant.** The ESP32-C6 build is in
+  the release matrix, published as `ESP32-C6` and offered on `/flash/` as *OnOfre
+  Rega*. The full-flash image comes from the build's own merged `.factory.bin`,
+  which already puts the bootloader at 0x0 — where a C6 expects it, not 0x1000.
+
+### Fixed
+- **A C6 would have been offered an ESP32 image.** It reported `mcu: "ESP32"` and
+  asked the generic update URL, because the C6 build also defines `ESP32`. Both are
+  now variant-aware: it reports `ESP32-C6` and asks for that variant. Nothing was
+  at risk in the field — no C6 had ever been published — but the first one to
+  auto-update would have flashed firmware for another chip.
+
+### Removed
+- **Maker support**, as agreed. The 4 MB pin map and the `ESP32-MAKER-4MB` variant
+  are gone from the firmware, and the cloud no longer accepts that variant: any
+  device still reporting it stops being offered updates rather than receiving a
+  wrong image.
+
+### Notes
+- Still not validated on hardware. Nothing has run a real irrigation cycle, and
+  *OnOfre Rega* on `/flash/` now makes an unvalidated image installable — worth
+  keeping to the test group until a board has watered something.
 
 ### Build
 - The web panel minifiers are pinned project dependencies (`package.json` +

@@ -26,6 +26,7 @@ jobs:
           - { env: ESP8266_RELEASE,          mcu: ESP8266,         chip: esp8266, flash_size: 4MB }
           - { env: ESP8266-HAN_RELEASE,      mcu: ESP8266-HAN,     chip: esp8266, flash_size: 4MB }
           - { env: ESP32_RELEASE,            mcu: ESP32,           chip: esp32,   flash_size: 8MB }
+          - { env: ESP32C6_IRRIGATION,       mcu: ESP32-C6,        chip: esp32c6, flash_size: 4MB }
     steps:
       - uses: actions/checkout@v4
 
@@ -175,6 +176,12 @@ jobs:
           mkdir -p webflash
           if [ "${{ matrix.chip }}" = "esp8266" ]; then
             cp "$APP" "webflash/$NAME"
+          elif [ -n "$(find "$BUILD_DIR" -maxdepth 1 -name '*.factory.bin' -print -quit)" ]; then
+            # Newer platform builds (the C6 target) already emit a merged image with
+            # the bootloader at the offset that chip expects — 0x0 there, not 0x1000.
+            # Copying it beats re-deriving the offsets per chip, and the bundled
+            # esptool 5 renamed the merge subcommand anyway.
+            cp "$(find "$BUILD_DIR" -maxdepth 1 -name '*.factory.bin' -print -quit)" "webflash/$NAME"
           else
             ESPTOOL=$(find "$HOME/.platformio/packages" -name esptool.py -path '*tool-esptoolpy*' -print -quit)
             BOOT_APP0=$(find "$HOME/.platformio/packages" -name boot_app0.bin -print -quit)

@@ -99,11 +99,7 @@ namespace DefaultPins
     constexpr int HAN_RX{14u};
     constexpr unsigned int OUTPUT_VALVE_THREE{noGPIO};
     constexpr unsigned int OUTPUT_VALVE_FOUR{noGPIO};
-#ifdef ESP32_MAKER_4MB
-    constexpr unsigned int outputInputPins[] = {7, 12, 13, 14, 19, 20, 21, 22, 25};
-#else
     constexpr unsigned int outputInputPins[] = {4,5,7, 8, 12, 13, 14, 19, 20, 21, 22, 25, 26, 27};
-#endif
     constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
 }
 #endif
@@ -168,8 +164,11 @@ namespace constanstsCloudIO
     constexpr const char *configUrl{"https://cloudio.bhonofre.pt/devices/config"};
 #ifdef HAN_MODE
     constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
-#elif ESP32_MAKER_4MB
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-MAKER-4MB"};
+#elif defined(ESP32C6)
+    // The variant is not cosmetic here: the C6 asks over the same x-ESP32-version
+    // header as an 8 MB ESP32, so without it the cloud would hand this board an
+    // image for a different chip.
+    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-C6"};
 #else
     constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest"};
 #endif

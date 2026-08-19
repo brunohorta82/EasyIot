@@ -814,8 +814,10 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["firmware"] = String(VERSION);
   root["buildDate"] = kFirmwareBuildDate;
 #ifdef ESP32
-#ifdef ESP32_MAKER_4MB
-  root["mcu"] = "ESP32-MAKER-4MB";
+#ifdef ESP32C6
+  // Must not report plain "ESP32": this string picks the OTA folder, and an 8 MB
+  // ESP32 image does not belong on a C6.
+  root["mcu"] = "ESP32-C6";
 #else
   root["mcu"] = "ESP32";
 #endif
