@@ -29,6 +29,7 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   <button class="tab on" data-view="overview">VISÃO GERAL</button>
   <button class="tab" data-view="pinout">PINOUT</button>
   <button class="tab" data-view="features">FUNÇÕES</button>
+  <button class="tab hide" data-view="irrigation" id="tab-irrigation">REGA</button>
   <button class="tab" data-view="diag">DIAGNÓSTICO</button>
   <button class="tab" data-view="system">SISTEMA</button>
 </div>
@@ -94,6 +95,29 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <span class="feature-count" id="feat-count">0</span>
   </div>
   <div class="feature-grid" id="feat-list"></div>
+</div></div>
+
+<!-- ============ REGA ============ -->
+<div class="view" id="v-irrigation"><div class="wrap">
+  <div class="sec">ESTADO</div>
+  <div id="irr-status"></div>
+  <div class="sec">ZONAS</div>
+  <p class="note" style="margin:0 2px 10px">
+    Só uma zona rega de cada vez — a pressão da água não alimenta duas. Abrir uma
+    fecha a que estiver aberta, venha o comando daqui, do botão na parede ou da app.
+  </p>
+  <div class="tiles" id="irr-zones"></div>
+  <div class="sec">PROGRAMAS</div>
+  <p class="note" style="margin:0 2px 10px">
+    Os programas correm no próprio equipamento, por isso continuam a regar se a
+    internet falhar. Um ciclo interrompido por falta de energia não é retomado.
+  </p>
+  <div id="irr-programs"></div>
+  <div class="btns" style="margin-top:12px">
+    <button class="btn" id="irr-add">Novo programa</button>
+    <button class="btn p" id="irr-save" disabled>Guardar programas</button>
+  </div>
+  <div class="note" id="irr-msg"></div>
 </div></div>
 
 <!-- ============ DIAGNÓSTICO ============ -->
