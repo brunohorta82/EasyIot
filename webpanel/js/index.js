@@ -196,7 +196,10 @@ function renderIrrPrograms() {
     '<div class="irr-prog-head">' +
       '<label class="f-check"><input type="checkbox" data-ip="enabled" data-pi="' + i + '"' +
         (prog.enabled ? " checked" : "") + "> Programa " + (i + 1) + "</label>" +
-      '<button class="btn d" data-ipdel="' + i + '">Remover</button>' +
+      '<div class="btns">' +
+      ((prog.zones || []).length
+        ? '<button class="btn" data-iprun="' + prog.id + '">Regar agora</button>' : "") +
+      '<button class="btn d" data-ipdel="' + i + '">Remover</button></div>' +
     "</div>" +
     '<div class="row2">' +
       '<div class="field"><label>HORA DE INÍCIO</label>' +
@@ -1427,6 +1430,12 @@ document.addEventListener("click", (ev) => {
     prog.weekdays ^= (1 << Number(parts[1]));
     markIrrDirty();
     renderIrrPrograms();
+    return;
+  }
+  const prun = ev.target.closest("[data-iprun]");
+  if (prun) {
+    // Forcing a cycle waters the whole garden, so it asks first.
+    if (armed(prun, "Regar tudo?")) runProgramNow(parseInt(prun.dataset.iprun, 10));
     return;
   }
   const pdel = ev.target.closest("[data-ipdel]");

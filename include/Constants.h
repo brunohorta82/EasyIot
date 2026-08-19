@@ -57,6 +57,11 @@ namespace tags
 namespace configFilenames
 {
     constexpr const char *config = "/config.json";
+    /* Irrigation programs live in their own file, not in config.json: an update
+       must never be able to lose a working configuration because it failed to
+       parse a key it did not know about. A device coming from v9 simply has no
+       such file and starts with no programs. */
+    constexpr const char *irrigation = "/irrigation.json";
 }
 
 namespace constantsConfig

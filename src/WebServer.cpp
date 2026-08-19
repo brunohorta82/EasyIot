@@ -5,6 +5,7 @@
 
 #include <ConfigOnofre.h>
 #include "Templates.h"
+#include "Irrigation.h"
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
 #include "IndexHtml.h"
@@ -407,6 +408,56 @@ void loadAPI()
     response->setLength();
     request->send(response); }));
 
+  /*IRRIGATION SCHEDULE*/
+  server
+      .addHandler(new AsyncCallbackJsonWebHandler("/irrigation", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    JsonObject body = json.as<JsonObject>();
+    irrigation.update(body);
+    irrigation.save();
+    // Answer with what was stored, not with what was sent: the panel shows the
+    // schedule the device actually kept, including zones it dropped.
+    irrigation.jsonBody(root);
+    response->setLength();
+    request->send(response); }));
+
+  /*FORCE A PROGRAM NOW*/
+  server
+      .addHandler(new AsyncCallbackJsonWebHandler("/irrigation/run", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    const bool started = irrigation.runProgram((uint8_t)(json["programId"] | 0));
+    irrigation.jsonBody(root);
+    if (!started)
+      response->setCode(404);
+    response->setLength();
+    request->send(response); }));
+
+  auto irrigationStopHandler = [](AsyncWebServerRequest *request)
+  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    irrigation.stop();
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    irrigation.jsonBody(root);
+    response->setLength();
+    request->send(response);
+  };
+
   auto rebootHandler = [](AsyncWebServerRequest *request)
   {
 #if WEB_SECURE_ON
@@ -467,6 +518,10 @@ void loadAPI()
   // Keep GET temporarily for backward compatibility with old clients.
   server.on("/reboot", HTTP_POST, rebootHandler);
   server.on("/reboot", HTTP_GET, rebootHandler);
+  // GET as well as POST: stopping the watering is the one thing someone may need
+  // to do from a phone browser bar, with a wet lawn and no app.
+  server.on("/irrigation/stop", HTTP_POST, irrigationStopHandler);
+  server.on("/irrigation/stop", HTTP_GET, irrigationStopHandler);
 
   server.on("/templates/change", HTTP_POST, templateChangeHandler);
   server.on("/templates/change", HTTP_GET, templateChangeHandler);
