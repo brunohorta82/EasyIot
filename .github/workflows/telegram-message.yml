@@ -1,0 +1,40 @@
+name: Send a message to the testers channel
+
+# For anything that is not a release announcement: a welcome note, asking testers
+# to reinstall after a bad build, telling them a fix is on the way. Run it from
+# the Actions tab and type the text. Unlike the announcement step in the release
+# workflow, this one fails loudly — you asked for a message to be sent, so
+# silently not sending it would be the wrong answer.
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Text to post. A few HTML tags are allowed: <b>, <i>, <code>, <a href>."
+        required: true
+        type: string
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MESSAGE: ${{ inputs.message }}
+        run: |
+          set -euo pipefail
+          test -n "$TELEGRAM_BOT_TOKEN" || { echo "::error::TELEGRAM_BOT_TOKEN is not set"; exit 1; }
+          test -n "$TELEGRAM_CHAT_ID" || { echo "::error::TELEGRAM_CHAT_ID is not set"; exit 1; }
+          # --data-urlencode keeps newlines and accents intact, and keeps the text
+          # out of the URL and therefore out of any proxy log.
+          out=$(curl -sS -X POST \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "parse_mode=HTML" \
+            --data-urlencode "disable_web_page_preview=true" \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage")
+          # Telegram answers 200 with {"ok":false,...} for things like a bot that is
+          # not an administrator of the channel, so the body is what to check.
+          echo "$out" | grep -q '"ok":true' || { echo "::error::Telegram refused: $(echo "$out" | cut -c1-300)"; exit 1; }
+          echo "Sent."

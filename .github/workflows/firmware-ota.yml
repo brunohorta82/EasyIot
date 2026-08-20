@@ -233,3 +233,25 @@ jobs:
           source: "webflash/${{ steps.webflash.outputs.name }}"
           target: "/mnt/HC_Volume_34871065/v01/CLOUDIO/FIRMWARE/WEBFLASH/${{ matrix.mcu }}/"
           strip_components: 1
+
+  # One message per release, not one per matrix job. Runs after every variant has
+  # built, only for a real deploy, and never fails the release: a firmware that
+  # shipped but was not announced still shipped.
+  announce:
+    needs: build
+    if: ${{ always() && needs.build.result == 'success' && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Announce on Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PRODUCT: "OnOfre Firmware"
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # The tag is v9.182; the changelog heading is 9.182.
+          export VERSION="${VERSION#v}"
+          python3 .github/scripts/notify_telegram.py
