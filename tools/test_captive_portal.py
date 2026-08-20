@@ -27,10 +27,17 @@ class CaptivePortalTests(unittest.TestCase):
         self.assertIn(
             "const bool isSubmission = request->method() == HTTP_POST;", source
         )
+        self.assertIn("bool isRequestHandlerTrivial() override", source)
+        self.assertIn("return false;", source)
         self.assertIn(
-            'if (isSubmission && request->hasArg("s") && request->hasArg("i")',
+            'request->getParam("s", true)',
             source,
         )
+        self.assertIn('request->getParam("i", true)', source)
+        self.assertIn('request->getParam("p", true)', source)
+        self.assertIn('request->getParam("t", true)', source)
+        self.assertNotIn('request->arg("s")', source)
+        self.assertNotIn('request->arg("p")', source)
         self.assertIn(
             'if (!isSubmission && request->hasArg("sc"))',
             source,
