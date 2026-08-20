@@ -128,12 +128,14 @@ public:
   {
 
     AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->addHeader("Cache-Control", "no-store");
     bool store = false;
+    const bool isSubmission = request->method() == HTTP_POST;
     response->print(FPSTR(HTTP_HEADER));
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
+    if (isSubmission && request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
     {
       String n_name = config.chipId;
       if (request->hasArg("i"))
@@ -164,11 +166,10 @@ public:
       storedR.replace("{o}", String("http://" + String(config.nodeId) + ".local").c_str());
       response->print(storedR.c_str());
       response->print(FPSTR(HTTP_END));
-      request->send(response);
       store = true;
     }
 
-    if (request->hasArg("sc"))
+    if (!isSubmission && request->hasArg("sc"))
     {
       int n = WiFi.scanComplete();
       if (n == -2)
@@ -233,6 +234,11 @@ public:
     }
     if (!store)
     {
+      if (isSubmission)
+      {
+        response->setCode(400);
+        response->print(FPSTR(HTTP_INVALID));
+      }
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);
       if (config.templateId == 0)
@@ -241,8 +247,8 @@ public:
       }
       response->print(form);
       response->print(FPSTR(HTTP_END));
-      request->send(response);
     }
+    request->send(response);
     if (store)
     {
       config.save().requestRestart();
