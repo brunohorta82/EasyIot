@@ -1,6 +1,7 @@
 #include "Irrigation.h"
 #include "ConfigOnofre.h"
 #include "DeviceClock.h"
+#include "Persistence.h"
 #include <LittleFS.h>
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
@@ -18,7 +19,7 @@ namespace
   {
     for (auto &a : config.actuatores)
     {
-      if (a.isGardenValve() && strcmp(a.uniqueId, uniqueId) == 0)
+      if (a.ready && a.isGardenValve() && strcmp(a.uniqueId, uniqueId) == 0)
         return &a;
     }
     return nullptr;
@@ -44,11 +45,8 @@ void Irrigation::load()
   update(root);
 }
 
-void Irrigation::save()
+bool Irrigation::save()
 {
-  File file = LittleFS.open(configFilenames::irrigation, "w");
-  if (!file)
-    return;
   JsonDocument doc;
   doc["enabled"] = enabled;
   doc["skipOnRain"] = skipOnRain;
@@ -68,48 +66,111 @@ void Irrigation::save()
       zo["minutes"] = z.minutes;
     }
   }
-  serializeJson(doc, file);
-  file.close();
+  return persistJsonAtomically(configFilenames::irrigation,
+                               configFilenames::irrigationTemporary, doc);
 }
 
 bool Irrigation::update(JsonObject &root)
 {
   // The payload replaces the schedule wholesale: the panel always sends every
   // program, and merging would make a removal indistinguishable from an omission.
-  enabled = root["enabled"] | true;
-  skipOnRain = root["skipOnRain"] | true;
+  JsonVariantConst enabledValue = root["enabled"];
+  JsonVariantConst skipOnRainValue = root["skipOnRain"];
+  JsonVariantConst programsValue = root["programs"];
+  if (!enabledValue.is<bool>() || !skipOnRainValue.is<bool>() ||
+      !programsValue.is<JsonArrayConst>())
+    return false;
+
+  JsonArrayConst list = programsValue.as<JsonArrayConst>();
+  if (list.size() > maxPrograms)
+    return false;
 
   std::vector<IrrigationProgram> parsed;
-  JsonArray list = root["programs"].as<JsonArray>();
-  for (JsonObject o : list)
+  for (JsonVariantConst programValue : list)
   {
-    if (parsed.size() >= maxPrograms)
-      break;
+    if (!programValue.is<JsonObjectConst>())
+      return false;
+    JsonObjectConst o = programValue.as<JsonObjectConst>();
+
+    JsonVariantConst idValue = o["id"];
+    JsonVariantConst programEnabledValue = o["enabled"];
+    JsonVariantConst startMinuteValue = o["startMinute"];
+    JsonVariantConst weekdaysValue = o["weekdays"];
+    JsonVariantConst zonesValue = o["zones"];
+    if (!idValue.is<unsigned int>() ||
+        !programEnabledValue.is<bool>() ||
+        !startMinuteValue.is<unsigned int>() ||
+        !weekdaysValue.is<unsigned int>() ||
+        !zonesValue.is<JsonArrayConst>())
+      return false;
+
+    const unsigned int id = idValue.as<unsigned int>();
+    const unsigned int startMinute = startMinuteValue.as<unsigned int>();
+    const unsigned int weekdays = weekdaysValue.as<unsigned int>();
+    if (id == 0 || id > 255u || startMinute > 1439u || weekdays > 0x7Fu)
+      return false;
+    for (const auto &existing : parsed)
+      if (existing.id == id)
+        return false;
+
     IrrigationProgram p;
-    p.id = o["id"] | (uint8_t)(parsed.size() + 1);
-    p.enabled = o["enabled"] | true;
-    p.startMinute = min(1439, max(0, (int)(o["startMinute"] | 0)));
-    p.weekdays = (uint8_t)(o["weekdays"] | 0) & 0x7F;
-    for (JsonObject zo : o["zones"].as<JsonArray>())
+    p.id = static_cast<uint8_t>(id);
+    p.enabled = programEnabledValue.as<bool>();
+    p.startMinute = static_cast<uint16_t>(startMinute);
+    p.weekdays = static_cast<uint8_t>(weekdays);
+    JsonArrayConst zones = zonesValue.as<JsonArrayConst>();
+    size_t zoneIndex = 0;
+    for (JsonVariantConst zoneValue : zones)
     {
-      const char *id = zo["uniqueId"] | "";
+      if (!zoneValue.is<JsonObjectConst>())
+        return false;
+      JsonObjectConst zo = zoneValue.as<JsonObjectConst>();
+      JsonVariantConst zoneIdValue = zo["uniqueId"];
+      JsonVariantConst minutesValue = zo["minutes"];
+      if (!zoneIdValue.is<const char *>() ||
+          !minutesValue.is<unsigned int>())
+        return false;
+
+      const char *zoneId = zoneIdValue.as<const char *>();
+      const unsigned int minutes = minutesValue.as<unsigned int>();
+      IrrigationZone z;
+      if (!zoneId || !zoneId[0] || strlen(zoneId) >= sizeof(z.uniqueId) ||
+          minutes == 0 || minutes > maxZoneMinutes)
+        return false;
+
+      // Compare against the already-validated prefix of the submitted array,
+      // including unknown valves that will be dropped below. Duplicate input
+      // is malformed even when neither copy exists on this device.
+      size_t priorIndex = 0;
+      for (JsonVariantConst priorValue : zones)
+      {
+        if (priorIndex++ >= zoneIndex)
+          break;
+        const char *priorId = priorValue.as<JsonObjectConst>()["uniqueId"];
+        if (strcmp(priorId, zoneId) == 0)
+          return false;
+      }
+      zoneIndex++;
+
       // A zone naming a feature this device does not have is dropped rather than
       // kept as a hole in the cycle: the panel would show a program that waters
       // something invisible.
-      if (!findZone(id))
+      if (!findZone(zoneId))
         continue;
-      IrrigationZone z;
-      strlcpy(z.uniqueId, id, sizeof(z.uniqueId));
-      z.minutes = (uint16_t)min((int)maxZoneMinutes, max(1, (int)(zo["minutes"] | 1)));
+      strlcpy(z.uniqueId, zoneId, sizeof(z.uniqueId));
+      z.minutes = static_cast<uint16_t>(minutes);
       p.zones.push_back(z);
     }
     parsed.push_back(p);
   }
-  programs = parsed;
-
-  // A schedule change must not leave a zone open from the cycle it replaced.
+  // Resolve and close the active zone against the OLD schedule. Replacing the
+  // vector first can make runningProgram/runningZone point at a different zone
+  // (or no zone), losing the only reference to a valve that is still open.
   if (isRunning())
     stop();
+  enabled = enabledValue.as<bool>();
+  skipOnRain = skipOnRainValue.as<bool>();
+  programs = parsed;
   return true;
 }
 

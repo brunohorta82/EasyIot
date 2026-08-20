@@ -60,7 +60,7 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
   for (auto &a : config.actuatores)
   {
-    if (a.id == shutters->actuatorId)
+    if (a.ready && a.id == shutters->actuatorId)
     {
       a.state = level;
       a.notifyState(StateOrigin::INTERNAL);
@@ -76,7 +76,7 @@ void actuatoresCallback(message_t const &msg, void *arg)
 
   for (auto &s : config.actuatores)
   {
-    if (!s.isKnxSupport())
+    if (!s.ready || !s.isKnxSupport())
     {
       continue;
     }
@@ -206,9 +206,9 @@ void stopShutter(Button2 &btn)
 }
 void garageNotify(Button2 &btn)
 {
-  for (auto a : config.actuatores)
+  for (auto &a : config.actuatores)
   {
-    if (a.id == btn.getID())
+    if (a.ready && a.id == btn.getID())
     {
 
       a.state = digitalRead(btn.getPin()) ? OFF_OPEN : ON_CLOSE;
@@ -217,33 +217,9 @@ void garageNotify(Button2 &btn)
   }
 }
 
-void Actuator::setup()
+void Actuator::rebuildInputHandlers()
 {
-  ready = false;
   buttons.clear();
-  id = config.featureIds++;
-  if (isCover() && outputs.size() == 2 && typeControl == ActuatorControlType::GPIO_OUTPUT)
-  {
-    shutter = new Shutters(outputs[0], outputs[1], id);
-    shutter->setOperationHandler(shuttersOperationHandler)
-        .restoreState(state, upCourseTime * 1000, downCourseTime * 1000)
-        .setCourseTime(upCourseTime * 1000, downCourseTime * 1000)
-        .onLevelReached(onShuttersLevelReached)
-        .begin();
-  }
-  for (auto output : outputs)
-  {
-    configPIN(output, OUTPUT);
-    writeToPIN(output, 0);
-    if (isLight() || isSwitch() || isGardenValve())
-    {
-      writeToPIN(output, state);
-    }
-  }
-  // Garden valves belong here too: the GARDEN template gives every valve a button
-  // and the panel prints its pin, so leaving them out of this block promised a
-  // wall switch that did nothing. Only the output side included them, which is why
-  // commanding a valve worked while pressing its button did not.
   if (isLight() || isSwitch() || isGardenValve())
   {
     for (auto input : inputs)
@@ -255,10 +231,6 @@ void Actuator::setup()
       {
       case ActuatorDriver::LIGHT_PUSH:
       case ActuatorDriver::SWITCH_PUSH:
-        button.setPressedHandler(toogle);
-        break;
-      // A momentary button is what an irrigation box is wired with, and it matches
-      // the PUSH that driverToInputMode() already reports for this driver.
       case ActuatorDriver::GARDEN_VALVE:
         button.setPressedHandler(toogle);
         break;
@@ -273,7 +245,7 @@ void Actuator::setup()
       buttons.push_back(button);
     }
   }
-  else if (isGarage() && typeControl == ActuatorControlType::GPIO_OUTPUT)
+  else if (isGarage() && typeControl == ActuatorControlType::GPIO_OUTPUT && !inputs.empty())
   {
     Button2 button;
     button.begin(inputs[0]);
@@ -331,6 +303,36 @@ void Actuator::setup()
       buttons.push_back(buttonRotate);
     }
   }
+}
+
+void Actuator::setup()
+{
+  ready = false;
+  id = config.featureIds++;
+  // Irrigation valve state is runtime-only. A reset, power loss, or unrelated
+  // configuration save must never reopen a valve from a persisted ON value.
+  if (isGardenValve())
+    state = ActuatorState::OFF_OPEN;
+  if (isCover() && outputs.size() == 2 && typeControl == ActuatorControlType::GPIO_OUTPUT)
+  {
+    shutter = new Shutters(outputs[0], outputs[1], id);
+    shutter->setOperationHandler(shuttersOperationHandler)
+        .restoreState(state, upCourseTime * 1000, downCourseTime * 1000)
+        .setCourseTime(upCourseTime * 1000, downCourseTime * 1000)
+        .onLevelReached(onShuttersLevelReached)
+        .begin();
+  }
+  for (auto output : outputs)
+  {
+    configPIN(output, OUTPUT);
+    writeToPIN(output, 0);
+    if (isLight() || isSwitch() || isGardenValve())
+    {
+      writeToPIN(output, state);
+    }
+  }
+
+  rebuildInputHandlers();
 
   if (isKnxSupport())
   {
@@ -339,6 +341,19 @@ void Actuator::setup()
     knx.callback_assign(config.knxIdRegister, knx.GA_to_address(knxAddress[0], 0, 0));
   }
   ready = true;
+}
+
+void Actuator::deactivateForConfigUpdate()
+{
+  if (!ready)
+    return;
+
+  // A normal stop is completed by a later Shutters::loop() call. Configuration
+  // updates stop looping an inert actuator, so reset is required here: it sends
+  // HALT to the relays synchronously before their GPIO ownership changes.
+  ready = false;
+  if (isCover() && typeControl == ActuatorControlType::GPIO_OUTPUT && shutter != nullptr)
+    shutter->reset();
 }
 
 void Actuator::notifyState(StateOrigin origin)
@@ -373,6 +388,9 @@ void Actuator::notifyState(StateOrigin origin)
 
 Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
+  if (!ready)
+    return this;
+
   lastChange = millis();
   if (!isGarage() && this->state == state)
     return this;
@@ -405,6 +423,11 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   {
     if (isCover())
     {
+      // A malformed legacy cover can reach runtime without a Shutters
+      // instance. Fail closed instead of dereferencing a null pointer.
+      if (shutter == nullptr)
+        return this;
+
       int level = state;
       if (level == ActuatorState::STOP)
         shutter->stop();
@@ -432,7 +455,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
 #endif
     for (auto &sw : config.actuatores)
     {
-      if (isKnxSupport() && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
+      if (sw.ready && isKnxSupport() && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
         if (sw.isRelay() && sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {
@@ -451,7 +474,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   {
     for (auto &sw : config.actuatores)
     {
-      if (sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
+      if (sw.ready && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
         if (sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {

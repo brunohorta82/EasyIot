@@ -62,27 +62,52 @@ void logBootBanner()
 
 void checkInternalRoutines()
 {
-  const int requestedTemplateId = config.takeTemplateChangeRequest();
+  // Async Cloud callbacks only publish bounded events or copy commands. Keep
+  // all connection, watchdog, and feature work in the main execution context.
+  serviceCloudIOMqtt();
+  serviceCloudIOWatchdog();
+
+  // Async Cloud MQTT callbacks only copy commands into a bounded queue. Apply
+  // one from the main context before consuming restart/update requests so a
+  // queued system command can take effect in this same loop pass.
+  drainCloudIOCommands();
+
+  const int requestedTemplateId = config.peekTemplateChangeRequest();
   if (requestedTemplateId != Template::NO_TEMPLATE)
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Applying template: %d" CR, tags::system, requestedTemplateId);
 #endif
-    // On ESP8266 this runs between cooperative feature-loop iterations. On
-    // ESP32 pauseFeatures() also waits for the separate sensor task to leave.
-    config.pauseFeatures();
-    config.templateId = Template::NO_TEMPLATE;
-    if (config.loadTemplate(requestedTemplateId))
+    if (!config.tryBeginFeatureAccess())
     {
-      config.save();
-      config.requestRestart();
+      // Leave the occupied request slot untouched. A later pass retries it,
+      // while concurrent requests receive BUSY instead of overwriting it.
     }
     else
     {
+      config.templateId = Template::NO_TEMPLATE;
+      if (config.loadTemplate(requestedTemplateId))
+      {
+        if (!config.persist())
+        {
 #ifdef DEBUG_ONOFRE
-      Log.error("%s Template change failed: %d" CR, tags::system, requestedTemplateId);
+          Log.error("%s Template storage failed; restoring previous configuration" CR,
+                    tags::system);
 #endif
-      config.resumeFeatures();
+        }
+        // Retain the lease until the next pass services this restart request.
+        // On storage failure the old atomic file is still authoritative, so the
+        // same restart also rolls the live draft back.
+        config.requestRestart();
+      }
+      else
+      {
+#ifdef DEBUG_ONOFRE
+        Log.error("%s Template change failed: %d" CR, tags::system, requestedTemplateId);
+#endif
+        config.clearTemplateChangeRequest(requestedTemplateId);
+        config.endFeatureAccess();
+      }
     }
   }
 
@@ -117,17 +142,26 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Load Defaults requested." CR, tags::system);
 #endif
-#if defined(ESP32) && !defined(LEGACY_PROVISON)
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    if (!config.tryBeginFeatureAccess())
     {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ESP_ERROR_CHECK(nvs_flash_init());
+      config.requestLoadDefaults();
     }
+    else
+    {
+#if defined(ESP32) && !defined(LEGACY_PROVISON)
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      esp_err_t ret = nvs_flash_init();
+      if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+      {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ESP_ERROR_CHECK(nvs_flash_init());
+      }
 #endif
-    LittleFS.format();
-    config.requestRestart();
+      LittleFS.format();
+      // Reset completion is the terminal operation. Keep all feature access
+      // blocked until the restart request is serviced.
+      config.requestRestart();
+    }
   }
 
   if (config.takeAutoUpdateRequest())
@@ -135,9 +169,29 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Auto Update Request." CR, tags::system);
 #endif
-    config.pauseFeatures();
-    stopWebserver();
-    performUpdate();
+    if (!config.tryBeginFeatureAccess())
+    {
+      config.requestAutoUpdate();
+    }
+    else
+    {
+      stopWebserver();
+      const AutoUpdateResult updateResult = performUpdate();
+      if (updateResult == AutoUpdateResult::UPDATED)
+      {
+        // The updater normally reboots on success. Keep an explicit fallback
+        // request so a future framework setting cannot leave the web server
+        // stopped and the feature lease held forever.
+        config.requestRestart();
+      }
+      else
+      {
+        // Failed and no-update checks both return to the running firmware.
+        // Restore the lease and web service around the blocking updater.
+        config.endFeatureAccess();
+        startWebserver();
+      }
+    }
   }
 
   if (config.isReloadWifiRequested())
@@ -172,10 +226,8 @@ void featuresTask(void *pvParameters)
 {
   for (;;)
   {
-    if (!config.isLoopFeaturesPaused())
-    {
-      config.loopSensors();
-    }
+    config.loopSensors();
+    config.serviceDeferredI2cDiscovery();
     vTaskDelay(1);
   }
 }
@@ -233,15 +285,10 @@ void loop()
   {
     webserverServicesLoop();
     loopMqtt();
-    if (!config.isLoopFeaturesPaused())
-    {
-      config.loopActuators();
-    }
+    config.loopActuators();
 #ifdef ESP8266
-    if (!config.isLoopFeaturesPaused())
-    {
-      config.loopSensors();
-    }
+    config.loopSensors();
+    config.serviceDeferredI2cDiscovery();
 #endif
   }
 }

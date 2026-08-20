@@ -214,17 +214,17 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <div class="note">Deixa a palavra-passe em branco para a manter como está.</div>
   </div>
 
-  <div class="sec">CÓPIA DE SEGURANÇA</div>
+  <div class="sec">CÓPIA DE DIAGNÓSTICO</div>
   <div class="card">
     <p class="note" style="margin:0 0 11px">
-      Guarda ou repõe toda a configuração — funções, Wi-Fi e MQTT. Restaurar substitui
-      o que está no dispositivo.
+      Exporta apenas os dados visíveis para diagnóstico. Não inclui palavras-passe
+      nem é uma cópia de segurança que possa ser restaurada automaticamente.
     </p>
-    <div class="btns"><button class="btn" id="a-export">Exportar configuração</button></div>
+    <div class="btns"><button class="btn" id="a-export">Exportar diagnóstico</button></div>
     <div class="field" style="margin:11px 0 0"><label>RESTAURAR DE UM FICHEIRO</label>
-      <input type="file" id="r-file" accept=".json"></div>
-    <div class="btns"><button class="btn" id="r-send">Restaurar</button></div>
-    <div class="note" id="r-msg"></div>
+      <input type="file" id="r-file" accept=".json" disabled></div>
+    <div class="btns"><button class="btn" id="r-send" disabled>Restauro indisponível</button></div>
+    <div class="note" id="r-msg">O restauro antigo não validava toda a configuração e está desativado por segurança.</div>
   </div>
   </div>
 

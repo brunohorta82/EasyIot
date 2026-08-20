@@ -16,6 +16,19 @@
 /** Why the device last restarted, in plain text. Available in release builds too. */
 String deviceResetReason();
 
+// Stable API result codes for POST /config. Keep the numeric values in sync
+// with webpanel/js/index.js so the panel can explain a rejected wiring change.
+enum class ConfigUpdateResult : uint8_t
+{
+  OK = 0,
+  INVALID_REQUEST = 1,
+  INVALID_PIN = 2,
+  PIN_COUNT_MISMATCH = 3,
+  PIN_CONFLICT = 4,
+  BUSY = 5,
+  PERSISTENCE_FAILED = 6
+};
+
 class ConfigOnofre
 {
 public:
@@ -56,14 +69,17 @@ public:
   // CONTROL VARIABLES
   int featureIds = 0;
   void json(JsonVariant &root, bool allFields);
-  ConfigOnofre &update(JsonObject &root);
+  ConfigUpdateResult update(JsonObject &root, JsonVariant &responseRoot);
+  bool persist();
   ConfigOnofre &save();
   ConfigOnofre &init();
   ConfigOnofre &load();
-  ConfigOnofre &pauseFeatures();
-  ConfigOnofre &resumeFeatures();
+  bool tryBeginFeatureAccess();
+  void endFeatureAccess();
   ConfigOnofre &reloadFeatures();
   void i2cDiscovery();
+  void requestI2cDiscovery();
+  void serviceDeferredI2cDiscovery();
 #ifdef ESP32
   void pzemDiscovery();
 #endif
@@ -92,11 +108,11 @@ public:
   void requestLoadDefaults();
   bool isLoadDefaultsRequested();
 
-  void requestTemplateChange(int templateId);
-  int takeTemplateChangeRequest();
+  bool requestTemplateChange(int templateId);
+  int peekTemplateChangeRequest() const;
+  void clearTemplateChangeRequest(int templateId);
 
-  bool isLoopFeaturesPaused() const;
-  bool validPin(unsigned int pin)
+  bool validOutputPin(unsigned int pin) const
   {
     for (auto p : DefaultPins::outputInputPins)
     {
@@ -104,6 +120,69 @@ public:
         return true;
     }
     return false;
+  }
+  bool validInputPin(unsigned int pin) const
+  {
+    if (validOutputPin(pin))
+      return true;
+#if defined(ESP32) && !defined(ESP32C6)
+    for (auto p : DefaultPins::intputOnlyPins)
+    {
+      if (p == pin)
+        return true;
+    }
+#endif
+    return false;
+  }
+  // Sensor wiring is not uniformly input-only. Data buses and UART TX pins
+  // must be safe to drive, while a few receive/echo pins may use an ESP32
+  // input-only GPIO. Keep this separate from PinRole: sensor claims must never
+  // enter the actuator output-release path.
+  bool validSensorPin(SensorDriver driver, size_t slot, unsigned int pin) const
+  {
+    if (!Sensor::isSupportedOnCurrentTarget(driver))
+      return false;
+    switch (driver)
+    {
+    case SensorDriver::PIR:
+      return slot == 0 && validInputPin(pin);
+    case SensorDriver::HCSR04:
+      return slot < 2 && (slot == 0 ? validOutputPin(pin) : validInputPin(pin));
+    case SensorDriver::LD2410:
+    case SensorDriver::PZEM_004T_V03:
+    case SensorDriver::PZEM_004T_V01:
+      return slot < 2 && (slot == 0 ? validInputPin(pin) : validOutputPin(pin));
+    case SensorDriver::HAN:
+#ifdef ESP32
+      // ESP32's canonical fixed array is RX, TX.
+      return slot < 2 && (slot == 0 ? validInputPin(pin) : validOutputPin(pin));
+#else
+      // The legacy ESP8266 implementation constructs SoftwareSerial from
+      // inputs[1], inputs[0], so its effective order remains TX, RX.
+      return slot < 2 && (slot == 0 ? validOutputPin(pin) : validInputPin(pin));
+#endif
+    case SensorDriver::DHT_11:
+    case SensorDriver::DHT_21:
+    case SensorDriver::DHT_22:
+    case SensorDriver::RAIN:
+    case SensorDriver::DOOR:
+    case SensorDriver::WINDOW:
+    case SensorDriver::DS18B20:
+      return slot == 0 && validOutputPin(pin);
+    case SensorDriver::LTR303X:
+    case SensorDriver::SHT4X:
+    case SensorDriver::TMF882X:
+      return slot < 2 && validOutputPin(pin);
+    case SensorDriver::INVALID_SENSOR:
+    default:
+      return false;
+    }
+  }
+  // Compatibility for older call sites: a generic valid pin must be safe to
+  // drive. Input-only GPIOs require the explicit validInputPin() check.
+  bool validPin(unsigned int pin) const
+  {
+    return validOutputPin(pin);
   }
   // True when a feature already drives this pin. Without this a second feature
   // could be created on top of the first, leaving two drivers on one GPIO.
@@ -118,9 +197,12 @@ public:
         if (p == pin)
           return true;
     }
-    for (auto &s : sensors)
+    for (const auto &s : sensors)
     {
-      for (auto p : s.inputs)
+      std::vector<unsigned int> claimedInputs;
+      if (!Sensor::fixedRuntimeInputs(s.driver, claimedInputs))
+        claimedInputs = s.inputs;
+      for (auto p : claimedInputs)
         if (p == pin)
           return true;
     }
@@ -133,20 +215,36 @@ public:
   void controlFeature(StateOrigin origin, String uniqueId, int state);
 
 private:
-  bool beginFeatureLoop();
-  void endFeatureLoop();
+  bool tryBeginConfigUpdate();
+  void endConfigUpdate();
+#ifdef ESP32
+  // These requests cross AsyncTCP/MQTT and main-loop task boundaries on ESP32.
+  // They intentionally coalesce: each flag represents pending work, not a queue.
+  std::atomic<bool> reboot{false};
+  std::atomic<bool> loadDefaults{false};
+  std::atomic<bool> autoUpdate{false};
+  std::atomic<bool> wifiReload{false};
+  std::atomic<bool> cloudIOSync{false};
+  std::atomic<bool> wifiScan{false};
+  std::atomic<bool> i2cDiscoveryRequested{false};
+  // One non-reentrant lease serializes every top-level reader or writer of the
+  // live feature vectors. Callers must fail fast instead of waiting while an
+  // AsyncTCP/MQTT callback or another task owns it.
+  std::atomic<bool> featureAccessInProgress{false};
+  std::atomic<int> requestedTemplateId{Template::NO_TEMPLATE};
+#else
+  // ESP8266 callbacks run cooperatively; plain flags avoid unsupported atomic
+  // helpers and no path below waits for a feature loop to finish.
   bool reboot = false;
   bool loadDefaults = false;
   bool autoUpdate = false;
   bool wifiReload = false;
   bool cloudIOSync = false;
   bool wifiScan = false;
-#ifdef ESP32
-  std::atomic<bool> pauseFeaturesLoop{false};
-  std::atomic<unsigned int> activeFeatureLoops{0};
-  std::atomic<int> requestedTemplateId{Template::NO_TEMPLATE};
-#else
-  bool pauseFeaturesLoop = false;
+  bool i2cDiscoveryRequested = false;
+  // ESP8266 runs cooperatively. Never wait or yield for this lease: nested or
+  // competing access is rejected and retried by the top-level caller.
+  bool featureAccessInProgress = false;
   int requestedTemplateId = Template::NO_TEMPLATE;
 #endif
 };

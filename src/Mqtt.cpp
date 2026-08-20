@@ -31,6 +31,9 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
     Log.notice("%s Payload: %s" CR, tags::mqtt, payload_as_string);
 #endif
+    // PubSubClient invokes this callback synchronously from mqttClient.loop().
+    // loopMqtt() owns the non-reentrant feature/config lease for the complete
+    // client operation, so this callback must not acquire it again.
     if (homeAssistantOnline(topic, payload_as_string))
     {
         initHomeAssistantDiscovery();
@@ -60,6 +63,8 @@ boolean reconnect()
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
         sendToServerEvents("mqtt_health", constantsMqtt::availablePayload);
+        // reconnect() is reached only from loopMqtt(), which already owns the
+        // lease. Keep the complete subscription scan in that same snapshot.
         for (auto &sw : config.actuatores)
         {
             if (sw.isVirtual())
@@ -95,8 +100,16 @@ void setupMQTT(bool forceDisconnect)
 
 void loopMqtt()
 {
-    if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
+    // PubSubClient is synchronous: connect(), loop(), callback dispatch, state
+    // publication, and configuration changes must never use the client or its
+    // backing config strings concurrently from another task.
+    if (!config.tryBeginFeatureAccess())
         return;
+    if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
+    {
+        config.endFeatureAccess();
+        return;
+    }
     static unsigned long lastReconnectAttempt = millis();
     if (!mqttConnected())
     {
@@ -117,6 +130,7 @@ void loopMqtt()
     {
         mqttClient.loop();
     }
+    config.endFeatureAccess();
 }
 
 void publishOnMqtt(const char *topic, const char *payload, bool retain)

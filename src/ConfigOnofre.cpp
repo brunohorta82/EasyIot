@@ -12,6 +12,8 @@
 #include "CloudIO.h"
 #include "DeviceClock.h"
 #include "Irrigation.h"
+#include "Persistence.h"
+#include <algorithm>
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 
@@ -156,6 +158,7 @@ void ConfigOnofre::i2cDiscovery()
 #endif
   Wire.begin(DefaultPins::SDA, DefaultPins::SCL);
 
+  bool needsSave = false;
   byte error, address;
   for (address = 1; address < 127; address++)
   {
@@ -171,24 +174,37 @@ void ConfigOnofre::i2cDiscovery()
         if (!isSensorExists(address))
         {
           prepareSHT4X(address);
-          save();
+          needsSave = true;
         }
       }
       else if (address == Discovery::I2C_SSD1306_ADDRESS)
       {
-        display = new Adafruit_SSD1306(128, 64, &Wire, -1);
-        if (display->begin(SSD1306_SWITCHCAPVCC, Discovery::I2C_SSD1306_ADDRESS))
+        // Discovery can be requested again by more than one PZEM sensor. Keep
+        // the one live display instance rather than leaking a new allocation
+        // on every scan.
+        if (display == nullptr)
         {
-          display->clearDisplay();
-          display->drawBitmap(
-              (display->width() - LOGO_WIDTH) / 2,
-              0,
-              logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
-          display->setTextSize(2);
-          display->setTextColor(SSD1306_WHITE);
-          display->setCursor(30, LOGO_HEIGHT);
-          display->println(F("ONOFRE"));
-          display->display();
+          Adafruit_SSD1306 *candidate = new Adafruit_SSD1306(128, 64, &Wire, -1);
+          if (candidate != nullptr &&
+              candidate->begin(SSD1306_SWITCHCAPVCC,
+                               Discovery::I2C_SSD1306_ADDRESS))
+          {
+            display = candidate;
+            display->clearDisplay();
+            display->drawBitmap(
+                (display->width() - LOGO_WIDTH) / 2,
+                0,
+                logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+            display->setTextSize(2);
+            display->setTextColor(SSD1306_WHITE);
+            display->setCursor(30, LOGO_HEIGHT);
+            display->println(F("ONOFRE"));
+            display->display();
+          }
+          else
+          {
+            delete candidate;
+          }
         }
       }
       else if (address == Discovery::I2C_LTR303_ADDRESS)
@@ -196,86 +212,119 @@ void ConfigOnofre::i2cDiscovery()
         if (!isSensorExists(address))
         {
           prepareLTR303(address);
-          save();
+          needsSave = true;
         }
       }
       else if (address == Discovery::I2C_TMF880X_ADDRESS)
       {
-        prepareTMF882X(address);
+        if (!isSensorExists(address))
+        {
+          prepareTMF882X(address);
+          needsSave = true;
+        }
       }
     }
   }
+  if (needsSave)
+    save();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Smart Bus Done." CR, tags::config);
 #endif
 }
-ConfigOnofre &ConfigOnofre::pauseFeatures()
+void ConfigOnofre::requestI2cDiscovery()
 {
 #ifdef ESP32
-  pauseFeaturesLoop.store(true, std::memory_order_release);
-  while (activeFeatureLoops.load(std::memory_order_acquire) != 0)
-    delay(1);
+  i2cDiscoveryRequested.store(true, std::memory_order_release);
 #else
-  pauseFeaturesLoop = true;
-#endif
-  return *this;
-}
-ConfigOnofre &ConfigOnofre::resumeFeatures()
-{
-#ifdef ESP32
-  pauseFeaturesLoop.store(false, std::memory_order_release);
-#else
-  pauseFeaturesLoop = false;
-#endif
-  return *this;
-}
-bool ConfigOnofre::isLoopFeaturesPaused() const
-{
-#ifdef ESP32
-  return pauseFeaturesLoop.load(std::memory_order_acquire);
-#else
-  return pauseFeaturesLoop;
+  i2cDiscoveryRequested = true;
 #endif
 }
-bool ConfigOnofre::beginFeatureLoop()
+void ConfigOnofre::serviceDeferredI2cDiscovery()
 {
 #ifdef ESP32
-  if (pauseFeaturesLoop.load(std::memory_order_acquire))
-    return false;
-  activeFeatureLoops.fetch_add(1, std::memory_order_acq_rel);
-  if (pauseFeaturesLoop.load(std::memory_order_acquire))
+  if (!i2cDiscoveryRequested.exchange(false, std::memory_order_acq_rel))
+    return;
+#else
+  if (!i2cDiscoveryRequested)
+    return;
+  i2cDiscoveryRequested = false;
+#endif
+
+  // This method is called only after loopSensors() has released its lease.
+  // Reacquire it for the scan because discovery may append sensors and save the
+  // complete vectors. If another owner won the lease, coalesce another retry.
+  if (!tryBeginFeatureAccess())
   {
-    activeFeatureLoops.fetch_sub(1, std::memory_order_acq_rel);
-    return false;
+    requestI2cDiscovery();
+    return;
   }
-#else
-  if (pauseFeaturesLoop)
+  i2cDiscovery();
+  endFeatureAccess();
+}
+bool ConfigOnofre::tryBeginFeatureAccess()
+{
+#ifdef ESP32
+  bool expected = false;
+  if (!featureAccessInProgress.compare_exchange_strong(
+          expected, true, std::memory_order_acquire, std::memory_order_relaxed))
     return false;
-#endif
   return true;
-}
-void ConfigOnofre::endFeatureLoop()
-{
-#ifdef ESP32
-  activeFeatureLoops.fetch_sub(1, std::memory_order_release);
+#else
+  // Do not wait or yield here: ESP8266 networking and feature work share the
+  // same cooperative execution context.
+  if (featureAccessInProgress)
+    return false;
+  featureAccessInProgress = true;
+  return true;
 #endif
 }
-void ConfigOnofre::requestTemplateChange(int templateId)
+void ConfigOnofre::endFeatureAccess()
 {
 #ifdef ESP32
-  requestedTemplateId.store(templateId, std::memory_order_release);
+  featureAccessInProgress.store(false, std::memory_order_release);
 #else
+  featureAccessInProgress = false;
+#endif
+}
+bool ConfigOnofre::tryBeginConfigUpdate()
+{
+  return tryBeginFeatureAccess();
+}
+void ConfigOnofre::endConfigUpdate()
+{
+  endFeatureAccess();
+}
+bool ConfigOnofre::requestTemplateChange(int templateId)
+{
+#ifdef ESP32
+  int expected = Template::NO_TEMPLATE;
+  return requestedTemplateId.compare_exchange_strong(
+      expected, templateId, std::memory_order_release, std::memory_order_relaxed);
+#else
+  if (requestedTemplateId != Template::NO_TEMPLATE)
+    return false;
   requestedTemplateId = templateId;
+  return true;
 #endif
 }
-int ConfigOnofre::takeTemplateChangeRequest()
+int ConfigOnofre::peekTemplateChangeRequest() const
 {
 #ifdef ESP32
-  return requestedTemplateId.exchange(Template::NO_TEMPLATE, std::memory_order_acq_rel);
+  return requestedTemplateId.load(std::memory_order_acquire);
 #else
-  const int templateId = requestedTemplateId;
-  requestedTemplateId = Template::NO_TEMPLATE;
-  return templateId;
+  return requestedTemplateId;
+#endif
+}
+void ConfigOnofre::clearTemplateChangeRequest(int templateId)
+{
+#ifdef ESP32
+  int expected = templateId;
+  requestedTemplateId.compare_exchange_strong(
+      expected, Template::NO_TEMPLATE,
+      std::memory_order_acq_rel, std::memory_order_acquire);
+#else
+  if (requestedTemplateId == templateId)
+    requestedTemplateId = Template::NO_TEMPLATE;
 #endif
 }
 ConfigOnofre &ConfigOnofre::load()
@@ -417,9 +466,8 @@ bool ConfigOnofre::loadTemplate(int templateId)
   this->templateId = templateId;
   return true;
 }
-ConfigOnofre &ConfigOnofre::save()
+bool ConfigOnofre::persist()
 {
-  File file = LittleFS.open(configFilenames::config, "w+");
   JsonDocument doc;
   doc["templateId"] = templateId;
   if (!String(nodeId).isEmpty())
@@ -457,7 +505,10 @@ ConfigOnofre &ConfigOnofre::save()
   JsonArray features = doc["features"].to<JsonArray>();
   for (auto s : actuatores)
   {
-    JsonDocument a;
+    // Build directly inside the parent document. If any allocation below
+    // fails, the parent's overflow flag makes the atomic writer reject the
+    // complete save instead of hiding a partial child document.
+    JsonObject a = features.add<JsonObject>();
     a["group"] = "ACTUATOR";
     a["driver"] = s.driver;
     a["id"] = s.uniqueId;
@@ -468,9 +519,10 @@ ConfigOnofre &ConfigOnofre::save()
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
-    a["member"] = s.knxAddress[2];
     a["autoOff"] = s.autoOff;
-    a["state"] = s.state;
+    // A garden valve's live state is never a boot command. Persisting ON here
+    // can reopen water after an unrelated save and power cycle.
+    a["state"] = s.isGardenValve() ? ActuatorState::OFF_OPEN : s.state;
     JsonArray outputs = a["outputs"].to<JsonArray>();
     for (auto out : s.outputs)
     {
@@ -481,7 +533,6 @@ ConfigOnofre &ConfigOnofre::save()
     {
       inputs.add(in);
     }
-    features.add(a);
   }
   for (auto ss : sensors)
   {
@@ -499,17 +550,25 @@ ConfigOnofre &ConfigOnofre::save()
     }
   }
 
-  if (serializeJson(doc, file) == 0)
+  if (!persistJsonAtomically(configFilenames::config,
+                             configFilenames::configTemporary, doc))
   {
 #ifdef DEBUG_ONOFRE
-    Log.notice("%s Fail to write File." CR, tags::config);
+    Log.error("%s Failed to store configuration atomically." CR, tags::config);
 #endif
+    doc.clear();
+    return false;
   }
-  file.close();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Config Onofre stored." CR, tags::config);
 #endif
   doc.clear();
+  return true;
+}
+
+ConfigOnofre &ConfigOnofre::save()
+{
+  persist();
   return *this;
 }
 
@@ -566,123 +625,698 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
 
 namespace
 {
-// Pin re-mapping on an existing feature. Absent keys mean "leave the wiring
-// alone", so a payload that predates this (v9 panels, the mobile apps, a
-// restored backup) keeps behaving exactly as before.
-bool readPinArray(JsonVariant feature, const char *key, std::vector<unsigned int> &out)
+enum class FeatureKind : uint8_t
 {
-  if (!feature[key].is<JsonArray>())
-    return false;
+  ACTUATOR,
+  SENSOR
+};
+
+enum class PinRole : uint8_t
+{
+  INPUT_PIN,
+  OUTPUT_PIN
+};
+
+enum class PinArrayRead : uint8_t
+{
+  ABSENT,
+  VALID,
+  INVALID
+};
+
+struct FeaturePinPlan
+{
+  String id;
+  FeatureKind kind = FeatureKind::SENSOR;
+  ActuatorDriver driver = ActuatorDriver::INVALID;
+  SensorDriver sensorDriver = SensorDriver::INVALID_SENSOR;
+  std::vector<unsigned int> oldInputs;
+  std::vector<unsigned int> oldOutputs;
+  std::vector<unsigned int> inputs;
+  std::vector<unsigned int> outputs;
+  bool inputsProvided = false;
+  bool outputsProvided = false;
+  bool removed = false;
+  bool seen = false;
+  bool restartRequired = false;
+};
+
+struct PinClaim
+{
+  String id;
+  FeatureKind kind = FeatureKind::SENSOR;
+  SensorDriver sensorDriver = SensorDriver::INVALID_SENSOR;
+  PinRole role = PinRole::INPUT_PIN;
+  size_t slot = 0;
+  unsigned int pin = 0;
+};
+
+FeaturePinPlan *findPlan(std::vector<FeaturePinPlan> &plans, const String &id,
+                        FeatureKind kind)
+{
+  for (auto &plan : plans)
+    if (plan.kind == kind && plan.id.equals(id))
+      return &plan;
+  return nullptr;
+}
+
+bool planIdExists(const std::vector<FeaturePinPlan> &plans, const String &id)
+{
+  for (const auto &plan : plans)
+    if (plan.id.equals(id))
+      return true;
+  return false;
+}
+
+bool isInputModeSupported(Actuator &actuator, unsigned int mode)
+{
+  if (actuator.isLight() || actuator.isSwitch())
+    return mode == static_cast<unsigned int>(ActuatorInputMode::PUSH) ||
+           mode == static_cast<unsigned int>(ActuatorInputMode::LATCH);
+  if (actuator.isCover())
+    return mode <= static_cast<unsigned int>(ActuatorInputMode::ROTATE);
+  if (actuator.isGarage() || actuator.isGardenValve())
+    return mode == static_cast<unsigned int>(ActuatorInputMode::PUSH);
+  return false;
+}
+
+ConfigUpdateResult validateActuatorTopology(const Actuator &actuator,
+                                            const FeaturePinPlan &plan)
+{
+  if (plan.driver == ActuatorDriver::COVER_SINGLE_PUSH &&
+      plan.inputs.size() != 1)
+    return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+  if ((plan.driver == ActuatorDriver::COVER_DUAL_PUSH ||
+       plan.driver == ActuatorDriver::COVER_DUAL_LATCH) &&
+      plan.inputs.size() != 2)
+    return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+
+  if (actuator.typeControl == ActuatorControlType::GPIO_OUTPUT)
+  {
+    if ((plan.driver == ActuatorDriver::COVER_SINGLE_PUSH ||
+         plan.driver == ActuatorDriver::COVER_DUAL_PUSH ||
+         plan.driver == ActuatorDriver::COVER_DUAL_LATCH) &&
+        plan.outputs.size() != 2)
+      return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+    if (plan.driver == ActuatorDriver::GARAGE_PUSH && plan.inputs.empty())
+      return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+  }
+  return ConfigUpdateResult::OK;
+}
+
+PinArrayRead readPinArrayStrict(JsonVariantConst feature, const char *key,
+                                std::vector<unsigned int> &out)
+{
+  JsonVariantConst value = feature[key];
+  if (value.isUnbound())
+    return PinArrayRead::ABSENT;
+  if (!value.is<JsonArrayConst>())
+    return PinArrayRead::INVALID;
+
   out.clear();
-  for (auto p : feature[key].as<JsonArray>())
-    out.push_back(p | 0u);
+  for (JsonVariantConst pin : value.as<JsonArrayConst>())
+  {
+    // Do not let strings, null, negative, fractional, or overflowing values
+    // silently coerce to GPIO0.
+    if (!pin.is<unsigned int>())
+      return PinArrayRead::INVALID;
+    out.push_back(pin.as<unsigned int>());
+  }
+  return PinArrayRead::VALID;
+}
+
+bool validateConfigScalarTypes(JsonObjectConst root)
+{
+  static constexpr const char *stringFields[] = {
+      "nodeId", "mqttIpDns", "mqttUsername", "mqttPassword",
+      "wifiSSID", "wifiSecret", "wifiIp", "wifiMask", "wifiGw",
+      "accessPointPassword", "apiUser", "apiPassword"};
+  for (const char *field : stringFields)
+  {
+    JsonVariantConst value = root[field];
+    if (!value.isUnbound() && !value.is<const char *>())
+      return false;
+  }
+
+  JsonVariantConst dhcpValue = root["dhcp"];
+  if (!dhcpValue.isUnbound() && !dhcpValue.is<bool>())
+    return false;
+
+  JsonVariantConst mqttPortValue = root["mqttPort"];
+  if (!mqttPortValue.isUnbound())
+  {
+    if (!mqttPortValue.is<unsigned int>())
+      return false;
+    const unsigned int port = mqttPortValue.as<unsigned int>();
+    if (port == 0 || port > 65535)
+      return false;
+  }
+
+  JsonVariantConst backupValue = root["backup"];
+  if (!backupValue.isUnbound() && !backupValue.is<bool>())
+    return false;
   return true;
 }
 
-// Every pin must be usable on this board, appear once, and belong to no other
-// feature — otherwise two drivers would drive the same GPIO.
-bool pinsAvailable(ConfigOnofre &cfg, const String &selfId, const std::vector<unsigned int> &pins,
-                   const std::vector<Actuator> &actuatores, const std::vector<Sensor> &sensors)
+void addClaims(const FeaturePinPlan &plan, bool proposed,
+               std::vector<PinClaim> &claims)
 {
-  for (size_t i = 0; i < pins.size(); i++)
+  const std::vector<unsigned int> &inputs = proposed ? plan.inputs : plan.oldInputs;
+  const std::vector<unsigned int> &outputs = proposed ? plan.outputs : plan.oldOutputs;
+  for (size_t slot = 0; slot < inputs.size(); slot++)
   {
-    if (!cfg.validPin(pins[i]))
-      return false;
-    for (size_t j = i + 1; j < pins.size(); j++)
-      if (pins[i] == pins[j])
-        return false;
-    for (const auto &a : actuatores)
+    PinClaim claim;
+    claim.id = plan.id;
+    claim.kind = plan.kind;
+    claim.sensorDriver = plan.sensorDriver;
+    claim.role = PinRole::INPUT_PIN;
+    claim.slot = slot;
+    claim.pin = inputs[slot];
+    claims.push_back(claim);
+  }
+  for (size_t slot = 0; slot < outputs.size(); slot++)
+  {
+    PinClaim claim;
+    claim.id = plan.id;
+    claim.kind = plan.kind;
+    claim.sensorDriver = plan.sensorDriver;
+    claim.role = PinRole::OUTPUT_PIN;
+    claim.slot = slot;
+    claim.pin = outputs[slot];
+    claims.push_back(claim);
+  }
+}
+
+bool sameClaim(const PinClaim &left, const PinClaim &right)
+{
+  return left.kind == right.kind && left.role == right.role &&
+         left.slot == right.slot && left.pin == right.pin &&
+         left.id.equals(right.id);
+}
+
+bool containsClaim(const std::vector<PinClaim> &claims, const PinClaim &wanted)
+{
+  for (const auto &claim : claims)
+    if (sameClaim(claim, wanted))
+      return true;
+  return false;
+}
+
+bool pinHasUnchangedOutput(const std::vector<PinClaim> &before,
+                           const std::vector<PinClaim> &after,
+                           unsigned int pin)
+{
+  for (const auto &claim : after)
+    if (claim.pin == pin && claim.role == PinRole::OUTPUT_PIN &&
+        containsClaim(before, claim))
+      return true;
+  return false;
+}
+
+bool validPinForRole(const ConfigOnofre &cfg, const PinClaim &claim)
+{
+  if (claim.kind == FeatureKind::SENSOR)
+    return cfg.validSensorPin(claim.sensorDriver, claim.slot, claim.pin);
+  if (claim.role == PinRole::INPUT_PIN)
+    return cfg.validInputPin(claim.pin);
+  return cfg.validOutputPin(claim.pin);
+}
+
+ConfigUpdateResult preparePinUpdate(ConfigOnofre &cfg, JsonObject &root,
+                                    std::vector<FeaturePinPlan> &plans,
+                                    std::vector<PinClaim> &before,
+                                    std::vector<PinClaim> &after)
+{
+  plans.reserve(cfg.actuatores.size() + cfg.sensors.size());
+  for (const auto &actuator : cfg.actuatores)
+  {
+    FeaturePinPlan plan;
+    plan.id = actuator.uniqueId;
+    plan.kind = FeatureKind::ACTUATOR;
+    plan.driver = actuator.driver;
+    plan.oldInputs = actuator.inputs;
+    plan.oldOutputs = actuator.outputs;
+    plan.inputs = actuator.inputs;
+    plan.outputs = actuator.outputs;
+    if (plan.id.length() == 0 || planIdExists(plans, plan.id))
+      return ConfigUpdateResult::INVALID_REQUEST;
+    plans.push_back(plan);
+  }
+  for (const auto &sensor : cfg.sensors)
+  {
+    FeaturePinPlan plan;
+    plan.id = sensor.uniqueId;
+    plan.kind = FeatureKind::SENSOR;
+    plan.sensorDriver = sensor.driver;
+    // I2C and fixed-UART drivers ignore their stored JSON array at runtime.
+    // Validate the physical map they really open, otherwise another feature
+    // could be accepted on top of an already-owned bus pin.
+    if (!Sensor::fixedRuntimeInputs(sensor.driver, plan.oldInputs))
+      plan.oldInputs = sensor.inputs;
+    plan.inputs = plan.oldInputs;
+    if (plan.id.length() == 0 || planIdExists(plans, plan.id))
+      return ConfigUpdateResult::INVALID_REQUEST;
+    plans.push_back(plan);
+  }
+
+  JsonVariantConst removeValue = root["featuresToRemove"];
+  if (!removeValue.isUnbound())
+  {
+    if (!removeValue.is<JsonArrayConst>())
+      return ConfigUpdateResult::INVALID_REQUEST;
+    for (JsonVariantConst item : removeValue.as<JsonArrayConst>())
     {
-      if (selfId.equals(a.uniqueId))
-        continue;
-      for (auto p : a.inputs)
-        if (p == pins[i])
-          return false;
-      for (auto p : a.outputs)
-        if (p == pins[i])
-          return false;
-    }
-    for (const auto &s : sensors)
-    {
-      if (selfId.equals(s.uniqueId))
-        continue;
-      for (auto p : s.inputs)
-        if (p == pins[i])
-          return false;
+      if (!item.is<const char *>())
+        return ConfigUpdateResult::INVALID_REQUEST;
+      const String id = item.as<const char *>();
+
+      // Match the mutation below exactly: remove the first actuator with this
+      // ID, or a sensor only when no actuator matches. Repeated IDs therefore
+      // remove the same sequence that the apply phase will remove.
+      FeaturePinPlan *removedPlan = nullptr;
+      for (auto &plan : plans)
+        if (!plan.removed && plan.kind == FeatureKind::ACTUATOR &&
+            plan.id.equals(id))
+        {
+          removedPlan = &plan;
+          break;
+        }
+      if (removedPlan == nullptr)
+        for (auto &plan : plans)
+          if (!plan.removed && plan.kind == FeatureKind::SENSOR &&
+              plan.id.equals(id))
+          {
+            removedPlan = &plan;
+            break;
+          }
+      if (removedPlan != nullptr)
+        removedPlan->removed = true;
     }
   }
-  return true;
+
+  // A legacy unsupported sensor must not make itself impossible to remove.
+  // Reject it only after processing removals, while every surviving driver is
+  // still validated before any GPIO or vector mutation.
+  for (const auto &plan : plans)
+    if (!plan.removed && plan.kind == FeatureKind::SENSOR &&
+        !Sensor::isSupportedOnCurrentTarget(plan.sensorDriver))
+      return ConfigUpdateResult::INVALID_REQUEST;
+
+  JsonVariantConst featuresValue = root["features"];
+  if (!featuresValue.isUnbound())
+  {
+    if (!featuresValue.is<JsonArrayConst>())
+      return ConfigUpdateResult::INVALID_REQUEST;
+    for (JsonVariantConst feature : featuresValue.as<JsonArrayConst>())
+    {
+      if (!feature.is<JsonObjectConst>())
+        return ConfigUpdateResult::INVALID_REQUEST;
+
+      const String group = feature["group"] | "";
+      FeatureKind kind;
+      if (group.equals("ACTUATOR"))
+        kind = FeatureKind::ACTUATOR;
+      else if (group.equals("SENSOR"))
+        kind = FeatureKind::SENSOR;
+      else
+        continue; // Preserve compatibility with fields/groups this build ignores.
+
+      const String id = feature["id"] | "";
+      if (id.length() == 0)
+        return ConfigUpdateResult::INVALID_REQUEST;
+      FeaturePinPlan *plan = findPlan(plans, id, kind);
+      if (plan == nullptr || plan->removed)
+        continue; // Unknown and explicitly removed IDs were historically ignored.
+      if (plan->seen)
+        return ConfigUpdateResult::INVALID_REQUEST;
+      plan->seen = true;
+
+      std::vector<unsigned int> pins;
+      const PinArrayRead inputs = readPinArrayStrict(feature, "inputs", pins);
+      if (inputs == PinArrayRead::INVALID)
+        return ConfigUpdateResult::INVALID_REQUEST;
+      if (inputs == PinArrayRead::VALID)
+      {
+        if (kind != FeatureKind::SENSOR)
+        {
+          if (pins.size() != plan->oldInputs.size())
+            return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+        }
+        else
+        {
+          const size_t expectedInputs =
+              Sensor::expectedInputCount(plan->sensorDriver);
+          if (expectedInputs == 0)
+            return ConfigUpdateResult::INVALID_REQUEST;
+          if (pins.size() != expectedInputs)
+            return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+
+          std::vector<unsigned int> fixedInputs;
+          if (Sensor::fixedRuntimeInputs(plan->sensorDriver, fixedInputs) &&
+              pins != fixedInputs)
+            return ConfigUpdateResult::INVALID_PIN;
+        }
+        plan->inputs = pins;
+        plan->inputsProvided = true;
+      }
+
+      if (kind == FeatureKind::ACTUATOR)
+      {
+        auto actuator = std::find_if(cfg.actuatores.begin(), cfg.actuatores.end(),
+                                     [id](const Actuator &item)
+                                     { return id.equals(item.uniqueId); });
+        if (actuator == cfg.actuatores.end())
+          return ConfigUpdateResult::INVALID_REQUEST;
+
+        JsonVariantConst inputModeValue = feature["inputMode"];
+        if (!inputModeValue.isUnbound())
+        {
+          if (!inputModeValue.is<unsigned int>())
+            return ConfigUpdateResult::INVALID_REQUEST;
+          const unsigned int inputMode = inputModeValue.as<unsigned int>();
+          if (inputMode > static_cast<unsigned int>(ActuatorInputMode::ROTATE) ||
+              !isInputModeSupported(*actuator, inputMode))
+            return ConfigUpdateResult::INVALID_REQUEST;
+          plan->driver = actuator->findDriver(static_cast<ActuatorInputMode>(inputMode));
+          if (plan->driver == ActuatorDriver::INVALID)
+            return ConfigUpdateResult::INVALID_REQUEST;
+        }
+
+        const PinArrayRead outputs = readPinArrayStrict(feature, "outputs", pins);
+        if (outputs == PinArrayRead::INVALID)
+          return ConfigUpdateResult::INVALID_REQUEST;
+        if (outputs == PinArrayRead::VALID)
+        {
+          if (pins.size() != plan->oldOutputs.size())
+            return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+          plan->outputs = pins;
+          plan->outputsProvided = true;
+        }
+
+        const ConfigUpdateResult topology = validateActuatorTopology(*actuator, *plan);
+        if (topology != ConfigUpdateResult::OK)
+          return topology;
+
+        const unsigned long nextUpCourseTime =
+            feature["upCourseTime"] | actuator->upCourseTime;
+        const unsigned long nextDownCourseTime =
+            feature["downCourseTime"] | actuator->downCourseTime;
+        const uint8_t nextKnxArea = feature["area"] | actuator->knxAddress[0];
+        const uint8_t nextKnxLine = feature["line"] | actuator->knxAddress[1];
+        const uint8_t nextKnxMember = feature["member"] | actuator->knxAddress[2];
+        plan->restartRequired = plan->oldOutputs != plan->outputs ||
+                                actuator->upCourseTime != nextUpCourseTime ||
+                                actuator->downCourseTime != nextDownCourseTime ||
+                                actuator->knxAddress[0] != nextKnxArea ||
+                                actuator->knxAddress[1] != nextKnxLine ||
+                                actuator->knxAddress[2] != nextKnxMember;
+      }
+    }
+
+    for (auto &plan : plans)
+      if (plan.kind == FeatureKind::SENSOR)
+        plan.restartRequired = plan.oldInputs != plan.inputs;
+  }
+
+  for (const auto &plan : plans)
+  {
+    addClaims(plan, false, before);
+    if (!plan.removed)
+      addClaims(plan, true, after);
+  }
+
+  // A historical configuration may contain several logical owners for the
+  // same output. Grandfather it only while every owner remains unchanged. If
+  // one owner is removed or remapped, there is no safe physical level that can
+  // be handed to the survivor without knowing the external wiring.
+  for (const auto &oldClaim : before)
+    if (oldClaim.role == PinRole::OUTPUT_PIN &&
+        !containsClaim(after, oldClaim) &&
+        pinHasUnchangedOutput(before, after, oldClaim.pin))
+      return ConfigUpdateResult::PIN_CONFLICT;
+
+  // Grandfather exact unchanged claims. Field devices legitimately share I2C
+  // or addressed serial bus pins, and older firmware also allowed some maps we
+  // would reject today. Only a newly introduced claim must be valid and unique
+  // in the final configuration.
+  for (size_t i = 0; i < after.size(); i++)
+  {
+    if (containsClaim(before, after[i]))
+      continue;
+    if (!validPinForRole(cfg, after[i]))
+      return ConfigUpdateResult::INVALID_PIN;
+    for (size_t j = 0; j < after.size(); j++)
+      if (i != j && after[i].pin == after[j].pin)
+        return ConfigUpdateResult::PIN_CONFLICT;
+  }
+  return ConfigUpdateResult::OK;
 }
 
-// Park the pins a feature is giving up so a relay does not stay latched on a
-// GPIO nothing owns any more.
-void releasePins(const std::vector<unsigned int> &pins)
+bool pinHasRole(const std::vector<PinClaim> &claims, unsigned int pin, PinRole role)
 {
-  for (auto p : pins)
+  for (const auto &claim : claims)
+    if (claim.pin == pin && claim.role == role)
+      return true;
+  return false;
+}
+
+bool pinAlreadyReleased(const std::vector<unsigned int> &released, unsigned int pin)
+{
+  for (auto item : released)
+    if (item == pin)
+      return true;
+  return false;
+}
+
+void parkOutput(unsigned int pin, bool remainsAnInput)
+{
+  if (!remainsAnInput)
   {
-    configPIN(p, OUTPUT);
-    writeToPIN(p, 0);
-    configPIN(p, INPUT);
+    configPIN(pin, OUTPUT);
+    writeToPIN(pin, 0);
+  }
+  configPIN(pin, INPUT);
+}
+
+void releaseChangedOutputs(ConfigOnofre &cfg,
+                           const std::vector<FeaturePinPlan> &plans,
+                           const std::vector<PinClaim> &before,
+                           const std::vector<PinClaim> &after)
+{
+  std::vector<unsigned int> released;
+  for (const auto &plan : plans)
+  {
+    if (plan.kind != FeatureKind::ACTUATOR)
+      continue;
+    for (size_t slot = 0; slot < plan.oldOutputs.size(); slot++)
+    {
+      PinClaim oldClaim;
+      oldClaim.id = plan.id;
+      oldClaim.kind = plan.kind;
+      oldClaim.role = PinRole::OUTPUT_PIN;
+      oldClaim.slot = slot;
+      oldClaim.pin = plan.oldOutputs[slot];
+      if (containsClaim(after, oldClaim) ||
+          pinHasUnchangedOutput(before, after, oldClaim.pin) ||
+          !cfg.validOutputPin(oldClaim.pin) ||
+          pinAlreadyReleased(released, oldClaim.pin))
+        continue;
+      const bool remainsAnInput = pinHasRole(after, oldClaim.pin, PinRole::INPUT_PIN);
+      parkOutput(oldClaim.pin, remainsAnInput);
+      released.push_back(oldClaim.pin);
+    }
   }
 }
 } // namespace
 
-ConfigOnofre &ConfigOnofre::update(JsonObject &root)
+ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseRoot)
 {
-  bool restore = root["backup"] | false;
+  if (root.isNull() || !validateConfigScalarTypes(root))
+    return ConfigUpdateResult::INVALID_REQUEST;
+
+  // The legacy restore path is intentionally unreachable. It bypasses the pin
+  // preflight, drops sensors, regenerates IDs and cannot restore the credentials
+  // omitted by GET /config. Keep the old parser only as migration reference
+  // until a versioned candidate/rollback design replaces it.
+  JsonVariantConst backupValue = root["backup"];
+  if (!backupValue.isUnbound() && backupValue.as<bool>())
+    return ConfigUpdateResult::INVALID_REQUEST;
+  if (!tryBeginConfigUpdate())
+    return ConfigUpdateResult::BUSY;
+
+  // PubSubClient keeps a pointer to the configured broker string and an
+  // established session does not automatically reconnect when credentials
+  // change. Remember the previous values while this exclusive lease is held;
+  // if any differ after the validated apply, disconnect and reconfigure the
+  // synchronous client before releasing the lease.
+  char previousMqttHost[sizeof(mqttIpDns)] = {};
+  char previousMqttUsername[sizeof(mqttUsername)] = {};
+  char previousMqttPassword[sizeof(mqttPassword)] = {};
+  strlcpy(previousMqttHost, mqttIpDns, sizeof(previousMqttHost));
+  strlcpy(previousMqttUsername, mqttUsername, sizeof(previousMqttUsername));
+  strlcpy(previousMqttPassword, mqttPassword, sizeof(previousMqttPassword));
+  const int previousMqttPort = mqttPort;
+
+  // Network identity and addressing are consumed by Wi-Fi, mDNS and MQTT
+  // outside this request. Reboot after the response whenever those persisted
+  // values change so the live services cannot keep using an old snapshot.
+  char previousNodeId[sizeof(nodeId)] = {};
+  char previousWifiSSID[sizeof(wifiSSID)] = {};
+  char previousWifiSecret[sizeof(wifiSecret)] = {};
+  char previousWifiIp[sizeof(wifiIp)] = {};
+  char previousWifiMask[sizeof(wifiMask)] = {};
+  char previousWifiGw[sizeof(wifiGw)] = {};
+  char previousAccessPointPassword[sizeof(accessPointPassword)] = {};
+  strlcpy(previousNodeId, nodeId, sizeof(previousNodeId));
+  strlcpy(previousWifiSSID, wifiSSID, sizeof(previousWifiSSID));
+  strlcpy(previousWifiSecret, wifiSecret, sizeof(previousWifiSecret));
+  strlcpy(previousWifiIp, wifiIp, sizeof(previousWifiIp));
+  strlcpy(previousWifiMask, wifiMask, sizeof(previousWifiMask));
+  strlcpy(previousWifiGw, wifiGw, sizeof(previousWifiGw));
+  strlcpy(previousAccessPointPassword, accessPointPassword,
+          sizeof(previousAccessPointPassword));
+  const bool previousDhcp = dhcp;
+
+  const bool restore = false;
+  std::vector<FeaturePinPlan> pinPlans;
+  std::vector<PinClaim> oldClaims;
+  std::vector<PinClaim> newClaims;
+  if (!restore)
+  {
+    const ConfigUpdateResult result = preparePinUpdate(*this, root, pinPlans,
+                                                       oldClaims, newClaims);
+    if (result != ConfigUpdateResult::OK)
+    {
+      endConfigUpdate();
+      return result;
+    }
+
+
+    bool deactivateActuators = false;
+    for (const auto &plan : pinPlans)
+      if (plan.kind == FeatureKind::ACTUATOR &&
+          (plan.removed || plan.restartRequired))
+      {
+        deactivateActuators = true;
+        break;
+      }
+
+    // A running irrigation cycle must close its valve while the old actuator
+    // map is still live. Then make removed/restart-pending actuators inert;
+    // covers synchronously halt both relays before any GPIO ownership changes.
+    if (deactivateActuators && irrigation.isRunning())
+      irrigation.stop();
+    for (const auto &plan : pinPlans)
+    {
+      if (plan.kind != FeatureKind::ACTUATOR ||
+          (!plan.removed && !plan.restartRequired))
+        continue;
+      auto actuator = std::find_if(actuatores.begin(), actuatores.end(),
+                                   [&plan](const Actuator &item)
+                                   { return plan.id.equals(item.uniqueId); });
+      if (actuator != actuatores.end())
+        actuator->deactivateForConfigUpdate();
+    }
+    for (const auto &plan : pinPlans)
+    {
+      if (plan.kind != FeatureKind::SENSOR || plan.removed ||
+          !plan.restartRequired)
+        continue;
+      auto sensor = std::find_if(sensors.begin(), sensors.end(),
+                                 [&plan](const Sensor &item)
+                                 { return plan.id.equals(item.uniqueId); });
+      if (sensor != sensors.end())
+        sensor->deactivateForConfigUpdate();
+    }
+
+    // Finish every hand-off before any feature is erased or configured on its
+    // new pins. Inputs and shared buses are never driven LOW here.
+    releaseChangedOutputs(*this, pinPlans, oldClaims, newClaims);
+  }
+
   if (restore)
   {
     actuatores.clear();
     sensors.clear();
   }
-  dhcp = root["dhcp"] | true;
-  String mqttPasswordStr = root["mqttPassword"] | "";
-  if (!root["mqttPassword"].isNull() && mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  JsonVariantConst dhcpValue = root["dhcp"];
+  if (!dhcpValue.isUnbound())
+    dhcp = dhcpValue.as<bool>();
+
+  JsonVariantConst mqttPasswordValue = root["mqttPassword"];
+  if (!mqttPasswordValue.isUnbound() &&
+      strcmp(mqttPasswordValue.as<const char *>(), constantsConfig::PW_HIDE) != 0)
   {
-    strlcpy(mqttPassword, mqttPasswordStr.c_str(), sizeof(mqttPassword));
+    strlcpy(mqttPassword, mqttPasswordValue.as<const char *>(), sizeof(mqttPassword));
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Mqtt Password changed." CR, tags::config);
 #endif
   }
 
-  String wifiSecretStr = root["wifiSecret"] | "";
-  if (!root["wifiSecret"].isNull() && wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  JsonVariantConst wifiSecretValue = root["wifiSecret"];
+  if (!wifiSecretValue.isUnbound() &&
+      strcmp(wifiSecretValue.as<const char *>(), constantsConfig::PW_HIDE) != 0)
   {
-    strlcpy(wifiSecret, wifiSecretStr.c_str(), sizeof(wifiSecret));
+    strlcpy(wifiSecret, wifiSecretValue.as<const char *>(), sizeof(wifiSecret));
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Wifi Password changed." CR, tags::config);
 #endif
   }
 
-  String accessPointPasswordStr = root["accessPointPassword"] | constantsConfig::apSecret;
-  if (!root["accessPointPassword"].isNull() && accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  JsonVariantConst accessPointPasswordValue = root["accessPointPassword"];
+  if (!accessPointPasswordValue.isUnbound() &&
+      strcmp(accessPointPasswordValue.as<const char *>(), constantsConfig::PW_HIDE) != 0)
   {
-    strlcpy(accessPointPassword, accessPointPasswordStr.c_str(), sizeof(accessPointPassword));
+    strlcpy(accessPointPassword, accessPointPasswordValue.as<const char *>(),
+            sizeof(accessPointPassword));
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Access Point Password changed." CR, tags::config);
 #endif
   }
 
-  String apiPasswordStr = root["apiPassword"] | constantsConfig::apiPassword;
-  if (!root["apiPassword"].isNull() && apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  JsonVariantConst apiPasswordValue = root["apiPassword"];
+  if (!apiPasswordValue.isUnbound() &&
+      strcmp(apiPasswordValue.as<const char *>(), constantsConfig::PW_HIDE) != 0)
   {
-    strlcpy(apiPassword, apiPasswordStr.c_str(), sizeof(apiPassword));
+    strlcpy(apiPassword, apiPasswordValue.as<const char *>(), sizeof(apiPassword));
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Api Password changed." CR, tags::config);
 #endif
   }
 
-  String n_name = root["nodeId"] | chipId;
-  normalize(n_name);
-  strlcpy(nodeId, n_name.c_str(), sizeof(nodeId));
-  strlcpy(mqttIpDns, root["mqttIpDns"] | "", sizeof(mqttIpDns));
-  mqttPort = root["mqttPort"] | constantsMqtt::defaultPort;
-  strlcpy(mqttUsername, root["mqttUsername"] | "", sizeof(mqttUsername));
-  strlcpy(wifiSSID, root["wifiSSID"] | "", sizeof(wifiSSID));
-  strlcpy(wifiIp, root["wifiIp"] | "", sizeof(wifiIp));
-  strlcpy(wifiMask, root["wifiMask"] | "", sizeof(wifiMask));
-  strlcpy(wifiGw, root["wifiGw"] | "", sizeof(wifiGw));
-  strlcpy(apiUser, root["apiUser"] | constantsConfig::apiUser, sizeof(apiUser));
+  JsonVariantConst nodeIdValue = root["nodeId"];
+  if (!nodeIdValue.isUnbound())
+  {
+    String normalizedName = nodeIdValue.as<const char *>();
+    normalize(normalizedName);
+    if (normalizedName.isEmpty())
+      normalizedName = chipId;
+    strlcpy(nodeId, normalizedName.c_str(), sizeof(nodeId));
+  }
+  JsonVariantConst mqttHostValue = root["mqttIpDns"];
+  if (!mqttHostValue.isUnbound())
+    strlcpy(mqttIpDns, mqttHostValue.as<const char *>(), sizeof(mqttIpDns));
+  JsonVariantConst mqttPortValue = root["mqttPort"];
+  if (!mqttPortValue.isUnbound())
+    mqttPort = mqttPortValue.as<unsigned int>();
+  JsonVariantConst mqttUsernameValue = root["mqttUsername"];
+  if (!mqttUsernameValue.isUnbound())
+    strlcpy(mqttUsername, mqttUsernameValue.as<const char *>(), sizeof(mqttUsername));
+  JsonVariantConst wifiSsidValue = root["wifiSSID"];
+  if (!wifiSsidValue.isUnbound())
+    strlcpy(wifiSSID, wifiSsidValue.as<const char *>(), sizeof(wifiSSID));
+  JsonVariantConst wifiIpValue = root["wifiIp"];
+  if (!wifiIpValue.isUnbound())
+    strlcpy(wifiIp, wifiIpValue.as<const char *>(), sizeof(wifiIp));
+  JsonVariantConst wifiMaskValue = root["wifiMask"];
+  if (!wifiMaskValue.isUnbound())
+    strlcpy(wifiMask, wifiMaskValue.as<const char *>(), sizeof(wifiMask));
+  JsonVariantConst wifiGwValue = root["wifiGw"];
+  if (!wifiGwValue.isUnbound())
+    strlcpy(wifiGw, wifiGwValue.as<const char *>(), sizeof(wifiGw));
+  JsonVariantConst apiUserValue = root["apiUser"];
+  if (!apiUserValue.isUnbound())
+    strlcpy(apiUser, apiUserValue.as<const char *>(), sizeof(apiUser));
   JsonArray featuresToRemove = root["featuresToRemove"];
   for (String id : featuresToRemove)
   {
@@ -709,6 +1343,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
   JsonArray features = root["features"];
   int counter = 0;
+  bool restartRequired = false;
   for (auto feature : features)
   {
     counter++;
@@ -747,45 +1382,52 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
       }
       else
       {
-        for (auto &actuator : actuatores)
+        auto match = std::find_if(actuatores.begin(), actuatores.end(), [id](const Actuator &item)
+                                  { return id.equals(item.uniqueId); });
+        if (match != actuatores.end())
         {
-          if (strcmp(actuator.uniqueId, id.c_str()) == 0)
-          {
-            if (strlen(feature["name"] | I18N::NO_NAME) > 0)
-              strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
-            actuator.driver = actuator.findDriver(feature["inputMode"] | ActuatorInputMode::PUSH);
-            actuator.upCourseTime = feature["upCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-            actuator.downCourseTime = feature["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
-            actuator.knxAddress[0] = feature["area"] | 0;
-            actuator.knxAddress[1] = feature["line"] | 0;
-            actuator.knxAddress[2] = feature["member"] | 0;
-            actuator.autoOff = feature["autoOff"] | 0ul;
+          Actuator &actuator = *match;
+          FeaturePinPlan *plan = findPlan(pinPlans, id, FeatureKind::ACTUATOR);
+          if (plan == nullptr)
+            continue;
 
-            std::vector<unsigned int> newInputs, newOutputs;
-            const bool wantsInputs = readPinArray(feature, "inputs", newInputs);
-            const bool wantsOutputs = readPinArray(feature, "outputs", newOutputs);
-            if (wantsInputs || wantsOutputs)
-            {
-              std::vector<unsigned int> candidate = wantsInputs ? newInputs : actuator.inputs;
-              const std::vector<unsigned int> &outs = wantsOutputs ? newOutputs : actuator.outputs;
-              candidate.insert(candidate.end(), outs.begin(), outs.end());
-              if (pinsAvailable(*this, id, candidate, actuatores, sensors))
-              {
-                releasePins(actuator.inputs);
-                releasePins(actuator.outputs);
-                if (wantsInputs)
-                  actuator.inputs = newInputs;
-                if (wantsOutputs)
-                  actuator.outputs = newOutputs;
-              }
-#ifdef DEBUG_ONOFRE
-              else
-              {
-                Log.warning("%s Pin change refused for %s." CR, tags::config, actuator.uniqueId);
-              }
-#endif
-            }
-            actuator.setup();
+          const ActuatorDriver oldDriver = actuator.driver;
+          const std::vector<unsigned int> oldInputs = actuator.inputs;
+          const unsigned long nextUpCourseTime = feature["upCourseTime"] | actuator.upCourseTime;
+          const unsigned long nextDownCourseTime = feature["downCourseTime"] | actuator.downCourseTime;
+          const uint8_t nextKnxArea = feature["area"] | actuator.knxAddress[0];
+          const uint8_t nextKnxLine = feature["line"] | actuator.knxAddress[1];
+          const uint8_t nextKnxMember = feature["member"] | actuator.knxAddress[2];
+
+          const bool driverChanged = oldDriver != plan->driver;
+          const bool inputsChanged = oldInputs != plan->inputs;
+          const bool restartRequiredForActuator = plan->restartRequired;
+
+          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+            strlcpy(actuator.name, feature["name"] | I18N::NO_NAME, sizeof(actuator.name));
+          actuator.driver = plan->driver;
+          actuator.upCourseTime = nextUpCourseTime;
+          actuator.downCourseTime = nextDownCourseTime;
+          actuator.knxAddress[0] = nextKnxArea;
+          actuator.knxAddress[1] = nextKnxLine;
+          actuator.knxAddress[2] = nextKnxMember;
+          actuator.autoOff = feature["autoOff"] | actuator.autoOff;
+          if (plan->inputsProvided)
+            actuator.inputs = plan->inputs;
+          if (plan->outputsProvided)
+            actuator.outputs = plan->outputs;
+
+          if (restartRequiredForActuator)
+          {
+            // Output, shutter-course and KNX changes need full hardware setup.
+            // Re-running setup inside the request can pulse relays, duplicate
+            // KNX callbacks and leak the current shutter controller. Keep the
+            // feature inert until the controlled restart rebuilds everything.
+            restartRequired = true;
+          }
+          else if (inputsChanged || driverChanged)
+          {
+            actuator.rebuildInputHandlers();
           }
         }
       }
@@ -797,30 +1439,58 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
       }
       else
       {
-        for (auto &sensor : sensors)
+        auto match = std::find_if(sensors.begin(), sensors.end(), [id](const Sensor &item)
+                                  { return id.equals(item.uniqueId); });
+        if (match != sensors.end())
         {
-          if (strcmp(sensor.uniqueId, id.c_str()) == 0)
-          {
-            if (strlen(feature["name"] | I18N::NO_NAME) > 0)
-              strlcpy(sensor.name, feature["name"] | I18N::NO_NAME, sizeof(sensor.name));
+          Sensor &sensor = *match;
+          if (strlen(feature["name"] | I18N::NO_NAME) > 0)
+            strlcpy(sensor.name, feature["name"] | I18N::NO_NAME, sizeof(sensor.name));
 
-            std::vector<unsigned int> newInputs;
-            if (readPinArray(feature, "inputs", newInputs) &&
-                pinsAvailable(*this, id, newInputs, actuatores, sensors))
-            {
-              releasePins(sensor.inputs);
-              sensor.inputs = newInputs;
-              // Drivers configure their pin behind isInitialized(); force it.
-              sensor.reInit();
-            }
+          FeaturePinPlan *plan = findPlan(pinPlans, id, FeatureKind::SENSOR);
+          if (plan != nullptr && plan->inputsProvided)
+          {
+            sensor.inputs = plan->inputs;
+            if (plan->restartRequired)
+              restartRequired = true;
           }
         }
       }
     }
   }
-  setupMQTT(false);
+  const bool mqttChanged = previousMqttPort != mqttPort ||
+                           strcmp(previousMqttHost, mqttIpDns) != 0 ||
+                           strcmp(previousMqttUsername, mqttUsername) != 0 ||
+                           strcmp(previousMqttPassword, mqttPassword) != 0;
+  if (mqttChanged)
+    setupMQTT(true);
+  const bool networkChanged = previousDhcp != dhcp ||
+                              strcmp(previousNodeId, nodeId) != 0 ||
+                              strcmp(previousWifiSSID, wifiSSID) != 0 ||
+                              strcmp(previousWifiSecret, wifiSecret) != 0 ||
+                              strcmp(previousWifiIp, wifiIp) != 0 ||
+                              strcmp(previousWifiMask, wifiMask) != 0 ||
+                              strcmp(previousWifiGw, wifiGw) != 0 ||
+                              strcmp(previousAccessPointPassword,
+                                     accessPointPassword) != 0;
+  if (networkChanged)
+  {
+    restartRequired = true;
+  }
   root.clear();
-  return this->save();
+  if (!persist())
+  {
+    // The previous atomic file is still authoritative, but the live graph has
+    // already changed. Transfer ownership of the feature lease to a controlled
+    // response-after-disconnect restart so no loop can act on an undurable map.
+    responseRoot["restartRequired"] = true;
+    return ConfigUpdateResult::PERSISTENCE_FAILED;
+  }
+  json(responseRoot, true);
+  if (restartRequired)
+    responseRoot["restartRequired"] = true;
+  endConfigUpdate();
+  return ConfigUpdateResult::OK;
 }
 
 void ConfigOnofre::json(JsonVariant &root, bool allFields)
@@ -867,8 +1537,10 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
       usable.add(pin);
 #ifdef ESP32
     JsonArray inputOnly = root["inputOnlyPins"].to<JsonArray>();
+#ifndef ESP32C6
     for (auto pin : DefaultPins::intputOnlyPins)
       inputOnly.add(pin);
+#endif
 #endif
   }
   root["wifiIp"] = WiFi.localIP().toString();
@@ -899,10 +1571,12 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
 #ifdef ESP32
   JsonVariant inPins = root["inPins"].to<JsonArray>();
 
+#ifndef ESP32C6
   for (auto p : DefaultPins::intputOnlyPins)
   {
     inPins.add(p);
   }
+#endif
 #endif
   for (auto p : DefaultPins::outputInputPins)
   {
@@ -983,51 +1657,86 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
 
 void ConfigOnofre::requestWifiScan()
 {
+#ifdef ESP32
+  wifiScan.store(true, std::memory_order_release);
+#else
   wifiScan = true;
+#endif
 }
 
 bool ConfigOnofre::isWifiScanRequested()
 {
+#ifdef ESP32
+  return wifiScan.exchange(false, std::memory_order_acq_rel);
+#else
   if (wifiScan)
   {
     wifiScan = false;
     return true;
   }
   return false;
+#endif
 }
 
 void ConfigOnofre::requestCloudIOSync()
 {
+#ifdef ESP32
+  cloudIOSync.store(true, std::memory_order_release);
+#else
   cloudIOSync = true;
+#endif
 }
 
 bool ConfigOnofre::isCloudIOSyncRequested()
 {
+#ifdef ESP32
+  return cloudIOSync.exchange(false, std::memory_order_acq_rel);
+#else
   if (cloudIOSync)
   {
     cloudIOSync = false;
     return true;
   }
   return false;
+#endif
 }
 
 void ConfigOnofre::requestReloadWifi()
 {
+#ifdef ESP32
+  wifiReload.store(true, std::memory_order_release);
+#else
   wifiReload = true;
+#endif
 }
 bool ConfigOnofre::isReloadWifiRequested()
 {
+#ifdef ESP32
+  return wifiReload.exchange(false, std::memory_order_acq_rel);
+#else
   if (wifiReload)
   {
     wifiReload = false;
     return true;
   }
   return false;
+#endif
 }
 void ConfigOnofre::loopActuators()
 {
-  if (!beginFeatureLoop())
+  if (!tryBeginFeatureAccess())
     return;
+
+  // A restart-pending actuator has already released or halted hardware. Keep
+  // the complete actuator/irrigation loop inert until the controlled restart;
+  // otherwise irrigation could command a half-reconfigured output map.
+  for (const auto &sw : actuatores)
+    if (!sw.ready)
+    {
+      endFeatureAccess();
+      return;
+    }
+
   for (auto &sw : actuatores)
   {
     // A valve opened by a program answers to the program's timer, not to its own
@@ -1038,7 +1747,8 @@ void ConfigOnofre::loopActuators()
     {
       sw.changeState(StateOrigin::AUTO, 0);
     }
-    if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isCover())
+    if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isCover() &&
+        sw.shutter != nullptr)
     {
       sw.shutter->loop();
     }
@@ -1063,36 +1773,54 @@ void ConfigOnofre::loopActuators()
     }
   }
   irrigation.loop();
-  endFeatureLoop();
+  endFeatureAccess();
 }
 void ConfigOnofre::requestRestart()
 {
+#ifdef ESP32
+  reboot.store(true, std::memory_order_release);
+#else
   reboot = true;
+#endif
 }
 void ConfigOnofre::loopSensors()
 {
-  if (!beginFeatureLoop())
+  if (!tryBeginFeatureAccess())
     return;
+  for (const auto &sensor : sensors)
+    if (!sensor.ready)
+    {
+      endFeatureAccess();
+      return;
+    }
   for (auto &s : sensors)
   {
     s.loop();
   }
-  endFeatureLoop();
+  endFeatureAccess();
 }
 
 bool ConfigOnofre::isRestartRequested()
 {
+#ifdef ESP32
+  return reboot.exchange(false, std::memory_order_acq_rel);
+#else
   if (reboot)
   {
     reboot = false;
     return true;
   }
   return false;
+#endif
 }
 
 void ConfigOnofre::requestAutoUpdate()
 {
+#ifdef ESP32
+  autoUpdate.store(true, std::memory_order_release);
+#else
   autoUpdate = true;
+#endif
 }
 // Asking must not consume: loop() calls this only to decide whether to skip its
 // normal work, and it used to clear the flag doing so. When the MQTT command
@@ -1100,29 +1828,45 @@ void ConfigOnofre::requestAutoUpdate()
 // between — that guard ate the request and no update ever happened.
 bool ConfigOnofre::isAutoUpdateRequested()
 {
+#ifdef ESP32
+  return autoUpdate.load(std::memory_order_acquire);
+#else
   return autoUpdate;
+#endif
 }
 // Taken once, by whoever actually performs the update.
 bool ConfigOnofre::takeAutoUpdateRequest()
 {
+#ifdef ESP32
+  return autoUpdate.exchange(false, std::memory_order_acq_rel);
+#else
   if (autoUpdate)
   {
     autoUpdate = false;
     return true;
   }
   return false;
+#endif
 }
 
 void ConfigOnofre::requestLoadDefaults()
 {
+#ifdef ESP32
+  loadDefaults.store(true, std::memory_order_release);
+#else
   loadDefaults = true;
+#endif
 }
 bool ConfigOnofre::isLoadDefaultsRequested()
 {
+#ifdef ESP32
+  return loadDefaults.exchange(false, std::memory_order_acq_rel);
+#else
   if (loadDefaults)
   {
     loadDefaults = false;
     return true;
   }
   return false;
+#endif
 }
