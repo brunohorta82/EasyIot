@@ -98,6 +98,8 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
 .kv span { color: var(--dim); }
 /* Readings carry a unit, so they must never wrap mid-value ("4821.30 kW h"). */
 .kv b { font-weight: 600; text-align: right; white-space: nowrap; }
+/* Long metadata may wrap, but must remain inside its diagnostics card. */
+.kv b.kv-wrap { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .grn { color: var(--grn2); } .amb { color: var(--amb); } .red { color: var(--red); } .dim { color: var(--dim); }
 
 /* ---------- feature rows ---------- */
