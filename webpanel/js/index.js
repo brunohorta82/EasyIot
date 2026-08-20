@@ -196,9 +196,10 @@ function renderIrrPrograms() {
     '<div class="irr-prog-head">' +
       '<label class="f-check"><input type="checkbox" data-ip="enabled" data-pi="' + i + '"' +
         (prog.enabled ? " checked" : "") + "> Programa " + (i + 1) + "</label>" +
-      '<div class="btns">' +
+      '<div class="btns irr-prog-actions">' +
       ((prog.zones || []).length
         ? '<button class="btn" data-iprun="' + prog.id + '">Regar agora</button>' : "") +
+      '<span class="irr-actions-gap"></span>' +
       '<button class="btn d" data-ipdel="' + i + '">Remover</button></div>' +
     "</div>" +
     '<div class="row2">' +
@@ -231,6 +232,26 @@ function renderIrrPrograms() {
     : '<div class="note">Ainda não há programas. Cria um para a rega correr sozinha.</div>';
 }
 
+/* Editing a field must not rebuild the list it lives in: innerHTML replaces the
+   input being typed into, so the focus is lost and a half-entered time snaps
+   back. Only the derived bits are refreshed in place. */
+function refreshProgramNote(i) {
+  const card = document.querySelector('.irr-prog[data-pi="' + i + '"]');
+  if (!card) return;
+  const prog = irrigation.programs[i];
+  const note = card.querySelector(".note");
+  if (!note) return;
+  const dead = !(prog.zones || []).length || !prog.weekdays;
+  note.className = "note" + (dead ? " err" : "");
+  note.textContent =
+    (!(prog.zones || []).length
+      ? "Sem zonas escolhidas — este programa não rega nada."
+      : !prog.weekdays
+        ? "Sem dias escolhidos — este programa não corre."
+        : "Total " + programTotal(prog) + " min, por esta ordem.") +
+    (prog.enabled ? "" : " Programa desligado.");
+}
+
 function programTotal(prog) {
   return (prog.zones || []).reduce((a, z) => a + (parseInt(z.minutes, 10) || 0), 0);
 }
@@ -261,11 +282,16 @@ async function saveIrrigation() {
 }
 
 async function runProgramNow(programId) {
+  // The equipment runs its own copy of the program, by id. Asking it to run one
+  // it has never been told about cannot work — and reloading afterwards used to
+  // throw away the unsaved edits, which looked exactly like the program being
+  // deleted by the button that was supposed to start it.
+  if (irrDirty) { toast("Guarda os programas primeiro", "err"); return; }
   try {
     irrigation = await api("/irrigation/run", { method: "POST", body: JSON.stringify({ programId: programId }) });
     config.irrigation = irrigation;
-    await load();
-    document.querySelector('[data-view="irrigation"]').click();
+    renderIrrStatus();
+    renderIrrZones();
   } catch (e) { toast("Não foi possível arrancar o programa", "err"); }
 }
 
@@ -273,8 +299,10 @@ async function stopIrrigation() {
   try {
     irrigation = await api("/irrigation/stop", { method: "POST" });
     config.irrigation = irrigation;
-    await load();
-    document.querySelector('[data-view="irrigation"]').click();
+    // Only the state and the zones change; the programs on screen are untouched,
+    // including anything being edited.
+    renderIrrStatus();
+    renderIrrZones();
   } catch (e) { toast("Não foi possível parar", "err"); }
 }
 
@@ -1427,8 +1455,9 @@ document.addEventListener("click", (ev) => {
     const parts = day.dataset.ipday.split(":");
     const prog = irrigation.programs[Number(parts[0])];
     prog.weekdays ^= (1 << Number(parts[1]));
+    day.classList.toggle("on", ((prog.weekdays >> Number(parts[1])) & 1) === 1);
     markIrrDirty();
-    renderIrrPrograms();
+    refreshProgramNote(Number(parts[0]));
     return;
   }
   const prun = ev.target.closest("[data-iprun]");
@@ -1512,7 +1541,7 @@ document.addEventListener("change", (ev) => {
       prog.startMinute = m;
     }
     markIrrDirty();
-    renderIrrPrograms();
+    refreshProgramNote(Number(ip.dataset.pi));
     return;
   }
   const ipz = ev.target.closest("[data-ipz]");
@@ -1530,8 +1559,11 @@ document.addEventListener("change", (ev) => {
     } else {
       prog.zones = prog.zones.filter((z) => z.uniqueId !== zid);
     }
+    // The minutes box belongs to the zone next to it, so it follows the tick.
+    const mins = document.querySelector('[data-ipmin="' + parts[0] + ":" + zid + '"]');
+    if (mins) mins.disabled = !ipz.checked;
     markIrrDirty();
-    renderIrrPrograms();
+    refreshProgramNote(Number(parts[0]));
     return;
   }
   const ipmin = ev.target.closest("[data-ipmin]");
@@ -1540,7 +1572,7 @@ document.addEventListener("change", (ev) => {
     const entry = (irrigation.programs[Number(parts[0])].zones || []).find((z) => z.uniqueId === parts[1]);
     if (entry) entry.minutes = Math.max(1, Math.min(240, parseInt(ipmin.value, 10) || 1));
     markIrrDirty();
-    renderIrrPrograms();
+    refreshProgramNote(Number(parts[0]));
     return;
   }
   if (ev.target.id === "irr-enabled" || ev.target.id === "irr-rain") { markIrrDirty(); return; }

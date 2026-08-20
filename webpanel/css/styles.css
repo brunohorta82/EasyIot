@@ -399,3 +399,8 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
   border-radius: 8px; padding: 5px 8px; color: var(--txt); font: inherit; text-align: right; }
 .irr-zline input[type=number]:disabled { opacity: .4; }
 .irr-zline span { font-size: 11px; color: var(--dim); min-width: 24px; }
+
+/* The confirmation on "Regar agora" changes that button's width, and Remover sat
+   right beside it — enough for the second click to land on the wrong one. */
+.irr-prog-actions { align-items: center; }
+.irr-actions-gap { display: inline-block; width: 22px; }

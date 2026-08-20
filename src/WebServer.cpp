@@ -116,7 +116,17 @@ public:
   CaptiveRequestHandler() {}
   virtual ~CaptiveRequestHandler() {}
 
+  // Both generations again, and this one decides whether the handler runs at all:
+  // in the archived fork canHandle() is non-const, in ESP32Async 3.x it is const.
+  // With only the non-const version the C6 build overrides nothing, the base
+  // returns false, and since setupCaptivePortal() resets the server and leaves
+  // this handler alone on the AP, every request there answers 404 — the access
+  // point comes up and the configuration page cannot be reached.
   bool canHandle(AsyncWebServerRequest *request)
+  {
+    return true;
+  }
+  bool canHandle(AsyncWebServerRequest *request) const
   {
     return true;
   }

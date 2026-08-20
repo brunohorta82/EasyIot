@@ -2,7 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
-## [9.182-dev] - 2026-08-20
+## [9.182] - 2026-08-20
+
+### Fixed
+- **The C6 brought its access point up and then answered 404 to everything.** The
+  captive handler declared `canHandle()` non-const, which overrides the archived
+  AsyncWebServer fork but not ESP32Async 3.x, where the method is const. The base
+  returned false, and since `setupCaptivePortal()` resets the server and leaves
+  that handler alone on the AP, the configuration page could not be reached at
+  all. Both overloads are now present, the same way the PR before this one had to
+  do for `isRequestHandlerTrivial()`.
+- **Irrigation: editing a field no longer rebuilds the list it lives in.** Every
+  change re-rendered the whole programs section, so the input being typed into was
+  replaced — the focus jumped and a half-entered time snapped back. Only the total
+  line and the minutes box now update in place.
+- **Irrigation: "Regar agora" no longer looks like it deletes the program.** It
+  reloaded the configuration afterwards, which threw away unsaved edits, and the
+  confirmation resized the button so the second click could land on Remover
+  beside it. Running now refuses while there are unsaved changes — the equipment
+  runs its own copy by id, so a program it has never been told about cannot run —
+  and the two buttons are no longer neighbours.
 
 ### Fixed
 - Template changes on already-provisioned devices are now validated, queued for
