@@ -306,6 +306,56 @@ async function stopIrrigation() {
   } catch (e) { toast("Não foi possível parar", "err"); }
 }
 
+/* The device answers the update request immediately and then does the work in its
+   main loop, so asking was all the panel used to know. Without this a failed
+   update and a dead button look identical — which is exactly how it was reported.
+   The device now keeps the progress and the reason, and this follows it. */
+function followUpdate() {
+  const bar = $("ota-bar");
+  const fill = bar.querySelector("i");
+  const msg = $("ota-msg");
+  bar.classList.remove("hide");
+  fill.style.width = "0";
+  msg.className = "note";
+  msg.textContent = "A atualizar — não desligues o equipamento.";
+  $("a-update").disabled = true;
+
+  let misses = 0;
+  const timer = setInterval(async () => {
+    let ota = null;
+    try {
+      ota = (await api("/config")).ota;
+      misses = 0;
+    } catch (e) {
+      // It reboots when it succeeds, so losing it is the expected happy ending.
+      if (++misses < 4) return;
+      clearInterval(timer);
+      fill.style.width = "100%";
+      msg.className = "note ok";
+      msg.textContent = "Gravado. O equipamento reiniciou — recarrega a página.";
+      return;
+    }
+    if (!ota) { clearInterval(timer); done(); return; }
+    fill.style.width = (ota.percent || 0) + "%";
+    if (ota.state === "running") return;
+    clearInterval(timer);
+    if (ota.state === "failed") {
+      msg.className = "note err";
+      msg.textContent = "A atualização falhou: " + (ota.error || "sem detalhe do equipamento");
+      done();
+    } else if (ota.state === "done") {
+      msg.className = "note ok";
+      msg.textContent = "Gravado. A reiniciar…";
+    } else {
+      done();
+    }
+  }, 1500);
+
+  function done() {
+    $("a-update").disabled = false;
+  }
+}
+
 /* ---------------- theme ---------------- */
 /* The choice lives in localStorage, not in the device config: it belongs to
    whoever is looking, and writing it to the device would burn flash on a
@@ -1622,8 +1672,10 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   $("a-update").onclick = async (e) => {
     if (!armed(e.currentTarget, "Atualizar?")) return;
-    try { await api("/auto-update", { method: "POST" }); toast("A atualizar — não desligues", "ok"); }
-    catch (err) { toast("Falhou", "err"); }
+    try {
+      await api("/auto-update", { method: "POST" });
+      followUpdate();
+    } catch (err) { toast("Falhou o pedido de atualização", "err"); }
   };
   $("a-defaults").onclick = async (e) => {
     if (!armed(e.currentTarget, "Apagar tudo?")) return;

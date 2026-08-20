@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.185] - 2026-08-20
+
+### Added
+- **An over-the-air update now shows what it is doing.** The device answered the
+  request immediately and did the work in its main loop, so the panel knew nothing
+  after asking: a failed update and a dead button looked identical, which is how it
+  was reported. The device keeps the progress and, on failure, the reason from
+  `getLastErrorString()`; `/config` reports it as `ota`, and the panel follows it
+  with a bar and shows the error instead of staying silent. Losing the device
+  mid-update is treated as the successful ending it usually is, since a device that
+  finishes reboots.
+
+### Changed
+- The Telegram announcement now prefers a `### Para testers` section from the
+  changelog entry when there is one. The channel is read by testers and the
+  changelog is written in English for the repository; keeping the Portuguese
+  summary in the same file means it cannot drift away from the entry it describes.
+
+### Para testers
+- **O botão de atualizar já mostra o que está a acontecer** — barra de progresso e,
+  se falhar, a razão em vez de silêncio.
+- As mensagens deste canal passam a ser escritas em português.
+
 ## [9.184] - 2026-08-20
 
 ### Fixed
@@ -21,6 +44,13 @@ All notable changes to this project are documented in this file.
 - The panel is embedded in the firmware, so both sides move together; nothing else
   called these endpoints yet.
 
+### Para testers
+- **O "Regar agora" apagava os programas em vez de os correr.** Corrigido: agora
+  arranca o programa e o horário fica intacto.
+- **O "Parar rega" dava sempre erro.** Corrigido.
+- Se perdeste programas ao carregar em "Regar agora", tens de os criar outra vez —
+  foram apagados no equipamento.
+
 ## [9.183] - 2026-08-20
 
 ### Fixed
@@ -31,6 +61,13 @@ All notable changes to this project are documented in this file.
   template gives every valve a button and whose panel prints its pin. Valves now
   take a momentary press to toggle, matching the PUSH that `driverToInputMode()`
   already reported for the driver.
+
+### Para testers
+- **Os botões de parede das válvulas não faziam nada.** Já funcionam: um toque
+  alterna a válvula.
+- Atenção em bancada: sem sensor de chuva ligado, o equipamento lê "a chover" e os
+  programas agendados não arrancam. Desliga "saltar o ciclo se estiver a chover"
+  enquanto testas.
 
 ### Notes
 - Two reports from the test group are still open and are not fixed here: "Regar

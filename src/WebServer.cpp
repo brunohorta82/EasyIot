@@ -52,10 +52,49 @@ static AsyncWebServerResponse *beginProgmemResponse(AsyncWebServerRequest *reque
 #endif
 }
 
+/* An over-the-air update used to be invisible: the panel asked for it, the reply
+   came back immediately, and whatever happened next happened in the main loop with
+   nobody watching. A failure looked exactly like a button that did nothing. This
+   keeps enough state for the panel to show progress and, more importantly, to show
+   the reason when it fails. */
+OtaStatus otaStatus;
+
+void otaStatusJson(JsonVariant &root)
+{
+  JsonObject ota = root["ota"].to<JsonObject>();
+  switch (otaStatus.state)
+  {
+  case OtaState::RUNNING:
+    ota["state"] = "running";
+    break;
+  case OtaState::FAILED:
+    ota["state"] = "failed";
+    break;
+  case OtaState::DONE:
+    ota["state"] = "done";
+    break;
+  default:
+    ota["state"] = "idle";
+  }
+  ota["percent"] = otaStatus.percent;
+  if (otaStatus.error[0] != '\0')
+    ota["error"] = otaStatus.error;
+}
+
 void performUpdate()
 {
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
+#endif
+  otaStatus.state = OtaState::RUNNING;
+  otaStatus.percent = 0;
+  otaStatus.error[0] = '\0';
+#ifdef ESP8266
+  ESPhttpUpdate.onProgress([](int done, int total)
+                           { otaStatus.percent = total > 0 ? (int)((int64_t)done * 100 / total) : 0; });
+#else
+  httpUpdate.onProgress([](int done, int total)
+                        { otaStatus.percent = total > 0 ? (int)((int64_t)done * 100 / total) : 0; });
 #endif
   const String otaUrl = String(constanstsCloudIO::otaUrl);
   const bool useHttps = otaUrl.startsWith("https://");
@@ -88,6 +127,12 @@ void performUpdate()
   switch (ret)
   {
   case HTTP_UPDATE_FAILED:
+    otaStatus.state = OtaState::FAILED;
+#ifdef ESP8266
+    strlcpy(otaStatus.error, ESPhttpUpdate.getLastErrorString().c_str(), sizeof(otaStatus.error));
+#else
+    strlcpy(otaStatus.error, httpUpdate.getLastErrorString().c_str(), sizeof(otaStatus.error));
+#endif
 #ifdef DEBUG_ONOFRE
 #ifdef ESP8266
     Log.notice("HTTP_UPDATE_FAILD Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
@@ -98,11 +143,15 @@ void performUpdate()
 #endif
     break;
   case HTTP_UPDATE_NO_UPDATES:
+    otaStatus.state = OtaState::FAILED;
+    strlcpy(otaStatus.error, "O servidor não ofereceu atualização", sizeof(otaStatus.error));
 #ifdef DEBUG_ONOFRE
     Log.notice("HTTP_UPDATE_NO_UPDATES");
 #endif
     break;
   case HTTP_UPDATE_OK:
+    otaStatus.state = OtaState::DONE;
+    otaStatus.percent = 100;
 #ifdef DEBUG_ONOFRE
     Log.notice("HTTP_UPDATE_OK");
 #endif

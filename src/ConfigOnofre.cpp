@@ -847,6 +847,8 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     // the device deliberately refuses to water rather than guess the hour.
     root["clockSynced"] = clockSynced();
     root["clockNow"] = clockNowIso();
+    // So the panel can follow an update it asked for instead of guessing.
+    otaStatusJson(root);
     // Diagnostics for the local panel. Deliberately not sent to the cloud sync,
     // which has no use for them and is posted far more often.
     root["freeHeap"] = ESP.getFreeHeap();

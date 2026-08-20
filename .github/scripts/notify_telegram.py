@@ -42,6 +42,25 @@ def changelog_section(path, version):
     return block
 
 
+TESTERS_HEADING = "### Para testers"
+
+
+def testers_subsection(block):
+    """The channel is read by testers, not by whoever wrote the code, and the
+    changelog is written in English for the repository. A release can therefore
+    carry a short Portuguese section aimed at the channel; when it does, that is
+    the whole message. It is kept in the same file so it cannot drift away from
+    the entry it describes."""
+    out, inside = [], False
+    for line in block:
+        if line.strip().startswith("### "):
+            inside = line.strip() == TESTERS_HEADING
+            continue
+        if inside:
+            out.append(line)
+    return out
+
+
 def bullets_from(block):
     """One entry per '- ' item, joining the lines it wraps onto."""
     items, current = [], None
@@ -93,10 +112,11 @@ def main():
         print("::warning::Telegram secrets are not set — skipping the announcement")
         return 0
 
-    lines = bullets_from(changelog_section(
+    section = changelog_section(
         os.environ.get("CHANGELOG_FILE", "CHANGELOG.md"),
         os.environ.get("CHANGELOG_VERSION", version),
-    ))
+    )
+    lines = bullets_from(testers_subsection(section)) or bullets_from(section)
     if not lines:
         lines = commit_subjects()
     if not lines:
