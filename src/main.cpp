@@ -62,6 +62,30 @@ void logBootBanner()
 
 void checkInternalRoutines()
 {
+  const int requestedTemplateId = config.takeTemplateChangeRequest();
+  if (requestedTemplateId != Template::NO_TEMPLATE)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Applying template: %d" CR, tags::system, requestedTemplateId);
+#endif
+    // On ESP8266 this runs between cooperative feature-loop iterations. On
+    // ESP32 pauseFeatures() also waits for the separate sensor task to leave.
+    config.pauseFeatures();
+    config.templateId = Template::NO_TEMPLATE;
+    if (config.loadTemplate(requestedTemplateId))
+    {
+      config.save();
+      config.requestRestart();
+    }
+    else
+    {
+#ifdef DEBUG_ONOFRE
+      Log.error("%s Template change failed: %d" CR, tags::system, requestedTemplateId);
+#endif
+      config.resumeFeatures();
+    }
+  }
+
   if (config.isCloudIOSyncRequested())
   {
 #ifdef DEBUG_ONOFRE

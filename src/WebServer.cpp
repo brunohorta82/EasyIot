@@ -490,12 +490,24 @@ void loadAPI()
       return;
     }
 
-    templateSelect((Template)templateParam->value().toInt());
-    config.save();
+    String templateValue = templateParam->value();
+    templateValue.trim();
+    const int templateId = templateValue.toInt();
+    if (templateValue != String(templateId) ||
+        templateId < Template::DUAL_LIGHT || templateId > Template::GARDEN)
+    {
+      request->send(errorResponse("Template id is invalid"));
+      return;
+    }
+
+    // The async callback may run while a feature loop is active. Queue the
+    // replacement for the main loop instead of mutating live vectors here.
+    config.requestTemplateChange(templateId);
 
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
-    root["result"] = "Template changed";
+    root["result"] = "Template change queued";
+    response->setCode(202);
     response->setLength();
     request->send(response);
   };

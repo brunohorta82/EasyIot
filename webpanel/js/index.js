@@ -1087,8 +1087,7 @@ function armed(btn, label) {
 async function applyTemplate(v) {
   try {
     await api("/templates/change?t=" + v, { method: "POST" });
-    toast("Predefinição aplicada", "ok");
-    setTimeout(load, 600);
+    toast("Predefinição aceite · a reiniciar", "ok");
   } catch (e) { toast("Não foi possível aplicar", "err"); }
 }
 

@@ -298,10 +298,12 @@ void prepareGarage(String name, unsigned int gateOne, unsigned int gateTwo, unsi
     strlcpy(garage.uniqueId, idStr.c_str(), sizeof(garage.uniqueId));
     config.actuatores.push_back(garage);
 }
-void templateSelect(enum Template _template)
+bool templateSelect(enum Template _template)
 {
     if (config.templateId != Template::NO_TEMPLATE)
-        return;
+        return false;
+    if (_template < Template::NO_TEMPLATE || _template > Template::GARDEN)
+        return false;
 #ifdef DEBUG_ONOFRE
     Log.info("%s Template selected: %d" CR, tags::webserver, _template);
 #endif
@@ -354,7 +356,7 @@ void templateSelect(enum Template _template)
 #endif
         break;
     default:
-        return;
-        break;
+        return false;
     }
+    return true;
 }
