@@ -1389,6 +1389,29 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         for route in ("/irrigation-run", "/irrigation-stop"):
             self.assertIn(f'"{route}"', self.server)
             self.assertIn(f'"{route}"', self.panel)
+
+        # v9.186 keeps slash-path aliases for panels that were already open
+        # during an OTA. They must be registered before the prefix-matching
+        # schedule endpoint and share the same hardened callbacks.
+        schedule = self.server.index(
+            'new AsyncCallbackJsonWebHandler("/irrigation",'
+        )
+        legacy_run = self.server.index(
+            'new AsyncCallbackJsonWebHandler("/irrigation/run", irrigationRunHandler)'
+        )
+        legacy_stop = self.server.index(
+            'server.on("/irrigation/stop", HTTP_POST, irrigationStopHandler)'
+        )
+        self.assertLess(legacy_run, schedule)
+        self.assertLess(legacy_stop, schedule)
+        self.assertIn(
+            'new AsyncCallbackJsonWebHandler("/irrigation-run", irrigationRunHandler)',
+            self.server,
+        )
+        self.assertIn(
+            'server.on("/irrigation-stop", HTTP_POST, irrigationStopHandler)',
+            self.server,
+        )
         self.assertNotIn('"/irrigation/run"', self.panel)
         self.assertNotIn('"/irrigation/stop"', self.panel)
 

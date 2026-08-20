@@ -308,10 +308,12 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             "POST /irrigation": section(
                 self.web, "/*IRRIGATION SCHEDULE*/", "/*FORCE A PROGRAM NOW*/"
             ),
-            "POST /irrigation-run": section(
-                self.web, "/*FORCE A PROGRAM NOW*/", "auto irrigationStopHandler"
+            "POST /irrigation-run and legacy /irrigation/run": block_after(
+                self.web,
+                r"auto\s+irrigationRunHandler\s*=\s*\[\]\s*\(\s*"
+                r"AsyncWebServerRequest\s*\*\s*request",
             ),
-            "POST/GET /irrigation-stop": block_after(
+            "POST/GET /irrigation-stop and legacy /irrigation/stop": block_after(
                 self.web,
                 r"auto\s+irrigationStopHandler\s*=\s*\[\]\s*\(\s*AsyncWebServerRequest\s*\*\s*request",
             ),
