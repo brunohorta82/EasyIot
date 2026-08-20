@@ -211,13 +211,72 @@ void ConfigOnofre::i2cDiscovery()
 }
 ConfigOnofre &ConfigOnofre::pauseFeatures()
 {
+#ifdef ESP32
+  pauseFeaturesLoop.store(true, std::memory_order_release);
+  while (activeFeatureLoops.load(std::memory_order_acquire) != 0)
+    delay(1);
+#else
   pauseFeaturesLoop = true;
+#endif
   return *this;
 }
 ConfigOnofre &ConfigOnofre::resumeFeatures()
 {
+#ifdef ESP32
+  pauseFeaturesLoop.store(false, std::memory_order_release);
+#else
   pauseFeaturesLoop = false;
+#endif
   return *this;
+}
+bool ConfigOnofre::isLoopFeaturesPaused() const
+{
+#ifdef ESP32
+  return pauseFeaturesLoop.load(std::memory_order_acquire);
+#else
+  return pauseFeaturesLoop;
+#endif
+}
+bool ConfigOnofre::beginFeatureLoop()
+{
+#ifdef ESP32
+  if (pauseFeaturesLoop.load(std::memory_order_acquire))
+    return false;
+  activeFeatureLoops.fetch_add(1, std::memory_order_acq_rel);
+  if (pauseFeaturesLoop.load(std::memory_order_acquire))
+  {
+    activeFeatureLoops.fetch_sub(1, std::memory_order_acq_rel);
+    return false;
+  }
+#else
+  if (pauseFeaturesLoop)
+    return false;
+#endif
+  return true;
+}
+void ConfigOnofre::endFeatureLoop()
+{
+#ifdef ESP32
+  activeFeatureLoops.fetch_sub(1, std::memory_order_release);
+#endif
+}
+void ConfigOnofre::requestTemplateChange(int templateId)
+{
+#ifdef ESP32
+  requestedTemplateId.store(templateId, std::memory_order_release);
+#else
+  requestedTemplateId = templateId;
+#endif
+}
+int ConfigOnofre::takeTemplateChangeRequest()
+{
+#ifdef ESP32
+  return requestedTemplateId.exchange(Template::NO_TEMPLATE, std::memory_order_acq_rel);
+#else
+  const int templateId = requestedTemplateId;
+  requestedTemplateId = Template::NO_TEMPLATE;
+  return templateId;
+#endif
 }
 ConfigOnofre &ConfigOnofre::load()
 {
@@ -351,10 +410,12 @@ ConfigOnofre &ConfigOnofre::load()
 #endif
   return *this;
 }
-void ConfigOnofre::loadTemplate(int templateId)
+bool ConfigOnofre::loadTemplate(int templateId)
 {
-  templateSelect((Template)templateId);
+  if (!templateSelect((Template)templateId))
+    return false;
   this->templateId = templateId;
+  return true;
 }
 ConfigOnofre &ConfigOnofre::save()
 {
@@ -963,6 +1024,8 @@ bool ConfigOnofre::isReloadWifiRequested()
 }
 void ConfigOnofre::loopActuators()
 {
+  if (!beginFeatureLoop())
+    return;
   for (auto &sw : actuatores)
   {
     // A valve opened by a program answers to the program's timer, not to its own
@@ -998,6 +1061,7 @@ void ConfigOnofre::loopActuators()
     }
   }
   irrigation.loop();
+  endFeatureLoop();
 }
 void ConfigOnofre::requestRestart()
 {
@@ -1005,10 +1069,13 @@ void ConfigOnofre::requestRestart()
 }
 void ConfigOnofre::loopSensors()
 {
+  if (!beginFeatureLoop())
+    return;
   for (auto &s : sensors)
   {
     s.loop();
   }
+  endFeatureLoop();
 }
 
 bool ConfigOnofre::isRestartRequested()

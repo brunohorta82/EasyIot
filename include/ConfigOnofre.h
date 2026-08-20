@@ -5,6 +5,9 @@
 #include "Actuatores.h"
 #include "Sensors.h"
 #include <vector>
+#ifdef ESP32
+#include <atomic>
+#endif
 #ifdef DEBUG_ONOFRE
 #include <ArduinoLog.h>
 #endif
@@ -66,7 +69,7 @@ public:
 #endif
   bool isSensorExists(int hwAddress);
   void generateId(String &id, const String &name, int familyCode, int io, size_t maxSize);
-  void loadTemplate(int templateId);
+  bool loadTemplate(int templateId);
   void loopActuators();
   void loopSensors();
 
@@ -89,10 +92,10 @@ public:
   void requestLoadDefaults();
   bool isLoadDefaultsRequested();
 
-  constexpr bool isLoopFeaturesPaused()
-  {
-    return pauseFeaturesLoop;
-  }
+  void requestTemplateChange(int templateId);
+  int takeTemplateChangeRequest();
+
+  bool isLoopFeaturesPaused() const;
   bool validPin(unsigned int pin)
   {
     for (auto p : DefaultPins::outputInputPins)
@@ -130,11 +133,20 @@ public:
   void controlFeature(StateOrigin origin, String uniqueId, int state);
 
 private:
+  bool beginFeatureLoop();
+  void endFeatureLoop();
   bool reboot = false;
   bool loadDefaults = false;
   bool autoUpdate = false;
   bool wifiReload = false;
   bool cloudIOSync = false;
   bool wifiScan = false;
+#ifdef ESP32
+  std::atomic<bool> pauseFeaturesLoop{false};
+  std::atomic<unsigned int> activeFeatureLoops{0};
+  std::atomic<int> requestedTemplateId{Template::NO_TEMPLATE};
+#else
   bool pauseFeaturesLoop = false;
+  int requestedTemplateId = Template::NO_TEMPLATE;
+#endif
 };

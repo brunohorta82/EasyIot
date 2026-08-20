@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.182-dev] - 2026-08-20
+
+### Fixed
+- Template changes on already-provisioned devices are now validated, queued for
+  the main loop, saved, and followed by a controlled restart instead of reporting
+  success while leaving the old template active. ESP32 feature readers are
+  quiesced before their vectors are replaced.
+
 ## [9.181] - 2026-08-19
 
 ### Fixed
