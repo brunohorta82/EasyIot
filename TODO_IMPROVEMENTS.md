@@ -26,7 +26,6 @@
 
 1. [ ] Pin PlatformIO platforms to known-good versions (`espressif32@...`, `espressif8266@...`) for reproducible builds. File: `platformio.ini`
 2. [x] Pin GitHub-based `lib_deps` to tags/registry versions (avoid floating `master/main`) — SHT4x pinned to 1.1.2 after upstream renamed a header and broke every Linux build; the remaining git URLs are still unpinned. File: `platformio.ini`
-3. [ ] Add periodic dependency audit task (`pio pkg outdated` + compatibility notes per env).
 
 ## Webpanel UX (P1/P2)
 
@@ -80,6 +79,7 @@
 
 1. [x] Replaced deprecated ArduinoJson `containsKey()` checks in config update path with `isNull()` guards. File: `src/ConfigOnofre.cpp`
 2. [x] Added explicit ESP8266 no-op switch cases for ESP32-only sensor drivers (`TMF882X`, `LD2410`) to remove compiler switch warnings. File: `src/Sensors.cpp`
+3. [x] Added a non-updating PlatformIO dependency audit that checks each configured environment independently and explains `Current`, `Wanted`, `Latest`, and Git dependency limitations. Files: `tools/audit_dependencies.py`, `tools/test_audit_dependencies.py`
 
 ## Process & Release
 
