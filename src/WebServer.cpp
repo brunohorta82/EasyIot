@@ -120,7 +120,14 @@ public:
   {
     return true;
   }
-  bool isRequestHandlerTrivial() override
+  // AsyncWebServer 1.x uses a non-const virtual method, while the newer
+  // ESP32Async API used by Arduino 3.x makes it const. Keep both overloads so
+  // POST form bodies are parsed on every supported framework generation.
+  bool isRequestHandlerTrivial()
+  {
+    return false;
+  }
+  bool isRequestHandlerTrivial() const
   {
     return false;
   }
@@ -251,7 +258,7 @@ public:
       if (isSubmission)
       {
         response->setCode(400);
-        response->print(FPSTR(HTTP_INVALID));
+        response->print(FPSTR(HTTP_CAPTIVE_INVALID));
       }
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);

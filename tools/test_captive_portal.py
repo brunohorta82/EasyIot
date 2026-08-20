@@ -27,7 +27,8 @@ class CaptivePortalTests(unittest.TestCase):
         self.assertIn(
             "const bool isSubmission = request->method() == HTTP_POST;", source
         )
-        self.assertIn("bool isRequestHandlerTrivial() override", source)
+        self.assertIn("bool isRequestHandlerTrivial()", source)
+        self.assertIn("bool isRequestHandlerTrivial() const", source)
         self.assertIn("return false;", source)
         self.assertIn(
             'request->getParam("s", true)',
@@ -48,7 +49,7 @@ class CaptivePortalTests(unittest.TestCase):
 
         self.assertIn('response->addHeader("Cache-Control", "no-store");', source)
         self.assertIn("response->setCode(400);", source)
-        self.assertIn("response->print(FPSTR(HTTP_INVALID));", source)
+        self.assertIn("response->print(FPSTR(HTTP_CAPTIVE_INVALID));", source)
 
 
 if __name__ == "__main__":
