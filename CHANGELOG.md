@@ -2,6 +2,65 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.187-dev] - 2026-08-21
+
+### Changed
+- Development baseline synchronized through upstream release 9.186.
+
+### Fixed
+- **Captive Wi-Fi repair preserves an installed template.** Browsers submit the
+  hidden template field even when a configured device only needs new Wi-Fi
+  details. That field is now ignored in recovery mode, so saving the network
+  no longer fails or replaces the device's existing functions; first setup
+  still validates an explicitly selected template.
+- **Irrigation controls use the released backend routes.** The WebUI now calls
+  `/irrigation-run` and `/irrigation-stop`. The v9.186 slash-path compatibility
+  aliases remain available for already-open panels and use the same protected
+  action handlers.
+- **Automatic OTA no longer mistakes a lost connection for success.** The panel
+  confirms an update from the reported result or a changed firmware version;
+  an unavailable device remains unconfirmed and cannot produce a false green
+  success message.
+- **Live wiring edits are validated before hardware state changes.** `POST
+  /config` validates the proposed final pin map, electrical roles and pin counts,
+  then returns stable result codes for malformed requests, invalid pins, topology
+  mismatches, conflicts and busy state. Changes that require hardware
+  reinitialization make the affected feature inert and queue a controlled restart
+  only after the HTTP response closes.
+- **Sensor drivers now enforce their input topology.** Driver-specific pin counts
+  and roles are checked during configuration, and runtime guards fail closed
+  before malformed sensor input arrays can access a GPIO.
+- **Feature configuration is serialized across execution contexts.** A
+  non-blocking access lease coordinates the feature loops with Web, template,
+  MQTT, irrigation and OTA operations; competing work reports busy or retries
+  instead of racing live vectors and configuration strings.
+- **Failed OTA attempts release their resources.** Manual uploads track ownership
+  per request and abort/release on failure or disconnect. Automatic OTA restarts
+  the Web server after failure or no update, and queues a device restart only
+  after a successful replacement.
+- **Cloud and Wi-Fi callbacks defer shared-state work to the main loop.** Cloud
+  MQTT events and bounded complete commands are staged for main-loop handling,
+  the watchdog ticker only signals pending work, and retained Cloud credentials
+  plus Wi-Fi configuration use protected snapshots or deferred commits.
+- **Unsafe configuration restore is disabled.** The old export omitted secrets,
+  dropped sensors, regenerated actuator IDs and bypassed the new pin preflight.
+  Export now identifies itself as a non-secret diagnostic snapshot until a
+  complete, versioned and server-validated restore format is implemented.
+- **Configuration files keep their previous known-good copy on write failure.**
+  Device and irrigation JSON are written to a size-checked temporary file and
+  then renamed over the target without deleting it first. Configuration,
+  feature-creation, captive-provisioning and irrigation schedule save failures
+  return HTTP 507 and restart into the previous stored configuration instead of
+  reporting an undurable change as successful.
+- **Garden valves cannot reopen from a stored runtime state.** Valve state is
+  forced OFF during setup and serialized as OFF, while the live scheduler and
+  wall button can still operate it after boot.
+- **Replacing an irrigation schedule closes its old active valve first.** The
+  previous code replaced the program list before stopping a running cycle, so a
+  removed or reordered zone could lose its only reference while still open.
+  Malformed whole-schedule payloads are now rejected before changing the active
+  cycle or the in-memory program list.
+
 ## [9.186] - 2026-08-20
 
 ### Fixed
@@ -125,6 +184,12 @@ All notable changes to this project are documented in this file.
   the main loop, saved, and followed by a controlled restart instead of reporting
   success while leaving the old template active. ESP32 feature readers are
   quiesced before their vectors are replaced.
+- Captive-portal credentials are now accepted only from a non-cacheable POST
+  submission, so Wi-Fi passwords no longer appear in the request URL. Invalid
+  submissions return an error without changing the stored configuration. The
+  custom async handler now explicitly parses POST bodies; the full flow was
+  validated on ESP8266 from AP discovery through Wi-Fi reconnection.
+
 ### Changed
 - Added a non-updating dependency audit runner that reports outdated PlatformIO
   packages per configured environment, continues after target-specific failures,
@@ -267,7 +332,6 @@ All notable changes to this project are documented in this file.
 - Not yet exercised on hardware. This is logic that drives relays connected to
   water, so a bench test — five LEDs on the valve pins — should come before it
   reaches a real installation.
-
 ## [9.177] - 2026-08-19
 
 ### Added

@@ -178,8 +178,9 @@ not factory-reset the device as part of a routine rollback.
    application-only `ONOFRE_<MCU>_RELEASE_<VERSION>.bin` as a blank-chip image
    for ESP32-family devices; it does not include the bootloader and partition
    data.
-3. Expect full-flash recovery to be capable of erasing configuration. Once the
-   device is reachable, restore the configuration export made before deployment.
+3. Expect full-flash recovery to be capable of erasing configuration. Re-enter
+   the configuration manually using a separately protected record. The current
+   WebUI export is a non-secret diagnostic snapshot, not a restorable backup.
 4. If rebuilding from source is unavoidable, check out the exact known-good
    commit/tag, select the exact PlatformIO environment, build it, and record the
    binary and checksum used.
