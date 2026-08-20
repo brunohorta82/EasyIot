@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import ast
 import re
 import unittest
 
@@ -14,6 +15,28 @@ WEB_SERVER = ROOT / "src" / "WebServer.cpp"
 
 
 class CaptivePortalTests(unittest.TestCase):
+    def test_base_page_uses_one_small_buffer_and_compact_brand(self) -> None:
+        header = CAPTIVE_HEADER.read_text(encoding="utf-8")
+        server = WEB_SERVER.read_text(encoding="utf-8")
+
+        self.assertIn(
+            'beginResponseStream("text/html", 4096)',
+            server,
+        )
+        self.assertIn("FPSTR(HTTP_CAPTIVE_BODY_START)", server)
+        self.assertNotIn("FPSTR(HTTP_HEADER_END)", server)
+
+        match = re.search(
+            r"const char HTTP_CAPTIVE_BODY_START\[\] PROGMEM =\s*"
+            r"((?:\s*\"(?:[^\"\\]|\\.)*\")+)\s*;",
+            header,
+        )
+        self.assertIsNotNone(match)
+        fragments = re.findall(r'\"(?:[^\"\\]|\\.)*\"', match.group(1))
+        compact_brand = "".join(ast.literal_eval(fragment) for fragment in fragments)
+        self.assertLess(len(compact_brand), 1024)
+        self.assertIn("ONOFRE", compact_brand)
+
     def test_all_captive_forms_submit_credentials_with_post(self) -> None:
         source = CAPTIVE_HEADER.read_text(encoding="utf-8")
         methods = re.findall(r"<form method='([^']+)' action='/'", source)
@@ -50,6 +73,38 @@ class CaptivePortalTests(unittest.TestCase):
         self.assertIn('response->addHeader("Cache-Control", "no-store");', source)
         self.assertIn("response->setCode(400);", source)
         self.assertIn("response->print(FPSTR(HTTP_CAPTIVE_INVALID));", source)
+
+    def test_wifi_repair_preserves_an_existing_template(self) -> None:
+        source = WEB_SERVER.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "if (config.templateId == Template::NO_TEMPLATE)",
+            source,
+        )
+        self.assertIn("invalidTemplate = templateParam == nullptr;", source)
+        self.assertIn("templateValue != String(templateId)", source)
+        self.assertIn("!isCaptiveTemplateAllowed(templateId)", source)
+        self.assertIn("!config.loadTemplate(templateId)", source)
+
+    def test_captive_template_whitelist_excludes_han_only_choice(self) -> None:
+        source = WEB_SERVER.read_text(encoding="utf-8")
+        helper = re.search(
+            r"bool isCaptiveTemplateAllowed\(int templateId\)\s*\{(.*?)\n\}",
+            source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(helper)
+        body = helper.group(1)
+        for template in (
+            "NO_TEMPLATE",
+            "DUAL_LIGHT",
+            "DUAL_SWITCH",
+            "COVER",
+            "GARAGE",
+            "GARDEN",
+        ):
+            self.assertIn(f"case Template::{template}:", body)
+        self.assertNotIn("case Template::HAN_MODULE:", body)
 
 
 if __name__ == "__main__":
