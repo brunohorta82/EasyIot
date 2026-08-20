@@ -494,6 +494,45 @@ void loadAPI()
     response->setLength();
     request->send(response); }));
 
+  auto irrigationStopHandler = [](AsyncWebServerRequest *request)
+  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    irrigation.stop();
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    irrigation.jsonBody(root);
+    response->setLength();
+    request->send(response);
+  };
+
+  /* A firmware update does not reload an open browser tab, so a device on a new
+     build is routinely driven by the previous panel. Those panels call
+     /irrigation/run and /irrigation/stop, which the schedule handler below would
+     otherwise claim — deleting every program on a run and failing on a stop. The
+     old paths are therefore registered here, ahead of it, pointing at the right
+     code. Order is the mechanism: the server takes the first handler that accepts
+     the request. */
+  server.on("/irrigation/stop", HTTP_POST, irrigationStopHandler);
+  server.on("/irrigation/stop", HTTP_GET, irrigationStopHandler);
+  server
+      .addHandler(new AsyncCallbackJsonWebHandler("/irrigation/run", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                  {
+#if WEB_SECURE_ON
+    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
+      return request->requestAuthentication(REALM);
+#endif
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    const bool started = irrigation.runProgram((uint8_t)(json["programId"] | 0));
+    irrigation.jsonBody(root);
+    if (!started)
+      response->setCode(404);
+    response->setLength();
+    request->send(response); }));
+
   /*IRRIGATION SCHEDULE*/
   server
       // The two actions live outside this path on purpose. AsyncWebServer matches a
@@ -536,19 +575,6 @@ void loadAPI()
     response->setLength();
     request->send(response); }));
 
-  auto irrigationStopHandler = [](AsyncWebServerRequest *request)
-  {
-#if WEB_SECURE_ON
-    if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
-      return request->requestAuthentication(REALM);
-#endif
-    irrigation.stop();
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    JsonVariant &root = response->getRoot();
-    irrigation.jsonBody(root);
-    response->setLength();
-    request->send(response);
-  };
 
   auto rebootHandler = [](AsyncWebServerRequest *request)
   {

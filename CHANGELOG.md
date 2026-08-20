@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.186] - 2026-08-20
+
+### Fixed
+- **The 9.184 fix did not reach anyone with the panel already open.** Renaming the
+  action endpoints only helps a browser that reloaded the page: a firmware update
+  does not reload an open tab, so a device on the new build was still being driven
+  by the previous panel, calling `/irrigation/run` and `/irrigation/stop` — which
+  the schedule handler kept claiming, deleting programs on a run and failing on a
+  stop, exactly as before. Both old paths are now registered ahead of it and point
+  at the right code. Verified in the simulator: all four paths answer 200, keep the
+  programs, and stop clears the cycle.
+
+### Para testers
+- **O "Parar rega" e o "Regar agora" já funcionam mesmo sem recarregar a página.**
+  Na 9.184 a correção só valia depois de recarregar o painel, e um separador aberto
+  continuava a usar o antigo.
+- Se ainda tiveres o painel aberto de antes, um recarregamento normal (F5) não faz
+  mal, mas já não é obrigatório.
+
 ## [9.185] - 2026-08-20
 
 ### Added
