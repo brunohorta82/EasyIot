@@ -240,7 +240,11 @@ void Actuator::setup()
       writeToPIN(output, state);
     }
   }
-  if (isLight() || isSwitch())
+  // Garden valves belong here too: the GARDEN template gives every valve a button
+  // and the panel prints its pin, so leaving them out of this block promised a
+  // wall switch that did nothing. Only the output side included them, which is why
+  // commanding a valve worked while pressing its button did not.
+  if (isLight() || isSwitch() || isGardenValve())
   {
     for (auto input : inputs)
     {
@@ -251,6 +255,11 @@ void Actuator::setup()
       {
       case ActuatorDriver::LIGHT_PUSH:
       case ActuatorDriver::SWITCH_PUSH:
+        button.setPressedHandler(toogle);
+        break;
+      // A momentary button is what an irrigation box is wired with, and it matches
+      // the PUSH that driverToInputMode() already reports for this driver.
+      case ActuatorDriver::GARDEN_VALVE:
         button.setPressedHandler(toogle);
         break;
       case ActuatorDriver::LIGHT_LATCH:

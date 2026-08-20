@@ -2,6 +2,28 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.183] - 2026-08-20
+
+### Fixed
+- **A valve's wall button did nothing.** `Actuator::setup()` attaches button
+  handlers under `if (isLight() || isSwitch())`, and a garden valve is neither —
+  while the block right above it, which drives the output, does include valves. So
+  commanding a valve worked and pressing its button did not, on a board whose
+  template gives every valve a button and whose panel prints its pin. Valves now
+  take a momentary press to toggle, matching the PUSH that `driverToInputMode()`
+  already reported for the driver.
+
+### Notes
+- Two reports from the test group are still open and are not fixed here: "Regar
+  agora" and "Parar rega" doing nothing. Renaming a feature on the same board
+  worked, which proves authenticated JSON POSTs reach the device, so the fault is
+  in the command path rather than the web server. Waiting on the HTTP status of a
+  failing request to tell those apart.
+- A rain sensor with nothing wired to it reads as raining (the input is pulled up
+  and an open input is HIGH), and "skip the cycle when it rains" is on by default —
+  so scheduled programs are skipped silently. Turn that option off while testing on
+  a bench.
+
 ## [9.182] - 2026-08-20
 
 ### Fixed
