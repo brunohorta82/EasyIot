@@ -61,6 +61,17 @@ All notable changes to this project are documented in this file.
   Malformed whole-schedule payloads are now rejected before changing the active
   cycle or the in-memory program list.
 
+### Validation
+- Flashed the pre-v9.186-rebase `ESP8266_DEBUG` 9.186-dev build to the
+  USB-powered test board and completed configured-device captive Wi-Fi repair.
+  The POST was stored, the response was followed by a software restart, and the
+  device returned to station mode.
+- The WebUI retained both existing switch functions and their original pin map;
+  Cloud connectivity recovered and both test switches operated ON and OFF.
+- The rebased 9.187-dev head, live pin remapping, OTA recovery, ESP32 hardware,
+  and C6 hardware remain open validation items and are not claimed by this bench
+  test.
+
 ## [9.186] - 2026-08-20
 
 ### Fixed
