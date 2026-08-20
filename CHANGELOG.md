@@ -9,6 +9,10 @@ All notable changes to this project are documented in this file.
   the main loop, saved, and followed by a controlled restart instead of reporting
   success while leaving the old template active. ESP32 feature readers are
   quiesced before their vectors are replaced.
+### Changed
+- Added a non-updating dependency audit runner that reports outdated PlatformIO
+  packages per configured environment, continues after target-specific failures,
+  and documents why available updates still require build and hardware validation.
 
 ## [9.181] - 2026-08-19
 

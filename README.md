@@ -53,6 +53,12 @@ Para incluir uma compilação da configuração atual:
 Consulte [docs/RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md#project-checks)
 para a matriz completa e os detalhes de cada verificação.
 
+Para consultar atualizações disponíveis sem alterar `platformio.ini` nem
+atualizar dependências automaticamente:
+
+- `python3 tools/audit_dependencies.py`
+- apenas um ambiente: `python3 tools/audit_dependencies.py --env ESP8266_DEBUG`
+
 ## Binários locais de firmware
 
 Depois de compilar com PlatformIO, `tools/export_firmware.py` pode guardar o

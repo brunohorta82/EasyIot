@@ -68,6 +68,32 @@ metadata, generated web-header parity, conflict markers, and whitespace. Web
 asset parity is checked in a temporary directory, so the command does not
 rewrite working-tree headers.
 
+## Dependency Audit
+
+Run the periodic dependency audit across every configured PlatformIO
+environment:
+
+- `python3 tools/audit_dependencies.py`
+
+Audit only selected environments when investigating a specific target:
+
+- `python3 tools/audit_dependencies.py --env ESP8266_DEBUG`
+- `python3 tools/audit_dependencies.py --env ESP8266_DEBUG --env ESP32_DEBUG`
+
+The runner executes `pio pkg outdated` independently for each environment, so a
+broken platform does not hide the results for other targets. It reports
+`Current`, `Wanted`, and `Latest` versions but never edits `platformio.ini` or
+updates declared packages. PlatformIO may still refresh its own registry cache
+or prepare an environment while inspecting it. The runner exits nonzero if any
+environment could not be audited, while still printing results for the remaining
+environments.
+
+Treat the output as an investigation list, not an upgrade recommendation.
+`Wanted` follows the current declaration; `Latest` may be incompatible, and Git
+dependencies may point at a moving branch. Upgrade one dependency family at a
+time, then run the relevant build matrix and hardware checks before changing a
+pin.
+
 ## Local Wi-Fi Override
 
 1. Copy `platformio_override.example.ini` to `platformio_override.ini`.
