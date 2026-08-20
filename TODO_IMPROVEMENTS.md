@@ -37,7 +37,6 @@
 
 1. [x] CI build checks for main envs — `.github/workflows/firmware-ota.yml` builds all four release envs (ESP8266, ESP8266-HAN, ESP32, ESP32-MAKER-4MB) and publishes them to the OTA folder on tag/dispatch.
 2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
-3. [ ] Add quick rollback notes for failed release/update.
 
 #
 
@@ -87,6 +86,7 @@
 2. [x] Added branch naming convention for external CP branches. File: `docs/RELEASE_WORKFLOW.md`
 3. [x] Added release checklist document in repo docs. File: `docs/RELEASE_WORKFLOW.md`
 4. [x] Added script to generate release notes draft from commits. File: `tools/generate_release_notes.sh`
+5. [x] Added an exact-variant rollback playbook for WebUI OTA recovery, full-flash recovery, configuration restore, containment, and post-rollback verification. File: `docs/RELEASE_WORKFLOW.md`
 
 ## Security & API
 

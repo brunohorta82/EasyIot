@@ -113,6 +113,66 @@ tool refuses to overwrite it with different bytes or metadata. Every export has
 `BUILD_INFO.txt` and `SHA256SUMS.txt`. The ignored local directory is not an
 off-machine backup; archive important known-good firmware separately.
 
+## Quick Rollback
+
+A rollback installs a previously hardware-tested build for the exact device
+variant. Do not choose a binary from the MCU family alone: standard, HAN, and
+other board profiles can use different firmware and partition layouts.
+
+### Prepare Before Deployment
+
+1. In the WebUI, open **System -> Access & Backup** and export the device
+   configuration.
+2. Verify the candidate that passed hardware testing:
+   - `python3 tools/export_firmware.py verify --export-dir firmware_bins/candidate/debug/ESP8266_DEBUG --expected-env ESP8266_DEBUG`
+3. Promote that exact candidate to the immutable local known-good area:
+   - `python3 tools/export_firmware.py promote --candidate-dir firmware_bins/candidate/debug/ESP8266_DEBUG --hardware-tested-date today`
+4. Archive the known-good binary, `BUILD_INFO.txt`, and `SHA256SUMS.txt` outside
+   the ignored local `firmware_bins/` directory.
+
+### Device WebUI Is Reachable
+
+1. Identify the current board/variant and select the matching previous
+   application binary. A local known-good export can be checked again with:
+   - `python3 tools/export_firmware.py verify --export-dir firmware_bins/known-good/<ENV>/v<VERSION> --expected-env <ENV>`
+2. Open **System -> Firmware**, choose that `.bin`, and send it to the device.
+3. Keep the device powered until the upload completes and it restarts.
+4. Reopen the WebUI and verify the displayed firmware version, Wi-Fi, CloudIO or
+   MQTT connection, and basic actuator/sensor operation.
+
+This application-only OTA path normally preserves the stored configuration. Do
+not factory-reset the device as part of a routine rollback.
+
+### Device WebUI Is Unreachable or It Boot-Loops
+
+1. Use the matching full-flash `ONOFRE_<MCU>_WEBFLASH_<VERSION>.bin` artifact
+   through the browser installer at `/flash/`, or use the same artifact from the
+   CI run that built the release.
+2. Prefer a published, hardware-tested full-flash image. Do not use an
+   application-only `ONOFRE_<MCU>_RELEASE_<VERSION>.bin` as a blank-chip image
+   for ESP32-family devices; it does not include the bootloader and partition
+   data.
+3. Expect full-flash recovery to be capable of erasing configuration. Once the
+   device is reachable, restore the configuration export made before deployment.
+4. If rebuilding from source is unavoidable, check out the exact known-good
+   commit/tag, select the exact PlatformIO environment, build it, and record the
+   binary and checksum used.
+
+Do not copy raw flash offsets between ESP8266, ESP32, and ESP32-C6 recovery
+commands. Their complete images and layouts differ. If the device cannot enter
+its serial bootloader, physical access to its boot/reset controls and a working
+USB data connection is required; WebUI recovery is no longer possible.
+
+### Contain and Verify the Rollback
+
+1. The release owner should stop offering the faulty artifact before rolling
+   devices back, so an automatic update cannot immediately reinstall it.
+2. Record the affected variant, failed version, observed failure, rollback
+   version, binary checksum, and configuration-restoration result.
+3. Treat the rollback as complete only after restart, reconnect, control, and
+   relevant sensor checks pass on the real device.
+4. Correct and revalidate the release before publishing it again.
+
 ## Practical Notes
 
 - Prefer one CP per logical scope (security, webpanel, docs, etc.).
