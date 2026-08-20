@@ -120,6 +120,17 @@ public:
   {
     return true;
   }
+  // AsyncWebServer 1.x uses a non-const virtual method, while the newer
+  // ESP32Async API used by Arduino 3.x makes it const. Keep both overloads so
+  // POST form bodies are parsed on every supported framework generation.
+  bool isRequestHandlerTrivial()
+  {
+    return false;
+  }
+  bool isRequestHandlerTrivial() const
+  {
+    return false;
+  }
   void restart()
   {
     config.requestRestart();
@@ -128,33 +139,45 @@ public:
   {
 
     AsyncResponseStream *response = request->beginResponseStream("text/html");
+    response->addHeader("Cache-Control", "no-store");
     bool store = false;
+    const bool isSubmission = request->method() == HTTP_POST;
+    const AsyncWebParameter *ssidParam = isSubmission ? request->getParam("s", true) : nullptr;
+    const AsyncWebParameter *nameParam = isSubmission ? request->getParam("i", true) : nullptr;
+    const AsyncWebParameter *passwordParam = isSubmission ? request->getParam("p", true) : nullptr;
+    const AsyncWebParameter *templateParam = isSubmission ? request->getParam("t", true) : nullptr;
+#ifdef DEBUG_ONOFRE
+    if (isSubmission)
+    {
+      Log.notice("[CAPTIVE] POST fields: wifi=%d name=%d password=%d template=%d" CR,
+                 ssidParam != nullptr, nameParam != nullptr,
+                 passwordParam != nullptr, templateParam != nullptr);
+    }
+#endif
     response->print(FPSTR(HTTP_HEADER));
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
+    if (ssidParam != nullptr && nameParam != nullptr &&
+        ssidParam->value().length() > 0 && nameParam->value().length() > 0)
     {
       String n_name = config.chipId;
-      if (request->hasArg("i"))
-      {
-        n_name = String(request->arg("i"));
-        normalize(n_name);
-        if (n_name.isEmpty())
-          n_name = config.chipId;
-      }
+      n_name = nameParam->value();
+      normalize(n_name);
+      if (n_name.isEmpty())
+        n_name = config.chipId;
 
       strlcpy(config.nodeId, n_name.c_str(), sizeof(config.nodeId));
-      strlcpy(config.wifiSSID, request->arg("s").c_str(), sizeof(config.wifiSSID));
-      if (request->hasArg("t"))
+      strlcpy(config.wifiSSID, ssidParam->value().c_str(), sizeof(config.wifiSSID));
+      if (templateParam != nullptr)
       {
         config.pauseFeatures();
-        config.loadTemplate(request->arg("t").toInt());
+        config.loadTemplate(templateParam->value().toInt());
       }
 
-      if (request->hasArg("p"))
+      if (passwordParam != nullptr)
       {
-        strlcpy(config.wifiSecret, request->arg("p").c_str(), sizeof(config.wifiSecret));
+        strlcpy(config.wifiSecret, passwordParam->value().c_str(), sizeof(config.wifiSecret));
       }
       else
       {
@@ -164,11 +187,10 @@ public:
       storedR.replace("{o}", String("http://" + String(config.nodeId) + ".local").c_str());
       response->print(storedR.c_str());
       response->print(FPSTR(HTTP_END));
-      request->send(response);
       store = true;
     }
 
-    if (request->hasArg("sc"))
+    if (!isSubmission && request->hasArg("sc"))
     {
       int n = WiFi.scanComplete();
       if (n == -2)
@@ -233,6 +255,11 @@ public:
     }
     if (!store)
     {
+      if (isSubmission)
+      {
+        response->setCode(400);
+        response->print(FPSTR(HTTP_CAPTIVE_INVALID));
+      }
       String form = FPSTR(HTTP_FORM_START);
       form.replace("{n}", config.nodeId);
       if (config.templateId == 0)
@@ -241,8 +268,8 @@ public:
       }
       response->print(form);
       response->print(FPSTR(HTTP_END));
-      request->send(response);
     }
+    request->send(response);
     if (store)
     {
       config.save().requestRestart();
