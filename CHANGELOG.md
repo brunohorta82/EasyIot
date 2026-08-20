@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.184] - 2026-08-20
+
+### Fixed
+- **"Regar agora" was deleting every program, and "Parar rega" always failed.**
+  AsyncWebServer matches a plain URI as "exact, or prefix with a trailing slash",
+  and the handler for `/irrigation` — the one that replaces the whole schedule — is
+  registered before the actions, so it answered `/irrigation/run` and
+  `/irrigation/stop` as well. A run request carries no `programs` key, so the
+  schedule parsed as empty and was written to flash that way; a stop request
+  carries no body at all, which is why the panel reported a failure. The actions
+  moved to `/irrigation-run` and `/irrigation-stop`, which cannot be a prefix of
+  the schedule path. Reproduced and verified both ways against the simulator.
+- This also corrects the diagnosis behind the 9.182 note that said "Regar agora"
+  merely *looked* like it deleted a program. It was deleting it, on the device.
+
+### Notes
+- The panel is embedded in the firmware, so both sides move together; nothing else
+  called these endpoints yet.
+
 ## [9.183] - 2026-08-20
 
 ### Fixed

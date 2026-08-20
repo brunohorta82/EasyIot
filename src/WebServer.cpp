@@ -447,6 +447,12 @@ void loadAPI()
 
   /*IRRIGATION SCHEDULE*/
   server
+      // The two actions live outside this path on purpose. AsyncWebServer matches a
+      // plain URI as "exact, or prefix with a trailing slash", and this handler is
+      // registered first, so it was answering the action requests as if they were
+      // schedule replacements. A run request carries no "programs" key, so the
+      // schedule parsed as empty and was saved that way: pressing "Regar agora"
+      // deleted every program, and stopping answered an error.
       .addHandler(new AsyncCallbackJsonWebHandler("/irrigation", [](AsyncWebServerRequest *request, JsonVariant json)
                                                   {
 #if WEB_SECURE_ON
@@ -466,7 +472,7 @@ void loadAPI()
 
   /*FORCE A PROGRAM NOW*/
   server
-      .addHandler(new AsyncCallbackJsonWebHandler("/irrigation/run", [](AsyncWebServerRequest *request, JsonVariant json)
+      .addHandler(new AsyncCallbackJsonWebHandler("/irrigation-run", [](AsyncWebServerRequest *request, JsonVariant json)
                                                   {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
@@ -569,8 +575,8 @@ void loadAPI()
   server.on("/reboot", HTTP_GET, rebootHandler);
   // GET as well as POST: stopping the watering is the one thing someone may need
   // to do from a phone browser bar, with a wet lawn and no app.
-  server.on("/irrigation/stop", HTTP_POST, irrigationStopHandler);
-  server.on("/irrigation/stop", HTTP_GET, irrigationStopHandler);
+  server.on("/irrigation-stop", HTTP_POST, irrigationStopHandler);
+  server.on("/irrigation-stop", HTTP_GET, irrigationStopHandler);
 
   server.on("/templates/change", HTTP_POST, templateChangeHandler);
   server.on("/templates/change", HTTP_GET, templateChangeHandler);
