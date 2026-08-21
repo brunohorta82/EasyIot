@@ -260,7 +260,10 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   </div>
 </div></div>
 
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true">
+  <span id="toast-msg"></span>
+  <button id="toast-close" type="button" aria-label="Fechar notificação">&times;</button>
+</div>
 <script src="js/index.js?v=__ASSET_VERSION__"></script>
 </body>
 </html>
