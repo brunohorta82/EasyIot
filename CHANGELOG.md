@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [9.188-dev] - 2026-08-21
+## [9.188] - 2026-08-21
 
 ### Changed
 - Development baseline synchronized through upstream release 9.187.
@@ -32,6 +32,16 @@ All notable changes to this project are documented in this file.
 - One earlier uncaptured C6 stress run ended in a task-watchdog reset. It did not
   recur during the recorded two-tab run, but its task/backtrace was lost and the
   cause remains unconfirmed.
+
+### Para testers
+- **No OnOfre Rega, os pinos 6 e 7 deixaram de estar disponíveis** — são do barramento
+  fixo e usá-los partia o equipamento. Configurações antigas que os usassem são
+  recusadas.
+- **O painel deixou de dar erros esporádicos** ao gravar ou comandar com dois
+  separadores abertos.
+- A password do painel só passa a valer depois de reiniciar, e o equipamento reinicia
+  sozinho quando a mudas.
+
 
 ## [9.187] - 2026-08-21
 

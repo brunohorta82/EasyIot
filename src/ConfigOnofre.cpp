@@ -488,8 +488,13 @@ ConfigOnofre &ConfigOnofre::load()
         storedPinsValid = storedPinsValid && validInputPin(input);
       if (!storedPinsValid)
       {
+        // Guarded like every other log here: a release build has no ArduinoLog,
+        // so an unguarded call breaks the four release targets while the debug
+        // ones keep compiling.
+#ifdef DEBUG_ONOFRE
         Log.error("%s Stored actuator has an invalid pin mapping; leaving it inactive." CR,
                   tags::config);
+#endif
         continue;
       }
 
