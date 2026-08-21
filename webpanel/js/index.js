@@ -317,15 +317,27 @@ function followUpdate() {
   const startingVersion = String(config.firmware || "");
   const deadline = Date.now() + 180000;
   bar.classList.remove("hide");
+  bar.classList.add("indeterminate");
+  bar.removeAttribute("aria-valuenow");
+  bar.setAttribute("aria-valuetext", "A descarregar e instalar");
   fill.style.width = "0";
   msg.className = "note";
-  msg.textContent = "A atualizar — não desligues o equipamento.";
+  msg.textContent = "A descarregar e instalar — o painel ficará temporariamente indisponível. Não desligues o equipamento.";
   $("a-update").disabled = true;
 
   let finished = false;
+  const setProgress = (percent) => {
+    const value = Math.max(0, Math.min(100, Number(percent) || 0));
+    bar.classList.remove("indeterminate");
+    fill.style.width = value + "%";
+    bar.setAttribute("aria-valuenow", String(value));
+    bar.setAttribute("aria-valuetext", value + "%");
+  };
   const finish = (ok, text, percent) => {
     finished = true;
-    if (percent != null) fill.style.width = percent + "%";
+    bar.classList.remove("indeterminate");
+    if (percent != null) setProgress(percent);
+    else bar.setAttribute("aria-valuetext", text);
     msg.className = ok ? "note ok" : "note err";
     msg.textContent = text;
     $("a-update").disabled = false;
@@ -335,7 +347,9 @@ function followUpdate() {
     if (finished) return;
     let snapshot;
     try {
-      snapshot = await api("/config");
+      // Safari may otherwise reuse the pre-reboot snapshot and leave the bar
+      // waiting at the end even though the new firmware is already online.
+      snapshot = await api("/config?otaPoll=" + Date.now(), { cache: "no-store" });
     } catch (e) {
       if (Date.now() >= deadline) {
         finish(false, "Não foi possível confirmar o resultado. Volta a abrir a página e verifica a versão instalada.");
@@ -357,8 +371,9 @@ function followUpdate() {
         setTimeout(poll, 1500);
       return;
     }
-    fill.style.width = (ota.percent || 0) + "%";
+    if (ota.state === "running" && ota.percent > 0) setProgress(ota.percent);
     if (ota.state === "failed") {
+      if (ota.percent > 0) setProgress(ota.percent);
       finish(false, "A atualização falhou: " + (ota.error || "sem detalhe do equipamento"));
     } else if (ota.state === "done") {
       finish(true, "Gravado. A reiniciar…", 100);
