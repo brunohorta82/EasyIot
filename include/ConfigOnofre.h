@@ -215,6 +215,7 @@ public:
   void controlFeature(StateOrigin origin, String uniqueId, int state);
 
 private:
+  bool tryBeginFeatureLoopAccess();
   bool tryBeginConfigUpdate();
   void endConfigUpdate();
 #ifdef ESP32
@@ -231,6 +232,10 @@ private:
   // live feature vectors. Callers must fail fast instead of waiting while an
   // AsyncTCP/MQTT callback or another task owns it.
   std::atomic<bool> featureAccessInProgress{false};
+  // A failed foreground acquisition asks periodic feature loops to step aside
+  // for a bounded handoff window. The deadline cannot latch the loops off when
+  // a caller reports BUSY but does not retry.
+  std::atomic<uint32_t> featureAccessYieldUntilMs{0};
   std::atomic<int> requestedTemplateId{Template::NO_TEMPLATE};
 #else
   // ESP8266 callbacks run cooperatively; plain flags avoid unsupported atomic
@@ -245,6 +250,7 @@ private:
   // ESP8266 runs cooperatively. Never wait or yield for this lease: nested or
   // competing access is rejected and retried by the top-level caller.
   bool featureAccessInProgress = false;
+  uint32_t featureAccessYieldUntilMs = 0;
   int requestedTemplateId = Template::NO_TEMPLATE;
 #endif
 };

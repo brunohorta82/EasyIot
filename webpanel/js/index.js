@@ -446,8 +446,17 @@ function rssiText(dbm) {
 function rssiClass(dbm) { return dbm == null ? "" : dbm >= -70 ? "ok" : dbm >= -80 ? "warn" : "bad"; }
 
 async function api(path, opts) {
-  const res = await fetch(baseUrl + path, Object.assign(
-    { headers: { "Content-Type": "application/json", "Accept": "application/json" } }, opts || {}));
+  let res;
+  const busyDeadline = Date.now() + 2000;
+  for (;;) {
+    res = await fetch(baseUrl + path, Object.assign(
+      { headers: { "Content-Type": "application/json", "Accept": "application/json" } }, opts || {}));
+    if (res.status !== 409 || Date.now() >= busyDeadline) break;
+    // A failed acquisition reserves the next lease for foreground work. Retry
+    // beyond the 100 ms handoff window so a long-running current owner can
+    // finish without making a transient feature-loop collision user-visible.
+    await new Promise(resolve => setTimeout(resolve, 120));
+  }
   const txt = await res.text();
   let body = null;
   try { body = txt ? JSON.parse(txt) : null; } catch (e) { /* not JSON */ }

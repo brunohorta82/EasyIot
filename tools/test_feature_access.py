@@ -184,8 +184,16 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             r"std::atomic<bool>\s+featureAccessInProgress\s*\{\s*false\s*\}\s*;",
         )
         self.assertRegex(
+            esp32_field,
+            r"std::atomic<uint32_t>\s+featureAccessYieldUntilMs\s*\{\s*0\s*\}\s*;",
+        )
+        self.assertRegex(
             esp8266_field,
             r"bool\s+featureAccessInProgress\s*(?:=\s*false|\{\s*false\s*\})\s*;",
+        )
+        self.assertRegex(
+            esp8266_field,
+            r"uint32_t\s+featureAccessYieldUntilMs\s*=\s*0\s*;",
         )
         self.assertNotIn("std::atomic", esp8266_field)
 
@@ -200,9 +208,13 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         self.assertIn("true", begin_esp32)
         self.assertIn("return false;", begin_esp32)
         self.assertNotRegex(begin_esp32, r"\b(?:while|delay|yield)\s*\(")
-        self.assertRegex(
+        self.assertOrdered(
             begin_esp8266,
-            r"if\s*\(\s*featureAccessInProgress\s*\)\s*return\s+false\s*;",
+            "if (featureAccessInProgress)",
+            "featureAccessYieldUntilMs = millis() + kFeatureAccessYieldMs;",
+            "return false;",
+            "featureAccessInProgress = true;",
+            "featureAccessYieldUntilMs = 0;",
         )
         self.assertIn("featureAccessInProgress = true;", begin_esp8266)
         self.assertNotRegex(begin_esp8266, r"\b(?:while|delay|yield)\s*\(")
@@ -254,7 +266,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
                 rf"void\s+ConfigOnofre::{function_name}\s*\(\s*\)",
             )
             busy_pattern = (
-                r"if\s*\(\s*!\s*tryBeginFeatureAccess\s*\(\s*\)\s*\)"
+                r"if\s*\(\s*!\s*tryBeginFeatureLoopAccess\s*\(\s*\)\s*\)"
             )
             busy = block_after(loop, busy_pattern)
             self.assertIn("return;", busy)
@@ -277,7 +289,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
                 loop.rstrip().endswith("endFeatureAccess();"),
                 f"{function_name} must release after its normal path",
             )
-            self.assertEqual(loop.count("tryBeginFeatureAccess()"), 1)
+            self.assertEqual(loop.count("tryBeginFeatureLoopAccess()"), 1)
             self.assertGreaterEqual(
                 loop.count("endFeatureAccess();"),
                 len(list(re.finditer(r"\breturn\s*;", after_busy))) + 1,
@@ -331,20 +343,14 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         self.assertNotIn("tryBeginFeatureAccess", save_config)
         self.assertNotIn("endFeatureAccess", save_config)
 
-    def test_web_authentication_uses_a_protected_credential_snapshot(self) -> None:
+    def test_web_authentication_uses_an_immutable_boot_snapshot(self) -> None:
         authorize = block_after(
             self.web,
             r"bool\s+authorizeRequest\s*\(\s*AsyncWebServerRequest\s*\*\s*request",
         )
-        self.assertEqual(authorize.count("config.tryBeginFeatureAccess()"), 1)
-        self.assertEqual(authorize.count("config.endFeatureAccess();"), 1)
-        self.assertOrdered(
-            authorize,
-            "config.tryBeginFeatureAccess()",
-            "config.apiUser",
-            "config.apiPassword",
-            "config.endFeatureAccess();",
-            "request->authenticate(user, password, REALM)",
+        self.assertNotIn("tryBeginFeatureAccess", authorize)
+        self.assertIn(
+            "request->authenticate(webApiUser, webApiPassword, REALM)", authorize
         )
         self.assertIn("if (sendFailure)", authorize)
         self.assertNotRegex(
@@ -353,8 +359,56 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             "async handlers must not read mutable credentials directly",
         )
 
+        initialize = block_after(
+            self.web, r"void\s+initializeWebAuthCredentials\s*\(\s*\)"
+        )
+        self.assertOrdered(
+            initialize,
+            "config.apiUser",
+            "config.apiPassword",
+        )
+        setup = block_after(self.main, r"void\s+setup\s*\(\s*\)")
+        self.assertOrdered(
+            setup,
+            "config.load();",
+            "initializeWebAuthCredentials();",
+            "setupWiFi();",
+        )
+        update = block_after(
+            self.config,
+            r"ConfigUpdateResult\s+ConfigOnofre::update\s*\(",
+        )
+        self.assertIn("apiCredentialsChanged", update)
+        self.assertIn("networkChanged || apiCredentialsChanged", update)
+
         manual_state = block_after(self.web, r"struct\s+ManualUpdateState")
         self.assertIn("authenticated", manual_state)
+
+    def test_foreground_waiter_makes_periodic_loops_step_aside(self) -> None:
+        foreground = block_after(
+            self.config, r"bool\s+ConfigOnofre::tryBeginFeatureAccess\s*\(\s*\)"
+        )
+        periodic = block_after(
+            self.config,
+            r"bool\s+ConfigOnofre::tryBeginFeatureLoopAccess\s*\(\s*\)",
+        )
+        self.assertIn("featureAccessYieldUntilMs", foreground)
+        self.assertIn("featureAccessYieldUntilMs", periodic)
+        self.assertIn("kFeatureAccessYieldMs", foreground)
+        self.assertIn("featureAccessYieldActive", periodic)
+        self.assertIn("compare_exchange_strong", periodic)
+        self.assertOrdered(
+            periodic,
+            "featureAccessYieldUntilMs.load(std::memory_order_acquire)",
+            "compare_exchange_strong",
+            "featureAccessYieldUntilMs.load(std::memory_order_acquire)",
+            "featureAccessInProgress.store(false, std::memory_order_release)",
+        )
+        helper = block_after(
+            self.config, r"static\s+bool\s+featureAccessYieldActive\s*\("
+        )
+        self.assertIn("deadline != 0", helper)
+        self.assertIn("static_cast<int32_t>(deadline - millis()) > 0", helper)
 
     def test_manual_ota_owns_one_lease_for_the_upload_lifetime(self) -> None:
         state = block_after(self.web, r"struct\s+ManualUpdateState")

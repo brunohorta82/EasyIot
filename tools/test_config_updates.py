@@ -192,10 +192,17 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn(
             "std::atomic<bool> featureAccessInProgress{false};", esp32
         )
+        self.assertIn(
+            "std::atomic<uint32_t> featureAccessYieldUntilMs{0};", esp32
+        )
         self.assertNotIn("std::atomic", esp8266)
         self.assertRegex(
             esp8266,
             r"bool\s+featureAccessInProgress\s*(?:=\s*false|\{false\})\s*;",
+        )
+        self.assertRegex(
+            esp8266,
+            r"uint32_t\s+featureAccessYieldUntilMs\s*=\s*0\s*;",
         )
 
     def test_pin_capabilities_are_role_aware_and_portable(self) -> None:
@@ -229,6 +236,31 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         ]
         self.assertIn("intputOnlyPins[] = {34, 35, 36, 37, 38}", classic_esp32)
         self.assertNotIn("intputOnlyPins", esp32c6)
+        c6_pins = re.search(
+            r"outputInputPins\[\]\s*=\s*\{([^}]*)\}", esp32c6
+        )
+        self.assertIsNotNone(c6_pins)
+        configurable_c6_pins = {
+            int(pin.strip()) for pin in c6_pins.group(1).split(",") if pin.strip()
+        }
+        self.assertNotIn(6, configurable_c6_pins)
+        self.assertNotIn(7, configurable_c6_pins)
+        self.assertIn(4, configurable_c6_pins)
+        self.assertIn(5, configurable_c6_pins)
+
+    def test_stored_actuators_fail_closed_before_invalid_pins_are_driven(self) -> None:
+        load = block_after(self.config, r"ConfigOnofre\s*&\s*ConfigOnofre::load\s*\(")
+        actuator = load[load.index('strcmp(d["group"] | "", "ACTUATOR")') :]
+        self.assertOrdered(
+            actuator,
+            "validOutputPin(output)",
+            "validInputPin(input)",
+            "if (!storedPinsValid)",
+            "continue;",
+            "actuator.setup();",
+        )
+        invalid = block_after(actuator, r"if\s*\(\s*!storedPinsValid\s*\)")
+        self.assertNotIn("actuator.setup();", invalid)
 
     def test_new_template_features_validate_input_capable_pins(self) -> None:
         prepare = block_after(self.templates, r"int\s+prepareNewFeature\s*\(")
@@ -583,7 +615,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         )
         self.assertOrdered(
             config_loop,
-            "if (!tryBeginFeatureAccess())",
+            "if (!tryBeginFeatureLoopAccess())",
             "if (!sensor.ready)",
             "endFeatureAccess();",
             "return;",
@@ -1709,6 +1741,8 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             "previousWifiMask",
             "previousWifiGw",
             "previousAccessPointPassword",
+            "previousApiUser",
+            "previousApiPassword",
             "previousDhcp",
         ):
             self.assertIn(snapshot, update)
@@ -1730,7 +1764,11 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             "dhcp",
         ):
             self.assertIn(live_value, expression)
-        branch = block_after(update, r"if\s*\(\s*networkChanged\s*\)")
+        self.assertIn("apiCredentialsChanged", update)
+        branch = block_after(
+            update,
+            r"if\s*\(\s*networkChanged\s*\|\|\s*apiCredentialsChanged\s*\)",
+        )
         self.assertIn("restartRequired = true;", branch)
 
         route = self.server[self.server.index('"/config"') :]
@@ -1738,6 +1776,12 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn('response->addHeader("Connection", "close")', route)
         self.assertIn("request->onDisconnect", route)
         self.assertIn("config.requestRestart();", route)
+
+        api = block_after(self.panel, r"async\s+function\s+api\s*\(")
+        self.assertIn("Date.now() + 2000", api)
+        self.assertIn("res.status !== 409", api)
+        self.assertIn("Date.now() >= busyDeadline", api)
+        self.assertIn("setTimeout(resolve, 120)", api)
 
     def test_dhcp_metadata_save_does_not_turn_the_live_lease_into_static_config(self) -> None:
         save = block_after(self.panel, r"async\s+function\s+save\s*\(")

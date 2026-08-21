@@ -84,6 +84,9 @@ void otaStatusJson(JsonVariant &root)
 
 namespace
 {
+char webApiUser[sizeof(config.apiUser)] = {};
+char webApiPassword[sizeof(config.apiPassword)] = {};
+
 struct ManualUpdateState
 {
   bool ownsUpdate;
@@ -464,26 +467,12 @@ bool authorizeRequest(AsyncWebServerRequest *request, bool sendFailure = true,
                       bool *featureBusy = nullptr)
 {
 #if WEB_SECURE_ON
-  // Authentication runs in the AsyncWebServer context while POST /config may
-  // replace these arrays from another task. Authenticate against a short local
-  // snapshot; request->authenticate() consumes it synchronously and retains no
-  // pointer after returning.
-  char user[sizeof(config.apiUser)] = {};
-  char password[sizeof(config.apiPassword)] = {};
   if (featureBusy != nullptr)
     *featureBusy = false;
-  if (!config.tryBeginFeatureAccess())
-  {
-    if (featureBusy != nullptr)
-      *featureBusy = true;
-    if (sendFailure)
-      sendFeatureBusy(request);
-    return false;
-  }
-  strlcpy(user, config.apiUser, sizeof(user));
-  strlcpy(password, config.apiPassword, sizeof(password));
-  config.endFeatureAccess();
-  if (!request->authenticate(user, password, REALM))
+  // These buffers are captured before feature tasks start and remain immutable
+  // for the boot. API credential edits force a controlled restart, so static
+  // Web assets never contend with sensor/actuator work merely to authenticate.
+  if (!request->authenticate(webApiUser, webApiPassword, REALM))
   {
     if (sendFailure)
       request->requestAuthentication(REALM);
@@ -495,6 +484,12 @@ bool authorizeRequest(AsyncWebServerRequest *request, bool sendFailure = true,
   (void)featureBusy;
 #endif
   return true;
+}
+
+void initializeWebAuthCredentials()
+{
+  strlcpy(webApiUser, config.apiUser, sizeof(webApiUser));
+  strlcpy(webApiPassword, config.apiPassword, sizeof(webApiPassword));
 }
 
 void loadWebPanel()

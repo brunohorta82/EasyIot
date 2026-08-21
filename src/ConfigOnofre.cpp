@@ -16,6 +16,13 @@
 #include <algorithm>
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
+static constexpr uint32_t kFeatureAccessYieldMs = 100;
+
+static bool featureAccessYieldActive(uint32_t deadline)
+{
+  return deadline != 0 &&
+         static_cast<int32_t>(deadline - millis()) > 0;
+}
 
 void actuatoresCallback(message_t const &msg, void *arg);
 
@@ -267,14 +274,59 @@ bool ConfigOnofre::tryBeginFeatureAccess()
   bool expected = false;
   if (!featureAccessInProgress.compare_exchange_strong(
           expected, true, std::memory_order_acquire, std::memory_order_relaxed))
+  {
+    uint32_t deadline = millis() + kFeatureAccessYieldMs;
+    if (deadline == 0)
+      deadline = 1;
+    featureAccessYieldUntilMs.store(deadline, std::memory_order_release);
     return false;
+  }
+  featureAccessYieldUntilMs.store(0, std::memory_order_release);
   return true;
 #else
   // Do not wait or yield here: ESP8266 networking and feature work share the
   // same cooperative execution context.
   if (featureAccessInProgress)
+  {
+    featureAccessYieldUntilMs = millis() + kFeatureAccessYieldMs;
+    if (featureAccessYieldUntilMs == 0)
+      featureAccessYieldUntilMs = 1;
+    return false;
+  }
+  featureAccessInProgress = true;
+  featureAccessYieldUntilMs = 0;
+  return true;
+#endif
+}
+bool ConfigOnofre::tryBeginFeatureLoopAccess()
+{
+#ifdef ESP32
+  if (featureAccessYieldActive(
+          featureAccessYieldUntilMs.load(std::memory_order_acquire)))
+    return false;
+  bool expected = false;
+  if (!featureAccessInProgress.compare_exchange_strong(
+          expected, true, std::memory_order_acquire, std::memory_order_relaxed))
+    return false;
+  // Close the race where a foreground waiter arrived between the first check
+  // and this loop acquiring the lease.
+  if (featureAccessYieldActive(
+          featureAccessYieldUntilMs.load(std::memory_order_acquire)))
+  {
+    featureAccessInProgress.store(false, std::memory_order_release);
+    return false;
+  }
+  return true;
+#else
+  if (featureAccessInProgress ||
+      featureAccessYieldActive(featureAccessYieldUntilMs))
     return false;
   featureAccessInProgress = true;
+  if (featureAccessYieldActive(featureAccessYieldUntilMs))
+  {
+    featureAccessInProgress = false;
+    return false;
+  }
   return true;
 #endif
 }
@@ -425,6 +477,22 @@ ConfigOnofre &ConfigOnofre::load()
       {
         actuator.inputs.push_back(in);
       }
+
+      // Stored configurations predate the live-update validator. Fail closed
+      // before setup() can drive a pin that is reserved on the current target
+      // (for example the ESP32-C6 Smart Bus on GPIO6/7).
+      bool storedPinsValid = true;
+      for (auto output : actuator.outputs)
+        storedPinsValid = storedPinsValid && validOutputPin(output);
+      for (auto input : actuator.inputs)
+        storedPinsValid = storedPinsValid && validInputPin(input);
+      if (!storedPinsValid)
+      {
+        Log.error("%s Stored actuator has an invalid pin mapping; leaving it inactive." CR,
+                  tags::config);
+        continue;
+      }
+
       actuator.setup();
       actuatores.push_back(actuator);
     }
@@ -1167,6 +1235,8 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
   char previousWifiMask[sizeof(wifiMask)] = {};
   char previousWifiGw[sizeof(wifiGw)] = {};
   char previousAccessPointPassword[sizeof(accessPointPassword)] = {};
+  char previousApiUser[sizeof(apiUser)] = {};
+  char previousApiPassword[sizeof(apiPassword)] = {};
   strlcpy(previousNodeId, nodeId, sizeof(previousNodeId));
   strlcpy(previousWifiSSID, wifiSSID, sizeof(previousWifiSSID));
   strlcpy(previousWifiSecret, wifiSecret, sizeof(previousWifiSecret));
@@ -1175,6 +1245,8 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
   strlcpy(previousWifiGw, wifiGw, sizeof(previousWifiGw));
   strlcpy(previousAccessPointPassword, accessPointPassword,
           sizeof(previousAccessPointPassword));
+  strlcpy(previousApiUser, apiUser, sizeof(previousApiUser));
+  strlcpy(previousApiPassword, apiPassword, sizeof(previousApiPassword));
   const bool previousDhcp = dhcp;
 
   const bool restore = false;
@@ -1473,7 +1545,10 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
                               strcmp(previousWifiGw, wifiGw) != 0 ||
                               strcmp(previousAccessPointPassword,
                                      accessPointPassword) != 0;
-  if (networkChanged)
+  const bool apiCredentialsChanged =
+      strcmp(previousApiUser, apiUser) != 0 ||
+      strcmp(previousApiPassword, apiPassword) != 0;
+  if (networkChanged || apiCredentialsChanged)
   {
     restartRequired = true;
   }
@@ -1724,7 +1799,7 @@ bool ConfigOnofre::isReloadWifiRequested()
 }
 void ConfigOnofre::loopActuators()
 {
-  if (!tryBeginFeatureAccess())
+  if (!tryBeginFeatureLoopAccess())
     return;
 
   // A restart-pending actuator has already released or halted hardware. Keep
@@ -1785,7 +1860,7 @@ void ConfigOnofre::requestRestart()
 }
 void ConfigOnofre::loopSensors()
 {
-  if (!tryBeginFeatureAccess())
+  if (!tryBeginFeatureLoopAccess())
     return;
   for (const auto &sensor : sensors)
     if (!sensor.ready)
