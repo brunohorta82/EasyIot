@@ -23,13 +23,6 @@ All notable changes to this project are documented in this file.
 - The untouched Safari page confirmed 9.188 and displayed the completed 100%
   progress bar.
 
-### Para testers
-- **A atualização automática do ESP8266 por HTTPS volta a funcionar.** Durante
-  a transferência, a barra move-se sem inventar uma percentagem; chega aos 100%
-  apenas depois de o equipamento reiniciar e confirmar a nova versão.
-- Se não houver memória segura para iniciar uma ligação TLS, o equipamento
-  apresenta um erro útil em vez de reiniciar por falta de memória.
-
 ## [9.188] - 2026-08-21
 
 ### Changed
