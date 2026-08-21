@@ -57,11 +57,13 @@ namespace tags
 namespace configFilenames
 {
     constexpr const char *config = "/config.json";
+    constexpr const char *configTemporary = "/config.tmp";
     /* Irrigation programs live in their own file, not in config.json: an update
        must never be able to lose a working configuration because it failed to
        parse a key it did not know about. A device coming from v9 simply has no
        such file and starts with no programs. */
     constexpr const char *irrigation = "/irrigation.json";
+    constexpr const char *irrigationTemporary = "/irrigation.tmp";
 }
 
 namespace constantsConfig
@@ -134,7 +136,6 @@ namespace DefaultPins
     constexpr int HAN_TX{6u};
     constexpr int HAN_RX{7u};
     constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 18, 19, 20, 21, 22, 23};
-    constexpr unsigned int intputOnlyPins[] = {};
 }
 #endif
 #ifdef ESP8266

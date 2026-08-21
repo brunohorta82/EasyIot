@@ -71,6 +71,25 @@ void Sensor::notifyState()
 
 void Sensor::loop()
 {
+  if (!ready)
+    return;
+
+  // Stored configurations predate strict pin-array validation. Never index a
+  // malformed vector: mark the sensor failed and leave all GPIO/UART state
+  // untouched until the configuration is repaired and the device restarts.
+  if (!hasRuntimeInputTopology())
+  {
+#ifdef DEBUG_ONOFRE
+    if (!error)
+      Log.error("%s Invalid input topology for %s: expected %u, found %u" CR,
+                tags::sensors, uniqueId,
+                static_cast<unsigned int>(expectedInputCount(driver)),
+                static_cast<unsigned int>(inputs.size()));
+#endif
+    setError();
+    return;
+  }
+
   if (!wifiConnected())
   {
     return;
@@ -399,6 +418,7 @@ void Sensor::loop()
 #endif
     }
   }
+  break;
 
   case HAN:
   {
@@ -410,7 +430,9 @@ void Sensor::loop()
       if (!isInitialized())
       {
         modbus = new ModbusMaster();
-        Serial1.begin(9600, SERIAL_8N1, 21, 7);
+        Serial1.begin(9600, SERIAL_8N1,
+                      SensorRuntimePins::HAN_RX,
+                      SensorRuntimePins::HAN_TX);
         modbus->begin(1, Serial1);
       }
 #endif
@@ -697,7 +719,9 @@ void Sensor::loop()
 #if defined(ESP8266)
       if (!isInitialized())
       {
-        config.i2cDiscovery();
+        // A scan may append to config.sensors. Queue it so the main loop runs
+        // discovery only after this range-for and its feature lease end.
+        config.requestI2cDiscovery();
       }
       SoftwareSerial softwareSerial = SoftwareSerial(inputs[0], inputs[1]);
       PZEM004Tv30 pzemv03(softwareSerial);
@@ -848,7 +872,9 @@ void Sensor::loop()
       PZEM004T pzem = PZEM004T(inputs[0], inputs[1]);
 #endif
 #ifdef ESP32
-      static PZEM004T pzem = PZEM004T(&Serial1, 27, 26);
+      static PZEM004T pzem = PZEM004T(&Serial1,
+                                      SensorRuntimePins::PZEM_V01_RX,
+                                      SensorRuntimePins::PZEM_V01_TX);
 #endif
       IPAddress ip(192, 168, 1, 1);
 #if defined(ESP8266)

@@ -26,4 +26,4 @@ void beginBleProvison();
 void scanNewWifiNetworks();
 void enableScan();
 bool wifiConnected();
-void refreshMDNS(const char *lastName);
+void refreshMDNS();

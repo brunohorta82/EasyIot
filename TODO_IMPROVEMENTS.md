@@ -1,8 +1,8 @@
 # EasyIot - To Do
 
 - Created by: Alexandru Hauzman
-- Updated: 20.08.2026
-- Current upstream version: 9.181
+- Updated: 21.08.2026
+- Current upstream version: 9.186
 
 ## Important Notes
 
@@ -13,13 +13,15 @@
 
 ## Firmware & Versioning (P1)
 
+1. [ ] Propagate atomic-save failures from runtime actuator-state changes to Web/MQTT/Cloud/GPIO callers instead of letting the legacy `save()` wrapper discard the result. Files: `include/ConfigOnofre.h`, `src/ConfigOnofre.cpp`, `src/WebServer.cpp`
+
 ## Security & OTA (P1)
 
 1. [ ] (Blocked) Remove temporary CloudIO HTTP fallback after full TLS compatibility is confirmed on devices, including weak-signal scenarios. Blocked: the whole fleet must be on >= 9.161 first, otherwise devices that fail the TLS handshake have no way to sync. File: `src/CloudIO.cpp`
 2. [x] Convert state-changing endpoints from GET to POST (`/reboot`, `/load-defaults`, `/templates/change`); temporary GET compatibility kept for older clients. File: `src/WebServer.cpp`
 3. [ ] (Blocked - no boards available) Validate OTA update flow over HTTPS on remaining device variants (ESP32C3 / HAN). File: `src/WebServer.cpp`
 4. [ ] Replace default credentials (`admin` / `xpto` / default AP secret) with a first-boot forced change flow. File: `include/Constants.h`
-5. [ ] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
+5. [x] Change captive portal save flow from GET query params to POST body (avoid leaking passwords in URL/history). Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
 6. [ ] Add OTA integrity check (signed firmware or hash validation) before applying update. File: `src/WebServer.cpp`
 
 ## Dependencies & Library Updates (P1/P2)
@@ -31,11 +33,13 @@
 
 1. [ ] Improve the Functions tab layout: make the add-function form clearer and more compact, visually delimit each configured feature as its own card, and use a responsive two-column grid on wider screens that stacks to one column on phones. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
 2. [ ] Add a subtle left-edge health indicator to relevant status badges and diagnostic cards: green for healthy/connected, orange for degraded/retrying, red only for actual errors/disconnection, and gray for disabled/unknown. Keep the existing text or icon so status never relies on color alone; normal actuator OFF states and intentionally disabled MQTT must not appear as errors. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
+3. [ ] Design a versioned configuration backup/restore format with explicit secret handling, server-side target validation, preserved feature IDs, sensors and irrigation data, atomic persistence, and rollback tests.
 
 ## Testing & CI (P2 - Deferred / Later)
 
 1. [x] CI build checks for main envs — `.github/workflows/firmware-ota.yml` builds all four release envs (ESP8266, ESP8266-HAN, ESP32, ESP32-MAKER-4MB) and publishes them to the OTA folder on tag/dispatch.
 2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
+3. [ ] Complete hardware testing of the 9.187 safety batch on ESP8266 and ESP32: accepted and rejected live pin changes, garden-valve OFF behavior after save/power-cycle, physical/MQTT/Cloud traffic during configuration, and failed/successful manual and automatic OTA recovery.
 
 #
 
@@ -63,6 +67,17 @@
 4. [x] Added HTTPS-first CloudIO config request with one-time silent HTTP fallback to prevent restart loops when TLS path fails. File: `src/CloudIO.cpp`
 5. [x] Validated OTA update flow over HTTPS on ESP8266 (`Update Success` + reconnect to CloudIO/MQTT). File: `src/WebServer.cpp`
 6. [x] Validated OTA update flow over HTTPS on ESP32 (`Update Success` + reboot + reconnect to CloudIO/MQTT; `HTTPS result: 200`, `fallback=0`). File: `src/WebServer.cpp`
+7. [x] Moved captive-portal credential saving to a non-cacheable POST submission and enabled POST-body parsing in the custom async handler. Files: `include/CaptivePortal.h`, `src/WebServer.cpp`, `tools/test_captive_portal.py`
+8. [x] Re-tested configured-device captive Wi-Fi repair on ESP8266 with 9.186-dev: Save persisted the new network/name, preserved the two existing functions and pin map, restarted into STA mode, and restored WebUI and Cloud access. Files: `include/CaptivePortal.h`, `src/WebServer.cpp`, `tools/test_captive_portal.py`
+
+## Firmware Safety
+
+1. [x] Added final-state configuration preflight with role-aware pin validation, topology/cardinality checks, conflict detection, stable result codes, and restart-after-response handling. Files: `include/ConfigOnofre.h`, `src/ConfigOnofre.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `webpanel/js/index.js`
+2. [x] Added driver-specific sensor input contracts and runtime topology guards that reject malformed configurations before GPIO access. Files: `include/Sensors.h`, `src/Sensors.cpp`, `src/ConfigOnofre.cpp`
+3. [x] Added a non-blocking cross-context feature-access lease across feature loops, Web routes, templates, MQTT, irrigation, Cloud sync, and OTA ownership. Files: `include/ConfigOnofre.h`, `src/ConfigOnofre.cpp`, `src/WebServer.cpp`, `src/Mqtt.cpp`, `src/CloudIO.cpp`, `src/Templates.cpp`, `src/main.cpp`
+4. [x] Added explicit manual/automatic OTA ownership and cleanup so failed or incomplete updates release resources and successful replacement restarts after the response. Files: `include/WebServer.h`, `src/WebServer.cpp`, `src/main.cpp`
+5. [x] Deferred Cloud MQTT commands, connection events, watchdog work, and Wi-Fi credential commits out of callback/ticker contexts. Files: `include/CloudIO.h`, `include/CoreWiFi.h`, `src/CloudIO.cpp`, `src/CoreWiFi.cpp`, `src/main.cpp`
+6. [x] Added size-checked temporary-file replacement, surfaced supported persistence failures, disabled incomplete restore, and made garden-valve boot state fail-safe OFF. Files: `include/Persistence.h`, `src/Persistence.cpp`, `src/ConfigOnofre.cpp`, `src/Irrigation.cpp`, `src/WebServer.cpp`, `src/Actuatores.cpp`, `webpanel/index.html`, `webpanel/js/index.js`
 
 ## Webpanel
 

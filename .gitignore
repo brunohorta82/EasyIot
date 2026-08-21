@@ -1,9 +1,13 @@
 # package.json/package-lock.json are tracked on purpose: the web panel minifiers
 # are pinned build dependencies whose output is embedded in the firmware image.
 node_modules
+__pycache__/
+*.py[cod]
 .DS_Store
 .pio
 platformio_override.ini
+/AGENTS.md
+/.agent/
 .vscode
 RELEASE_NOTES_DRAFT.md
 

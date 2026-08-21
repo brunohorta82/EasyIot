@@ -58,9 +58,9 @@ public:
 
   /** Reads /irrigation.json. A device with no such file simply has no programs. */
   void load();
-  void save();
+  bool save();
 
-  /** Replaces the whole schedule from the panel/app payload and persists it. */
+  /** Replaces the whole in-memory schedule; the caller persists it after validation. */
   bool update(JsonObject &root);
 
   /** Serialises state + schedule under the "irrigation" key, for /config. */

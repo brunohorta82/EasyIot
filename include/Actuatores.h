@@ -84,7 +84,7 @@ public:
     unsigned long lastChange = 0ul;
 
     // VIRTUAL COVER CONTROLLER
-    Shutters *shutter;
+    Shutters *shutter{nullptr};
     unsigned long upCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
     unsigned long downCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
 
@@ -283,6 +283,8 @@ public:
     };
     Actuator *
     changeState(StateOrigin origin, int state);
+    void deactivateForConfigUpdate();
+    void rebuildInputHandlers();
     void setup();
     void notifyState(StateOrigin origin);
 };

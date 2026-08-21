@@ -288,7 +288,7 @@ async function runProgramNow(programId) {
   // deleted by the button that was supposed to start it.
   if (irrDirty) { toast("Guarda os programas primeiro", "err"); return; }
   try {
-    irrigation = await api("/irrigation/run", { method: "POST", body: JSON.stringify({ programId: programId }) });
+    irrigation = await api("/irrigation-run", { method: "POST", body: JSON.stringify({ programId: programId }) });
     config.irrigation = irrigation;
     renderIrrStatus();
     renderIrrZones();
@@ -297,7 +297,7 @@ async function runProgramNow(programId) {
 
 async function stopIrrigation() {
   try {
-    irrigation = await api("/irrigation/stop", { method: "POST" });
+    irrigation = await api("/irrigation-stop", { method: "POST" });
     config.irrigation = irrigation;
     // Only the state and the zones change; the programs on screen are untouched,
     // including anything being edited.
@@ -306,54 +306,69 @@ async function stopIrrigation() {
   } catch (e) { toast("Não foi possível parar", "err"); }
 }
 
-/* The device answers the update request immediately and then does the work in its
-   main loop, so asking was all the panel used to know. Without this a failed
-   update and a dead button look identical — which is exactly how it was reported.
-   The device now keeps the progress and the reason, and this follows it. */
+/* The device answers first and performs the update in its main loop. The safe
+   updater temporarily stops the web server, so a missed poll means only "still
+   unavailable" — never success. Success is confirmed by a new firmware version
+   (or an explicit done state); failures are shown after the old server returns. */
 function followUpdate() {
   const bar = $("ota-bar");
   const fill = bar.querySelector("i");
   const msg = $("ota-msg");
+  const startingVersion = String(config.firmware || "");
+  const deadline = Date.now() + 180000;
   bar.classList.remove("hide");
   fill.style.width = "0";
   msg.className = "note";
   msg.textContent = "A atualizar — não desligues o equipamento.";
   $("a-update").disabled = true;
 
-  let misses = 0;
-  const timer = setInterval(async () => {
-    let ota = null;
+  let finished = false;
+  const finish = (ok, text, percent) => {
+    finished = true;
+    if (percent != null) fill.style.width = percent + "%";
+    msg.className = ok ? "note ok" : "note err";
+    msg.textContent = text;
+    $("a-update").disabled = false;
+  };
+
+  const poll = async () => {
+    if (finished) return;
+    let snapshot;
     try {
-      ota = (await api("/config")).ota;
-      misses = 0;
+      snapshot = await api("/config");
     } catch (e) {
-      // It reboots when it succeeds, so losing it is the expected happy ending.
-      if (++misses < 4) return;
-      clearInterval(timer);
-      fill.style.width = "100%";
-      msg.className = "note ok";
-      msg.textContent = "Gravado. O equipamento reiniciou — recarrega a página.";
+      if (Date.now() >= deadline) {
+        finish(false, "Não foi possível confirmar o resultado. Volta a abrir a página e verifica a versão instalada.");
+        return;
+      }
+      setTimeout(poll, 1500);
       return;
     }
-    if (!ota) { clearInterval(timer); done(); return; }
-    fill.style.width = (ota.percent || 0) + "%";
-    if (ota.state === "running") return;
-    clearInterval(timer);
-    if (ota.state === "failed") {
-      msg.className = "note err";
-      msg.textContent = "A atualização falhou: " + (ota.error || "sem detalhe do equipamento");
-      done();
-    } else if (ota.state === "done") {
-      msg.className = "note ok";
-      msg.textContent = "Gravado. A reiniciar…";
-    } else {
-      done();
-    }
-  }, 1500);
 
-  function done() {
-    $("a-update").disabled = false;
-  }
+    const ota = snapshot.ota || null;
+    if (startingVersion && snapshot.firmware && snapshot.firmware !== startingVersion) {
+      finish(true, "Atualização confirmada · versão " + snapshot.firmware, 100);
+      return;
+    }
+    if (!ota) {
+      if (Date.now() >= deadline)
+        finish(false, "O equipamento respondeu, mas não confirmou a atualização.");
+      else
+        setTimeout(poll, 1500);
+      return;
+    }
+    fill.style.width = (ota.percent || 0) + "%";
+    if (ota.state === "failed") {
+      finish(false, "A atualização falhou: " + (ota.error || "sem detalhe do equipamento"));
+    } else if (ota.state === "done") {
+      finish(true, "Gravado. A reiniciar…", 100);
+    } else if (Date.now() >= deadline) {
+      finish(false, "A atualização não terminou dentro do tempo esperado. Verifica a versão antes de repetir.");
+    } else {
+      setTimeout(poll, 1500);
+    }
+  };
+  setTimeout(poll, 1500);
 }
 
 /* ---------------- theme ---------------- */
@@ -876,16 +891,27 @@ function pinEditor(f, i) {
   return block("SAÍDAS (relé)", "out", outs) + block("ENTRADAS (botão/sensor)", "in", ins) + warn;
 }
 
-/* How the physical input behaves. The firmware derives the driver from this on
-   every save (findDriver), so it decides whether a wall switch is a momentary
-   button or a latching one — the same wiring, two different behaviours. */
+/* How the physical input behaves. An omitted value preserves the current
+   driver; an explicit value is validated against the actuator family. Keep a
+   one-button cover on mode 2 because changing its topology also needs another
+   input pin. */
 const INPUT_MODES = [
   { v: 0, n: "botão de pressão (momentâneo)" },
   { v: 1, n: "interruptor (mantém posição)" },
 ];
+const COVER_SINGLE_MODE = { v: 2, n: "botão único (rodar / parar)" };
+function inputModes(f) {
+  const driver = String(f.driver || "");
+  if (driver === "COVER_SINGLE_PUSH") return [COVER_SINGLE_MODE];
+  if (driver.indexOf("COVER_DUAL") === 0) return INPUT_MODES;
+  if (driver === "GARAGE_PUSH" || driver === "GARDEN_VALVE") return [];
+  return INPUT_MODES;
+}
 function inputModeField(f, i) {
   if (!isActuator(f) || f.inputMode == null) return "";
-  const opts = INPUT_MODES.map((m) =>
+  const modes = inputModes(f);
+  if (!modes.length) return "";
+  const opts = modes.map((m) =>
     '<option value="' + m.v + '"' + (m.v === f.inputMode ? " selected" : "") + ">" +
     m.n + "</option>").join("");
   return '<div class="field"><label>MODO DE ENTRADA</label>' +
@@ -1099,7 +1125,20 @@ function featureError(e) {
   if (code === 3) return "Tipo de função inválido para este firmware.";
   if (code === 4) return "Este tipo precisa de dois pinos válidos.";
   if (code === 5) return "Esse pino já está a ser usado por outra função.";
+  if (code === 6) return "Não foi possível guardar na memória do dispositivo; a função não será mantida.";
   return "O dispositivo recusou a função.";
+}
+
+/* ConfigOnofre::update() returns stable result codes for rejected saves. */
+function configError(e) {
+  const code = e && e.body && e.body.result;
+  if (code === 1) return "A configuração enviada é inválida.";
+  if (code === 2) return "Um dos pinos não é válido nesta placa.";
+  if (code === 3) return "A quantidade de pinos não corresponde ao tipo de função.";
+  if (code === 4) return "Um dos pinos já está a ser usado por outra função.";
+  if (code === 5) return "O dispositivo está ocupado — tenta guardar novamente.";
+  if (code === 6) return "Não foi possível guardar na memória do dispositivo; a configuração anterior será reposta.";
+  return "Não foi possível guardar.";
 }
 
 async function save() {
@@ -1108,9 +1147,17 @@ async function save() {
   body.wifiSSID = $("s-ssid").value.trim();
   if ($("s-wpw").value) body.wifiSecret = $("s-wpw").value;
   body.dhcp = $("s-dhcp").checked;
-  body.wifiIp = $("s-ip").value.trim();
-  body.wifiMask = $("s-mask").value.trim();
-  body.wifiGw = $("s-gw").value.trim();
+  if (body.dhcp) {
+    // GET /config reports the live DHCP lease for diagnostics. It is not a
+    // static-address edit and must not make an unrelated save restart Wi-Fi.
+    delete body.wifiIp;
+    delete body.wifiMask;
+    delete body.wifiGw;
+  } else {
+    body.wifiIp = $("s-ip").value.trim();
+    body.wifiMask = $("s-mask").value.trim();
+    body.wifiGw = $("s-gw").value.trim();
+  }
   body.mqttIpDns = $("s-mqttHost").value.trim();
   body.mqttPort = parseInt($("s-mqttPort").value, 10) || 1883;
   body.mqttUsername = $("s-mqttUser").value.trim();
@@ -1123,14 +1170,16 @@ async function save() {
   btn.disabled = true;
   btn.textContent = "A guardar…";
   try {
-    config = await api("/config", { method: "POST", body: JSON.stringify(body) });
+    const saved = await api("/config", { method: "POST", body: JSON.stringify(body) });
+    const restartRequired = saved.restartRequired === true;
+    config = saved;
     removed = [];
     clearDirty();
-    toast("Guardado", "ok");
+    toast(restartRequired ? "Guardado — o dispositivo vai reiniciar." : "Guardado", "ok");
     renderHeader(); renderOverview(); renderPinout(); renderFeatures(); renderDiag(); fillSystem(); fillNewFeatureForm();
     wireFeatureEvents();
   } catch (e) {
-    toast("Não foi possível guardar", "err");
+    toast(configError(e), "err");
   } finally {
     // Always restore the button: leaving it disabled strands the page with no
     // way to retry, which is how a failed save looked like a silent one.
@@ -1311,20 +1360,24 @@ function uploadFirmware(btn) {
       msg.className = ok ? "note ok" : "note err";
       msg.textContent = ok
         ? "Enviado. O dispositivo está a reiniciar — volta a abrir esta página daqui a pouco."
-        : "O envio falhou. O dispositivo reinicia com o firmware anterior.";
+        : "O envio falhou. O firmware anterior continua ativo; tente novamente.";
     };
-    // The device closes its web server as it answers, so a dropped connection
-    // after a complete upload is the expected ending, not a failure.
+    // The backend now returns a truthful status before scheduling a restart.
+    // Sending every byte is not proof that flash finalization succeeded.
     xhr.onload = () => done(xhr.status === 200);
-    xhr.onerror = () => done(fill.style.width === "100%");
+    xhr.onerror = () => done(false);
     xhr.send(form);
   }
 }
 
-/* The exported file carries backup:true, which is what makes POST /config take
-   the restore path and rebuild features rather than edit the current ones. */
+/* This is deliberately a non-secret diagnostic snapshot, not a restorable
+   backup. GET /config omits credentials and the legacy restore path cannot
+   safely reconstruct the complete device state. */
 function exportConfig() {
-  const snapshot = Object.assign({}, config, { backup: true });
+  const snapshot = Object.assign({}, config, {
+    snapshotType: "easyiot-diagnostic",
+    snapshotVersion: 1
+  });
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -1335,44 +1388,10 @@ function exportConfig() {
 
 function restoreConfig(file, btn) {
   const msg = $("r-msg");
-  const reader = new FileReader();
-  reader.onload = async () => {
-    let restored;
-    try {
-      restored = JSON.parse(reader.result);
-    } catch (e) {
-      msg.className = "note err";
-      msg.textContent = "O ficheiro não é uma configuração válida.";
-      return;
-    }
-    if (!restored.features) {
-      msg.className = "note err";
-      msg.textContent = "Falta a lista de funções — não parece uma cópia de segurança.";
-      return;
-    }
-    if (restored.chipId && config.chipId && restored.chipId !== config.chipId) {
-      msg.className = "note err";
-      msg.textContent = "Esta cópia é do dispositivo " + esc(restored.chipId) +
-        ", não deste (" + esc(config.chipId) + ").";
-      return;
-    }
-    if (!armed(btn, "Substituir tudo?")) return;
-    restored.backup = true;   // force the restore path even on an older export
-    msg.className = "note";
-    msg.textContent = "A restaurar…";
-    try {
-      config = await api("/config", { method: "POST", body: JSON.stringify(restored) });
-      clearDirty();
-      load();
-      msg.className = "note ok";
-      msg.textContent = "Configuração restaurada.";
-      toast("Configuração restaurada", "ok");
-    } catch (e) {
-      msg.className = "note err";
-      msg.textContent = "O dispositivo recusou a configuração.";
-    }
-  };
-  reader.readAsText(file);
+  void file;
+  void btn;
+  msg.className = "note err";
+  msg.textContent = "O restauro está desativado até existir validação completa e segura.";
 }
 
 /* ---------------- live updates ---------------- */
@@ -1573,8 +1592,8 @@ document.addEventListener("change", (ev) => {
   if (f) {
     const i = parseInt(f.dataset.i, 10);
     const key = f.dataset.f;
-    // A <select> reports type "select-one", so numeric ones say so explicitly:
-    // the firmware reads inputMode as an int and falls back to PUSH otherwise.
+    // A <select> reports type "select-one", so numeric ones say so explicitly;
+    // the firmware validates inputMode as an unsigned integer when it is sent.
     const numeric = f.type === "number" || f.dataset.num === "1";
     const val = numeric ? (parseInt(f.value, 10) || 0) : f.value;
     if (config.features[i]) { config.features[i][key] = val; markDirty(); }

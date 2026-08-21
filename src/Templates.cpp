@@ -3,7 +3,74 @@
 #include "Actuatores.h"
 #include "Sensors.h"
 #include "ConfigOnofre.h"
+#include "Irrigation.h"
+#include <algorithm>
 extern ConfigOnofre config;
+
+namespace
+{
+bool isSupportedActuatorDriverCode(int driverCode)
+{
+    switch (driverCode)
+    {
+    case ActuatorDriver::SWITCH_PUSH:
+    case ActuatorDriver::SWITCH_LATCH:
+    case ActuatorDriver::COVER_SINGLE_PUSH:
+    case ActuatorDriver::COVER_DUAL_PUSH:
+    case ActuatorDriver::COVER_DUAL_LATCH:
+    case ActuatorDriver::LIGHT_PUSH:
+    case ActuatorDriver::LIGHT_LATCH:
+    case ActuatorDriver::GARAGE_PUSH:
+    case ActuatorDriver::GARDEN_VALVE:
+        return true;
+    case ActuatorDriver::INVALID:
+    default:
+        return false;
+    }
+}
+
+bool setActuatorName(Actuator &actuator, const String &name)
+{
+    // String::length() is the number of bytes copied into this C buffer. Leave
+    // one byte for the terminator before generateId() treats it as a C string.
+    if (name.isEmpty() || name.length() >= sizeof(actuator.name))
+        return false;
+    strlcpy(actuator.name, name.c_str(), sizeof(actuator.name));
+    return true;
+}
+
+void clearLiveFeatureGraphSafely()
+{
+    // init() selects its first template with an empty graph. Do not touch GPIOs
+    // in that path; teardown is only for replacing already-live features.
+    if (config.actuatores.empty() && config.sensors.empty())
+        return;
+
+    if (irrigation.isRunning())
+        irrigation.stop();
+
+    std::vector<unsigned int> releasedOutputs;
+    for (auto &actuator : config.actuatores)
+    {
+        // Covers need reset(), not stop(): reset emits HALT synchronously, while
+        // stop normally waits for a later Shutters::loop() that will never run.
+        actuator.deactivateForConfigUpdate();
+        for (const auto output : actuator.outputs)
+        {
+            if (!config.validOutputPin(output) ||
+                std::find(releasedOutputs.begin(), releasedOutputs.end(), output) != releasedOutputs.end())
+                continue;
+            configPIN(output, OUTPUT);
+            writeToPIN(output, LOW);
+            configPIN(output, INPUT);
+            releasedOutputs.push_back(output);
+        }
+    }
+    for (auto &sensor : config.sensors)
+        sensor.deactivateForConfigUpdate();
+}
+} // namespace
+
 void prepareHAN()
 {
     Sensor sensor;
@@ -21,7 +88,8 @@ void prepareLD2410(String name, unsigned int rx, unsigned int tx)
 {
     Sensor sensor;
     strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
-    sensor.inputs = {tx, rx};
+    // Sensor::loop passes slot 0 as UART RX and slot 1 as UART TX.
+    sensor.inputs = {rx, tx};
     sensor.driver = LD2410;
     sensor.delayRead = constantsConfig::ld2410Delay;
     String idStr;
@@ -163,8 +231,9 @@ void preparePzem(String name, unsigned int tx, unsigned int rx, int hwAddress, S
 void prepareActuator(String name, unsigned int output, unsigned int input, ActuatorDriver driver, ActuatorControlType type)
 {
     Actuator actuator;
+    if (!setActuatorName(actuator, name))
+        return;
     actuator.driver = driver;
-    strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
     actuator.typeControl = type;
     if (output != DefaultPins::noGPIO)
         actuator.outputs.push_back(output);
@@ -177,17 +246,42 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
 }
 int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int driverCode)
 {
-    if (driverCode < 60)
+    // Reject negative, unknown and inert values before converting an integer
+    // supplied by HTTP into an enum used by the actuator runtime.
+    if (isSupportedActuatorDriverCode(driverCode))
     {
-        return prepareVirtualSwitch(name, input1, input2, (ActuatorDriver)driverCode);
+        return prepareVirtualSwitch(name, input1, input2, static_cast<ActuatorDriver>(driverCode));
     }
-    else
+    if (driverCode < 60)
+        return 3;
+
     {
         // Sensors used to skip validation entirely, so a bogus or already-taken
         // pin was accepted and only showed up as a driver that never reads.
         if (name.isEmpty())
             return 1;
-        if (!config.validPin(input1))
+        const SensorDriver sensorDriver = static_cast<SensorDriver>(driverCode);
+        switch (sensorDriver)
+        {
+        case SensorDriver::DHT_11:
+        case SensorDriver::DHT_21:
+        case SensorDriver::DHT_22:
+        case SensorDriver::DS18B20:
+        case SensorDriver::DOOR:
+        case SensorDriver::WINDOW:
+        case SensorDriver::PIR:
+        case SensorDriver::HCSR04:
+        case SensorDriver::RAIN:
+        case SensorDriver::LD2410:
+        case SensorDriver::PZEM_004T_V03:
+        case SensorDriver::PZEM_004T_V01:
+            break;
+        default:
+            return 3;
+        }
+        if (!Sensor::isSupportedOnCurrentTarget(sensorDriver))
+            return 3;
+        if (!config.validSensorPin(sensorDriver, 0, input1))
             return 2;
         if (config.pinInUse(input1))
             return 5;
@@ -197,7 +291,7 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
                              driverCode == SensorDriver::PZEM_004T_V01;
         if (dualPin)
         {
-            if (!config.validPin(input2))
+            if (!config.validSensorPin(sensorDriver, 1, input2))
                 return 4;
             if (input1 == input2 || config.pinInUse(input2))
                 return 5;
@@ -233,25 +327,25 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             preparePzem(name, input1, input2, Discovery::MODBUS_PZEM_ADDRESS_DEFAULT, (SensorDriver)driverCode);
             break;
         default:
-            break;
+            return 3;
         }
     }
     return 0;
 }
 int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, ActuatorDriver driver)
 {
-    if (name.isEmpty())
+    Actuator actuator;
+    if (!setActuatorName(actuator, name))
         return 1;
-    if (!config.validPin(input1))
-        return 2;
-    if (ActuatorDriver::INVALID == driver)
+    if (!isSupportedActuatorDriverCode(static_cast<int>(driver)))
         return 3;
+    if (!config.validInputPin(input1))
+        return 2;
     if (config.pinInUse(input1))
         return 5;
-    Actuator actuator;
     actuator.driver = driver;
     actuator.inputs.push_back(input1);
-    if (actuator.requireDualInputs() && !config.validPin(input2))
+    if (actuator.requireDualInputs() && !config.validInputPin(input2))
     {
         return 4;
     }
@@ -261,7 +355,6 @@ int prepareVirtualSwitch(String name, unsigned int input1, unsigned int input2, 
             return 5;
         actuator.inputs.push_back(input2);
     }
-    strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
     actuator.typeControl = ActuatorControlType::VIRTUAL;
     actuator.outputs.clear();
     String idStr;
@@ -307,6 +400,7 @@ bool templateSelect(enum Template _template)
 #ifdef DEBUG_ONOFRE
     Log.info("%s Template selected: %d" CR, tags::webserver, _template);
 #endif
+    clearLiveFeatureGraphSafely();
     config.actuatores.clear();
     config.sensors.clear();
     switch (_template)
