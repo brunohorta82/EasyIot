@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [9.187-dev] - 2026-08-21
+## [9.187] - 2026-08-21
 
 ### Changed
 - Development baseline synchronized through upstream release 9.186.
@@ -75,6 +75,15 @@ All notable changes to this project are documented in this file.
 - The rebased 9.187-dev head, live pin remapping, OTA recovery, ESP32 hardware,
   and C6 hardware remain open validation items and are not claimed by this bench
   test.
+
+### Para testers
+- **Alterações de configuração passaram a ser validadas antes de mexer no
+  equipamento.** Uma configuração inválida é recusada em vez de deixar o
+  equipamento num estado a meio.
+- As gravações em disco passaram a ser atómicas: uma falha de energia a gravar já
+  não deixa o ficheiro corrompido.
+- Depois de arrancar, as válvulas de rega ficam sempre fechadas.
+
 
 ## [9.186] - 2026-08-20
 
