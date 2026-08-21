@@ -245,6 +245,9 @@ void setup()
 
   startFileSystem();
   config.load();
+  // Authentication credentials stay immutable for this boot. Credential edits
+  // request a controlled restart before the new snapshot becomes active.
+  initializeWebAuthCredentials();
 #ifdef DEBUG_ONOFRE
   logBootBanner();
 #endif

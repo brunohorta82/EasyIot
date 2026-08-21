@@ -9,6 +9,7 @@ enum class AutoUpdateResult : uint8_t
   FAILED
 };
 void setupWebPanel();
+void initializeWebAuthCredentials();
 void startWebserver();
 void stopWebserver();
 void setupCaptivePortal();

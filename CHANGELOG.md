@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.188-dev] - 2026-08-21
+
+### Changed
+- Development baseline synchronized through upstream release 9.187.
+
+### Fixed
+- **ESP32-C6 Smart Bus pins can no longer be assigned to features.** GPIO6 and
+  GPIO7 are the fixed SDA/SCL pins on this target and are removed from the
+  configurable pin list. Stored actuator mappings are validated before setup so
+  legacy mappings to reserved pins remain inactive instead of being driven.
+- **Foreground Web requests can no longer starve behind feature loops.** A
+  bounded handoff makes periodic actuator and sensor loops yield to a waiting
+  request, while the WebUI retries short 409/BUSY responses instead of exposing
+  transient lease contention to the user.
+- **Web authentication no longer contends with live feature work.** API
+  credentials are captured before feature tasks start and remain immutable for
+  the boot. Credential edits use the controlled-restart path before the new
+  snapshot becomes active.
+
+### Validation
+- `ESP8266_DEBUG`, `ESP32_DEBUG`, and the isolated
+  `ESP32C6_IRRIGATION_DEBUG` build pass with the follow-up changes.
+- On an ESP32-C6-DevKitM-1, captive provisioning, repeated two-tab WebUI
+  navigation, name-only saving, actuator control, rejected duplicate mappings,
+  and controlled pin remapping were exercised. The test exposed GPIO6/7 as
+  fixed Smart Bus pins; the corrected firmware removes them from feature
+  selection and rejects legacy stored mappings before actuator setup.
+- One earlier uncaptured C6 stress run ended in a task-watchdog reset. It did not
+  recur during the recorded two-tab run, but its task/backtrace was lost and the
+  cause remains unconfirmed.
+
 ## [9.187] - 2026-08-21
 
 ### Changed

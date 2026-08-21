@@ -40,6 +40,7 @@
 1. [x] CI build checks for main envs — `.github/workflows/firmware-ota.yml` builds all four release envs (ESP8266, ESP8266-HAN, ESP32, ESP32-MAKER-4MB) and publishes them to the OTA folder on tag/dispatch.
 2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
 3. [ ] Complete hardware testing of the 9.187 safety batch on ESP8266 and ESP32: accepted and rejected live pin changes, garden-valve OFF behavior after save/power-cycle, physical/MQTT/Cloud traffic during configuration, and failed/successful manual and automatic OTA recovery.
+4. [ ] Capture and diagnose the non-reproduced ESP32-C6 task-watchdog reset seen during WebUI/control stress; retain the complete task report and backtrace before changing watchdog or scheduling behavior.
 
 #
 

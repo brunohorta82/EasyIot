@@ -135,7 +135,10 @@ namespace DefaultPins
     constexpr int SCL{7u};
     constexpr int HAN_TX{6u};
     constexpr int HAN_RX{7u};
-    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 18, 19, 20, 21, 22, 23};
+    // GPIO6/7 are the fixed Smart Bus I2C pins above. Exposing either one as a
+    // configurable feature pin lets Wire take ownership after actuator setup,
+    // leaving a persisted relay mapped to a pin that is no longer GPIO output.
+    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 10, 11, 18, 19, 20, 21, 22, 23};
 }
 #endif
 #ifdef ESP8266
