@@ -1147,9 +1147,17 @@ async function save() {
   body.wifiSSID = $("s-ssid").value.trim();
   if ($("s-wpw").value) body.wifiSecret = $("s-wpw").value;
   body.dhcp = $("s-dhcp").checked;
-  body.wifiIp = $("s-ip").value.trim();
-  body.wifiMask = $("s-mask").value.trim();
-  body.wifiGw = $("s-gw").value.trim();
+  if (body.dhcp) {
+    // GET /config reports the live DHCP lease for diagnostics. It is not a
+    // static-address edit and must not make an unrelated save restart Wi-Fi.
+    delete body.wifiIp;
+    delete body.wifiMask;
+    delete body.wifiGw;
+  } else {
+    body.wifiIp = $("s-ip").value.trim();
+    body.wifiMask = $("s-mask").value.trim();
+    body.wifiGw = $("s-gw").value.trim();
+  }
   body.mqttIpDns = $("s-mqttHost").value.trim();
   body.mqttPort = parseInt($("s-mqttPort").value, 10) || 1883;
   body.mqttUsername = $("s-mqttUser").value.trim();

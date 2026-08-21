@@ -13,6 +13,10 @@ All notable changes to this project are documented in this file.
   details. That field is now ignored in recovery mode, so saving the network
   no longer fails or replaces the device's existing functions; first setup
   still validates an explicitly selected template.
+- **A name-only save no longer restarts DHCP devices.** The configuration API
+  reports the live DHCP lease for diagnostics, but the panel was sending that
+  address back as a static-IP edit. DHCP saves now omit and ignore those static
+  fields, so unrelated metadata changes do not restart the network.
 - **Irrigation controls use the released backend routes.** The WebUI now calls
   `/irrigation-run` and `/irrigation-stop`. The v9.186 slash-path compatibility
   aliases remain available for already-open panels and use the same protected

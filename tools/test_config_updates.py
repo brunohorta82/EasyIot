@@ -1739,6 +1739,31 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn("request->onDisconnect", route)
         self.assertIn("config.requestRestart();", route)
 
+    def test_dhcp_metadata_save_does_not_turn_the_live_lease_into_static_config(self) -> None:
+        save = block_after(self.panel, r"async\s+function\s+save\s*\(")
+        self.assertOrdered(
+            save,
+            'body.dhcp = $("s-dhcp").checked;',
+            "if (body.dhcp)",
+            "delete body.wifiIp;",
+            "delete body.wifiMask;",
+            "delete body.wifiGw;",
+        )
+
+        update = block_after(
+            self.config, r"ConfigUpdateResult\s+ConfigOnofre::update\s*\("
+        )
+        for field, value_name in (
+            ("wifiIp", "wifiIpValue"),
+            ("wifiMask", "wifiMaskValue"),
+            ("wifiGw", "wifiGwValue"),
+        ):
+            self.assertIn(f'JsonVariantConst {value_name} = root["{field}"];', update)
+            self.assertRegex(
+                update,
+                rf"if\s*\(\s*!dhcp\s*&&\s*!{value_name}\.isUnbound\(\)\s*\)",
+            )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

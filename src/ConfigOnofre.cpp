@@ -1306,13 +1306,13 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
   if (!wifiSsidValue.isUnbound())
     strlcpy(wifiSSID, wifiSsidValue.as<const char *>(), sizeof(wifiSSID));
   JsonVariantConst wifiIpValue = root["wifiIp"];
-  if (!wifiIpValue.isUnbound())
+  if (!dhcp && !wifiIpValue.isUnbound())
     strlcpy(wifiIp, wifiIpValue.as<const char *>(), sizeof(wifiIp));
   JsonVariantConst wifiMaskValue = root["wifiMask"];
-  if (!wifiMaskValue.isUnbound())
+  if (!dhcp && !wifiMaskValue.isUnbound())
     strlcpy(wifiMask, wifiMaskValue.as<const char *>(), sizeof(wifiMask));
   JsonVariantConst wifiGwValue = root["wifiGw"];
-  if (!wifiGwValue.isUnbound())
+  if (!dhcp && !wifiGwValue.isUnbound())
     strlcpy(wifiGw, wifiGwValue.as<const char *>(), sizeof(wifiGw));
   JsonVariantConst apiUserValue = root["apiUser"];
   if (!apiUserValue.isUnbound())
