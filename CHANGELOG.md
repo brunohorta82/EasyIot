@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 - Development baseline synchronized through upstream release 9.187.
+- **Available firmware is visible in the persistent header.** The installed
+  version remains a quiet, non-clickable label when current. When a newer
+  version exists, the header uses the same lime treatment as the update button
+  and opens System -> Firmware; a failed release check is shown in amber.
 
 ### Fixed
 - **ESP32-C6 Smart Bus pins can no longer be assigned to features.** GPIO6 and
