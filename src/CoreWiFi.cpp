@@ -430,6 +430,9 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     break;
 
   case MESSAGE_CONNECTED:
+    // JustWifi's disconnect() drops STA, and coming back up can restore the
+    // default sleep setting, so this is asserted again where the link is real.
+    WiFi.setSleep(false);
   {
     // WiFi.SSID()/psk() return temporary Strings. Capture them before staging
     // so the pending buffers never retain framework-owned pointers.
@@ -539,6 +542,13 @@ void beginBleProvison()
 void setupWiFi()
 {
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
+  // Bring the radio up before touching it. setSleep() was the first WiFi call in
+  // this function, so the driver did not exist yet and it did nothing — modem
+  // sleep stayed on, which is what a weak, slowly-improving signal looks like.
+  // The boot log said so out loud a few lines later: reloadWiFiConfig() calls
+  // jw.disconnect(), and that came back ESP_ERR_WIFI_NOT_INIT at 75 ms.
+  // jw.enableSTA() only sets a flag of its own, so it cannot be relied on here.
+  WiFi.enableSTA(true);
   WiFi.setSleep(false);
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);

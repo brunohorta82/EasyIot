@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.189] - 2026-08-21
+
+### Fixed
+- **The Wi-Fi radio was being configured before it existed.** `setupWiFi()` opened
+  with `WiFi.setSleep(false)` — the first Wi-Fi call in the function, so the driver
+  was not initialised and the call did nothing. Modem sleep therefore stayed at its
+  default, which is what a weak signal that slowly improves looks like. The boot log
+  from a C6 said it out loud a few lines later: `reloadWiFiConfig()` calls
+  `jw.disconnect()`, and that returned `ESP_ERR_WIFI_NOT_INIT` at 75 ms.
+  `jw.enableSTA()` only sets a flag inside JustWifi, so it could not be relied on
+  to bring the radio up. `WiFi.enableSTA(true)` now runs first, and the sleep
+  setting is asserted again on connect, because JustWifi's disconnect drops STA and
+  a reconnect can restore the default.
+
+### Para testers
+- **O sinal Wi-Fi fraco nos primeiros minutos, no OnOfre Rega.** A configuração do
+  rádio estava a ser feita antes de o rádio existir, e a instrução que evita o modo
+  de poupança não chegava a ser aplicada. Corrigido.
+- Quem reportou isto: vale a pena reiniciar o equipamento depois de atualizar e ver
+  se o sinal aparece logo bom, em vez de melhorar ao longo de minutos.
+
 ## [9.188] - 2026-08-21
 
 ### Changed
