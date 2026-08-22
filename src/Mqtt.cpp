@@ -1,3 +1,4 @@
+#include "DeviceLog.h"
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 #include <PubSubClient.h>
@@ -63,6 +64,7 @@ boolean reconnect()
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
         sendToServerEvents("mqtt_health", constantsMqtt::availablePayload);
+        deviceLog("mqtt ligado a %s", config.mqttIpDns);
         // reconnect() is reached only from loopMqtt(), which already owns the
         // lease. Keep the complete subscription scan in that same snapshot.
         for (auto &sw : config.actuatores)

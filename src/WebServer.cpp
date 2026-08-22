@@ -7,6 +7,7 @@
 #include <ConfigOnofre.h>
 #include "Templates.h"
 #include "Irrigation.h"
+#include "DeviceLog.h"
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
 #include "IndexHtml.h"
@@ -142,6 +143,7 @@ AutoUpdateResult performUpdate()
   Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
 #endif
   otaStatus.state = OtaState::RUNNING;
+  deviceLog("atualizacao pedida");
   otaStatus.percent = 0;
   otaStatus.error[0] = '\0';
 #ifdef ESP8266
@@ -219,6 +221,7 @@ AutoUpdateResult performUpdate()
   {
   case HTTP_UPDATE_FAILED:
     otaStatus.state = OtaState::FAILED;
+    deviceLog("atualizacao falhou");
 #ifdef ESP8266
     if (otaTlsErrorCode != 0 && otaTlsError[0] != '\0')
       strlcpy(otaStatus.error, otaTlsError, sizeof(otaStatus.error));
@@ -246,6 +249,7 @@ AutoUpdateResult performUpdate()
   case HTTP_UPDATE_OK:
     otaStatus.state = OtaState::DONE;
     otaStatus.percent = 100;
+    deviceLog("atualizacao gravada");
 #ifdef DEBUG_ONOFRE
     Log.notice("HTTP_UPDATE_OK");
 #endif
@@ -908,6 +912,18 @@ void loadAPI()
 
   // POST is the preferred method for state-changing endpoints.
   // Keep GET temporarily for backward compatibility with old clients.
+  /* Plain text, not JSON: this exists to be selected, copied and pasted into a
+     message by whoever is holding the device. Wrapping it in JSON would make the
+     one thing it is for harder. */
+  server.on("/logs", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    // authorizeRequest(), not request->authenticate() with config.*: credentials
+    // are snapshotted at boot so an async handler never reads mutable state, and
+    // the test suite enforces it. It caught this line.
+    if (!authorizeRequest(request))
+      return;
+    request->send(200, "text/plain; charset=utf-8", deviceLogText()); });
+
   server.on("/reboot", HTTP_POST, rebootHandler);
   server.on("/reboot", HTTP_GET, rebootHandler);
   // GET as well as POST: stopping the watering is the one thing someone may need

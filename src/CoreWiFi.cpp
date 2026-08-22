@@ -1,5 +1,6 @@
 #include "CoreWiFi.h"
 #include "DeviceClock.h"
+#include "DeviceLog.h"
 #include "Constants.h"
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
 #include <JustWifi.h>
@@ -415,6 +416,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   case MESSAGE_SMARTCONFIG_ERROR:
   case MESSAGE_HOSTNAME_ERROR:
   case MESSAGE_DISCONNECTED:
+    deviceLog("wifi desligado");
   case MESSAGE_TURNING_OFF:
   case MESSAGE_TURNING_ON:
   case MESSAGE_SCANNING:
@@ -433,6 +435,10 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     // JustWifi's disconnect() drops STA, and coming back up can restore the
     // default sleep setting, so this is asserted again where the link is real.
     WiFi.setSleep(false);
+    // RSSI and channel are the two numbers every signal complaint needs, and the
+    // only place they exist is the moment the link comes up.
+    deviceLog("wifi ligado %s ch%d %ddBm ip %s", WiFi.SSID().c_str(), WiFi.channel(),
+              WiFi.RSSI(), WiFi.localIP().toString().c_str());
   {
     // WiFi.SSID()/psk() return temporary Strings. Capture them before staging
     // so the pending buffers never retain framework-owned pointers.
@@ -456,6 +462,7 @@ void infoCallback(justwifi_messages_t code, char *parameter)
   }
 
   case MESSAGE_ACCESSPOINT_CREATED:
+    deviceLog("rede de configuracao criada");
     config.stopCloudIOWatchdog();
 #ifdef DEBUG_ONOFRE
     Log.notice("----------------------------------------------" CR);

@@ -2,6 +2,36 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.190] - 2026-08-21
+
+### Added
+- **The device keeps its own short log, readable from the panel.** Diagnosing what
+  a tester reports has meant asking for a USB cable, and by then the boot being
+  described is gone — everything written with ArduinoLog goes to Serial and is
+  compiled out of release builds. This is the opposite trade: a handful of lines
+  that always exist, in a fixed-size RAM ring (40 entries on ESP8266, 80 on ESP32),
+  served as plain text at `GET /logs` and shown in Diagnostics with a copy button.
+  Deliberately not the debug log: boot and reset reason, Wi-Fi up with SSID,
+  channel, RSSI and IP, Wi-Fi down, access point created, MQTT connected, update
+  requested/failed/written, a zone opening, and a cycle skipped for rain. Plain
+  text because it exists to be pasted into a message.
+
+### Merged
+- #129 save notifications moved somewhere they can be seen, with a dismiss button
+  and errors that linger longer than successes.
+- #130 ESP8266 HTTPS firmware updates, which were failing with HTTP -1 after the
+  OTA endpoint moved to HTTPS: bounded BearSSL buffers negotiated with the server.
+- #131 the header shows an available firmware version beside the installed one.
+
+### Para testers
+- **O equipamento passou a guardar um registo próprio**, no separador Diagnóstico,
+  com um botão para copiar. É isso que interessa colar quando reportam algo — já
+  não é preciso cabo USB.
+- **Nos equipamentos ESP8266 a atualização automática voltou a funcionar** (falhava
+  com erro -1 desde que o servidor passou a HTTPS).
+- O cabeçalho mostra agora a versão disponível ao lado da instalada.
+- As mensagens de gravação aparecem num sítio visível, e os erros ficam mais tempo.
+
 ## [9.189] - 2026-08-21
 
 ### Fixed

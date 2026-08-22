@@ -2,6 +2,7 @@
 #include "ConfigOnofre.h"
 #include "CloudIO.h"
 #include "WebServer.h"
+#include "DeviceLog.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
 #include <esp-knx-ip.h>
@@ -39,6 +40,9 @@ void logBootBanner()
   const String firmwareVersion = String(VERSION);
   const String firmwareBuildDate = String(__DATE__ " " __TIME__);
   const String resetReason = deviceResetReason();
+  // First line of the buffer, always: without it a log is a set of events with no
+  // idea which boot they belong to.
+  deviceLog("arranque fw %s motivo %s", firmwareVersion.c_str(), resetReason.c_str());
 
   Log.info("----------------------------------------------" CR);
   Log.info("%s Reset reason: %s" CR, tags::system, resetReason.c_str());

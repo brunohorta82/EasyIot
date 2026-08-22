@@ -1,6 +1,7 @@
 #include "Irrigation.h"
 #include "ConfigOnofre.h"
 #include "DeviceClock.h"
+#include "DeviceLog.h"
 #include "Persistence.h"
 #include <LittleFS.h>
 #ifdef DEBUG_ONOFRE
@@ -265,6 +266,7 @@ void Irrigation::openZone()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Irrigation: %s for %d min." CR, tags::actuatores, valve->name, z.minutes);
 #endif
+  deviceLog("rega abre %s %dmin", valve->name, z.minutes);
   valve->changeState(StateOrigin::INTERNAL, ActuatorState::ON_CLOSE);
 }
 
@@ -373,6 +375,9 @@ void Irrigation::loop()
     p.lastRunMinute = minute;
     if (skipOnRain && raining())
     {
+      // The single most confusing silence in the whole feature: a schedule that
+      // does nothing because a sensor says it is raining.
+      deviceLog("rega saltada: chuva");
 #ifdef DEBUG_ONOFRE
       Log.notice("%s Irrigation skipped: raining." CR, tags::actuatores);
 #endif

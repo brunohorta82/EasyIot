@@ -158,6 +158,16 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
       <div class="kv"><span>relógio</span><b class="status-badge off" id="d-clock">—</b></div>
     </div>
   </div>
+  <div class="sec">REGISTO DO EQUIPAMENTO</div>
+  <p class="note" style="margin:0 0 9px">O que o equipamento registou desde que arrancou:
+    rede, cloud, atualizações e ciclos de rega. Vive na memória dele, por isso
+    recomeça a cada reinício — e é isto que interessa colar num relato.</p>
+  <div class="log" id="d-devlog"><div class="dim">a ler…</div></div>
+  <div class="btns" style="margin-top:9px">
+    <button class="btn" id="d-devlog-refresh">Atualizar</button>
+    <button class="btn" id="d-devlog-copy">Copiar</button>
+  </div>
+
   <div class="sec">REGISTO AO VIVO</div>
   <div class="log" id="d-log"><div class="dim">à espera de eventos…</div></div>
   <div class="btns" style="margin-top:9px">

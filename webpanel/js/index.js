@@ -386,6 +386,27 @@ function followUpdate() {
   setTimeout(poll, 1500);
 }
 
+/* The device keeps its own short log; this is the only way to read it without a
+   cable, which is the whole point. Plain text on purpose: it goes straight into a
+   message. */
+async function loadDeviceLog() {
+  const box = $("d-devlog");
+  box.textContent = "";
+  try {
+    const res = await fetch(baseUrl + "/logs", { headers: { Accept: "text/plain" } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const text = (await res.text()).trim();
+    if (!text) {
+      box.innerHTML = '<div class="dim">o equipamento ainda não registou nada</div>';
+      return;
+    }
+    box.innerHTML = text.split("\n").map((l) => "<div>" + esc(l) + "</div>").join("");
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    box.innerHTML = '<div class="e">não foi possível ler o registo do equipamento</div>';
+  }
+}
+
 /* ---------------- theme ---------------- */
 /* The choice lives in localStorage, not in the device config: it belongs to
    whoever is looking, and writing it to the device would burn flash on a
@@ -1556,6 +1577,8 @@ document.addEventListener("click", (ev) => {
   if (tab) {
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === tab));
     document.querySelectorAll(".view").forEach((v) => v.classList.toggle("on", v.id === "v-" + tab.dataset.view));
+    // Read once on arrival, so nobody has to know there is a button for it.
+    if (tab.dataset.view === "diag") loadDeviceLog();
     return;
   }
   // The cog is inside the tile, so it must claim the click before the toggle.
@@ -1771,10 +1794,22 @@ document.addEventListener("DOMContentLoaded", () => {
   // Announce an available update on arrival; the old panel did and people
   // relied on it to know a fix existed.
   load().then(connectEvents).then(checkForUpdate);
+  $("d-devlog-refresh").onclick = loadDeviceLog;
+  $("d-devlog-copy").onclick = async (e) => {
+    try {
+      await navigator.clipboard.writeText($("d-devlog").innerText);
+      toast("Registo copiado", "ok");
+    } catch (err) {
+      toast("O browser não deixou copiar — seleciona e copia à mão", "err");
+    }
+  };
+
   // Diagnostics are a snapshot; refresh them while the tab is open.
   setInterval(() => {
     if ($("v-diag").classList.contains("on")) {
       api("/config").then((c) => { applyDiagnosticsSnapshot(c); renderHeader(); renderDiag(); }).catch(() => {});
+      // Left to the buttons otherwise: re-reading it under someone's cursor every
+      // ten seconds would move the text they are trying to select.
     }
   }, 10000);
   // The remaining time is counted down here so the tile does not need a push
