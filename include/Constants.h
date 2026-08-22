@@ -165,6 +165,25 @@ namespace constanstsCloudIO
 {
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
+#ifdef ESP8266
+    // cloudio.bhonofre.pt negotiates RFC 6066 maximum fragment length. The
+    // BearSSL default 16 KB receive buffer cannot coexist with the running
+    // WebUI/MQTT heap on an ESP8266. Cloud sync can run during a memory-heavy
+    // startup, so it uses the smallest negotiated fragment. OTA runs only
+    // after the WebUI is stopped and has enough measured headroom for 2 KB,
+    // which avoids making the firmware download unnecessarily slow.
+    constexpr int cloudTlsReceiveBufferSize{512};
+    constexpr int otaTlsReceiveBufferSize{2048};
+    constexpr int tlsTransmitBufferSize{512};
+    // Cloud sync runs with the WebUI and other services alive. HTTPClient also
+    // allocates request/header storage after the TLS connection is established,
+    // so its gate needs substantially more reserve than the OTA path. If this
+    // reserve is unavailable, CloudIO uses its existing plain-HTTP fallback.
+    constexpr uint32_t cloudTlsMinimumFreeHeap{22000};
+    constexpr uint32_t cloudTlsMinimumMaxBlock{12000};
+    constexpr uint32_t otaTlsMinimumFreeHeap{10000};
+    constexpr uint32_t otaTlsMinimumMaxBlock{4096};
+#endif
     constexpr const char *configUrl{"https://cloudio.bhonofre.pt/devices/config"};
 #ifdef HAN_MODE
     constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};

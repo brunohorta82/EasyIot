@@ -154,19 +154,55 @@ AutoUpdateResult performUpdate()
   const String otaUrl = String(constanstsCloudIO::otaUrl);
   const bool useHttps = otaUrl.startsWith("https://");
   t_httpUpdate_return ret;
+#ifdef ESP8266
+  int otaTlsErrorCode = 0;
+  char otaTlsError[sizeof(otaStatus.error)] = {};
+#endif
   if (useHttps)
   {
 #ifdef ESP8266
-    BearSSL::WiFiClientSecure client;
+    if (ESP.getFreeHeap() >= constanstsCloudIO::otaTlsMinimumFreeHeap &&
+        ESP.getMaxFreeBlockSize() >= constanstsCloudIO::otaTlsMinimumMaxBlock)
+    {
+#ifdef DEBUG_ONOFRE
+      const uint32_t heapBeforeTls = ESP.getFreeHeap();
+      const uint32_t maxBlockBeforeTls = ESP.getMaxFreeBlockSize();
+      const uint8_t fragmentationBeforeTls = ESP.getHeapFragmentation();
+      Log.notice("%s OTA TLS before: heap=%u maxBlock=%u fragmentation=%u%% rssi=%d" CR,
+                 tags::system,
+                 heapBeforeTls,
+                 maxBlockBeforeTls,
+                 fragmentationBeforeTls,
+                 WiFi.RSSI());
+#endif
+      BearSSL::WiFiClientSecure client;
+      client.setInsecure();
+      client.setBufferSizes(constanstsCloudIO::otaTlsReceiveBufferSize,
+                            constanstsCloudIO::tlsTransmitBufferSize);
+      ret = ESPhttpUpdate.update(client, otaUrl, String(VERSION));
+      otaTlsErrorCode = client.getLastSSLError(otaTlsError, sizeof(otaTlsError));
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s OTA TLS after: heap=%u maxBlock=%u fragmentation=%u%% sslError=%d detail=%s" CR,
+                 tags::system,
+                 ESP.getFreeHeap(),
+                 ESP.getMaxFreeBlockSize(),
+                 ESP.getHeapFragmentation(),
+                 otaTlsErrorCode,
+                 otaTlsError);
+#endif
+    }
+    else
+    {
+      ret = HTTP_UPDATE_FAILED;
+      otaTlsErrorCode = -1000;
+      strlcpy(otaTlsError, "Memória insuficiente para ligação TLS", sizeof(otaTlsError));
+    }
 #else
     WiFiClientSecure client;
-#endif
     client.setInsecure();
-#ifdef ESP8266
-    ret = ESPhttpUpdate.update(client, otaUrl, String(VERSION));
-#endif
 #ifdef ESP32
     ret = httpUpdate.update(client, otaUrl, String(VERSION));
+#endif
 #endif
   }
   else
@@ -184,7 +220,10 @@ AutoUpdateResult performUpdate()
   case HTTP_UPDATE_FAILED:
     otaStatus.state = OtaState::FAILED;
 #ifdef ESP8266
-    strlcpy(otaStatus.error, ESPhttpUpdate.getLastErrorString().c_str(), sizeof(otaStatus.error));
+    if (otaTlsErrorCode != 0 && otaTlsError[0] != '\0')
+      strlcpy(otaStatus.error, otaTlsError, sizeof(otaStatus.error));
+    else
+      strlcpy(otaStatus.error, ESPhttpUpdate.getLastErrorString().c_str(), sizeof(otaStatus.error));
 #else
     strlcpy(otaStatus.error, httpUpdate.getLastErrorString().c_str(), sizeof(otaStatus.error));
 #endif
@@ -545,7 +584,9 @@ void loadAPI()
     serializeJsonPretty(root, payload);
     config.endFeatureAccess();
     delete response;
-    request->send(200, "application/json", payload); });
+    AsyncWebServerResponse *configResponse = request->beginResponse(200, "application/json", payload);
+    configResponse->addHeader("Cache-Control", "no-store");
+    request->send(configResponse); });
 
   /*SAVE CONFIG*/
   server

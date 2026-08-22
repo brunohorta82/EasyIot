@@ -123,6 +123,11 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
   border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
 .bar { height: 5px; background: var(--sunk); border-radius: 3px; overflow: hidden; margin-top: 6px; }
 .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--grn), var(--grn2)); }
+.bar.indeterminate i { width: 38% !important; animation: ota-indeterminate 1.15s ease-in-out infinite; }
+@keyframes ota-indeterminate {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(290%); }
+}
 input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .fval { font-size: 15px; font-weight: 700; }
 
@@ -154,7 +159,10 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
   from { opacity: .2; stroke-width: 8; }
   to { opacity: 1; stroke-width: 3; }
 }
-@media (prefers-reduced-motion: reduce) { .climate-latest { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .climate-latest, .bar.indeterminate i { animation: none; }
+  .bar.indeterminate i { width: 100% !important; opacity: .65; }
+}
 .climate-collecting { min-height: 56px; display: grid; place-items: center; border: 1px dashed var(--line);
   border-radius: 7px; color: var(--dim); font-size: 10.5px; }
 .climate-caption { color: var(--dim); font-size: 9.5px; text-align: right; margin-top: 6px; }

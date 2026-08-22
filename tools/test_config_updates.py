@@ -25,6 +25,7 @@ SENSOR_SOURCE = ROOT / "src" / "Sensors.cpp"
 MAIN_SOURCE = ROOT / "src" / "main.cpp"
 TEMPLATES_SOURCE = ROOT / "src" / "Templates.cpp"
 WEB_SERVER = ROOT / "src" / "WebServer.cpp"
+CLOUD_SOURCE = ROOT / "src" / "CloudIO.cpp"
 WEB_PANEL = ROOT / "webpanel" / "js" / "index.js"
 WEB_PANEL_HTML = ROOT / "webpanel" / "index.html"
 PERSISTENCE_SOURCE = ROOT / "src" / "Persistence.cpp"
@@ -114,6 +115,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         cls.main = MAIN_SOURCE.read_text(encoding="utf-8")
         cls.templates = TEMPLATES_SOURCE.read_text(encoding="utf-8")
         cls.server = WEB_SERVER.read_text(encoding="utf-8")
+        cls.cloud = CLOUD_SOURCE.read_text(encoding="utf-8")
         cls.panel = WEB_PANEL.read_text(encoding="utf-8")
         cls.panel_html = WEB_PANEL_HTML.read_text(encoding="utf-8")
         cls.persistence = PERSISTENCE_SOURCE.read_text(encoding="utf-8")
@@ -1413,9 +1415,35 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn('const startingVersion = String(config.firmware || "");', follow)
         self.assertIn("snapshot.firmware !== startingVersion", follow)
         self.assertIn("Date.now() >= deadline", follow)
+        self.assertIn('bar.classList.add("indeterminate")', follow)
+        self.assertIn('bar.classList.remove("indeterminate")', follow)
+        self.assertIn('bar.removeAttribute("aria-valuenow")', follow)
+        self.assertIn('bar.setAttribute("aria-valuenow", String(value))', follow)
+        self.assertIn('{ cache: "no-store" }', follow)
+        self.assertIn('"/config?otaPoll=" + Date.now()', follow)
+        self.assertIn('configResponse->addHeader("Cache-Control", "no-store")', self.server)
         self.assertNotRegex(follow, r"miss(?:es)?\s*>?=\s*\d+")
         catch = block_after(follow, r"catch\s*\(\s*e\s*\)")
         self.assertNotIn("finish(true", catch)
+
+    def test_esp8266_https_uses_bounded_negotiated_tls_buffers(self) -> None:
+        self.assertRegex(self.constants, r"cloudTlsReceiveBufferSize\s*\{\s*512\s*\}")
+        self.assertRegex(self.constants, r"otaTlsReceiveBufferSize\s*\{\s*2048\s*\}")
+        self.assertRegex(self.constants, r"tlsTransmitBufferSize\s*\{\s*512\s*\}")
+        self.assertIn("client.setBufferSizes(constanstsCloudIO::cloudTlsReceiveBufferSize", self.cloud)
+        self.assertIn("client.setBufferSizes(constanstsCloudIO::otaTlsReceiveBufferSize", self.server)
+        self.assertIn("ESP.getFreeHeap() >= constanstsCloudIO::cloudTlsMinimumFreeHeap", self.cloud)
+        self.assertIn("ESP.getMaxFreeBlockSize() >= constanstsCloudIO::cloudTlsMinimumMaxBlock", self.cloud)
+        self.assertIn("ESP.getFreeHeap() >= constanstsCloudIO::otaTlsMinimumFreeHeap", self.server)
+        self.assertIn("ESP.getMaxFreeBlockSize() >= constanstsCloudIO::otaTlsMinimumMaxBlock", self.server)
+        self.assertOrdered(
+            self.cloud,
+            "JsonDocument requestDoc;",
+            "serializeJson(requestDoc, payload);",
+            'String responsePayload = "";',
+            "BearSSL::WiFiClientSecure client;",
+        )
+        self.assertIn("client.getLastSSLError(otaTlsError", self.server)
 
     def test_irrigation_action_routes_match_between_firmware_and_panel(self) -> None:
         for route in ("/irrigation-run", "/irrigation-stop"):

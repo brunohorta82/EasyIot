@@ -22,6 +22,26 @@ All notable changes to this project are documented in this file.
   de poupança não chegava a ser aplicada. Corrigido.
 - Quem reportou isto: vale a pena reiniciar o equipamento depois de atualizar e ver
   se o sinal aparece logo bom, em vez de melhorar ao longo de minutos.
+## [Unreleased]
+
+### Fixed
+- **ESP8266 automatic HTTPS updates no longer fail from BearSSL memory
+  exhaustion.** Negotiated TLS buffers and separate memory guards keep OTA
+  within the device's measured heap limits, while low-memory CloudIO startup
+  safely uses its existing HTTP fallback instead of risking an OOM restart.
+- **Automatic-update progress no longer implies unobserved byte progress.** The
+  WebUI shows an accessible moving indicator while the device downloads and
+  installs, bypasses stale browser caches after reboot, and reaches 100% only
+  after confirming the new firmware version.
+- **ESP8266 OTA failures expose the BearSSL error detail** instead of reporting
+  only the generic HTTP connection error.
+
+### Validation
+- `ESP8266_DEBUG`, `ESP8266-HAN_DEBUG`, and `ESP32_DEBUG` builds pass.
+- An ESP8266 test device upgraded automatically over HTTPS from a local 9.186
+  build to official 9.188 and returned to Wi-Fi without manual browser refresh.
+- The untouched Safari page confirmed 9.188 and displayed the completed 100%
+  progress bar.
 
 ## [9.188] - 2026-08-21
 

@@ -689,30 +689,32 @@ void connectToCloudIO()
     return;
   }
   String payload = "";
-  JsonDocument doc;
-  JsonVariant root = doc.to<JsonVariant>();
-  // Snapshot the vectors under a short lease, then release before any TLS,
-  // HTTP, delay, or response parsing work.
-  if (!config.tryBeginFeatureAccess())
   {
+    JsonDocument requestDoc;
+    JsonVariant root = requestDoc.to<JsonVariant>();
+    // Snapshot the vectors under a short lease, then release before any TLS,
+    // HTTP, delay, or response parsing work.
+    if (!config.tryBeginFeatureAccess())
+    {
 #ifdef DEBUG_ONOFRE
-    Log.warning("%s Feature configuration busy; CloudIO snapshot deferred" CR, tags::cloudIO);
+      Log.warning("%s Feature configuration busy; CloudIO snapshot deferred" CR, tags::cloudIO);
 #endif
-    config.requestCloudIOSync();
-    return;
+      config.requestCloudIOSync();
+      return;
+    }
+    config.json(root, false);
+    config.endFeatureAccess();
+    // CloudIO backend expects numeric firmware format (e.g. 9.17).
+    // Keep local/UI version tags (e.g. 9.17-dev), but strip suffix for this API call.
+    String firmwareForCloud = String(VERSION);
+    int versionSuffixIndex = firmwareForCloud.indexOf('-');
+    if (versionSuffixIndex > 0)
+    {
+      firmwareForCloud = firmwareForCloud.substring(0, versionSuffixIndex);
+    }
+    root["firmware"] = firmwareForCloud;
+    serializeJson(requestDoc, payload);
   }
-  config.json(root, false);
-  config.endFeatureAccess();
-  // CloudIO backend expects numeric firmware format (e.g. 9.17).
-  // Keep local/UI version tags (e.g. 9.17-dev), but strip suffix for this API call.
-  String firmwareForCloud = String(VERSION);
-  int versionSuffixIndex = firmwareForCloud.indexOf('-');
-  if (versionSuffixIndex > 0)
-  {
-    firmwareForCloud = firmwareForCloud.substring(0, versionSuffixIndex);
-  }
-  root["firmware"] = firmwareForCloud;
-  serializeJson(doc, payload);
   String responsePayload = "";
   int httpCode = -1;
   const String requestUrl = String(constanstsCloudIO::configUrl);
@@ -738,10 +740,37 @@ void connectToCloudIO()
     if (useHttps)
     {
 #ifdef ESP8266
-      BearSSL::WiFiClientSecure client;
+      if (ESP.getFreeHeap() >= constanstsCloudIO::cloudTlsMinimumFreeHeap &&
+          ESP.getMaxFreeBlockSize() >= constanstsCloudIO::cloudTlsMinimumMaxBlock)
+      {
+        BearSSL::WiFiClientSecure client;
+        client.setInsecure();
+        client.setBufferSizes(constanstsCloudIO::cloudTlsReceiveBufferSize,
+                              constanstsCloudIO::tlsTransmitBufferSize);
+        beginOk = request.begin(client, url);
+        if (beginOk)
+        {
+          request.addHeader("Content-Type", "application/json");
+          responseCode = request.POST(payload.c_str());
+          if (responseCode == HTTP_CODE_OK)
+          {
+            responsePayload = request.getString();
+          }
+        }
+      }
+      else
+      {
+        responseCode = -1;
+#ifdef DEBUG_ONOFRE
+        Log.warning("%s [HTTP] HTTPS skipped: insufficient TLS memory heap=%u maxBlock=%u fragmentation=%u%%" CR,
+                    tags::cloudIO,
+                    ESP.getFreeHeap(),
+                    ESP.getMaxFreeBlockSize(),
+                    ESP.getHeapFragmentation());
+#endif
+      }
 #else
       WiFiClientSecure client;
-#endif
       client.setInsecure();
       beginOk = request.begin(client, url);
       if (beginOk)
@@ -753,6 +782,7 @@ void connectToCloudIO()
           responsePayload = request.getString();
         }
       }
+#endif
     }
     else
     {
@@ -830,7 +860,6 @@ void connectToCloudIO()
     httpCode = postCloudConfig(requestUrl, false, 1, 1);
   }
 
-  doc.clear();
 #ifdef DEBUG_ONOFRE
   Log.info("%s [HTTP] Request result: %d (fallback=%d)" CR, tags::cloudIO, httpCode, usedHttpFallback ? 1 : 0);
   Log.info("----------------------------------------------" CR);
@@ -867,6 +896,7 @@ void connectToCloudIO()
   else if (httpCode == HTTP_CODE_OK)
   {
     cloudSyncBackoffTicks = 0;
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, responsePayload);
     if (error)
     {
