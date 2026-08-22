@@ -404,10 +404,19 @@ function accent() {
 /* ---------------- helpers ---------------- */
 function toast(msg, kind) {
   const t = $("toast");
-  t.textContent = msg;
+  const isError = kind === "err";
+  t.setAttribute("role", isError ? "alert" : "status");
+  t.setAttribute("aria-live", isError ? "assertive" : "polite");
+  $("toast-msg").textContent = msg;
   t.className = "on " + (kind || "");
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => { t.className = ""; }, 3200);
+  // Errors need enough time to be read on a phone; every toast can also be
+  // dismissed immediately without stealing keyboard focus from the form.
+  toast._t = setTimeout(dismissToast, isError ? 9000 : 4200);
+}
+function dismissToast() {
+  clearTimeout(toast._t);
+  $("toast").className = "";
 }
 /* The save button lives in the header and starts disabled, so both of these
    have to drive it — otherwise there is nothing to press. */
@@ -1670,6 +1679,7 @@ window.addEventListener("beforeunload", (e) => {
 
 document.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentTheme());        // paints the button for the theme already applied
+  $("toast-close").onclick = dismissToast;
   $("theme-btn").onclick = () => applyTheme(currentTheme() === "light" ? "dark" : "light");
   $("save-btn").onclick = save;
   $("nf-add").onclick = addFeature;
