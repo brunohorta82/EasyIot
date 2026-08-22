@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.191] - 2026-08-22
+
+### Fixed
+- **No ESP32-C6 could ever update over the air.** The release job picked the OTA
+  application image with `find -name 'Firmware_*.bin' -print -quit`, and the C6
+  build emits a merged bootloader+partitions+app image next to the application one.
+  It picked the merged file, so OTA published a bootloader as if it were an
+  application: the device downloaded it, wrote it into the OTA slot, and then
+  refused to boot it — "Could Not Activate The Firmware", after a progress bar that
+  reached 100%. Every C6 release from 9.180 to 9.190 shipped that way. The
+  selection now excludes `*.factory.bin`, and the job fails outright rather than
+  publishing one, because the failure was invisible on the publishing side.
+
+### Para testers
+- **A atualização automática no OnOfre Rega estava a servir a imagem errada** e
+  falhava sempre no fim, com "Could Not Activate The Firmware". Corrigido: a partir
+  desta versão o botão de atualizar funciona no C6.
+- Para chegar a esta versão ainda é preciso instalar por USB uma última vez, em
+  cloudio.bhonofre.pt/flash/ — o equipamento não se consegue atualizar sozinho para
+  a correção da própria atualização.
+
 ## [9.190] - 2026-08-21
 
 ### Added

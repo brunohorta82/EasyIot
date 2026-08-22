@@ -153,11 +153,20 @@ jobs:
           # "Firmware_<env>_<version> - <date>.bin", so plain firmware.bin does not
           # exist. Match that first and keep firmware.bin as a fallback. Never glob
           # *.bin blindly: ESP32 build dirs also hold bootloader.bin/partitions.bin.
-          SRC=$(find "$BUILD_DIR" -maxdepth 1 -name 'Firmware_*.bin' -print -quit)
+          # Never the .factory.bin: newer platform builds (the C6) emit a merged
+          # bootloader+partitions+app image next to the application one, and this
+          # step used to pick whichever find returned first. When it picked the
+          # merged one, OTA published a bootloader as if it were an app: the device
+          # downloaded it, wrote it, and refused to boot it — "Could Not Activate
+          # The Firmware". Every C6 release from 9.180 to 9.190 shipped that way.
+          SRC=$(find "$BUILD_DIR" -maxdepth 1 -name 'Firmware_*.bin' ! -name '*.factory.bin' -print -quit)
           [ -n "$SRC" ] || SRC="$BUILD_DIR/firmware.bin"
           if [ ! -f "$SRC" ]; then
             echo "No firmware binary found in $BUILD_DIR:"; ls -la "$BUILD_DIR"; exit 1
           fi
+          case "$SRC" in
+            *.factory.bin) echo "::error::refusing to publish a merged factory image as the OTA application"; exit 1 ;;
+          esac
           cp "$SRC" "out/$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "Built from: $SRC"
