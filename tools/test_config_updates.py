@@ -1417,6 +1417,22 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         catch = block_after(follow, r"catch\s*\(\s*e\s*\)")
         self.assertNotIn("finish(true", catch)
 
+    def test_firmware_header_badge_links_to_update_panel(self) -> None:
+        self.assertIn('id="h-fw-link"', self.panel_html)
+        self.assertIn('title="Firmware instalado" disabled', self.panel_html)
+        self.assertIn('class="header-fw-download"', self.panel_html)
+        self.assertIn('class="header-fw-warning"', self.panel_html)
+        check = block_after(self.panel, r"async\s+function\s+checkForUpdate\s*\(")
+        self.assertIn('setFirmwareHeaderState("available", latest)', check)
+        self.assertIn('setFirmwareHeaderState("error")', check)
+        self.assertIn('setFirmwareHeaderState("current")', check)
+        state = block_after(self.panel, r"function\s+setFirmwareHeaderState\s*\(")
+        self.assertIn("badge.disabled = true", state)
+        self.assertIn("badge.disabled = false", state)
+        jump = block_after(self.panel, r"function\s+openFirmwareSettings\s*\(")
+        self.assertOrdered(jump, 'systemTab.click()', 'firmwareTab.click()')
+        self.assertIn('$("h-fw-link").onclick = openFirmwareSettings', self.panel)
+
     def test_irrigation_action_routes_match_between_firmware_and_panel(self) -> None:
         for route in ("/irrigation-run", "/irrigation-stop"):
             self.assertIn(f'"{route}"', self.server)
