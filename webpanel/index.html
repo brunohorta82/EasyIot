@@ -15,7 +15,14 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <svg viewBox="0 0 69 67" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.93 67c-1.37 0-2.48-1.13-2.48-2.52V34.87c0-3.69 1.59-7.19 4.36-9.58l15.6-13.51c4.69-4.05 11.59-4.01 16.23.09l15.18 13.44a12.63 12.63 0 0 1 4.25 9.49v5.88c3.44 1.07 5.93 4.28 5.93 8.08a8.45 8.45 0 0 1-8.44 8.46 8.45 8.45 0 0 1-8.44-8.46c0-3.82 2.52-7.04 5.98-8.1v-5.86c0-2.18-.93-4.26-2.55-5.69L40.37 15.67a6.6 6.6 0 0 0-9.73-.05l-15.61 13.5a7.55 7.55 0 0 0-2.59 5.75v29.61c0 1.39-1.11 2.52-2.48 2.52Z" fill="currentColor"/><path d="M8.44 16.92a8.45 8.45 0 0 0 8.44-8.46A8.45 8.45 0 0 0 8.44 0 8.45 8.45 0 0 0 0 8.46a8.45 8.45 0 0 0 8.44 8.46Z" fill="currentColor"/></svg>
     ONOFRE
   </div>
-  <span class="hid"><b id="h-name">…</b> · <span id="h-chip"></span> · <span id="h-mcu"></span> · FW <span class="notranslate" id="h-fw" translate="no">—</span></span>
+  <span class="hid"><b id="h-name">…</b> · <span id="h-chip"></span> · <span id="h-mcu"></span> ·
+    <button type="button" class="header-fw" id="h-fw-link" title="Firmware instalado" disabled>
+      <span>FW</span> <span class="notranslate" id="h-fw" translate="no">—</span>
+      <svg class="header-fw-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+      <span class="notranslate header-fw-latest" id="h-fw-latest" translate="no"></span>
+      <svg class="header-fw-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
+    </button>
+  </span>
   <span class="spacer"></span>
   <span class="pill" id="h-wifi">WiFi <b>—</b></span>
   <span class="pill" id="h-mqtt">MQTT <b>—</b></span>

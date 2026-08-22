@@ -525,6 +525,27 @@ function renderHeader() {
   setMqttPill(config.mqttConnected);
   $("h-up").innerHTML = "ligado há <b>" + duration(config.uptime) + "</b>";
 }
+function setFirmwareHeaderState(state, latest) {
+  const badge = $("h-fw-link");
+  const latestLabel = $("h-fw-latest");
+  badge.classList.remove("available", "error");
+  badge.disabled = true;
+  latestLabel.textContent = "";
+  if (state === "available") {
+    badge.classList.add("available");
+    badge.disabled = false;
+    latestLabel.textContent = latest;
+    badge.title = "Atualização " + latest + " disponível — abrir Firmware";
+    badge.setAttribute("aria-label", "Atualização de firmware " + latest + " disponível. Abrir Firmware");
+  } else if (state === "error") {
+    badge.classList.add("error");
+    badge.title = "Não foi possível verificar atualizações";
+    badge.setAttribute("aria-label", "Não foi possível verificar atualizações");
+  } else {
+    badge.title = "Firmware instalado";
+    badge.setAttribute("aria-label", "Firmware instalado " + (config.firmware || "desconhecido"));
+  }
+}
 function setStatusBadge(el, state, text) {
   if (!el) return;
   el.className = "status-badge " + state;
@@ -1072,6 +1093,14 @@ function showSystemPane(name) {
     pane.classList.toggle("on", pane.id === "system-" + name));
 }
 
+function openFirmwareSettings() {
+  const systemTab = document.querySelector('[data-view="system"]');
+  const firmwareTab = document.querySelector('[data-system-view="firmware"]');
+  if (systemTab) systemTab.click();
+  if (firmwareTab) firmwareTab.click();
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
 function fillNewFeatureForm() {
   const sel = $("nf-driver");
   sel.innerHTML = DRIVERS.map((g) => '<optgroup label="' + esc(g.g) + '">' +
@@ -1279,12 +1308,14 @@ async function checkForUpdate() {
     // Cross-origin by design; an https fetch from this http page is allowed.
     const res = await fetch(UPDATE_HOST + "/firmware/latest-version/" + encodeURIComponent(config.mcu),
       { mode: "cors" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
     latest = (await res.text()).trim();
   } catch (e) {
     // Offline, or no route to the release server — say so instead of implying
     // the firmware is current.
     note.className = "note";
     note.textContent = "Não foi possível verificar se há atualização.";
+    setFirmwareHeaderState("error");
     return;
   }
   if (isNewer(latest, config.firmware)) {
@@ -1292,6 +1323,7 @@ async function checkForUpdate() {
     note.textContent = "Está disponível a versão " + latest + ".";
     btn.textContent = "Atualizar para a " + latest;
     btn.classList.add("p");
+    setFirmwareHeaderState("available", latest);
   } else {
     note.className = "note";
     note.textContent = latest
@@ -1299,6 +1331,7 @@ async function checkForUpdate() {
       : "";
     btn.textContent = "Procurar atualização";
     btn.classList.remove("p");
+    setFirmwareHeaderState("current");
   }
 }
 
@@ -1696,6 +1729,7 @@ document.addEventListener("DOMContentLoaded", () => {
   applyTheme(currentTheme());        // paints the button for the theme already applied
   $("toast-close").onclick = dismissToast;
   $("theme-btn").onclick = () => applyTheme(currentTheme() === "light" ? "dark" : "light");
+  $("h-fw-link").onclick = openFirmwareSettings;
   $("save-btn").onclick = save;
   $("nf-add").onclick = addFeature;
   $("a-export").onclick = exportConfig;

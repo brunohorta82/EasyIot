@@ -51,6 +51,21 @@ button, input, select { font-family: inherit; font-size: inherit; color: inherit
 /* The mark keeps the true brand green even where text has to darken. */
 .brand svg { width: 20px; height: 20px; color: var(--brand); }
 .hid { color: var(--dim); font-size: 11.5px; }
+.header-fw {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 24px;
+  border: 1px solid transparent; border-radius: 8px; padding: 2px 6px;
+  background: transparent; color: var(--dim); font: inherit; cursor: default;
+  white-space: nowrap; vertical-align: middle;
+}
+.header-fw:not(:disabled) { cursor: pointer; }
+.header-fw:focus-visible { outline: 2px solid var(--grn); outline-offset: 2px; }
+.header-fw svg { display: none; width: 13px; height: 13px; flex: none; }
+.header-fw-latest { display: none; font-weight: 700; }
+.header-fw.available .header-fw-download, .header-fw.available .header-fw-latest { display: inline-block; }
+.header-fw.error {
+  color: var(--status-warn); border-color: rgba(245,166,35,.45); background: rgba(245,166,35,.12);
+}
+.header-fw.error .header-fw-warning { display: inline-block; }
 .spacer { flex: 1; }
 .pill {
   border: 1px solid var(--line); background: var(--panel2); border-radius: 999px;
@@ -204,7 +219,8 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .btn { display: inline-block; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
   padding: 7px 13px; font-size: 11.5px; cursor: pointer; }
 .btn:hover { border-color: var(--hover); }
-.btn.p { background: rgba(151,215,0,.15); border-color: var(--grn); color: var(--grn); }
+.btn.p, .header-fw.available { background: rgba(151,215,0,.15); border-color: var(--grn); color: var(--grn); }
+.header-fw.available:hover { background: rgba(151,215,0,.15); border-color: var(--grn); color: var(--grn); }
 .btn.d { border-color: rgba(229,72,77,.5); color: var(--red); }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .btns { display: flex; gap: 8px; flex-wrap: wrap; }
