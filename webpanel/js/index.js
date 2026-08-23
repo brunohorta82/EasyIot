@@ -1464,14 +1464,51 @@ function uploadFirmware(btn) {
   }
 }
 
-/* This is deliberately a non-secret diagnostic snapshot, not a restorable
-   backup. GET /config omits credentials and the legacy restore path cannot
-   safely reconstruct the complete device state. */
+const RESTORE_SCALAR_FIELDS = [
+  "nodeId", "mqttIpDns", "mqttPort", "mqttUsername", "wifiSSID", "dhcp",
+  "wifiIp", "wifiMask", "wifiGw", "apiUser"
+];
+const RESTORE_FEATURE_FIELDS = [
+  "group", "id", "name", "inputMode", "upCourseTime", "downCourseTime",
+  "autoOff", "area", "line", "member", "inputs", "outputs"
+];
+
+function copyFields(source, fields) {
+  const copy = {};
+  fields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(source, field)) copy[field] = source[field];
+  });
+  return copy;
+}
+
+function featureIdentityList(features) {
+  if (!Array.isArray(features)) throw new Error("A cópia não contém uma lista de funções válida.");
+  const identities = features.map((feature) => {
+    if (!feature || typeof feature !== "object" ||
+        (feature.group !== "ACTUATOR" && feature.group !== "SENSOR") ||
+        typeof feature.id !== "string" || !feature.id) {
+      throw new Error("A cópia contém uma função inválida.");
+    }
+    return feature.group + ":" + feature.id;
+  }).sort();
+  if (new Set(identities).size !== identities.length)
+    throw new Error("A cópia contém identificadores de função repetidos.");
+  return identities;
+}
+
+/* The exported object is intentionally non-secret. A restore preserves the
+   credentials already stored on the device and uses POST /config, whose
+   firmware-side preflight validates every submitted pin before changing it. */
 function exportConfig() {
-  const snapshot = Object.assign({}, config, {
-    snapshotType: "easyiot-diagnostic",
+  const snapshot = Object.assign(copyFields(config, RESTORE_SCALAR_FIELDS), {
+    snapshotType: "easyiot-config",
     snapshotVersion: 1
   });
+  snapshot.chipId = config.chipId;
+  snapshot.mcu = config.mcu;
+  snapshot.firmware = config.firmware;
+  snapshot.features = (config.features || []).map((feature) =>
+    copyFields(feature, RESTORE_FEATURE_FIELDS));
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -1480,12 +1517,63 @@ function exportConfig() {
   URL.revokeObjectURL(a.href);
 }
 
-function restoreConfig(file, btn) {
+async function restoreConfig(file, btn) {
   const msg = $("r-msg");
-  void file;
-  void btn;
-  msg.className = "note err";
-  msg.textContent = "O restauro está desativado até existir validação completa e segura.";
+  btn.disabled = true;
+  msg.className = "note";
+  msg.textContent = "A validar a cópia…";
+  try {
+    if (!file || file.size > 512 * 1024)
+      throw new Error("O ficheiro não é uma cópia JSON válida ou é demasiado grande.");
+    let snapshot;
+    try { snapshot = JSON.parse(await file.text()); }
+    catch (e) { throw new Error("Não foi possível ler este ficheiro JSON."); }
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
+      throw new Error("O ficheiro não contém uma configuração válida.");
+    if (snapshot.snapshotType &&
+        snapshot.snapshotType !== "easyiot-config" &&
+        snapshot.snapshotType !== "easyiot-diagnostic")
+      throw new Error("Este ficheiro não é uma cópia de configuração EasyIot.");
+    if (String(snapshot.chipId || "") !== String(config.chipId || ""))
+      throw new Error("Esta cópia pertence a outro equipamento.");
+    if (String(snapshot.mcu || "") !== String(config.mcu || ""))
+      throw new Error("Esta cópia foi criada para outra variante de hardware.");
+
+    const savedIds = featureIdentityList(snapshot.features);
+    const currentIds = featureIdentityList(config.features || []);
+    if (savedIds.length !== currentIds.length ||
+        savedIds.some((identity, index) => identity !== currentIds[index]))
+      throw new Error("A lista de funções já não é igual à da cópia. O restauro foi cancelado.");
+
+    const body = copyFields(snapshot, RESTORE_SCALAR_FIELDS);
+    body.features = snapshot.features.map((feature) =>
+      copyFields(feature, RESTORE_FEATURE_FIELDS));
+    // A DHCP snapshot contains the live lease returned by GET /config, not a
+    // static address request. Match the normal Save path and omit those values.
+    if (body.dhcp === true) {
+      delete body.wifiIp;
+      delete body.wifiMask;
+      delete body.wifiGw;
+    }
+
+    const saved = await api("/config", { method: "POST", body: JSON.stringify(body) });
+    const restartRequired = saved.restartRequired === true;
+    config = saved;
+    removed = [];
+    clearDirty();
+    renderHeader(); renderOverview(); renderPinout(); renderFeatures(); renderDiag(); fillSystem(); fillNewFeatureForm();
+    wireFeatureEvents();
+    msg.className = "note ok";
+    msg.textContent = restartRequired
+      ? "Configuração reposta. O equipamento vai reiniciar; volta a abrir a página dentro de alguns segundos."
+      : "Configuração reposta com sucesso.";
+    toast("Configuração reposta", "ok");
+  } catch (e) {
+    msg.className = "note err";
+    msg.textContent = e && e.body ? configError(e) : (e.message || "Não foi possível restaurar a configuração.");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 /* ---------------- live updates ---------------- */
@@ -1763,6 +1851,13 @@ document.addEventListener("DOMContentLoaded", () => {
   $("save-btn").onclick = save;
   $("nf-add").onclick = addFeature;
   $("a-export").onclick = exportConfig;
+  $("r-file").onchange = () => {
+    const file = ($("r-file").files || [])[0];
+    $("r-msg").className = "note";
+    $("r-msg").textContent = file
+      ? "Pronto para validar e aplicar " + file.name + "."
+      : "Escolhe uma cópia JSON exportada por este equipamento.";
+  };
   $("d-log-pause").onclick = (e) => {
     logPaused = !logPaused;
     e.target.textContent = logPaused ? "Retomar" : "Pausar";
