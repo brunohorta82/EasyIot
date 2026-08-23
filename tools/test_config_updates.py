@@ -1233,16 +1233,29 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn("config.requestRestart();", store)
         self.assertNotIn("config.endFeatureAccess();", store)
 
-    def test_diagnostic_snapshot_cannot_submit_a_restore(self) -> None:
+    def test_configuration_restore_is_target_bound_non_secret_and_preflighted(self) -> None:
         export = block_after(self.panel, r"function\s+exportConfig\s*\(")
         restore = block_after(self.panel, r"function\s+restoreConfig\s*\(")
-        self.assertIn('snapshotType: "easyiot-diagnostic"', export)
+        self.assertIn('snapshotType: "easyiot-config"', export)
+        self.assertIn("RESTORE_SCALAR_FIELDS", export)
+        self.assertIn("RESTORE_FEATURE_FIELDS", export)
         self.assertNotIn("backup: true", export)
-        self.assertNotIn("api(", restore)
-        self.assertNotIn("fetch(", restore)
-        self.assertIn("restauro está desativado", restore)
-        self.assertRegex(self.panel_html, r'id="r-file"[^>]*\bdisabled\b')
-        self.assertRegex(self.panel_html, r'id="r-send"[^>]*\bdisabled\b')
+        restore_contract = self.panel[
+            self.panel.index("const RESTORE_SCALAR_FIELDS"):
+            self.panel.index("function featureIdentityList")
+        ]
+        for secret in (
+            "mqttPassword", "wifiSecret", "accessPointPassword",
+            "apiPassword", "cloudIOUsername", "cloudIOPassword",
+        ):
+            self.assertNotIn(f'"{secret}"', restore_contract)
+        self.assertIn("snapshot.chipId", restore)
+        self.assertIn("snapshot.mcu", restore)
+        self.assertIn("featureIdentityList(snapshot.features)", restore)
+        self.assertIn("featureIdentityList(config.features || [])", restore)
+        self.assertIn('api("/config"', restore)
+        self.assertNotRegex(self.panel_html, r'id="r-file"[^>]*\bdisabled\b')
+        self.assertNotRegex(self.panel_html, r'id="r-send"[^>]*\bdisabled\b')
 
     def test_changed_outputs_are_parked_without_driving_new_inputs(self) -> None:
         park = block_after(self.config, r"void\s+parkOutput\s*\(")

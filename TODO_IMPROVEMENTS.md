@@ -1,8 +1,8 @@
 # EasyIot - To Do
 
 - Created by: Alexandru Hauzman
-- Updated: 22.08.2026
-- Current upstream version: 9.188
+- Updated: 23.08.2026
+- Current upstream version: 9.192
 
 ## Important Notes
 
@@ -53,6 +53,7 @@
 3. [x] Updated firmware version format support (example: `9.17-dev`).
 4. [x] Updated code/version reporting to use string `VERSION`.
 5. [x] Improved `extra_script.py` handling for quoted `VERSION` values.
+
 6. [x] Added `CHANGELOG.md` as the single release-history file.
 7. [x] Added pre-release metadata validator (version/changelog/env/OTA URL checks). File: `tools/validate_release.sh`
 8. [x] Added automatic pre-build hooks for HTML conversion and release validation with skip flags. Files: `tools/extra_script.py`, `platformio.ini`
@@ -91,6 +92,7 @@
 7. [x] Added bounded browser-only climate history graphs for DS18B20, DHT11/21/22, and SHT4x sensors with separate temperature/humidity scales, stable-state context, timestamps, and no device flash writes. Persistent day/week history remains a separate storage/API design. Files: `webpanel/css/styles.css`, `webpanel/js/index.js`
 8. [x] Made template replacement truthful on provisioned devices: validate and queue the request, quiesce active feature readers, save the replacement, and restart before using it. Files: `include/ConfigOnofre.h`, `include/Templates.h`, `src/ConfigOnofre.cpp`, `src/Templates.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `webpanel/js/index.js`
 9. [x] Added a firmware-update badge beside the installed header version: it stays quiet and disabled when current, shows an amber check failure, and uses the primary lime update pattern plus direct System -> Firmware navigation only when a newer version is available. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`, `tools/test_config_updates.py`
+10. [x] Re-enabled configuration-file import as a constrained, non-secret operation: only the same chip, MCU variant and complete feature-ID topology are accepted; imported fields are whitelisted and submitted through the existing server-side configuration preflight. Full recreation of removed features, sensor metadata, irrigation schedules and secrets remains tracked separately in Backlog. Files: `webpanel/index.html`, `webpanel/js/index.js`, `tools/test_config_updates.py`
 
 ## Code Quality
 
