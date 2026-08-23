@@ -18,8 +18,6 @@ import os
 import re
 import subprocess
 import sys
-import urllib.parse
-import urllib.request
 
 MAX_BULLETS = 12
 MAX_BULLET_CHARS = 220
@@ -125,22 +123,26 @@ def main():
     body = "\n".join("• " + html.escape(l) for l in lines)
     text = f"<b>{html.escape(product)} {html.escape(version)}</b>\n{body}"
 
-    data = urllib.parse.urlencode({
-        "chat_id": chat,
-        "text": text,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": "true",
-    }).encode()
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{token}/sendMessage", data=data)
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            r.read()
-    except Exception as e:
+    # curl rather than urllib: the self-hosted macOS runner uses a python.org build
+    # with no CA bundle installed, so urllib cannot verify api.telegram.org and the
+    # announcement died with CERTIFICATE_VERIFY_FAILED while the release itself was
+    # fine. curl uses the operating system's trust store and exists on every runner
+    # this repository uses.
+    result = subprocess.run(
+        ["curl", "-sS", "--max-time", "20", "-X", "POST",
+         "--data-urlencode", f"chat_id={chat}",
+         "--data-urlencode", f"text={text}",
+         "--data-urlencode", "parse_mode=HTML",
+         "--data-urlencode", "disable_web_page_preview=true",
+         f"https://api.telegram.org/bot{token}/sendMessage"],
+        capture_output=True, text=True)
+    # Telegram answers 200 with {"ok":false} for things like a bot that is not an
+    # administrator, so the body is what decides.
+    if result.returncode != 0 or '"ok":true' not in result.stdout:
         # Never fatal: a release that shipped but was not announced still shipped,
         # and failing the job here would say otherwise.
-        detail = getattr(e, "read", lambda: b"")()[:300].decode("utf-8", "replace")
-        print(f"::warning::Telegram refused the announcement: {e} {detail}")
+        detail = (result.stdout or result.stderr or "").strip()[:300]
+        print(f"::warning::Telegram refused the announcement: {detail}")
         return 0
     print(f"Announced {product} {version} on Telegram")
     return 0
