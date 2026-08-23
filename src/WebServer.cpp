@@ -570,6 +570,76 @@ void loadWebPanel()
 
 void loadAPI()
 {
+  /*EXPORT FULL NON-SECRET BACKUP*/
+  server.on("/backup", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    if (!authorizeRequest(request))
+      return;
+    if (!config.tryBeginFeatureAccess())
+    {
+      sendFeatureBusy(request);
+      return;
+    }
+    JsonDocument document;
+    JsonVariant root = document.to<JsonObject>();
+    config.backup(root);
+    if (document.overflowed())
+    {
+      config.endFeatureAccess();
+      request->send(errorResponse("Not enough memory to create backup", 507));
+      return;
+    }
+    String payload;
+    serializeJsonPretty(document, payload);
+    config.endFeatureAccess();
+    AsyncWebServerResponse *response = request->beginResponse(
+        200, "application/json", payload);
+    response->addHeader("Cache-Control", "no-store");
+    response->addHeader("Content-Disposition",
+                        "attachment; filename=easyiot-backup.json");
+    request->send(response); });
+
+  /*STAGE FULL RECOVERY*/
+  server.addHandler(new AsyncCallbackJsonWebHandler(
+      "/restore", [](AsyncWebServerRequest *request, JsonVariant json)
+      {
+        if (!authorizeRequest(request))
+          return;
+        if (!json.is<JsonObject>())
+        {
+          request->send(errorResponse("Restore request must be a JSON object"));
+          return;
+        }
+        if (!config.tryBeginFeatureAccess())
+        {
+          sendFeatureBusy(request);
+          return;
+        }
+        AsyncJsonResponse *response = new AsyncJsonResponse();
+        JsonVariant &responseRoot = response->getRoot();
+        JsonObject restore = json.as<JsonObject>();
+        const ConfigUpdateResult result = config.stageRestore(restore);
+        if (result != ConfigUpdateResult::OK)
+        {
+          responseRoot["result"] = static_cast<int>(result);
+          response->setCode(result == ConfigUpdateResult::PERSISTENCE_FAILED
+                                ? 507
+                                : 400);
+          config.endFeatureAccess();
+        }
+        else
+        {
+          responseRoot["restartRequired"] = true;
+          response->addHeader("Connection", "close");
+          request->onDisconnect([]()
+                                { config.requestRestart(); });
+          // Keep the lease until reboot applies the staged transaction before
+          // any feature loop can observe the replacement graph.
+        }
+        response->setLength();
+        request->send(response);
+      }));
+
   /*GET CONFIG*/
   server
       .on("/config", HTTP_GET, [](AsyncWebServerRequest *request)

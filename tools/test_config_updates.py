@@ -877,15 +877,18 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         persist = block_after(
             self.persistence, r"bool\s+persistJsonAtomically\s*\("
         )
-        self.assertNotIn("LittleFS.remove(targetPath)", persist)
+        writer = block_after(
+            self.persistence, r"bool\s+persistJsonValueAtomically\s*\("
+        )
+        self.assertNotIn("LittleFS.remove(targetPath)", writer)
+        self.assertIn("if (document.overflowed())", persist)
+        self.assertIn("persistJsonValueAtomically", persist)
         self.assertOrdered(
-            persist,
-            "if (document.overflowed())",
-            "return false;",
+            writer,
             "LittleFS.remove(temporaryPath);",
             'LittleFS.open(temporaryPath, "w")',
-            "measureJson(document)",
-            "serializeJson(document, temporary)",
+            "measureJson(value)",
+            "serializeJson(value, temporary)",
             "temporary.flush();",
             "temporary.close();",
             "writtenBytes != expectedBytes",
@@ -1233,29 +1236,56 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn("config.requestRestart();", store)
         self.assertNotIn("config.endFeatureAccess();", store)
 
-    def test_configuration_restore_is_target_bound_non_secret_and_preflighted(self) -> None:
+    def test_full_backup_is_non_secret_and_restore_is_server_validated(self) -> None:
         export = block_after(self.panel, r"function\s+exportConfig\s*\(")
         restore = block_after(self.panel, r"function\s+restoreConfig\s*\(")
-        self.assertIn('snapshotType: "easyiot-config"', export)
-        self.assertIn("RESTORE_SCALAR_FIELDS", export)
-        self.assertIn("RESTORE_FEATURE_FIELDS", export)
-        self.assertNotIn("backup: true", export)
-        restore_contract = self.panel[
-            self.panel.index("const RESTORE_SCALAR_FIELDS"):
-            self.panel.index("function featureIdentityList")
-        ]
+        firmware_export = block_after(
+            self.config, r"void\s+ConfigOnofre::backup\s*\("
+        )
+        firmware_restore = block_after(
+            self.config, r"ConfigUpdateResult\s+ConfigOnofre::stageRestore\s*\("
+        )
+        self.assertIn('api("/backup"', export)
+        self.assertIn('snapshot.format !== "easyiot-backup"', restore)
+        self.assertIn("snapshot.target.mcu", restore)
+        self.assertNotIn("chipId", restore)
+        self.assertIn('api("/restore"', restore)
+        self.assertIn('root["format"] = "easyiot-backup"', firmware_export)
+        self.assertIn('root["version"] = 1', firmware_export)
+        self.assertIn('stored["features"]', firmware_export)
+        self.assertIn('stored["cloudIOUsername"]', firmware_export)
+        self.assertIn("irrigation.jsonBody", firmware_export)
         for secret in (
             "mqttPassword", "wifiSecret", "accessPointPassword",
-            "apiPassword", "cloudIOUsername", "cloudIOPassword",
+            "apiPassword", "cloudIOPassword",
         ):
-            self.assertNotIn(f'"{secret}"', restore_contract)
-        self.assertIn("snapshot.chipId", restore)
-        self.assertIn("snapshot.mcu", restore)
-        self.assertIn("featureIdentityList(snapshot.features)", restore)
-        self.assertIn("featureIdentityList(config.features || [])", restore)
-        self.assertIn('api("/config"', restore)
+            self.assertNotIn(f'"{secret}"', firmware_export)
+            self.assertIn(f'"{secret}"', firmware_restore)
+        self.assertIn("currentMcuName()", firmware_restore)
+        self.assertIn("validPinForRole", firmware_restore)
+        self.assertIn("PIN_CONFLICT", firmware_restore)
+        self.assertIn("Sensor::expectedInputCount", firmware_restore)
+        self.assertIn("maxRestoreZoneMinutes", firmware_restore)
+        self.assertIn("configFilenames::restore", firmware_restore)
         self.assertNotRegex(self.panel_html, r'id="r-file"[^>]*\bdisabled\b')
         self.assertNotRegex(self.panel_html, r'id="r-send"[^>]*\bdisabled\b')
+
+    def test_restore_transaction_is_applied_before_config_load(self) -> None:
+        transaction = block_after(
+            self.persistence, r"bool\s+applyPendingRestore\s*\("
+        )
+        self.assertIn('"easyiot-restore-transaction"', transaction)
+        self.assertIn("configFilenames::configRollback", transaction)
+        self.assertIn("configFilenames::irrigationRollback", transaction)
+        self.assertIn('transaction["committed"] = true', transaction)
+        self.assertOrdered(
+            transaction,
+            "configStored",
+            "irrigationStored",
+            'transaction["committed"] = true',
+        )
+        setup = block_after(self.main, r"void\s+setup\s*\(\s*\)")
+        self.assertOrdered(setup, "startFileSystem();", "applyPendingRestore()", "config.load();")
 
     def test_changed_outputs_are_parked_without_driving_new_inputs(self) -> None:
         park = block_after(self.config, r"void\s+parkOutput\s*\(")

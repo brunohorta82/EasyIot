@@ -33,7 +33,6 @@
 
 1. [ ] Improve the Functions tab layout: make the add-function form clearer and more compact, visually delimit each configured feature as its own card, and use a responsive two-column grid on wider screens that stacks to one column on phones. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
 2. [ ] Add a subtle left-edge health indicator to relevant status badges and diagnostic cards: green for healthy/connected, orange for degraded/retrying, red only for actual errors/disconnection, and gray for disabled/unknown. Keep the existing text or icon so status never relies on color alone; normal actuator OFF states and intentionally disabled MQTT must not appear as errors. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
-3. [ ] Design a versioned configuration backup/restore format with explicit secret handling, server-side target validation, preserved feature IDs, sensors and irrigation data, atomic persistence, and rollback tests.
 
 ## Testing & CI (P2 - Deferred / Later)
 
@@ -41,6 +40,7 @@
 2. [ ] Add smoke tests for boot, Wi-Fi, MQTT, OTA update path.
 3. [ ] Complete hardware testing of the 9.187 safety batch on ESP8266 and ESP32: accepted and rejected live pin changes, garden-valve OFF behavior after save/power-cycle, physical/MQTT/Cloud traffic during configuration, and failed/successful manual and automatic OTA recovery.
 4. [ ] Capture and diagnose the non-reproduced ESP32-C6 task-watchdog reset seen during WebUI/control stress; retain the complete task report and backtrace before changing watchdog or scheduling behavior.
+5. [ ] Hardware-test full non-secret recovery on ESP32, ESP32-C3 and ESP32-C6, including replacement-device recovery, wrong-variant rejection and interrupted two-file transaction rollback.
 
 #
 
@@ -92,7 +92,7 @@
 7. [x] Added bounded browser-only climate history graphs for DS18B20, DHT11/21/22, and SHT4x sensors with separate temperature/humidity scales, stable-state context, timestamps, and no device flash writes. Persistent day/week history remains a separate storage/API design. Files: `webpanel/css/styles.css`, `webpanel/js/index.js`
 8. [x] Made template replacement truthful on provisioned devices: validate and queue the request, quiesce active feature readers, save the replacement, and restart before using it. Files: `include/ConfigOnofre.h`, `include/Templates.h`, `src/ConfigOnofre.cpp`, `src/Templates.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `webpanel/js/index.js`
 9. [x] Added a firmware-update badge beside the installed header version: it stays quiet and disabled when current, shows an amber check failure, and uses the primary lime update pattern plus direct System -> Firmware navigation only when a newer version is available. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`, `tools/test_config_updates.py`
-10. [x] Re-enabled configuration-file import as a constrained, non-secret operation: only the same chip, MCU variant and complete feature-ID topology are accepted; imported fields are whitelisted and submitted through the existing server-side configuration preflight. Full recreation of removed features, sensor metadata, irrigation schedules and secrets remains tracked separately in Backlog. Files: `webpanel/index.html`, `webpanel/js/index.js`, `tools/test_config_updates.py`
+10. [x] Added versioned full-device recovery without passwords: exact hardware-variant validation, stable actuator/sensor IDs, complete feature metadata and pin preflight, irrigation programs, a reboot-time two-file transaction journal, rollback after interrupted/failed writes, and replacement-device support. Files: `include/ConfigOnofre.h`, `include/Constants.h`, `include/Persistence.h`, `src/ConfigOnofre.cpp`, `src/Persistence.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `webpanel/index.html`, `webpanel/js/index.js`, `tools/test_config_updates.py`
 
 ## Code Quality
 

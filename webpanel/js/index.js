@@ -1464,110 +1464,60 @@ function uploadFirmware(btn) {
   }
 }
 
-const RESTORE_SCALAR_FIELDS = [
-  "nodeId", "mqttIpDns", "mqttPort", "mqttUsername", "wifiSSID", "dhcp",
-  "wifiIp", "wifiMask", "wifiGw", "apiUser"
-];
-const RESTORE_FEATURE_FIELDS = [
-  "group", "id", "name", "inputMode", "upCourseTime", "downCourseTime",
-  "autoOff", "area", "line", "member", "inputs", "outputs"
-];
-
-function copyFields(source, fields) {
-  const copy = {};
-  fields.forEach((field) => {
-    if (Object.prototype.hasOwnProperty.call(source, field)) copy[field] = source[field];
-  });
-  return copy;
-}
-
-function featureIdentityList(features) {
-  if (!Array.isArray(features)) throw new Error("A cópia não contém uma lista de funções válida.");
-  const identities = features.map((feature) => {
-    if (!feature || typeof feature !== "object" ||
-        (feature.group !== "ACTUATOR" && feature.group !== "SENSOR") ||
-        typeof feature.id !== "string" || !feature.id) {
-      throw new Error("A cópia contém uma função inválida.");
-    }
-    return feature.group + ":" + feature.id;
-  }).sort();
-  if (new Set(identities).size !== identities.length)
-    throw new Error("A cópia contém identificadores de função repetidos.");
-  return identities;
-}
-
-/* The exported object is intentionally non-secret. A restore preserves the
-   credentials already stored on the device and uses POST /config, whose
-   firmware-side preflight validates every submitted pin before changing it. */
-function exportConfig() {
-  const snapshot = Object.assign(copyFields(config, RESTORE_SCALAR_FIELDS), {
-    snapshotType: "easyiot-config",
-    snapshotVersion: 1
-  });
-  snapshot.chipId = config.chipId;
-  snapshot.mcu = config.mcu;
-  snapshot.firmware = config.firmware;
-  snapshot.features = (config.features || []).map((feature) =>
-    copyFields(feature, RESTORE_FEATURE_FIELDS));
+/* The firmware constructs the backup from persisted fields, not from the
+   diagnostic /config response. Credentials never enter the browser payload. */
+async function exportConfig() {
+  const msg = $("r-msg");
+  let snapshot;
+  try {
+    snapshot = await api("/backup", { cache: "no-store" });
+  } catch (e) {
+    msg.className = "note err";
+    msg.textContent = "Não foi possível criar a cópia de configuração.";
+    return;
+  }
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "CONFIG_" + (config.nodeId || "onofre") + "_ONOFRE_" + (config.firmware || "") + ".json";
+  a.download = "BACKUP_" + (config.nodeId || "onofre") + "_ONOFRE_" + (config.firmware || "") + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
+  msg.className = "note ok";
+  msg.textContent = "Cópia criada sem palavras-passe.";
 }
 
 async function restoreConfig(file, btn) {
   const msg = $("r-msg");
+  if (!armed(btn, "Confirmar recuperação?")) {
+    msg.className = "note err";
+    msg.textContent = "A recuperação substitui todas as funções e programas. Carrega novamente para confirmar.";
+    return;
+  }
   btn.disabled = true;
   msg.className = "note";
   msg.textContent = "A validar a cópia…";
   try {
-    if (!file || file.size > 512 * 1024)
+    if (!file || file.size >= 16 * 1024)
       throw new Error("O ficheiro não é uma cópia JSON válida ou é demasiado grande.");
     let snapshot;
     try { snapshot = JSON.parse(await file.text()); }
     catch (e) { throw new Error("Não foi possível ler este ficheiro JSON."); }
     if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot))
       throw new Error("O ficheiro não contém uma configuração válida.");
-    if (snapshot.snapshotType &&
-        snapshot.snapshotType !== "easyiot-config" &&
-        snapshot.snapshotType !== "easyiot-diagnostic")
+    if (snapshot.format !== "easyiot-backup" || snapshot.version !== 1 ||
+        !snapshot.target || !snapshot.configuration || !snapshot.irrigation)
       throw new Error("Este ficheiro não é uma cópia de configuração EasyIot.");
-    if (String(snapshot.chipId || "") !== String(config.chipId || ""))
-      throw new Error("Esta cópia pertence a outro equipamento.");
-    if (String(snapshot.mcu || "") !== String(config.mcu || ""))
+    if (String(snapshot.target.mcu || "") !== String(config.backupVariant || config.mcu || ""))
       throw new Error("Esta cópia foi criada para outra variante de hardware.");
+    const forbidden = ["mqttPassword", "wifiSecret", "accessPointPassword",
+      "apiPassword", "cloudIOPassword"];
+    if (forbidden.some((field) => Object.prototype.hasOwnProperty.call(snapshot.configuration, field)))
+      throw new Error("A cópia contém credenciais e foi recusada por segurança.");
 
-    const savedIds = featureIdentityList(snapshot.features);
-    const currentIds = featureIdentityList(config.features || []);
-    if (savedIds.length !== currentIds.length ||
-        savedIds.some((identity, index) => identity !== currentIds[index]))
-      throw new Error("A lista de funções já não é igual à da cópia. O restauro foi cancelado.");
-
-    const body = copyFields(snapshot, RESTORE_SCALAR_FIELDS);
-    body.features = snapshot.features.map((feature) =>
-      copyFields(feature, RESTORE_FEATURE_FIELDS));
-    // A DHCP snapshot contains the live lease returned by GET /config, not a
-    // static address request. Match the normal Save path and omit those values.
-    if (body.dhcp === true) {
-      delete body.wifiIp;
-      delete body.wifiMask;
-      delete body.wifiGw;
-    }
-
-    const saved = await api("/config", { method: "POST", body: JSON.stringify(body) });
-    const restartRequired = saved.restartRequired === true;
-    config = saved;
-    removed = [];
-    clearDirty();
-    renderHeader(); renderOverview(); renderPinout(); renderFeatures(); renderDiag(); fillSystem(); fillNewFeatureForm();
-    wireFeatureEvents();
+    await api("/restore", { method: "POST", body: JSON.stringify(snapshot) });
     msg.className = "note ok";
-    msg.textContent = restartRequired
-      ? "Configuração reposta. O equipamento vai reiniciar; volta a abrir a página dentro de alguns segundos."
-      : "Configuração reposta com sucesso.";
-    toast("Configuração reposta", "ok");
+    msg.textContent = "Recuperação validada. O equipamento vai reiniciar e aplicar a cópia completa.";
+    toast("Recuperação aceite · a reiniciar", "ok");
   } catch (e) {
     msg.className = "note err";
     msg.textContent = e && e.body ? configError(e) : (e.message || "Não foi possível restaurar a configuração.");
@@ -1856,7 +1806,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("r-msg").className = "note";
     $("r-msg").textContent = file
       ? "Pronto para validar e aplicar " + file.name + "."
-      : "Escolhe uma cópia JSON exportada por este equipamento.";
+      : "Escolhe uma cópia JSON EasyIot da mesma variante de equipamento.";
   };
   $("d-log-pause").onclick = (e) => {
     logPaused = !logPaused;

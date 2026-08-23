@@ -11,3 +11,6 @@
  */
 bool persistJsonAtomically(const char *targetPath, const char *temporaryPath,
                            JsonDocument &document);
+
+/** Apply a staged two-file recovery transaction before configuration is read. */
+bool applyPendingRestore();
