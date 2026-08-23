@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.192] - 2026-08-23
+
+### Changed
+- **Virtual switches no longer sit among the accessories.** A virtual switch drives
+  no output of its own — it is a wall button that commands other relays over KNX —
+  so a tile for it offered a switch whose state reflected nothing in the house. The
+  dashboard leaves them out; they stay in FUNÇÕES, where they are configured, and in
+  the pinout, where their input is spoken for. CloudIO already filtered them from
+  what it serves the apps (`isNonVirtual()` in DeviceDto), so this closes the gap on
+  the device's own panel.
+
+### Para testers
+- **Os interruptores virtuais deixaram de aparecer na lista de acessórios.** Não
+  comandam nada por si — servem para acionar outros — e o cartão deles mostrava um
+  estado que não correspondia a nada. Continuam visíveis em FUNÇÕES, para os
+  configurares.
+
 ## [9.191] - 2026-08-22
 
 ### Fixed

@@ -584,6 +584,13 @@ function setMqttPill(on) {
 
 const isActuator = (f) => f.group === "ACTUATOR";
 const isCover = (f) => (f.driver || "").indexOf("COVER") === 0;
+/* ActuatorControlType::VIRTUAL. A virtual switch drives no output of its own: it
+   is a wall button that commands other relays over KNX. Showing it among the
+   accessories offers a switch whose state reflects nothing in the house, so the
+   dashboard leaves it out. It stays visible where it belongs — in FUNÇÕES, where
+   it is configured, and in the pinout, where its input is spoken for. */
+const isVirtual = (f) => f.typeControl === 2;
+const isDashboardAccessory = (f) => isActuator(f) && !isVirtual(f);
 const tileAction = (on) => on ? "desligar" : "ligar";
 
 function setToggleTileState(tile, on) {
@@ -613,7 +620,7 @@ function openFeatureConfig(id) {
 
 function renderOverview() {
   const feats = config.features || [];
-  const acts = feats.filter(isActuator);
+  const acts = feats.filter(isDashboardAccessory);
   const sens = feats.filter((f) => !isActuator(f));
 
   // Tiles rather than full-width rows: an accessory is a small thing and reads
