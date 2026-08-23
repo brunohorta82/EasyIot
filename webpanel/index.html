@@ -234,15 +234,15 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   <div class="sec">CÓPIA DE CONFIGURAÇÃO</div>
   <div class="card">
     <p class="note" style="margin:0 0 11px">
-      Exporta e repõe os dados visíveis deste dispositivo. As palavras-passe não
-      saem do equipamento e são mantidas durante o restauro. Por segurança, a
-      cópia só pode ser aplicada ao mesmo equipamento e à mesma lista de funções.
+      Cria uma cópia completa das funções, sensores, nomes, pinos, tempos, KNX e
+      programas de rega. Não inclui palavras-passe. Num equipamento de substituição,
+      configura primeiro a mesma rede Wi-Fi e a respetiva palavra-passe.
     </p>
     <div class="btns"><button class="btn" id="a-export">Exportar configuração</button></div>
     <div class="field" style="margin:11px 0 0"><label>RESTAURAR DE UM FICHEIRO</label>
       <input type="file" id="r-file" accept=".json,application/json"></div>
     <div class="btns"><button class="btn" id="r-send">Aplicar configuração</button></div>
-    <div class="note" id="r-msg">Escolhe uma cópia JSON exportada por este equipamento.</div>
+    <div class="note" id="r-msg">Escolhe uma cópia JSON EasyIot da mesma variante de equipamento.</div>
   </div>
   </div>
 

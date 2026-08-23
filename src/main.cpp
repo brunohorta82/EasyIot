@@ -5,6 +5,7 @@
 #include "DeviceLog.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
+#include "Persistence.h"
 #include <esp-knx-ip.h>
 #include "LittleFS.h"
 #ifdef ESP32
@@ -248,6 +249,14 @@ void setup()
 #endif
 
   startFileSystem();
+  if (!applyPendingRestore())
+  {
+    deviceLog("recuperacao pendente falhou");
+#ifdef DEBUG_ONOFRE
+    Log.error("%s Pending recovery failed; retained the previous configuration where possible." CR,
+              tags::config);
+#endif
+  }
   config.load();
   // Authentication credentials stay immutable for this boot. Credential edits
   // request a controlled restart before the new snapshot becomes active.

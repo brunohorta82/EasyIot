@@ -18,6 +18,25 @@
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 static constexpr uint32_t kFeatureAccessYieldMs = 100;
 
+static const char *currentMcuName()
+{
+#ifdef ESP32
+#ifdef ESP32C6
+  return "ESP32-C6";
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+  return "ESP32-C3";
+#else
+  return "ESP32";
+#endif
+#else
+#ifdef HAN_MODE
+  return "ESP8266-HAN";
+#else
+  return "ESP8266";
+#endif
+#endif
+}
+
 static bool featureAccessYieldActive(uint32_t deadline)
 {
   return deadline != 0 &&
@@ -639,6 +658,72 @@ bool ConfigOnofre::persist()
   return true;
 }
 
+void ConfigOnofre::backup(JsonVariant &root)
+{
+  root["format"] = "easyiot-backup";
+  root["version"] = 1;
+  JsonObject target = root["target"].to<JsonObject>();
+  target["mcu"] = currentMcuName();
+  target["firmware"] = String(VERSION);
+
+  JsonObject stored = root["configuration"].to<JsonObject>();
+  stored["templateId"] = templateId;
+  stored["nodeId"] = nodeId;
+  stored["mqttIpDns"] = mqttIpDns;
+  stored["mqttPort"] = mqttPort;
+  stored["mqttUsername"] = mqttUsername;
+  stored["cloudIOUsername"] = cloudIOUsername;
+  stored["wifiSSID"] = wifiSSID;
+  stored["dhcp"] = dhcp;
+  stored["wifiIp"] = wifiIp;
+  stored["wifiMask"] = wifiMask;
+  stored["wifiGw"] = wifiGw;
+  stored["apiUser"] = apiUser;
+
+  JsonArray features = stored["features"].to<JsonArray>();
+  for (const auto &actuator : actuatores)
+  {
+    JsonObject item = features.add<JsonObject>();
+    item["group"] = "ACTUATOR";
+    item["id"] = actuator.uniqueId;
+    item["name"] = actuator.name;
+    item["driver"] = actuator.driver;
+    item["typeControl"] = actuator.typeControl;
+    item["upCourseTime"] = actuator.upCourseTime;
+    item["downCourseTime"] = actuator.downCourseTime;
+    item["area"] = actuator.knxAddress[0];
+    item["line"] = actuator.knxAddress[1];
+    item["member"] = actuator.knxAddress[2];
+    item["autoOff"] = actuator.autoOff;
+    item["state"] = actuator.driver == ActuatorDriver::GARDEN_VALVE
+                        ? ActuatorState::OFF_OPEN
+                        : actuator.state;
+    JsonArray outputs = item["outputs"].to<JsonArray>();
+    for (auto pin : actuator.outputs)
+      outputs.add(pin);
+    JsonArray inputs = item["inputs"].to<JsonArray>();
+    for (auto pin : actuator.inputs)
+      inputs.add(pin);
+  }
+  for (const auto &sensor : sensors)
+  {
+    JsonObject item = features.add<JsonObject>();
+    item["group"] = "SENSOR";
+    item["id"] = sensor.uniqueId;
+    item["name"] = sensor.name;
+    item["driver"] = sensor.driver;
+    item["hwAddress"] = sensor.hwAddress;
+    item["delayRead"] = sensor.delayRead;
+    JsonArray inputs = item["inputs"].to<JsonArray>();
+    for (auto pin : sensor.inputs)
+      inputs.add(pin);
+  }
+
+  JsonVariant irrigationRoot = root["irrigation"].to<JsonObject>();
+  irrigation.jsonBody(irrigationRoot);
+  irrigationRoot.remove("running");
+}
+
 ConfigOnofre &ConfigOnofre::save()
 {
   persist();
@@ -698,6 +783,10 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
 
 namespace
 {
+constexpr size_t maxRestoreFeatures{32};
+constexpr size_t maxRestorePrograms{8};
+constexpr uint16_t maxRestoreZoneMinutes{240};
+
 enum class FeatureKind : uint8_t
 {
   ACTUATOR,
@@ -759,6 +848,50 @@ bool planIdExists(const std::vector<FeaturePinPlan> &plans, const String &id)
     if (plan.id.equals(id))
       return true;
   return false;
+}
+
+bool supportedActuatorDriver(ActuatorDriver driver)
+{
+  switch (driver)
+  {
+  case ActuatorDriver::SWITCH_PUSH:
+  case ActuatorDriver::SWITCH_LATCH:
+  case ActuatorDriver::COVER_SINGLE_PUSH:
+  case ActuatorDriver::COVER_DUAL_PUSH:
+  case ActuatorDriver::COVER_DUAL_LATCH:
+  case ActuatorDriver::LIGHT_PUSH:
+  case ActuatorDriver::LIGHT_LATCH:
+  case ActuatorDriver::GARAGE_PUSH:
+  case ActuatorDriver::GARDEN_VALVE:
+    return true;
+  case ActuatorDriver::INVALID:
+  default:
+    return false;
+  }
+}
+
+bool boundedString(JsonObjectConst object, const char *key, size_t capacity,
+                   const char *&value)
+{
+  JsonVariantConst field = object[key];
+  if (!field.is<const char *>())
+    return false;
+  value = field.as<const char *>();
+  return value != nullptr && strlen(value) < capacity;
+}
+
+bool isI2cRestoreDriver(SensorDriver driver)
+{
+  return driver == SensorDriver::LTR303X || driver == SensorDriver::SHT4X ||
+         driver == SensorDriver::TMF882X;
+}
+
+bool restoreClaimsMayShare(const PinClaim &left, const PinClaim &right)
+{
+  return left.kind == FeatureKind::SENSOR && right.kind == FeatureKind::SENSOR &&
+         isI2cRestoreDriver(left.sensorDriver) &&
+         isI2cRestoreDriver(right.sensorDriver) && left.role == right.role &&
+         left.slot == right.slot;
 }
 
 bool isInputModeSupported(Actuator &actuator, unsigned int mode)
@@ -1202,6 +1335,306 @@ void releaseChangedOutputs(ConfigOnofre &cfg,
 }
 } // namespace
 
+ConfigUpdateResult ConfigOnofre::stageRestore(JsonObject &root)
+{
+  if (strcmp(root["format"] | "", "easyiot-backup") != 0 ||
+      (root["version"] | 0u) != 1u ||
+      !root["target"].is<JsonObject>() ||
+      !root["configuration"].is<JsonObject>() ||
+      !root["irrigation"].is<JsonObject>())
+    return ConfigUpdateResult::INVALID_REQUEST;
+
+  JsonObjectConst target = root["target"].as<JsonObjectConst>();
+  if (strcmp(target["mcu"] | "", currentMcuName()) != 0)
+    return ConfigUpdateResult::INVALID_REQUEST;
+
+  JsonObjectConst submitted = root["configuration"].as<JsonObjectConst>();
+  static constexpr const char *forbiddenCredentialFields[] = {
+      "mqttPassword", "wifiSecret", "accessPointPassword", "apiPassword",
+      "cloudIOPassword"};
+  for (const char *field : forbiddenCredentialFields)
+    if (!submitted[field].isUnbound())
+      return ConfigUpdateResult::INVALID_REQUEST;
+
+  const char *restoredNodeId = nullptr;
+  const char *restoredMqttHost = nullptr;
+  const char *restoredMqttUsername = nullptr;
+  const char *restoredCloudIOUsername = nullptr;
+  const char *restoredWifiSsid = nullptr;
+  const char *restoredWifiIp = nullptr;
+  const char *restoredWifiMask = nullptr;
+  const char *restoredWifiGw = nullptr;
+  const char *restoredApiUser = nullptr;
+  if (!boundedString(submitted, "nodeId", sizeof(nodeId), restoredNodeId) ||
+      !boundedString(submitted, "mqttIpDns", sizeof(mqttIpDns), restoredMqttHost) ||
+      !boundedString(submitted, "mqttUsername", sizeof(mqttUsername), restoredMqttUsername) ||
+      !boundedString(submitted, "cloudIOUsername", sizeof(cloudIOUsername),
+                     restoredCloudIOUsername) ||
+      !boundedString(submitted, "wifiSSID", sizeof(wifiSSID), restoredWifiSsid) ||
+      !boundedString(submitted, "wifiIp", sizeof(wifiIp), restoredWifiIp) ||
+      !boundedString(submitted, "wifiMask", sizeof(wifiMask), restoredWifiMask) ||
+      !boundedString(submitted, "wifiGw", sizeof(wifiGw), restoredWifiGw) ||
+      !boundedString(submitted, "apiUser", sizeof(apiUser), restoredApiUser))
+    return ConfigUpdateResult::INVALID_REQUEST;
+
+  JsonVariantConst templateValue = submitted["templateId"];
+  JsonVariantConst mqttPortValue = submitted["mqttPort"];
+  JsonVariantConst dhcpValue = submitted["dhcp"];
+  JsonVariantConst featuresValue = submitted["features"];
+  if (!templateValue.is<unsigned int>() ||
+      templateValue.as<unsigned int>() > static_cast<unsigned int>(Template::GARDEN) ||
+      !mqttPortValue.is<unsigned int>() || mqttPortValue.as<unsigned int>() == 0 ||
+      mqttPortValue.as<unsigned int>() > 65535u || !dhcpValue.is<bool>() ||
+      !featuresValue.is<JsonArrayConst>() ||
+      featuresValue.as<JsonArrayConst>().size() > maxRestoreFeatures)
+    return ConfigUpdateResult::INVALID_REQUEST;
+
+  JsonDocument transaction;
+  transaction["format"] = "easyiot-restore-transaction";
+  transaction["version"] = 1;
+  transaction["committed"] = false;
+  transaction["hadConfig"] = LittleFS.exists(configFilenames::config);
+  transaction["hadIrrigation"] = LittleFS.exists(configFilenames::irrigation);
+  JsonObject restoredConfig = transaction["config"].to<JsonObject>();
+  restoredConfig["templateId"] = templateValue.as<unsigned int>();
+  restoredConfig["nodeId"] = restoredNodeId;
+  restoredConfig["mqttIpDns"] = restoredMqttHost;
+  restoredConfig["mqttPort"] = mqttPortValue.as<unsigned int>();
+  restoredConfig["mqttUsername"] = restoredMqttUsername;
+  if (mqttPassword[0])
+    restoredConfig["mqttPassword"] = mqttPassword;
+  restoredConfig["cloudIOUsername"] = restoredCloudIOUsername;
+  if (cloudIOPassword[0])
+    restoredConfig["cloudIOPassword"] = cloudIOPassword;
+  restoredConfig["wifiSSID"] = restoredWifiSsid;
+  if (wifiSecret[0])
+    restoredConfig["wifiSecret"] = wifiSecret;
+  restoredConfig["dhcp"] = dhcpValue.as<bool>();
+  restoredConfig["wifiIp"] = restoredWifiIp;
+  restoredConfig["wifiMask"] = restoredWifiMask;
+  restoredConfig["wifiGw"] = restoredWifiGw;
+  restoredConfig["accessPointPassword"] = accessPointPassword;
+  restoredConfig["apiUser"] = restoredApiUser;
+  restoredConfig["apiPassword"] = apiPassword;
+
+  std::vector<FeaturePinPlan> plans;
+  std::vector<String> valveIds;
+  JsonArray storedFeatures = restoredConfig["features"].to<JsonArray>();
+  for (JsonVariantConst featureValue : featuresValue.as<JsonArrayConst>())
+  {
+    if (!featureValue.is<JsonObjectConst>())
+      return ConfigUpdateResult::INVALID_REQUEST;
+    JsonObjectConst feature = featureValue.as<JsonObjectConst>();
+    const char *id = nullptr;
+    const char *name = nullptr;
+    if (!boundedString(feature, "id", sizeof(Actuator{}.uniqueId), id) || !id[0] ||
+        !boundedString(feature, "name", sizeof(Actuator{}.name), name) || !name[0])
+      return ConfigUpdateResult::INVALID_REQUEST;
+    for (const auto &plan : plans)
+      if (plan.id.equals(id))
+        return ConfigUpdateResult::INVALID_REQUEST;
+
+    const String group = feature["group"] | "";
+    JsonVariantConst driverValue = feature["driver"];
+    if (!driverValue.is<unsigned int>())
+      return ConfigUpdateResult::INVALID_REQUEST;
+
+    FeaturePinPlan plan;
+    plan.id = id;
+    std::vector<unsigned int> pins;
+    if (readPinArrayStrict(feature, "inputs", pins) != PinArrayRead::VALID ||
+        pins.size() > 4)
+      return ConfigUpdateResult::INVALID_REQUEST;
+    plan.inputs = pins;
+
+    JsonObject storedFeature = storedFeatures.add<JsonObject>();
+    storedFeature["group"] = group;
+    storedFeature["id"] = id;
+    storedFeature["name"] = name;
+
+    if (group.equals("ACTUATOR"))
+    {
+      plan.kind = FeatureKind::ACTUATOR;
+      plan.driver = static_cast<ActuatorDriver>(driverValue.as<unsigned int>());
+      JsonVariantConst controlValue = feature["typeControl"];
+      if (!supportedActuatorDriver(plan.driver) ||
+          !controlValue.is<unsigned int>() ||
+          (controlValue.as<unsigned int>() != ActuatorControlType::GPIO_OUTPUT &&
+           controlValue.as<unsigned int>() != ActuatorControlType::VIRTUAL) ||
+          readPinArrayStrict(feature, "outputs", pins) != PinArrayRead::VALID ||
+          pins.size() > 2)
+        return ConfigUpdateResult::INVALID_REQUEST;
+      plan.outputs = pins;
+
+      const bool dualCover = plan.driver == ActuatorDriver::COVER_DUAL_PUSH ||
+                             plan.driver == ActuatorDriver::COVER_DUAL_LATCH;
+      const bool singleCover = plan.driver == ActuatorDriver::COVER_SINGLE_PUSH;
+      const bool garage = plan.driver == ActuatorDriver::GARAGE_PUSH;
+      const bool virtualControl =
+          controlValue.as<unsigned int>() == ActuatorControlType::VIRTUAL;
+      const size_t expectedInputs = dualCover ? 2u : singleCover ? 1u : garage ? 2u : 1u;
+      if ((!virtualControl && plan.outputs.size() != (dualCover || singleCover || garage ? 2u : 1u)) ||
+          (virtualControl && !plan.outputs.empty()) ||
+          (plan.driver == ActuatorDriver::GARDEN_VALVE && plan.inputs.size() > 1) ||
+          (plan.driver != ActuatorDriver::GARDEN_VALVE && plan.inputs.size() != expectedInputs))
+        return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+
+      JsonVariantConst upValue = feature["upCourseTime"];
+      JsonVariantConst downValue = feature["downCourseTime"];
+      JsonVariantConst autoOffValue = feature["autoOff"];
+      JsonVariantConst stateValue = feature["state"];
+      JsonVariantConst areaValue = feature["area"];
+      JsonVariantConst lineValue = feature["line"];
+      JsonVariantConst memberValue = feature["member"];
+      if (!upValue.is<unsigned long>() || !downValue.is<unsigned long>() ||
+          !autoOffValue.is<unsigned long>() || !stateValue.is<unsigned int>() ||
+          stateValue.as<unsigned int>() > ActuatorState::STOP ||
+          !areaValue.is<unsigned int>() || areaValue.as<unsigned int>() > 255u ||
+          !lineValue.is<unsigned int>() || lineValue.as<unsigned int>() > 255u ||
+          !memberValue.is<unsigned int>() || memberValue.as<unsigned int>() > 255u)
+        return ConfigUpdateResult::INVALID_REQUEST;
+
+      storedFeature["driver"] = plan.driver;
+      storedFeature["typeControl"] = controlValue.as<unsigned int>();
+      storedFeature["upCourseTime"] = upValue.as<unsigned long>();
+      storedFeature["downCourseTime"] = downValue.as<unsigned long>();
+      storedFeature["area"] = areaValue.as<unsigned int>();
+      storedFeature["line"] = lineValue.as<unsigned int>();
+      storedFeature["member"] = memberValue.as<unsigned int>();
+      storedFeature["autoOff"] = autoOffValue.as<unsigned long>();
+      storedFeature["state"] = plan.driver == ActuatorDriver::GARDEN_VALVE
+                                   ? ActuatorState::OFF_OPEN
+                                   : stateValue.as<unsigned int>();
+      if (plan.driver == ActuatorDriver::GARDEN_VALVE)
+        valveIds.push_back(id);
+    }
+    else if (group.equals("SENSOR"))
+    {
+      plan.kind = FeatureKind::SENSOR;
+      plan.sensorDriver = static_cast<SensorDriver>(driverValue.as<unsigned int>());
+      if (!Sensor::isSupportedOnCurrentTarget(plan.sensorDriver) ||
+          plan.inputs.size() != Sensor::expectedInputCount(plan.sensorDriver))
+        return ConfigUpdateResult::PIN_COUNT_MISMATCH;
+      std::vector<unsigned int> fixedInputs;
+      if (Sensor::fixedRuntimeInputs(plan.sensorDriver, fixedInputs) &&
+          plan.inputs != fixedInputs)
+        return ConfigUpdateResult::INVALID_PIN;
+      JsonVariantConst addressValue = feature["hwAddress"];
+      JsonVariantConst delayValue = feature["delayRead"];
+      if (!addressValue.is<unsigned int>() || addressValue.as<unsigned int>() > 255u ||
+          !delayValue.is<unsigned long>() || delayValue.as<unsigned long>() == 0)
+        return ConfigUpdateResult::INVALID_REQUEST;
+      storedFeature["driver"] = plan.sensorDriver;
+      storedFeature["hwAddress"] = addressValue.as<unsigned int>();
+      storedFeature["delayRead"] = delayValue.as<unsigned long>();
+    }
+    else
+    {
+      return ConfigUpdateResult::INVALID_REQUEST;
+    }
+
+    JsonArray storedInputs = storedFeature["inputs"].to<JsonArray>();
+    for (auto pin : plan.inputs)
+      storedInputs.add(pin);
+    if (plan.kind == FeatureKind::ACTUATOR)
+    {
+      JsonArray storedOutputs = storedFeature["outputs"].to<JsonArray>();
+      for (auto pin : plan.outputs)
+        storedOutputs.add(pin);
+    }
+    plans.push_back(plan);
+  }
+
+  std::vector<PinClaim> claims;
+  for (const auto &plan : plans)
+    addClaims(plan, true, claims);
+  for (size_t i = 0; i < claims.size(); i++)
+  {
+    if (!validPinForRole(*this, claims[i]))
+      return ConfigUpdateResult::INVALID_PIN;
+    for (size_t j = i + 1; j < claims.size(); j++)
+      if (claims[i].pin == claims[j].pin &&
+          !restoreClaimsMayShare(claims[i], claims[j]))
+        return ConfigUpdateResult::PIN_CONFLICT;
+  }
+
+  JsonObjectConst submittedIrrigation = root["irrigation"].as<JsonObjectConst>();
+  JsonVariantConst irrEnabled = submittedIrrigation["enabled"];
+  JsonVariantConst skipOnRain = submittedIrrigation["skipOnRain"];
+  JsonVariantConst programsValue = submittedIrrigation["programs"];
+  if (!irrEnabled.is<bool>() || !skipOnRain.is<bool>() ||
+      !programsValue.is<JsonArrayConst>() ||
+      programsValue.as<JsonArrayConst>().size() > maxRestorePrograms)
+    return ConfigUpdateResult::INVALID_REQUEST;
+
+  JsonObject restoredIrrigation = transaction["irrigation"].to<JsonObject>();
+  restoredIrrigation["enabled"] = irrEnabled.as<bool>();
+  restoredIrrigation["skipOnRain"] = skipOnRain.as<bool>();
+  JsonArray storedPrograms = restoredIrrigation["programs"].to<JsonArray>();
+  std::vector<unsigned int> programIds;
+  for (JsonVariantConst programValue : programsValue.as<JsonArrayConst>())
+  {
+    if (!programValue.is<JsonObjectConst>())
+      return ConfigUpdateResult::INVALID_REQUEST;
+    JsonObjectConst program = programValue.as<JsonObjectConst>();
+    JsonVariantConst idValue = program["id"];
+    JsonVariantConst enabledValue = program["enabled"];
+    JsonVariantConst startValue = program["startMinute"];
+    JsonVariantConst weekdaysValue = program["weekdays"];
+    JsonVariantConst zonesValue = program["zones"];
+    if (!idValue.is<unsigned int>() || idValue.as<unsigned int>() == 0 ||
+        idValue.as<unsigned int>() > 255u || !enabledValue.is<bool>() ||
+        !startValue.is<unsigned int>() || startValue.as<unsigned int>() > 1439u ||
+        !weekdaysValue.is<unsigned int>() || weekdaysValue.as<unsigned int>() > 0x7fu ||
+        !zonesValue.is<JsonArrayConst>())
+      return ConfigUpdateResult::INVALID_REQUEST;
+    for (auto priorId : programIds)
+      if (priorId == idValue.as<unsigned int>())
+        return ConfigUpdateResult::INVALID_REQUEST;
+    programIds.push_back(idValue.as<unsigned int>());
+
+    JsonObject storedProgram = storedPrograms.add<JsonObject>();
+    storedProgram["id"] = idValue.as<unsigned int>();
+    storedProgram["enabled"] = enabledValue.as<bool>();
+    storedProgram["startMinute"] = startValue.as<unsigned int>();
+    storedProgram["weekdays"] = weekdaysValue.as<unsigned int>();
+    JsonArray storedZones = storedProgram["zones"].to<JsonArray>();
+    std::vector<String> seenZones;
+    for (JsonVariantConst zoneValue : zonesValue.as<JsonArrayConst>())
+    {
+      if (!zoneValue.is<JsonObjectConst>())
+        return ConfigUpdateResult::INVALID_REQUEST;
+      JsonObjectConst zone = zoneValue.as<JsonObjectConst>();
+      const char *zoneId = nullptr;
+      JsonVariantConst minutesValue = zone["minutes"];
+      if (!boundedString(zone, "uniqueId", sizeof(IrrigationZone{}.uniqueId), zoneId) ||
+          !zoneId[0] || !minutesValue.is<unsigned int>() ||
+          minutesValue.as<unsigned int>() == 0 ||
+          minutesValue.as<unsigned int>() > maxRestoreZoneMinutes)
+        return ConfigUpdateResult::INVALID_REQUEST;
+      bool knownValve = false;
+      for (const auto &valveId : valveIds)
+        knownValve = knownValve || valveId.equals(zoneId);
+      for (const auto &seen : seenZones)
+        if (seen.equals(zoneId))
+          return ConfigUpdateResult::INVALID_REQUEST;
+      if (!knownValve)
+        return ConfigUpdateResult::INVALID_REQUEST;
+      seenZones.push_back(zoneId);
+      JsonObject storedZone = storedZones.add<JsonObject>();
+      storedZone["uniqueId"] = zoneId;
+      storedZone["minutes"] = minutesValue.as<unsigned int>();
+    }
+  }
+
+  if (transaction.overflowed())
+    return ConfigUpdateResult::PERSISTENCE_FAILED;
+  if (!persistJsonAtomically(configFilenames::restore,
+                             configFilenames::restoreTemporary, transaction))
+    return ConfigUpdateResult::PERSISTENCE_FAILED;
+  return ConfigUpdateResult::OK;
+}
+
 ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseRoot)
 {
   if (root.isNull() || !validateConfigScalarTypes(root))
@@ -1586,6 +2019,9 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   // DYNAMIC VALUES
   if (allFields)
   {
+    // Recovery needs an exact hardware family. The historical `mcu` field is
+    // also an OTA folder selector and reports C3 as ESP32, so do not overload it.
+    root["backupVariant"] = currentMcuName();
     root["mqttConnected"] = mqttConnected();
     // Expose configuration state without returning CloudIO credentials to the
     // browser. The panel cannot inspect the deliberately omitted username.

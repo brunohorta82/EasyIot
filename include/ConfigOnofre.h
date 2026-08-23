@@ -69,7 +69,9 @@ public:
   // CONTROL VARIABLES
   int featureIds = 0;
   void json(JsonVariant &root, bool allFields);
+  void backup(JsonVariant &root);
   ConfigUpdateResult update(JsonObject &root, JsonVariant &responseRoot);
+  ConfigUpdateResult stageRestore(JsonObject &root);
   bool persist();
   ConfigOnofre &save();
   ConfigOnofre &init();
