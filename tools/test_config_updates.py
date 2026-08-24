@@ -1533,6 +1533,52 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertNotIn('"/irrigation/run"', self.panel)
         self.assertNotIn('"/irrigation/stop"', self.panel)
 
+    def test_absent_concurrency_setting_leaves_the_installation_alone(self) -> None:
+        # A file written before the setting existed, or a panel/app that omits it,
+        # must not silently reconfigure how many valves the water feeds.
+        update = block_after(self.irrigation, r"bool Irrigation::update\(JsonObject &root\)")
+        self.assertIn('JsonVariantConst maxZonesValue = root["maxConcurrentZones"]', update)
+        self.assertIn("uint8_t parsedMaxZones = maxConcurrentZones;", update)
+        self.assertIn("if (!maxZonesValue.isNull())", update)
+        # Out-of-range input is refused rather than clamped: a caller asking for
+        # eight zones has misunderstood something the device should not guess at.
+        self.assertIn("wanted < 1u || wanted > kMaxConcurrentZones", update)
+        # And it is only committed after every program has validated, like the
+        # rest of the payload.
+        self.assertLess(update.index("parsedMaxZones = static_cast<uint8_t>(wanted)"),
+                        update.index("maxConcurrentZones = parsedMaxZones;"))
+        self.assertIn('doc["maxConcurrentZones"] = maxConcurrentZones;', self.irrigation)
+
+    def test_valve_interlock_enforces_the_configured_limit_oldest_first(self) -> None:
+        # The interlock lives in changeState because that is the single door every
+        # command to a valve passes through: a wall button, MQTT, the cloud and
+        # the panel all arrive here, so anywhere else it would be advisory.
+        block = block_after(self.actuator, r"Actuator \*Actuator::changeState\(StateOrigin origin, int state\)")
+        self.assertIn("open.size() + 1 > irrigation.openZoneLimit()", block)
+        self.assertIn("lastChange", block)
+        self.assertIn("ActuatorState::OFF_OPEN", block)
+        # openZoneLimit never returns zero, or the loop above would erase from an
+        # empty vector.
+        limit = block_after(self.irrigation, r"uint8_t Irrigation::openZoneLimit\(\) const")
+        self.assertIn("return 1;", limit)
+        self.assertIn("kMaxConcurrentZones", limit)
+
+    def test_panel_reads_every_open_zone_and_survives_older_firmware(self) -> None:
+        # running.zones is the new shape; running.zone/secondsLeft stay for a panel
+        # loaded from a device that has not been updated yet.
+        self.assertIn("(run.zones && run.zones.length) ? run.zones", self.panel)
+        self.assertIn("{ zone: run.zone, secondsLeft: run.secondsLeft }", self.panel)
+        body = block_after(self.irrigation, r"void Irrigation::jsonBody\(JsonVariant &irr\)")
+        self.assertIn('run["zone"] = p->zones[active[0].index].uniqueId;', body)
+        self.assertIn('JsonArray list = run["zones"].to<JsonArray>();', body)
+        # The countdown must not rebuild the card the select lives in: rebuilding
+        # it once a second shuts the dropdown under the finger using it.
+        self.assertIn("function refreshIrrRunning()", self.panel)
+        refresh = block_after(self.panel, r"function refreshIrrRunning\(\)")
+        self.assertNotIn("renderIrrStatus", refresh)
+        self.assertIn("refreshIrrRunning();\n      renderIrrZones();", self.panel)
+        self.assertIn("maxConcurrentZones: parseInt($(\"irr-max\").value, 10) || 1", self.panel)
+
     def test_absent_input_mode_preserves_the_preflighted_driver(self) -> None:
         plan = block_after(self.config, r"struct\s+FeaturePinPlan")
         self.assertRegex(

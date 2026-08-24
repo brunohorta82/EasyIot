@@ -2,6 +2,47 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.193] - 2026-08-24
+
+### Added
+- **How many sectors water at the same time is now a setting, 1 to 5.** One zone at
+  a time was a property of the installation written into the firmware: a feed that
+  comfortably supplies three sectors was watering them one after another for no
+  reason, and there was no way to say otherwise. The limit lives in the schedule
+  (`maxConcurrentZones`, default one) and is still enforced inside
+  `Actuator::changeState` — the single function every command to a valve passes
+  through, from a wall button to MQTT to the cloud — so it cannot be bypassed. Over
+  the limit, the zone open longest is the one closed, not all of them. A cycle keeps
+  as many zones open as the limit allows and starts the next as a slot frees, so
+  each zone still waters exactly its own minutes.
+- Omitting the field means "leave it as it is", so an `irrigation.json` written
+  before this existed, or an app that does not know the field, cannot silently
+  reconfigure the water pressure. `running.zone`/`running.secondsLeft` still carry
+  the first open zone for anything written before concurrency; `running.zones`
+  carries all of them.
+
+### Fixed
+- **The irrigation status card no longer rebuilds itself once a second.** The
+  countdown redrew the whole card, which now holds a dropdown — so the dropdown shut
+  itself under the finger of whoever opened it. Only the countdown line is refreshed,
+  and the 15-second poll compares the cycle before redrawing anything. Same class of
+  bug as the time field that used to lose focus while being typed into.
+- **A program's total no longer claims minutes it does not take.** "Total 33 min, por
+  esta ordem" was true only one zone at a time; with three in parallel the cycle ends
+  in 15. The summary now says both numbers.
+
+### Para testers
+- **Já podes dizer quantos setores regam ao mesmo tempo** — de 1 a 5, no topo do
+  separador REGA. O que estiver escolhido é respeitado por tudo: pelos programas,
+  pelo botão da parede, pela app e pelo painel. Se abrires mais um do que o limite,
+  fecha-se o que estiver aberto há mais tempo.
+- Quem não mexer em nada continua com um setor de cada vez, como até aqui. Atualizar
+  não altera a configuração de ninguém.
+- A conta do programa passou a dizer a verdade: "33 min de rega em 15 min, até 3
+  setores ao mesmo tempo".
+- Corrigido: a lista dos setores fechava-se sozinha enquanto se escolhia, porque o
+  cartão se redesenhava a cada segundo.
+
 ## [9.192] - 2026-08-23
 
 ### Changed
