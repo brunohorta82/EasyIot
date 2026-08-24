@@ -243,6 +243,58 @@ void Irrigation::jsonBody(JsonVariant &irr)
   }
 }
 
+void Irrigation::statusJson(JsonVariant &root)
+{
+  jsonBody(root);
+  JsonArray clocks = root["clocks"].to<JsonArray>();
+  for (const auto &sw : config.actuatores)
+  {
+    unsigned long left = 0ul;
+    unsigned long total = 0ul;
+    if (!sw.valveClock(left, total))
+      continue;
+    JsonObject item = clocks.add<JsonObject>();
+    item["zone"] = sw.uniqueId;
+    item["secondsLeft"] = left;
+    item["totalSeconds"] = total;
+    // Only with a clock: without NTP the device does not know when "now" is, and
+    // a made-up closing time would be worse than none.
+    const String closesAt = clockIsoIn(left);
+    if (closesAt.length() > 0)
+      item["closesAt"] = closesAt;
+  }
+}
+
+bool Irrigation::command(const char *payload)
+{
+  if (payload == nullptr)
+    return false;
+  if (strcmp(payload, "STOP") == 0)
+  {
+    stop();
+    return true;
+  }
+  if (strncmp(payload, "RUN:", 4) == 0)
+  {
+    const long programId = atol(payload + 4);
+    if (programId <= 0 || programId > 255)
+      return false;
+    runProgram((uint8_t)programId);
+    return true;
+  }
+  if (strncmp(payload, "MAX:", 4) == 0)
+  {
+    const long wanted = atol(payload + 4);
+    if (wanted < 1 || wanted > kMaxConcurrentZones)
+      return false;
+    // Persisted, or a reboot would undo what someone set from Home Assistant.
+    maxConcurrentZones = (uint8_t)wanted;
+    save();
+    return true;
+  }
+  return false;
+}
+
 const IrrigationProgram *Irrigation::running() const
 {
   if (runningProgram < 0 || (size_t)runningProgram >= programs.size())

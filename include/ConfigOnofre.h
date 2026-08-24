@@ -54,6 +54,9 @@ public:
   // valves and the schedule belongs to none of them. So it gets its own pair.
   char cloudIOIrrigationStatusTopic[128];
   char cloudIOIrrigationWriteTopic[128];
+  // The same pair on the local broker, which is where Home Assistant listens.
+  char irrigationStateTopic[128];
+  char irrigationWriteTopic[128];
   char cloudIOreadTopic[128];
   // WIFI
   char wifiSSID[32];

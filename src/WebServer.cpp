@@ -1,5 +1,6 @@
 #include "WebServer.h"
 #include "CloudIO.h"
+#include "HomeAssistantMqttDiscovery.h"
 #include <cstdlib>
 #include <DNSServer.h>
 #include "AsyncJson.h"
@@ -908,8 +909,10 @@ void loadAPI()
       // the schedule actually kept, including zones it dropped.
       irrigation.jsonBody(root);
       config.endFeatureAccess();
-      // A schedule change moves no valve, so nothing else would tell the apps.
-      notifyIrrigationToCloudIO();
+      // A schedule change moves no valve, so nothing else would tell the apps or
+      // Home Assistant, and the programs it offers as buttons would go stale.
+      notifyIrrigation();
+      createHaIrrigation();
     }
     response->setLength();
     request->send(response); }));

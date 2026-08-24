@@ -375,7 +375,7 @@ void Actuator::notifyState(StateOrigin origin)
       // A valve moving is the only thing that changes the irrigation picture
       // often, and the apps draw a countdown from it.
       if (isGardenValve())
-        notifyIrrigationToCloudIO();
+        notifyIrrigation();
     }
 
     // Notify by SSW Webpanel

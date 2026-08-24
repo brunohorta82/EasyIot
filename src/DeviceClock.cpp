@@ -52,6 +52,22 @@ int clockWeekday()
   return t.tm_wday;
 }
 
+String clockIsoIn(unsigned long seconds)
+{
+  struct tm t{};
+  if (!readLocalTime(t))
+    return String();
+  time_t moment = mktime(&t) + (time_t)seconds;
+  struct tm future{};
+  if (localtime_r(&moment, &future) == nullptr)
+    return String();
+  char buf[32];
+  // %z gives +0100/+0000 from TZ_INFO, which is what makes this parseable as an
+  // instant rather than as a wall-clock reading of unknown origin.
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S%z", &future);
+  return String(buf);
+}
+
 String clockNowIso()
 {
   struct tm t{};

@@ -2,6 +2,47 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.198] - 2026-08-24
+
+### Added
+- **The irrigation now arrives in Home Assistant properly.** A device with valves
+  already published them as switches over MQTT discovery, which said whether water
+  was flowing and nothing else. It now also publishes, with no add-on, no HACS and
+  no custom component:
+  - **when each zone closes**, as a `timestamp` sensor. Home Assistant renders a
+    timestamp as live relative time, so the dashboard counts down on its own — a
+    number of seconds would sit frozen between the device's messages;
+  - **"A regar"**, a `running` binary sensor for whether a cycle is going;
+  - **a button per program** and a **"Parar rega"** button;
+  - **"Setores em simultâneo"**, a `number` from 1 to 5, in the config category.
+- The closing-time sensors carry two availability topics with `availability_mode:
+  all` — the device has to be reachable *and* the valve has to be open. A closed
+  valve has no closing time, and showing the last one would be a dashboard that
+  lies.
+- The program buttons are re-published whenever the schedule is saved, and a slot
+  with no program has its config cleared: the buttons are the programs, so a deleted
+  program must take its button with it rather than leave one that waters nothing.
+
+### Changed
+- One payload now serves both audiences — `Irrigation::statusJson` — so the cloud
+  (for the phone apps) and the local broker (for Home Assistant) cannot describe the
+  same garden differently. `notifyIrrigation()` publishes to both, so no caller can
+  update half the world.
+- `RUN:`/`STOP`/`MAX:` parsing lives in `Irrigation::command`, reached from both
+  brokers. `MAX:` persists, or a reboot would undo what someone set from Home
+  Assistant. Still deliberately no way to edit the schedule over MQTT.
+- New: `clockIsoIn(seconds)`, an ISO-8601 instant **with the UTC offset**. Home
+  Assistant rejects a naive timestamp, and without a synced clock no closing time is
+  published at all rather than a made-up one.
+
+### Para testers
+- **Quem usa Home Assistant passa a ver a rega a sério.** Além dos interruptores das
+  electroválvulas, aparecem: a hora a que cada zona fecha (com o HA a fazer a
+  contagem sozinho), um sensor "A regar", um botão por programa, um botão "Parar
+  rega" e um campo para os setores em simultâneo. Não é preciso instalar nada — vem
+  no equipamento e aparece sozinho.
+- Se apagares um programa, o botão dele desaparece do Home Assistant também.
+
 ## [9.197] - 2026-08-24
 
 ### Added

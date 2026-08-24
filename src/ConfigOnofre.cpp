@@ -452,6 +452,8 @@ ConfigOnofre &ConfigOnofre::load()
   strlcpy(mqttUsername, doc["mqttUsername"] | "", sizeof(mqttUsername));
   strlcpy(mqttPassword, doc["mqttPassword"] | "", sizeof(mqttPassword));
   sprintf(healthTopic, "onofre/%s/available", chipId);
+  sprintf(irrigationStateTopic, "onofre/%s/irrigation/state", chipId);
+  sprintf(irrigationWriteTopic, "onofre/%s/irrigation/set", chipId);
 
   // WIFI
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));

@@ -1,5 +1,7 @@
 #include "DeviceLog.h"
 #include "Mqtt.h"
+#include "Irrigation.h"
+#include "CloudIO.h"
 #include "ConfigOnofre.h"
 #include <PubSubClient.h>
 #include "Actuatores.h"
@@ -39,6 +41,13 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     {
         initHomeAssistantDiscovery();
     }
+    else if (strcmp(topic, config.irrigationWriteTopic) == 0)
+    {
+        // A Home Assistant button or number lands here. Republish either way: a
+        // refused payload still leaves the entities showing the truth.
+        irrigation.command(payload_as_string);
+        notifyIrrigation();
+    }
     else
     {
         config.controlFeature(StateOrigin::MQTT, topic, payload_as_string);
@@ -76,6 +85,8 @@ boolean reconnect()
             subscribeOnMqtt(sw.writeTopic);
             sw.notifyState(StateOrigin::MQTT);
         }
+        // Where the Home Assistant buttons and the zone-count number send to.
+        subscribeOnMqtt(config.irrigationWriteTopic);
         initHomeAssistantDiscovery();
     }
 

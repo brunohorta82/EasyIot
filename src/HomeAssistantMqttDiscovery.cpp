@@ -1,6 +1,7 @@
 #include "HomeAssistantMqttDiscovery.h"
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
+#include "Irrigation.h"
 extern ConfigOnofre config;
 
 bool homeAssistantOnline(String topic, String payload)
@@ -580,5 +581,190 @@ void initHomeAssistantDiscovery()
   {
     publishOnMqtt(ss.readTopic, ss.state.c_str(), true);
     addToHomeAssistant(ss);
+  }
+  // Last, and state before configs would be pointless: Home Assistant only
+  // listens to a state topic once an entity claims it.
+  createHaIrrigation();
+  publishIrrigationHomeAssistantState();
+}
+
+namespace
+{
+  void haDevice(JsonObject &object)
+  {
+    JsonObject device = object["dev"].to<JsonObject>();
+    device["ids"] = "OnOfre-" + String(config.chipId);
+    device["name"] = config.nodeId;
+#ifdef ESP32
+    device["mdl"] = "V6 - " + String(config.chipId);
+#endif
+#ifdef ESP8266
+    device["mdl"] = "V5 - " + String(config.chipId);
+#endif
+    device["mf"] = "OnOfre Portugal";
+    device["sw"] = String(VERSION);
+  }
+
+  String zoneClockAvailabilityTopic(const char *uniqueId)
+  {
+    return String("onofre/") + config.chipId + "/irrigation/" + uniqueId + "/clock";
+  }
+
+  void publishHaConfig(const char *domain, const String &uniqueId, JsonDocument &doc)
+  {
+    String objectStr;
+    serializeJson(doc, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" +
+                         domain + "/" + uniqueId + "/config")
+                      .c_str(),
+                  objectStr.c_str(), false);
+  }
+
+  bool deviceHasValves()
+  {
+    for (auto &sw : config.actuatores)
+      if (sw.isGardenValve())
+        return true;
+    return false;
+  }
+}
+
+void createHaIrrigation()
+{
+  if (!mqttConnected() || !deviceHasValves())
+    return;
+
+  const String chip = String(config.chipId);
+
+  for (auto &sw : config.actuatores)
+  {
+    if (!sw.isGardenValve())
+      continue;
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    const String uniqueId = String(sw.uniqueId) + "_closes";
+    object["name"] = String(sw.name) + " fecha a";
+    object["uniq_id"] = uniqueId;
+    object["stat_t"] = config.irrigationStateTopic;
+    object["val_tpl"] = String("{{ (value_json.clocks | selectattr('zone','eq','") +
+                        sw.uniqueId + "') | map(attribute='closesAt') | first | default('') }}";
+    object["dev_cla"] = "timestamp";
+    object["ic"] = "mdi:timer-sand";
+    // Two conditions, both required: the device has to be there AND the valve has
+    // to be open. A closed valve has no closing time, and inventing one — or
+    // keeping the last — would be a dashboard that lies.
+    JsonArray availability = object["avty"].to<JsonArray>();
+    JsonObject deviceAvailable = availability.add<JsonObject>();
+    deviceAvailable["t"] = config.healthTopic;
+    JsonObject clockAvailable = availability.add<JsonObject>();
+    clockAvailable["t"] = zoneClockAvailabilityTopic(sw.uniqueId);
+    object["avty_mode"] = "all";
+    haDevice(object);
+    publishHaConfig("sensor", uniqueId, doc);
+  }
+
+  {
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    const String uniqueId = chip + "_irrigation_running";
+    object["name"] = "A regar";
+    object["uniq_id"] = uniqueId;
+    object["stat_t"] = config.irrigationStateTopic;
+    object["val_tpl"] = "{{ 'ON' if value_json.running else 'OFF' }}";
+    object["dev_cla"] = "running";
+    object["avty_t"] = config.healthTopic;
+    haDevice(object);
+    publishHaConfig("binary_sensor", uniqueId, doc);
+  }
+
+  {
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    const String uniqueId = chip + "_irrigation_stop";
+    object["name"] = "Parar rega";
+    object["uniq_id"] = uniqueId;
+    object["cmd_t"] = config.irrigationWriteTopic;
+    object["pl_prs"] = "STOP";
+    object["ic"] = "mdi:water-off";
+    object["avty_t"] = config.healthTopic;
+    haDevice(object);
+    publishHaConfig("button", uniqueId, doc);
+  }
+
+  {
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    const String uniqueId = chip + "_irrigation_max_zones";
+    object["name"] = "Setores em simultâneo";
+    object["uniq_id"] = uniqueId;
+    object["cmd_t"] = config.irrigationWriteTopic;
+    object["cmd_tpl"] = "MAX:{{ value | int }}";
+    object["stat_t"] = config.irrigationStateTopic;
+    object["val_tpl"] = "{{ value_json.maxConcurrentZones }}";
+    object["min"] = 1;
+    object["max"] = kMaxConcurrentZones;
+    object["step"] = 1;
+    object["mode"] = "box";
+    object["ic"] = "mdi:water-pump";
+    object["ent_cat"] = "config";
+    object["avty_t"] = config.healthTopic;
+    haDevice(object);
+    publishHaConfig("number", uniqueId, doc);
+  }
+
+  // A button per program, and an empty config for the slots that hold none: the
+  // buttons ARE the programs, so a deleted program must take its button with it
+  // rather than leave one that waters nothing.
+  for (uint8_t id = 1; id <= 8; id++)
+  {
+    const String uniqueId = chip + "_irrigation_run_" + String(id);
+    const IrrigationProgram *program = nullptr;
+    for (const auto &candidate : irrigation.programs)
+      if (candidate.id == id)
+        program = &candidate;
+
+    if (program == nullptr)
+    {
+      publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) +
+                           "/button/" + uniqueId + "/config")
+                        .c_str(),
+                    "", false);
+      continue;
+    }
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    object["name"] = "Regar programa " + String(id);
+    object["uniq_id"] = uniqueId;
+    object["cmd_t"] = config.irrigationWriteTopic;
+    object["pl_prs"] = "RUN:" + String(id);
+    object["ic"] = "mdi:sprinkler-variant";
+    object["avty_t"] = config.healthTopic;
+    haDevice(object);
+    publishHaConfig("button", uniqueId, doc);
+  }
+}
+
+void publishIrrigationHomeAssistantState()
+{
+  if (!mqttConnected() || !deviceHasValves())
+    return;
+  JsonDocument doc;
+  JsonVariant root = doc.to<JsonObject>();
+  irrigation.statusJson(root);
+  String payload;
+  serializeJson(doc, payload);
+  publishOnMqtt(config.irrigationStateTopic, payload.c_str(), true);
+
+  // The per-zone availability that decides whether a closing time exists at all.
+  for (auto &sw : config.actuatores)
+  {
+    if (!sw.isGardenValve())
+      continue;
+    unsigned long left = 0ul;
+    unsigned long total = 0ul;
+    const bool hasClock = sw.valveClock(left, total);
+    publishOnMqtt(zoneClockAvailabilityTopic(sw.uniqueId).c_str(),
+                  hasClock ? constantsMqtt::availablePayload : constantsMqtt::unavailablePayload,
+                  true);
   }
 }

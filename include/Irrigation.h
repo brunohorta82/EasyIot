@@ -80,6 +80,16 @@ public:
   /** The same object, written straight into root: what the endpoints return. */
   void jsonBody(JsonVariant &irr);
 
+  /** jsonBody plus the countdown of every open valve, including the moment each
+      closes. This is the message the cloud and Home Assistant both receive, so
+      the two cannot describe the same garden differently. */
+  void statusJson(JsonVariant &root);
+
+  /** Applies a command sent to an irrigation topic: RUN:<programId>, STOP, or
+      MAX:<n>. False when the payload means nothing, so a caller can tell a typo
+      from an order. */
+  bool command(const char *payload);
+
   /** Advances the cycle. Cheap enough to call from the main loop. */
   void loop();
 

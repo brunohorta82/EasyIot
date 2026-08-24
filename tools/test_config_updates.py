@@ -30,6 +30,8 @@ WEB_PANEL = ROOT / "webpanel" / "js" / "index.js"
 WEB_PANEL_HTML = ROOT / "webpanel" / "index.html"
 PERSISTENCE_SOURCE = ROOT / "src" / "Persistence.cpp"
 IRRIGATION_SOURCE = ROOT / "src" / "Irrigation.cpp"
+HOME_ASSISTANT_SOURCE = ROOT / "src" / "HomeAssistantMqttDiscovery.cpp"
+MQTT_SOURCE = ROOT / "src" / "Mqtt.cpp"
 
 
 def block_after(source: str, pattern: str) -> str:
@@ -120,6 +122,8 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         cls.panel_html = WEB_PANEL_HTML.read_text(encoding="utf-8")
         cls.persistence = PERSISTENCE_SOURCE.read_text(encoding="utf-8")
         cls.irrigation = IRRIGATION_SOURCE.read_text(encoding="utf-8")
+        cls.homeassistant = HOME_ASSISTANT_SOURCE.read_text(encoding="utf-8")
+        cls.mqtt = MQTT_SOURCE.read_text(encoding="utf-8")
 
     def assertOrdered(self, source: str, *needles: str) -> None:  # noqa: N802
         cursor = -1
@@ -1575,19 +1579,57 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn('"%s/%s/irrigation/status"', self.cloud)
         self.assertIn('"%s/%s/irrigation/set"', self.cloud)
         publish = block_after(self.cloud, r"void notifyIrrigationToCloudIO\(\)")
-        self.assertIn("irrigation.jsonBody(root)", publish)
         # Retained: an app opening after the cycle started must still see it.
         self.assertIn("mqttClient.publish(config.cloudIOIrrigationStatusTopic, 0, true", publish)
+        # One payload for both audiences, so the cloud and Home Assistant cannot
+        # describe the same garden differently.
+        self.assertIn("irrigation.statusJson(root)", publish)
+        both = block_after(self.cloud, r"void notifyIrrigation\(\)")
+        self.assertIn("notifyIrrigationToCloudIO();", both)
+        self.assertIn("publishIrrigationHomeAssistantState();", both)
         # Every open valve, including one opened by hand on its own autoOff.
-        self.assertIn("sw.valveClock(left, total)", publish)
-        # Commands are RUN/STOP only. Editing the schedule over a retained channel
-        # would make a lost message look like a deleted program.
-        self.assertIn('strncmp(command.payload, "RUN:", 4)', self.cloud)
-        self.assertIn('strcmp(command.payload, "STOP")', self.cloud)
-        self.assertNotIn("irrigation.update(", self.cloud)
+        status = block_after(self.irrigation, r"void Irrigation::statusJson\(JsonVariant &root\)")
+        self.assertIn("sw.valveClock(left, total)", status)
+        self.assertIn('item["closesAt"] = closesAt;', status)
+        # Commands are RUN/STOP/MAX only. Editing the schedule over a channel where
+        # the last message wins would make a lost message look like a deleted
+        # program, so the parser has no branch for it.
+        command = block_after(self.irrigation, r"bool Irrigation::command\(const char \*payload\)")
+        self.assertIn('strncmp(payload, "RUN:", 4)', command)
+        self.assertIn('strcmp(payload, "STOP")', command)
+        self.assertIn('strncmp(payload, "MAX:", 4)', command)
+        self.assertNotIn("update(", command)
+        # A limit set from Home Assistant survives a reboot.
+        self.assertIn("save();", command)
+
+    def test_home_assistant_gets_the_irrigation_it_can_render(self) -> None:
+        # A closing time, not a countdown in seconds: Home Assistant renders a
+        # timestamp as live relative time, and a number would sit frozen between
+        # the device's messages.
+        block = block_after(self.homeassistant, r"void createHaIrrigation\(\)")
+        self.assertIn('object["dev_cla"] = "timestamp"', block)
+        self.assertIn("map(attribute='closesAt')", block)
+        # Present only while the valve actually has a deadline — device up AND
+        # valve open, both required.
+        self.assertIn('object["avty_mode"] = "all"', block)
+        self.assertIn("zoneClockAvailabilityTopic(sw.uniqueId)", block)
+        # The buttons are the programs, so a deleted program's button is deleted
+        # too: an empty config payload is how MQTT discovery removes an entity.
+        self.assertIn('"/button/" + uniqueId + "/config")', block)
+        self.assertIn('"", false);', block)
+        self.assertIn('object["pl_prs"] = "RUN:" + String(id)', block)
+        self.assertIn('object["cmd_tpl"] = "MAX:{{ value | int }}"', block)
+        # A device with no valves publishes none of this.
+        self.assertIn("if (!mqttConnected() || !deviceHasValves())", block)
+        # And the local broker is where Home Assistant listens, so the command
+        # topic has to be subscribed there.
+        self.assertIn("subscribeOnMqtt(config.irrigationWriteTopic)", self.mqtt)
+        self.assertIn("irrigation.command(payload_as_string)", self.mqtt)
         # A valve moving republishes; so does a schedule save, which moves none.
-        self.assertIn("if (isGardenValve())\n        notifyIrrigationToCloudIO();", self.actuator)
-        self.assertIn("notifyIrrigationToCloudIO();", self.server)
+        self.assertIn("if (isGardenValve())\n        notifyIrrigation();", self.actuator)
+        self.assertIn("notifyIrrigation();", self.server)
+        # The programs are the buttons, so a schedule change has to republish them.
+        self.assertIn("createHaIrrigation();", self.server)
 
     def test_zone_dial_says_what_pressing_it_does(self) -> None:
         # The glyph is the action, not the state: a watering zone shows stop.

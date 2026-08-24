@@ -27,4 +27,9 @@ int clockWeekday();
 /** ISO-8601 local time for diagnostics, or an empty string while unsynced. */
 String clockNowIso();
 
+/** ISO-8601 for a moment `seconds` from now, WITH the UTC offset, or an empty
+    string while unsynced. Home Assistant rejects a naive timestamp, and the
+    offset is what lets its dashboard count down on its own. */
+String clockIsoIn(unsigned long seconds);
+
 #endif

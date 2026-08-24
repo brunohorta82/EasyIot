@@ -9,6 +9,9 @@ void notifyStateToCloudIO(const char *topic, const char *state);
     countdown of every open valve — as one retained message. Cheap enough to call
     on every valve change; there is nothing to publish while the cloud is down. */
 void notifyIrrigationToCloudIO();
+/** The same picture to both brokers: the cloud for the apps, the local one for
+    Home Assistant. One call, so a caller cannot update half the world. */
+void notifyIrrigation();
 // Service callback-owned flags from the main execution context. Neither the
 // Ticker nor AsyncMqttClient callbacks perform logging, configuration access,
 // or connection lifecycle work directly.

@@ -1,5 +1,6 @@
 #include "CloudIO.h"
 #include "Irrigation.h"
+#include "HomeAssistantMqttDiscovery.h"
 #include "ConfigOnofre.h"
 #include "CoreWiFi.h"
 #include <Ticker.h>
@@ -364,24 +365,16 @@ void notifyIrrigationToCloudIO()
     return;
   JsonDocument doc;
   JsonVariant root = doc.to<JsonObject>();
-  irrigation.jsonBody(root);
-  // Every open valve, not only the ones a cycle is watering: one opened by hand
-  // is on its own autoOff, and an app has no way to know that deadline.
-  JsonArray clocks = root["clocks"].to<JsonArray>();
-  for (const auto &sw : config.actuatores)
-  {
-    unsigned long left = 0ul;
-    unsigned long total = 0ul;
-    if (!sw.valveClock(left, total))
-      continue;
-    JsonObject item = clocks.add<JsonObject>();
-    item["zone"] = sw.uniqueId;
-    item["secondsLeft"] = left;
-    item["totalSeconds"] = total;
-  }
+  irrigation.statusJson(root);
   String payload;
   serializeJson(doc, payload);
   mqttClient.publish(config.cloudIOIrrigationStatusTopic, 0, true, payload.c_str());
+}
+
+void notifyIrrigation()
+{
+  notifyIrrigationToCloudIO();
+  publishIrrigationHomeAssistantState();
 }
 
 void notifyStateToCloudIO(const char *topic, const char *state)
@@ -493,7 +486,7 @@ void serviceCloudMqttSubscriptions()
   config.endFeatureAccess();
   // After the valve states, so an app that reconnects reads the cycle against
   // states it already has rather than against the ones it is about to receive.
-  notifyIrrigationToCloudIO();
+  notifyIrrigation();
   cloudMqttSubscriptionsPending = false;
 }
 
@@ -642,17 +635,8 @@ void drainCloudIOCommands()
     // RUN:<programId> forces a cycle, STOP ends it. Deliberately not the schedule:
     // editing programs over a retained-message channel would make a lost message
     // look like a deleted program.
-    if (strcmp(command.payload, "STOP") == 0)
-    {
-      irrigation.stop();
-    }
-    else if (strncmp(command.payload, "RUN:", 4) == 0)
-    {
-      const long programId = atol(command.payload + 4);
-      if (programId > 0 && programId < 256)
-        irrigation.runProgram((uint8_t)programId);
-    }
-    notifyIrrigationToCloudIO();
+    irrigation.command(command.payload);
+    notifyIrrigation();
   }
   else
   {
