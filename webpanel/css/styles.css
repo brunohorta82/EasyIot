@@ -418,6 +418,13 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .irr-running.idle b { color: var(--dim); }
 .irr-running span { font-size: 11.5px; color: var(--dim); }
 .irr-toggles { display: flex; flex-direction: column; gap: 7px; margin-top: 11px; }
+.irr-max { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.irr-max select {
+  flex: 0 0 74px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 9px; color: var(--txt);
+}
+.irr-max select:focus { outline: none; border-color: var(--grn); }
+.irr-hint { font-size: 11px; color: var(--dim); line-height: 1.45; }
 .irr-chip { font-size: 10px; letter-spacing: .1em; color: var(--blu); font-weight: 700;
   border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
 .irr-prog { margin-bottom: 9px; }

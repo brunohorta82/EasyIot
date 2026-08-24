@@ -1,4 +1,5 @@
 #include "Actuatores.h"
+#include "Irrigation.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
 #include "Constants.h"
@@ -394,23 +395,38 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   lastChange = millis();
   if (!isGarage() && this->state == state)
     return this;
-  // Only one irrigation zone may run at a time — the supply pressure will not
-  // feed two. The guard belongs here, not in an interface: a wall button, MQTT,
-  // the cloud and the web panel all reach a valve through this one function, so
-  // anywhere else it would be advisory. Closing the others recurses once with
-  // OFF_OPEN, which cannot re-enter this branch.
+  // How many irrigation zones may be open at once is what the supply pressure
+  // feeds, so it is configured per installation (1-5) rather than fixed here.
+  // The guard belongs in this function, not in an interface: a wall button, MQTT,
+  // the cloud and the web panel all reach a valve through it, so anywhere else it
+  // would be advisory. Closing the excess recurses once with OFF_OPEN, which
+  // cannot re-enter this branch.
   if (isGardenValve() && state == ActuatorState::ON_CLOSE)
   {
+    std::vector<Actuator *> open;
     for (auto &other : config.actuatores)
     {
       if (other.isGardenValve() && strcmp(other.uniqueId, uniqueId) != 0 &&
           other.state == ActuatorState::ON_CLOSE)
+        open.push_back(&other);
+    }
+    // Oldest first, counting this valve against the limit since it is about to
+    // open: the zone that has been watering longest is the one with least left
+    // to lose, and it is the least likely to be what someone just asked for.
+    while (open.size() + 1 > irrigation.openZoneLimit())
+    {
+      auto oldest = open.begin();
+      for (auto it = open.begin(); it != open.end(); ++it)
       {
-#ifdef DEBUG_ONOFRE
-        Log.notice("%s Closing %s: one zone at a time." CR, tags::actuatores, other.name);
-#endif
-        other.changeState(StateOrigin::INTERNAL, ActuatorState::OFF_OPEN);
+        if ((long)((*it)->lastChange - (*oldest)->lastChange) < 0)
+          oldest = it;
       }
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s Closing %s: %d zone(s) at a time." CR, tags::actuatores,
+                 (*oldest)->name, irrigation.openZoneLimit());
+#endif
+      (*oldest)->changeState(StateOrigin::INTERNAL, ActuatorState::OFF_OPEN);
+      open.erase(oldest);
     }
   }
 #ifdef DEBUG_ONOFRE

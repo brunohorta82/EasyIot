@@ -51,6 +51,7 @@ bool Irrigation::save()
   JsonDocument doc;
   doc["enabled"] = enabled;
   doc["skipOnRain"] = skipOnRain;
+  doc["maxConcurrentZones"] = maxConcurrentZones;
   JsonArray list = doc["programs"].to<JsonArray>();
   for (auto &p : programs)
   {
@@ -81,6 +82,21 @@ bool Irrigation::update(JsonObject &root)
   if (!enabledValue.is<bool>() || !skipOnRainValue.is<bool>() ||
       !programsValue.is<JsonArrayConst>())
     return false;
+
+  // Absent means "leave it as it is", not "back to one": the file written by a
+  // firmware from before this setting existed must not silently reconfigure the
+  // installation, and neither must an older panel or app that omits the field.
+  JsonVariantConst maxZonesValue = root["maxConcurrentZones"];
+  uint8_t parsedMaxZones = maxConcurrentZones;
+  if (!maxZonesValue.isNull())
+  {
+    if (!maxZonesValue.is<unsigned int>())
+      return false;
+    const unsigned int wanted = maxZonesValue.as<unsigned int>();
+    if (wanted < 1u || wanted > kMaxConcurrentZones)
+      return false;
+    parsedMaxZones = static_cast<uint8_t>(wanted);
+  }
 
   JsonArrayConst list = programsValue.as<JsonArrayConst>();
   if (list.size() > maxPrograms)
@@ -164,13 +180,14 @@ bool Irrigation::update(JsonObject &root)
     }
     parsed.push_back(p);
   }
-  // Resolve and close the active zone against the OLD schedule. Replacing the
-  // vector first can make runningProgram/runningZone point at a different zone
-  // (or no zone), losing the only reference to a valve that is still open.
+  // Resolve and close the open zones against the OLD schedule. Replacing the
+  // vector first can make the running indices point at different zones (or at
+  // none), losing the only reference to a valve that is still open.
   if (isRunning())
     stop();
   enabled = enabledValue.as<bool>();
   skipOnRain = skipOnRainValue.as<bool>();
+  maxConcurrentZones = parsedMaxZones;
   programs = parsed;
   return true;
 }
@@ -185,14 +202,24 @@ void Irrigation::jsonBody(JsonVariant &irr)
 {
   irr["enabled"] = enabled;
   irr["skipOnRain"] = skipOnRain;
+  irr["maxConcurrentZones"] = maxConcurrentZones;
   const IrrigationProgram *p = running();
-  if (p && runningZone < p->zones.size())
+  if (p && !active.empty())
   {
     JsonObject run = irr["running"].to<JsonObject>();
-    run["zone"] = p->zones[runningZone].uniqueId;
     run["programId"] = p->id;
-    long left = (long)(zoneEndsAt - millis());
-    run["secondsLeft"] = left > 0 ? left / 1000 : 0;
+    // The first open zone stays at the top level as a single zone plus a single
+    // countdown: panels and apps written before concurrency read exactly that,
+    // and an update that blanked their status card would be a regression.
+    run["zone"] = p->zones[active[0].index].uniqueId;
+    run["secondsLeft"] = secondsLeft(active[0]);
+    JsonArray list = run["zones"].to<JsonArray>();
+    for (const auto &slot : active)
+    {
+      JsonObject o = list.add<JsonObject>();
+      o["zone"] = p->zones[slot.index].uniqueId;
+      o["secondsLeft"] = secondsLeft(slot);
+    }
   }
   else
   {
@@ -238,69 +265,89 @@ bool Irrigation::raining() const
   return false;
 }
 
+uint8_t Irrigation::openZoneLimit() const
+{
+  if (maxConcurrentZones < 1)
+    return 1;
+  return maxConcurrentZones > kMaxConcurrentZones ? kMaxConcurrentZones : maxConcurrentZones;
+}
+
+unsigned long Irrigation::secondsLeft(const ActiveZone &slot) const
+{
+  const long left = (long)(slot.endsAt - millis());
+  return left > 0 ? (unsigned long)left / 1000ul : 0ul;
+}
+
 bool Irrigation::isRunningZone(const char *uniqueId) const
 {
   const IrrigationProgram *p = running();
-  if (!p || runningZone >= p->zones.size())
+  if (!p)
     return false;
-  return strcmp(p->zones[runningZone].uniqueId, uniqueId) == 0;
+  for (const auto &slot : active)
+  {
+    if (slot.index < p->zones.size() &&
+        strcmp(p->zones[slot.index].uniqueId, uniqueId) == 0)
+      return true;
+  }
+  return false;
 }
 
-void Irrigation::openZone()
+void Irrigation::clearRuntime()
+{
+  runningProgram = -1;
+  active.clear();
+  nextZone = 0;
+}
+
+void Irrigation::startPendingZones()
 {
   const IrrigationProgram *p = running();
   if (!p)
     return;
-  // Walk past zones whose valve has since been removed; changeState below closes
-  // whatever else is open, so the one-zone rule holds without repeating it here.
-  while (runningZone < p->zones.size() && !findZone(p->zones[runningZone].uniqueId))
-    runningZone++;
-  if (runningZone >= p->zones.size())
+  const size_t limit = openZoneLimit();
+  while (active.size() < limit && nextZone < p->zones.size())
   {
-    runningProgram = -1;
-    return;
-  }
-  const IrrigationZone &z = p->zones[runningZone];
-  Actuator *valve = findZone(z.uniqueId);
-  zoneEndsAt = millis() + (unsigned long)z.minutes * 60000ul;
+    const size_t index = nextZone++;
+    const IrrigationZone &z = p->zones[index];
+    Actuator *valve = findZone(z.uniqueId);
+    // A valve removed since the program was written is skipped, not waited for.
+    if (!valve)
+      continue;
+    active.push_back({index, millis() + (unsigned long)z.minutes * 60000ul});
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s Irrigation: %s for %d min." CR, tags::actuatores, valve->name, z.minutes);
+    Log.notice("%s Irrigation: %s for %d min." CR, tags::actuatores, valve->name, z.minutes);
 #endif
-  deviceLog("rega abre %s %dmin", valve->name, z.minutes);
-  valve->changeState(StateOrigin::INTERNAL, ActuatorState::ON_CLOSE);
-}
-
-void Irrigation::closeCurrentZone()
-{
-  const IrrigationProgram *p = running();
-  if (!p || runningZone >= p->zones.size())
-    return;
-  Actuator *valve = findZone(p->zones[runningZone].uniqueId);
-  if (valve && valve->state == ActuatorState::ON_CLOSE)
-    valve->changeState(StateOrigin::INTERNAL, ActuatorState::OFF_OPEN);
-}
-
-void Irrigation::advance()
-{
-  closeCurrentZone();
-  runningZone++;
-  const IrrigationProgram *p = running();
-  if (!p || runningZone >= p->zones.size())
+    deviceLog("rega abre %s %dmin", valve->name, z.minutes);
+    valve->changeState(StateOrigin::INTERNAL, ActuatorState::ON_CLOSE);
+  }
+  if (active.empty())
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Irrigation cycle finished." CR, tags::actuatores);
 #endif
-    runningProgram = -1;
-    return;
+    clearRuntime();
   }
-  openZone();
+}
+
+void Irrigation::closeActiveZones()
+{
+  const IrrigationProgram *p = running();
+  if (!p)
+    return;
+  for (const auto &slot : active)
+  {
+    if (slot.index >= p->zones.size())
+      continue;
+    Actuator *valve = findZone(p->zones[slot.index].uniqueId);
+    if (valve && valve->state == ActuatorState::ON_CLOSE)
+      valve->changeState(StateOrigin::INTERNAL, ActuatorState::OFF_OPEN);
+  }
 }
 
 void Irrigation::stop()
 {
-  closeCurrentZone();
-  runningProgram = -1;
-  runningZone = 0;
+  closeActiveZones();
+  clearRuntime();
 }
 
 bool Irrigation::runProgram(uint8_t programId)
@@ -317,10 +364,11 @@ bool Irrigation::runProgram(uint8_t programId)
     if (isRunning())
       stop();
     runningProgram = (int)i;
-    runningZone = 0;
+    active.clear();
+    nextZone = 0;
     programs[i].lastRunDay = clockWeekday();
     programs[i].lastRunMinute = clockMinuteOfDay();
-    openZone();
+    startPendingZones();
     return isRunning();
   }
   return false;
@@ -330,22 +378,44 @@ void Irrigation::loop()
 {
   if (isRunning())
   {
-    // Someone may have closed the running valve from a wall button, the app or
-    // the cloud. That is a takeover, not a pause: the cycle ends rather than
-    // silently reopening the valve under the person who just closed it.
     const IrrigationProgram *p = running();
-    Actuator *valve = p && runningZone < p->zones.size() ? findZone(p->zones[runningZone].uniqueId) : nullptr;
-    if (!valve || valve->state != ActuatorState::ON_CLOSE)
+    if (!p)
     {
-#ifdef DEBUG_ONOFRE
-      Log.notice("%s Irrigation cycle cancelled: zone was closed elsewhere." CR, tags::actuatores);
-#endif
-      runningProgram = -1;
-      runningZone = 0;
+      clearRuntime();
       return;
     }
-    if ((long)(millis() - zoneEndsAt) >= 0)
-      advance();
+    // Someone may have closed one of the open valves from a wall button, the app
+    // or the cloud. That is a takeover, not a pause: the whole cycle ends rather
+    // than reopening a valve under the person who just closed it, or leaving the
+    // rest of the program running while they think they stopped the watering.
+    for (const auto &slot : active)
+    {
+      Actuator *valve = slot.index < p->zones.size() ? findZone(p->zones[slot.index].uniqueId) : nullptr;
+      if (!valve || valve->state != ActuatorState::ON_CLOSE)
+      {
+#ifdef DEBUG_ONOFRE
+        Log.notice("%s Irrigation cycle cancelled: zone was closed elsewhere." CR, tags::actuatores);
+#endif
+        deviceLog("rega cancelada: valvula fechada por fora");
+        clearRuntime();
+        return;
+      }
+    }
+    // Close whatever ran out, then refill the free slots. Iterating backwards
+    // keeps the surviving indices valid while erasing.
+    bool freed = false;
+    for (size_t i = active.size(); i-- > 0;)
+    {
+      if ((long)(millis() - active[i].endsAt) < 0)
+        continue;
+      Actuator *valve = findZone(p->zones[active[i].index].uniqueId);
+      if (valve && valve->state == ActuatorState::ON_CLOSE)
+        valve->changeState(StateOrigin::INTERNAL, ActuatorState::OFF_OPEN);
+      active.erase(active.begin() + i);
+      freed = true;
+    }
+    if (freed)
+      startPendingZones();
     return;
   }
 
@@ -384,8 +454,9 @@ void Irrigation::loop()
       continue;
     }
     runningProgram = (int)i;
-    runningZone = 0;
-    openZone();
+    active.clear();
+    nextZone = 0;
+    startPendingZones();
     return;
   }
 }

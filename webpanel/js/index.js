@@ -132,12 +132,59 @@ function renderIrrigationTab() {
   const has = zones().length > 0;
   $("tab-irrigation").classList.toggle("hide", !has);
   if (!has) return;
-  irrigation = config.irrigation || { enabled: true, skipOnRain: true, programs: [] };
+  irrigation = config.irrigation ||
+    { enabled: true, skipOnRain: true, maxConcurrentZones: 1, programs: [] };
   irrDirty = false;
   $("irr-save").disabled = true;
   renderIrrStatus();
   renderIrrZones();
   renderIrrPrograms();
+}
+
+/* Firmware from before concurrency sends only running.zone/secondsLeft, so treat
+   the single pair as a one-element list rather than special-casing every reader. */
+function runningZones(run) {
+  if (!run) return [];
+  return (run.zones && run.zones.length) ? run.zones : [{ zone: run.zone, secondsLeft: run.secondsLeft }];
+}
+
+function isRunningZone(run, id) {
+  return runningZones(run).some((z) => z.zone === id);
+}
+
+function maxZones() {
+  const n = parseInt(irrigation.maxConcurrentZones, 10);
+  return n >= 1 && n <= 5 ? n : 1;
+}
+
+/* Everything about the cycle except how many seconds are left: the countdown is
+   redrawn on its own, and treating it as a change would rebuild the card on every
+   poll, which is exactly what this is here to avoid. */
+function irrShape(irr) {
+  const run = (irr || {}).running;
+  return JSON.stringify([
+    !!(irr || {}).enabled, !!(irr || {}).skipOnRain, (irr || {}).maxConcurrentZones,
+    (irr || {}).programs, run ? run.programId : null,
+    run ? runningZones(run).map((z) => z.zone) : null,
+  ]);
+}
+
+function runningLines(run) {
+  if (!run) {
+    return '<div class="irr-running idle"><b>Parado</b><span>' +
+      (irrigation.enabled ? "à espera do próximo programa" : "programas desligados") + "</span></div>";
+  }
+  return runningZones(run).map((z) =>
+    '<div class="irr-running"><b>' + esc(zoneName(z.zone)) + "</b>" +
+    '<span>a regar · faltam ' + duration(z.secondsLeft) + "</span></div>").join("");
+}
+
+/* Only the countdown, never the whole card: the card holds a select and two
+   checkboxes, and rebuilding them once a second would shut the dropdown under
+   the finger of whoever is using it. */
+function refreshIrrRunning() {
+  const el = $("irr-running-list");
+  if (el) el.innerHTML = runningLines(irrigation.running);
 }
 
 function renderIrrStatus() {
@@ -153,24 +200,40 @@ function renderIrrStatus() {
       ? '<div class="note err" style="margin:0 0 10px">Sem hora certa (NTP), os programas não correm. ' +
         "A rega manual continua disponível.</div>"
       : "") +
-    (run
-      ? '<div class="irr-running"><b>' + esc(zoneName(run.zone)) + "</b>" +
-        '<span>a regar · faltam ' + duration(run.secondsLeft) + "</span></div>"
-      : '<div class="irr-running idle"><b>Parado</b><span>' +
-        (irrigation.enabled ? "à espera do próximo programa" : "programas desligados") + "</span></div>") +
+    '<div id="irr-running-list">' + runningLines(run) + "</div>" +
     '<div class="irr-toggles">' +
     '<label class="f-check"><input type="checkbox" id="irr-enabled"' + (irrigation.enabled ? " checked" : "") +
       "> programas ativos</label>" +
     '<label class="f-check"><input type="checkbox" id="irr-rain"' + (irrigation.skipOnRain ? " checked" : "") +
       "> saltar o ciclo se estiver a chover" +
       (raining ? ' <span class="irr-chip">está a chover</span>' : "") + "</label>" +
+    '<label class="f-row irr-max"><span>setores ao mesmo tempo</span>' +
+      '<select id="irr-max">' +
+      [1, 2, 3, 4, 5].map((n) =>
+        '<option value="' + n + '"' + (maxZones() === n ? " selected" : "") + ">" + n + "</option>").join("") +
+      "</select></label>" +
+    '<span class="irr-hint">Quantos setores a pressão da água alimenta em simultâneo. ' +
+      "Com um valor alto demais rega-se tudo mal.</span>" +
     "</div>" +
     (run ? '<div class="btns" style="margin-top:11px"><button class="btn d" id="irr-stop">Parar rega</button></div>' : "") +
     "</div>";
 }
 
+function zoneSubtitle(run, id) {
+  const slot = runningZones(run).find((z) => z.zone === id);
+  return slot ? "a regar · " + duration(slot.secondsLeft) : "aberta";
+}
+
 function renderIrrZones() {
   const run = irrigation.running;
+  // The rule depends on the setting, so it is written from it rather than sitting
+  // in the markup saying something that may no longer be true.
+  const limit = maxZones();
+  $("irr-zones-note").textContent = limit === 1
+    ? "Só uma zona rega de cada vez — é o que a pressão da água alimenta. Abrir uma fecha "
+      + "a que estiver aberta, venha o comando daqui, do botão na parede ou da app."
+    : "Regam até " + limit + " zonas ao mesmo tempo. Abrir mais fecha a que estiver aberta "
+      + "há mais tempo, venha o comando daqui, do botão na parede ou da app.";
   $("irr-zones").innerHTML = zones().map((z) => {
     const on = String(z.state) === "100";
     const pin = (z.outputs || []).length ? "OUT " + z.outputs.join(",") : "";
@@ -178,7 +241,7 @@ function renderIrrZones() {
     return '<div class="tile-wrap"><div class="tile' + (on ? " on" : "") + '">' +
       '<span class="tile-top">' + ICONS.valve + "</span>" +
       "<b>" + esc(z.name) + "</b>" +
-      '<span class="tile-sub">' + (on ? (run && run.zone === z.id ? "a regar · " + duration(run.secondsLeft) : "aberta") : "fechada") + "</span>" +
+      '<span class="tile-sub">' + (on ? zoneSubtitle(run, z.id) : "fechada") + "</span>" +
       '<div class="btns" style="margin-top:8px">' +
       '<button class="btn' + (on ? " d" : "") + '" data-zone="' + esc(z.id) + '">' +
       (on ? "Fechar" : "Regar agora") + "</button></div>" +
@@ -225,7 +288,7 @@ function renderIrrPrograms() {
       ? "Sem zonas escolhidas — este programa não rega nada."
       : !prog.weekdays
         ? "Sem dias escolhidos — este programa não corre."
-        : "Total " + programTotal(prog) + " min, por esta ordem.") +
+        : programSummary(prog)) +
     (prog.enabled ? "" : " Programa desligado.") + "</div>" +
     "</div>";
   }).join("")
@@ -248,7 +311,7 @@ function refreshProgramNote(i) {
       ? "Sem zonas escolhidas — este programa não rega nada."
       : !prog.weekdays
         ? "Sem dias escolhidos — este programa não corre."
-        : "Total " + programTotal(prog) + " min, por esta ordem.") +
+        : programSummary(prog)) +
     (prog.enabled ? "" : " Programa desligado.");
 }
 
@@ -256,10 +319,32 @@ function programTotal(prog) {
   return (prog.zones || []).reduce((a, z) => a + (parseInt(z.minutes, 10) || 0), 0);
 }
 
+/* How long the cycle actually takes. With zones in parallel the sum of the
+   minutes stops being the answer: each zone starts as a slot frees up, so the
+   cycle ends with the slot that finishes last. */
+function programElapsed(prog, limit) {
+  const slots = new Array(Math.max(1, limit)).fill(0);
+  (prog.zones || []).forEach((z) => {
+    const first = slots.indexOf(Math.min.apply(null, slots));
+    slots[first] += parseInt(z.minutes, 10) || 0;
+  });
+  return Math.max.apply(null, slots);
+}
+
+function programSummary(prog) {
+  const limit = maxZones();
+  const total = programTotal(prog);
+  const elapsed = programElapsed(prog, limit);
+  return limit === 1 || elapsed === total
+    ? "Total " + total + " min, por esta ordem."
+    : total + " min de rega em " + elapsed + " min, até " + limit + " setores ao mesmo tempo.";
+}
+
 async function saveIrrigation() {
   const body = {
     enabled: $("irr-enabled").checked,
     skipOnRain: $("irr-rain").checked,
+    maxConcurrentZones: parseInt($("irr-max").value, 10) || 1,
     programs: irrigation.programs || [],
   };
   const msg = $("irr-msg");
@@ -1584,7 +1669,9 @@ function wireFeatureEvents() {
             // so the state card must not keep counting down a dead program.
             const run = irrigation.running;
             const open = (parseInt(e.data, 10) || 0) > 0;
-            if (run && ((open && run.zone !== feat.id) || (!open && run.zone === feat.id))) {
+            // Any valve of the cycle closing, or a valve outside it opening, means
+            // the device cancelled the cycle: it must not keep counting down.
+            if (run && (open ? !isRunningZone(run, feat.id) : isRunningZone(run, feat.id))) {
               irrigation.running = null;
               renderIrrStatus();
             }
@@ -1778,7 +1865,19 @@ document.addEventListener("change", (ev) => {
     refreshProgramNote(Number(parts[0]));
     return;
   }
-  if (ev.target.id === "irr-enabled" || ev.target.id === "irr-rain") { markIrrDirty(); return; }
+  if (ev.target.id === "irr-enabled" || ev.target.id === "irr-rain" || ev.target.id === "irr-max") {
+    // Keep the model in step: the status card is redrawn on every SSE event and
+    // would otherwise put the select back to the stored value mid-edit.
+    if (ev.target.id === "irr-max") {
+      irrigation.maxConcurrentZones = parseInt(ev.target.value, 10) || 1;
+      // Both the zones note and every program summary state the rule in words, so
+      // they have to follow the number the moment it changes, not only on save.
+      renderIrrZones();
+      (irrigation.programs || []).forEach((_, i) => refreshProgramNote(i));
+    }
+    markIrrDirty();
+    return;
+  }
   if (ev.target.id === "nf-driver") { onDriverChange(); return; }
   if (ev.target.id === "nf-p1" || ev.target.id === "nf-p2") { onNewPinChange(); return; }
   if (ev.target.id === "s-dhcp") { $("s-static").classList.toggle("hide", ev.target.checked); markDirty(); return; }
@@ -1870,20 +1969,30 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(() => {
     if (!irrigation || !$("v-irrigation").classList.contains("on")) return;
     const run = irrigation.running;
-    if (run && run.secondsLeft > 0) {
-      run.secondsLeft -= 1;
-      renderIrrStatus();
+    if (!run) return;
+    let ticked = false;
+    runningZones(run).forEach((z) => {
+      if (z.secondsLeft > 0) {
+        z.secondsLeft -= 1;
+        ticked = true;
+      }
+    });
+    if (ticked) {
+      refreshIrrRunning();
       renderIrrZones();
     }
   }, 1000);
   setInterval(() => {
     if (!irrigation || !$("v-irrigation").classList.contains("on") || irrDirty) return;
     api("/config").then((c) => {
+      const before = irrShape(irrigation);
       irrigation = c.irrigation || irrigation;
       config.irrigation = irrigation;
-      // Valve states travel by event; only the cycle itself is re-read.
-      renderIrrStatus();
-      renderIrrZones();
+      // Valve states travel by event; only the cycle itself is re-read. Rebuilding
+      // the card costs nothing to look at and everything to use — it holds a
+      // select — so the countdown alone is corrected unless the shape moved.
+      if (irrShape(irrigation) === before) refreshIrrRunning();
+      else { renderIrrStatus(); renderIrrZones(); }
     }).catch(() => {});
   }, 15000);
 });

@@ -16,13 +16,20 @@
  * Rules that the whole feature rests on:
  *  - nothing is watered without a synced clock. A scheduler guessing the time is
  *    worse than one that refuses to run;
- *  - only one zone is ever open, because the water pressure does not feed two;
+ *  - no more than maxConcurrentZones valves are open at once, because that is
+ *    what the supply pressure feeds. How many is a property of the installation,
+ *    not of the firmware, so it is configurable (1-5) and defaults to one;
  *  - a cycle interrupted by a power cut is not resumed on the next boot. Coming
  *    back at three in the morning to finish a cycle nobody is watching is worse
  *    than skipping it;
  *  - rain is evaluated when the cycle starts, not per zone, so a shower halfway
- *    through does not leave half the garden watered.
+ *    through does not leave half the garden watered;
+ *  - closing any open zone by hand cancels the cycle rather than pausing it.
+ *    Someone shutting a valve wants the watering to stop, and with several zones
+ *    open it would otherwise be unclear which ones survived the interruption.
  */
+
+constexpr uint8_t kMaxConcurrentZones{5};
 
 struct IrrigationZone
 {
@@ -54,6 +61,10 @@ class Irrigation
 public:
   bool enabled{true};
   bool skipOnRain{true};
+  /** How many zones may water at the same time, 1..kMaxConcurrentZones. One is
+      the safe default: a pump or a mains feed that cannot supply two zones will
+      simply water both badly, and there is no way to detect that from here. */
+  uint8_t maxConcurrentZones{1};
   std::vector<IrrigationProgram> programs;
 
   /** Reads /irrigation.json. A device with no such file simply has no programs. */
@@ -77,7 +88,7 @@ public:
       zone to water. */
   bool runProgram(uint8_t programId);
 
-  /** Closes the open zone and forgets the cycle. */
+  /** Closes every open zone and forgets the cycle. */
   void stop();
 
   bool isRunning() const { return runningProgram >= 0; }
@@ -85,16 +96,32 @@ public:
   /** True while a scheduled cycle is the reason this valve is open. */
   bool isRunningZone(const char *uniqueId) const;
 
+  /** The cap the valve interlock enforces, clamped whatever the stored value.
+      Read from Actuator::changeState, which is the one place every command to a
+      valve passes through, so the rule cannot be bypassed. */
+  uint8_t openZoneLimit() const;
+
 private:
-  int runningProgram{-1};   // index into programs, not the id
-  size_t runningZone{0};    // index into that program's zones
-  unsigned long zoneEndsAt{0};
-  int lastStartedMinute{-1}; // guards against starting twice in the same minute
+  /** One zone of the cycle that is watering right now. Each carries its own
+      deadline: zones in the same program rarely run for the same length. */
+  struct ActiveZone
+  {
+    size_t index;          // into the running program's zones
+    unsigned long endsAt;  // millis()
+  };
+
+  int runningProgram{-1};       // index into programs, not the id
+  std::vector<ActiveZone> active;
+  size_t nextZone{0};           // next zone of the cycle waiting for a free slot
+  int lastStartedMinute{-1};    // guards against starting twice in the same minute
   int lastStartedDay{-1};
 
-  void openZone();
-  void closeCurrentZone();
-  void advance();
+  /** Opens zones until the concurrency limit is reached or the cycle runs out.
+      Ends the cycle when there is nothing left open and nothing left to open. */
+  void startPendingZones();
+  void closeActiveZones();
+  void clearRuntime();
+  unsigned long secondsLeft(const ActiveZone &slot) const;
   bool raining() const;
   const IrrigationProgram *running() const;
 };
