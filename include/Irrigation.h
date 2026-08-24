@@ -96,6 +96,11 @@ public:
   /** True while a scheduled cycle is the reason this valve is open. */
   bool isRunningZone(const char *uniqueId) const;
 
+  /** Seconds left and the length this zone was given, for a valve the cycle is
+      watering. False when the cycle is not the reason it is open. Lets a panel
+      draw a countdown from the device's own clock instead of guessing. */
+  bool zoneCountdown(const char *uniqueId, unsigned long &left, unsigned long &total) const;
+
   /** The cap the valve interlock enforces, clamped whatever the stored value.
       Read from Actuator::changeState, which is the one place every command to a
       valve passes through, so the rule cannot be bypassed. */
@@ -106,8 +111,9 @@ private:
       deadline: zones in the same program rarely run for the same length. */
   struct ActiveZone
   {
-    size_t index;          // into the running program's zones
-    unsigned long endsAt;  // millis()
+    size_t index;                // into the running program's zones
+    unsigned long endsAt;        // millis()
+    unsigned long totalSeconds;  // what it was given, for a progress reading
   };
 
   int runningProgram{-1};       // index into programs, not the id

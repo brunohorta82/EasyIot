@@ -2,6 +2,35 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.195] - 2026-08-24
+
+### Added
+- **Each zone is now a dial that empties while it waters.** The zone tiles had a
+  text button and a number that only moved when the panel re-read the device. They
+  now carry a ring around a play/stop button — the ring drains as the time runs out
+  and the label counts down in minutes and seconds, the way the Shelly app does it.
+- An open valve is always on a clock: the program's minutes while a cycle waters it,
+  its own `autoOff` otherwise — the main loop has always enforced both. `/config`
+  now reports `secondsLeft` and `totalSeconds` per valve so a panel can draw the
+  proportion instead of inventing it, and the panel counts the seconds down locally
+  between reads so the ring moves every second rather than every poll.
+- Pressing the dial starts the countdown immediately, from the program's minutes for
+  a zone in a cycle or from `autoOff` for one opened by hand, instead of waiting up
+  to fifteen seconds for the device to be asked again.
+
+### Changed
+- The tick no longer rebuilds the zone tiles. It sets the ring's offset and the
+  label's text, so the button cannot be replaced under the finger pressing it —
+  the same reason the status card stopped being redrawn every second in 9.193.
+
+### Para testers
+- **Os setores passaram a ter um botão redondo com o tempo a andar à volta**, como
+  na app da Shelly: ▶ para abrir, ■ para fechar, e o anel vai-se esvaziando enquanto
+  rega. Ao lado diz quanto falta, em minutos e segundos.
+- Vale para os dois casos: numa zona que faz parte de um programa conta os minutos
+  do programa; numa que abras à mão conta os 30 minutos de fecho automático (ou o
+  que tiveres configurado nessa válvula).
+
 ## [9.194] - 2026-08-24
 
 ### Fixed

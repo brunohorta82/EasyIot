@@ -418,6 +418,18 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .irr-running.idle b { color: var(--dim); }
 .irr-running span { font-size: 11.5px; color: var(--dim); }
 .irr-toggles { display: flex; flex-direction: column; gap: 7px; margin-top: 11px; }
+/* A valve is a stopwatch with a tap on it: the ring drains while the water runs,
+   and the glyph says what pressing it will do, not what it is doing. */
+.zone-dial { position: relative; display: block; width: 66px; height: 66px; margin: 9px auto 6px;
+  padding: 0; border: 0; background: none; color: var(--dim); cursor: pointer; }
+.zone-dial:focus-visible { outline: 2px solid var(--grn); outline-offset: 3px; border-radius: 50%; }
+.zone-dial.on { color: var(--grn); }
+.zone-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.zr-track { fill: none; stroke: var(--line); stroke-width: 4; }
+.zr-fill { fill: none; stroke: currentColor; stroke-width: 4; stroke-linecap: round;
+  transition: stroke-dashoffset .95s linear; }
+.zone-glyph { position: absolute; inset: 0; display: grid; place-items: center; }
+.zone-glyph svg { width: 21px; height: 21px; }
 .irr-max { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .irr-max select {
   flex: 0 0 74px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;

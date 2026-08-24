@@ -292,6 +292,24 @@ bool Irrigation::isRunningZone(const char *uniqueId) const
   return false;
 }
 
+bool Irrigation::zoneCountdown(const char *uniqueId, unsigned long &left,
+                               unsigned long &total) const
+{
+  const IrrigationProgram *p = running();
+  if (!p)
+    return false;
+  for (const auto &slot : active)
+  {
+    if (slot.index >= p->zones.size() ||
+        strcmp(p->zones[slot.index].uniqueId, uniqueId) != 0)
+      continue;
+    left = secondsLeft(slot);
+    total = slot.totalSeconds;
+    return true;
+  }
+  return false;
+}
+
 void Irrigation::clearRuntime()
 {
   runningProgram = -1;
@@ -313,7 +331,8 @@ void Irrigation::startPendingZones()
     // A valve removed since the program was written is skipped, not waited for.
     if (!valve)
       continue;
-    active.push_back({index, millis() + (unsigned long)z.minutes * 60000ul});
+    active.push_back({index, millis() + (unsigned long)z.minutes * 60000ul,
+                      (unsigned long)z.minutes * 60ul});
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Irrigation: %s for %d min." CR, tags::actuatores, valve->name, z.minutes);
 #endif

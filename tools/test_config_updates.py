@@ -1549,6 +1549,32 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
                         update.index("maxConcurrentZones = parsedMaxZones;"))
         self.assertIn('doc["maxConcurrentZones"] = maxConcurrentZones;', self.irrigation)
 
+    def test_open_valve_reports_both_ends_of_its_clock(self) -> None:
+        # A valve is never open without a deadline: the program's minutes inside a
+        # cycle, its own autoOff outside one (the loop enforces both). Reporting
+        # only the remainder would leave a panel unable to draw a proportion.
+        block = block_after(self.config, r"void ConfigOnofre::json\(JsonVariant &root, bool allFields\)")
+        self.assertIn("irrigation.zoneCountdown(s.uniqueId, left, total)", block)
+        self.assertIn('a["secondsLeft"] = left;', block)
+        self.assertIn('a["totalSeconds"] = total;', block)
+        # The cycle wins: a zone the program is watering must not be measured
+        # against a 30-minute autoOff that would cut it short on screen.
+        self.assertLess(block.index("irrigation.zoneCountdown"), block.index("s.autoOff > 0ul"))
+        # Nothing is published for a closed valve, or one with no deadline at all.
+        self.assertIn("if (s.isGardenValve() && s.state == ActuatorState::ON_CLOSE)", block)
+        self.assertIn("if (total > 0ul)", block)
+
+    def test_zone_dial_says_what_pressing_it_does(self) -> None:
+        # The glyph is the action, not the state: a watering zone shows stop.
+        self.assertIn('(on ? ICONS.stop : ICONS.play)', self.panel)
+        self.assertIn('esc((on ? "Fechar " : "Regar ") + z.name)', self.panel)
+        # The ring is driven by attribute, and the label by text, so the tick never
+        # replaces the button someone is about to press.
+        paint = block_after(self.panel, r"function paintZoneClocks\(\)")
+        self.assertIn('ring.setAttribute("stroke-dashoffset"', paint)
+        self.assertIn("sub.textContent", paint)
+        self.assertNotIn("innerHTML", paint)
+
     def test_restore_carries_the_concurrency_limit_it_was_given(self) -> None:
         # The restore rebuilds the irrigation object field by field, so a field it
         # does not know about is a field it silently drops. Putting the pressure
@@ -1590,7 +1616,9 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn("function refreshIrrRunning()", self.panel)
         refresh = block_after(self.panel, r"function refreshIrrRunning\(\)")
         self.assertNotIn("renderIrrStatus", refresh)
-        self.assertIn("refreshIrrRunning();\n      renderIrrZones();", self.panel)
+        # 9.195: the tick paints the rings and the labels; rebuilding the tiles
+        # once a second would replace the dial mid-press.
+        self.assertIn("if (ticked) paintZoneClocks();", self.panel)
         self.assertIn("maxConcurrentZones: parseInt($(\"irr-max\").value, 10) || 1", self.panel)
 
     def test_absent_input_mode_preserves_the_preflighted_driver(self) -> None:

@@ -80,6 +80,8 @@ const TEMPLATES = [
 const COG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">' +
   '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.6H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.7 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H10a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V10a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>';
 const ICONS = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5L8 5.5Z"/></svg>',
+  stop: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>',
   light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2Z"/></svg>',
   socket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="10" r="1.4"/><circle cx="15" cy="10" r="1.4"/><path d="M8 16h8"/></svg>',
   cover: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 12h18M3 16h18"/></svg>',
@@ -220,8 +222,21 @@ function renderIrrStatus() {
 }
 
 function zoneSubtitle(run, id) {
-  const slot = runningZones(run).find((z) => z.zone === id);
-  return slot ? "a regar · " + duration(slot.secondsLeft) : "aberta";
+  const z = zones().find((x) => x.id === id);
+  if (!z || String(z.state) !== "100") return "fechada";
+  const clock = zoneClocks[id];
+  if (!clock) return "aberta";
+  const cycle = runningZones(run).some((s) => s.zone === id);
+  return (cycle ? "a regar · faltam " : "aberta · fecha em ") + mmss(clock.left);
+}
+
+/* Minutes and seconds: a ring that drains needs the seconds next to it, and
+   "9m" for the last nine minutes of a cycle reads as if nothing is happening. */
+function mmss(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  const mm = h ? String(m).padStart(2, "0") : String(m);
+  return (h ? h + ":" : "") + mm + ":" + String(s).padStart(2, "0");
 }
 
 function renderIrrZones() {
@@ -234,6 +249,7 @@ function renderIrrZones() {
       + "a que estiver aberta, venha o comando daqui, do botão na parede ou da app."
     : "Regam até " + limit + " zonas ao mesmo tempo. Abrir mais fecha a que estiver aberta "
       + "há mais tempo, venha o comando daqui, do botão na parede ou da app.";
+  zones().forEach(readZoneClock);
   $("irr-zones").innerHTML = zones().map((z) => {
     const on = String(z.state) === "100";
     const pin = (z.outputs || []).length ? "OUT " + z.outputs.join(",") : "";
@@ -241,12 +257,79 @@ function renderIrrZones() {
     return '<div class="tile-wrap"><div class="tile' + (on ? " on" : "") + '">' +
       '<span class="tile-top">' + ICONS.valve + "</span>" +
       "<b>" + esc(z.name) + "</b>" +
-      '<span class="tile-sub">' + (on ? zoneSubtitle(run, z.id) : "fechada") + "</span>" +
-      '<div class="btns" style="margin-top:8px">' +
-      '<button class="btn' + (on ? " d" : "") + '" data-zone="' + esc(z.id) + '">' +
-      (on ? "Fechar" : "Regar agora") + "</button></div>" +
+      '<button class="zone-dial' + (on ? " on" : "") + '" data-zone="' + esc(z.id) + '"' +
+      ' aria-label="' + esc((on ? "Fechar " : "Regar ") + z.name) + '">' +
+      '<svg class="zone-ring" viewBox="0 0 72 72" aria-hidden="true">' +
+      '<circle class="zr-track" cx="36" cy="36" r="32"></circle>' +
+      '<circle class="zr-fill" cx="36" cy="36" r="32" data-zring="' + esc(z.id) + '"' +
+      ' stroke-dasharray="' + RING + '" stroke-dashoffset="' + RING + '"></circle></svg>' +
+      '<span class="zone-glyph">' + (on ? ICONS.stop : ICONS.play) + "</span></button>" +
+      '<span class="tile-sub" data-zsub="' + esc(z.id) + '">' + zoneSubtitle(run, z.id) + "</span>" +
       '<span class="tile-pins">' + esc(pin + btn) + "</span></div></div>";
   }).join("");
+  paintZoneClocks();
+}
+
+/* 2*pi*r for the ring drawn above. The dash pattern is one full circumference, so
+   the offset is how much of it to hide: none left to water means all of it. */
+const RING = (2 * Math.PI * 32).toFixed(2);
+
+/* Seconds left and the length the zone was given, as the device reports them. A
+   valve is always on a clock while open — the program's minutes inside a cycle,
+   its own autoOff otherwise — and the panel counts the seconds down locally so
+   the ring moves every second instead of every poll. */
+const zoneClocks = {};
+
+/* A state event says a valve opened, not for how long. Until the next read of
+   /config the panel assumes the obvious deadline — the program's minutes for a
+   zone the cycle just started, the valve's own autoOff for one opened by hand —
+   so the ring starts draining on the click and not fifteen seconds later. */
+function seedZoneClock(zone, open, run) {
+  if (!open) {
+    zone.secondsLeft = 0;
+    zone.totalSeconds = 0;
+    readZoneClock(zone);
+    return;
+  }
+  let total = 0;
+  if (run && isRunningZone(run, zone.id)) {
+    const prog = (irrigation.programs || []).find((p) => p.id === run.programId);
+    const entry = prog && (prog.zones || []).find((z) => z.uniqueId === zone.id);
+    if (entry) total = (parseInt(entry.minutes, 10) || 0) * 60;
+  }
+  if (!total) total = parseInt(zone.autoOff, 10) || 0;
+  zone.totalSeconds = total;
+  zone.secondsLeft = total;
+  readZoneClock(zone);
+}
+
+function readZoneClock(z) {
+  const total = parseInt(z.totalSeconds, 10) || 0;
+  if (String(z.state) !== "100" || !total) {
+    delete zoneClocks[z.id];
+    return;
+  }
+  const left = Math.max(0, Math.min(total, parseInt(z.secondsLeft, 10) || 0));
+  zoneClocks[z.id] = { left: left, total: total };
+}
+
+/* Only the offset and the label, never the tile: a tile rebuilt once a second is
+   a button that cannot be pressed while it is being looked at. */
+function paintZoneClocks() {
+  zones().forEach((z) => {
+    const ring = document.querySelector('[data-zring="' + cssEscape(z.id) + '"]');
+    const sub = document.querySelector('[data-zsub="' + cssEscape(z.id) + '"]');
+    const clock = zoneClocks[z.id];
+    if (ring) {
+      const fraction = clock ? clock.left / clock.total : 0;
+      ring.setAttribute("stroke-dashoffset", (RING * (1 - fraction)).toFixed(2));
+    }
+    if (sub) sub.textContent = zoneSubtitle(irrigation.running, z.id);
+  });
+}
+
+function cssEscape(value) {
+  return String(value).replace(/["\\]/g, "\\$&");
 }
 
 function renderIrrPrograms() {
@@ -1669,6 +1752,7 @@ function wireFeatureEvents() {
             // so the state card must not keep counting down a dead program.
             const run = irrigation.running;
             const open = (parseInt(e.data, 10) || 0) > 0;
+            seedZoneClock(feat, open, run);
             // Any valve of the cycle closing, or a valve outside it opening, means
             // the device cancelled the cycle: it must not keep counting down.
             if (run && (open ? !isRunningZone(run, feat.id) : isRunningZone(run, feat.id))) {
@@ -1969,18 +2053,23 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(() => {
     if (!irrigation || !$("v-irrigation").classList.contains("on")) return;
     const run = irrigation.running;
-    if (!run) return;
     let ticked = false;
-    runningZones(run).forEach((z) => {
-      if (z.secondsLeft > 0) {
-        z.secondsLeft -= 1;
+    if (run) {
+      runningZones(run).forEach((z) => {
+        if (z.secondsLeft > 0) {
+          z.secondsLeft -= 1;
+          ticked = true;
+        }
+      });
+      if (ticked) refreshIrrRunning();
+    }
+    Object.keys(zoneClocks).forEach((id) => {
+      if (zoneClocks[id].left > 0) {
+        zoneClocks[id].left -= 1;
         ticked = true;
       }
     });
-    if (ticked) {
-      refreshIrrRunning();
-      renderIrrZones();
-    }
+    if (ticked) paintZoneClocks();
   }, 1000);
   setInterval(() => {
     if (!irrigation || !$("v-irrigation").classList.contains("on") || irrDirty) return;
@@ -1988,10 +2077,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const before = irrShape(irrigation);
       irrigation = c.irrigation || irrigation;
       config.irrigation = irrigation;
+      // The device is the clock; the panel only counts between reads. Nothing
+      // else of a feature is copied over, so an unsaved edit in FUNÇÕES is safe.
+      (c.features || []).forEach((fresh) => {
+        const zone = (config.features || []).find((f) => f.id === fresh.id);
+        if (!zone || !isZone(zone)) return;
+        zone.state = fresh.state;
+        zone.value = fresh.value;
+        zone.secondsLeft = fresh.secondsLeft;
+        zone.totalSeconds = fresh.totalSeconds;
+        readZoneClock(zone);
+      });
       // Valve states travel by event; only the cycle itself is re-read. Rebuilding
       // the card costs nothing to look at and everything to use — it holds a
       // select — so the countdown alone is corrected unless the shape moved.
-      if (irrShape(irrigation) === before) refreshIrrRunning();
+      if (irrShape(irrigation) === before) { refreshIrrRunning(); paintZoneClocks(); }
       else { renderIrrStatus(); renderIrrZones(); }
     }).catch(() => {});
   }, 15000);

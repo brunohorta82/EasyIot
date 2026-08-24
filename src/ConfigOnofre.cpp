@@ -2157,6 +2157,26 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     a["driver"] = s.driverToText();
     a["state"] = s.state;
     a["autoOff"] = s.autoOff;
+    // An open valve is always on a clock: the program's minutes while a cycle is
+    // watering it, its own autoOff otherwise (the loop enforces both). Reporting
+    // where it is between the two ends is what lets a panel show the time
+    // draining away rather than a number that only moves when it is re-read.
+    if (s.isGardenValve() && s.state == ActuatorState::ON_CLOSE)
+    {
+      unsigned long left = 0ul;
+      unsigned long total = 0ul;
+      if (!irrigation.zoneCountdown(s.uniqueId, left, total) && s.autoOff > 0ul)
+      {
+        const unsigned long elapsed = (millis() - s.lastChange) / 1000ul;
+        total = s.autoOff;
+        left = elapsed < total ? total - elapsed : 0ul;
+      }
+      if (total > 0ul)
+      {
+        a["secondsLeft"] = left;
+        a["totalSeconds"] = total;
+      }
+    }
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];
     a["member"] = s.knxAddress[2];
