@@ -226,8 +226,10 @@ function zoneSubtitle(run, id) {
   if (!z || String(z.state) !== "100") return "fechada";
   const clock = zoneClocks[id];
   if (!clock) return "aberta";
+  // Short enough to stay on one line under the dial: that it is open is already
+  // said by the stop glyph and by the lit tile, so the line only carries time.
   const cycle = runningZones(run).some((s) => s.zone === id);
-  return (cycle ? "a regar · faltam " : "aberta · fecha em ") + mmss(clock.left);
+  return (cycle ? "a regar · " : "fecha em ") + mmss(clock.left);
 }
 
 /* Minutes and seconds: a ring that drains needs the seconds next to it, and

@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.196] - 2026-08-24
+
+### Fixed
+- **The zone label wrapped onto two lines**, which pushed the tiles out of line with
+  each other. "aberta · fecha em 25:41" said in words what the stop glyph and the
+  lit tile already say, so the line now carries only the time: "fecha em 25:41", or
+  "a regar · 9:44" for a zone the cycle is watering.
+
+### Para testers
+- O tempo debaixo do botão já não parte para duas linhas.
+
 ## [9.195] - 2026-08-24
 
 ### Added
