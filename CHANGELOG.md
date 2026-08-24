@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.194] - 2026-08-24
+
+### Fixed
+- **Restoring a backup put the irrigation back to one zone at a time.** The restore
+  in 9.193 rebuilds the irrigation object field by field, and a field it does not
+  know about is a field it drops — so a restore quietly reconfigured the water
+  pressure, which is the one thing a restore must never do. It now carries
+  `maxConcurrentZones` (validated 1-5), and a backup taken before the setting
+  existed keeps whatever the device is set to instead of resetting it.
+
+### Announced late
+- 9.193 also shipped two features merged from pull requests #132 and #133 that were
+  missing from its notes: **exporting the configuration to a JSON file** and
+  **restoring one back**, both in SISTEMA. The copy never contains passwords, and a
+  restore refuses a file from a different kind of equipment.
+
+### Para testers
+- **Já podem guardar e repor a configuração do equipamento** (SISTEMA → CÓPIA DE
+  CONFIGURAÇÃO). A cópia sai sem palavras-passe nenhumas e só entra num equipamento
+  da mesma variante. Isto veio na 9.193 e faltou dizer.
+- Corrigido: repor uma cópia punha os setores em simultâneo de volta a 1. Agora a
+  cópia leva esse valor e reposto fica como estava.
+
 ## [9.193] - 2026-08-24
 
 ### Added

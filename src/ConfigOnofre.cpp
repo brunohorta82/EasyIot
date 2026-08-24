@@ -1567,9 +1567,26 @@ ConfigUpdateResult ConfigOnofre::stageRestore(JsonObject &root)
       programsValue.as<JsonArrayConst>().size() > maxRestorePrograms)
     return ConfigUpdateResult::INVALID_REQUEST;
 
+  // A backup carries the concurrency limit; one taken before the setting existed
+  // does not. Restoring must not quietly put the installation back to one zone —
+  // the whole point of a restore is that nothing else changes — so an absent
+  // value keeps what this device is set to.
+  JsonVariantConst submittedMaxZones = submittedIrrigation["maxConcurrentZones"];
+  uint8_t restoredMaxZones = irrigation.openZoneLimit();
+  if (!submittedMaxZones.isNull())
+  {
+    if (!submittedMaxZones.is<unsigned int>())
+      return ConfigUpdateResult::INVALID_REQUEST;
+    const unsigned int wantedMaxZones = submittedMaxZones.as<unsigned int>();
+    if (wantedMaxZones < 1u || wantedMaxZones > kMaxConcurrentZones)
+      return ConfigUpdateResult::INVALID_REQUEST;
+    restoredMaxZones = static_cast<uint8_t>(wantedMaxZones);
+  }
+
   JsonObject restoredIrrigation = transaction["irrigation"].to<JsonObject>();
   restoredIrrigation["enabled"] = irrEnabled.as<bool>();
   restoredIrrigation["skipOnRain"] = skipOnRain.as<bool>();
+  restoredIrrigation["maxConcurrentZones"] = restoredMaxZones;
   JsonArray storedPrograms = restoredIrrigation["programs"].to<JsonArray>();
   std::vector<unsigned int> programIds;
   for (JsonVariantConst programValue : programsValue.as<JsonArrayConst>())

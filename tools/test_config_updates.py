@@ -1549,6 +1549,20 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
                         update.index("maxConcurrentZones = parsedMaxZones;"))
         self.assertIn('doc["maxConcurrentZones"] = maxConcurrentZones;', self.irrigation)
 
+    def test_restore_carries_the_concurrency_limit_it_was_given(self) -> None:
+        # The restore rebuilds the irrigation object field by field, so a field it
+        # does not know about is a field it silently drops. Putting the pressure
+        # back to one zone is not "restoring" anything.
+        block = block_after(self.config, r"ConfigUpdateResult ConfigOnofre::stageRestore\(JsonObject &root\)")
+        self.assertIn('submittedIrrigation["maxConcurrentZones"]', block)
+        self.assertIn("uint8_t restoredMaxZones = irrigation.openZoneLimit();", block)
+        self.assertIn("wantedMaxZones < 1u || wantedMaxZones > kMaxConcurrentZones", block)
+        self.assertIn('restoredIrrigation["maxConcurrentZones"] = restoredMaxZones;', block)
+        # And a backup has to contain it in the first place, which it does because
+        # the snapshot is jsonBody's own output.
+        backup = block_after(self.config, r"void ConfigOnofre::backup\(JsonVariant &root\)")
+        self.assertIn("irrigation.jsonBody(irrigationRoot)", backup)
+
     def test_valve_interlock_enforces_the_configured_limit_oldest_first(self) -> None:
         # The interlock lives in changeState because that is the single door every
         # command to a valve passes through: a wall button, MQTT, the cloud and
