@@ -372,6 +372,10 @@ void Actuator::notifyState(StateOrigin origin)
     if (isRelay() && cloudIOConnected())
     {
       notifyStateToCloudIO(cloudIOreadTopic, stateStr.c_str());
+      // A valve moving is the only thing that changes the irrigation picture
+      // often, and the apps draw a countdown from it.
+      if (isGardenValve())
+        notifyIrrigationToCloudIO();
     }
 
     // Notify by SSW Webpanel
@@ -385,6 +389,20 @@ void Actuator::notifyState(StateOrigin origin)
 #endif
     knx.write_1byte_int(knx.GA_to_address(knxAddress[0], knxAddress[1], knxAddress[2]), state);
   }
+}
+
+bool Actuator::valveClock(unsigned long &left, unsigned long &total) const
+{
+  if (driver != ActuatorDriver::GARDEN_VALVE || state != ActuatorState::ON_CLOSE)
+    return false;
+  if (irrigation.zoneCountdown(uniqueId, left, total))
+    return true;
+  if (autoOff == 0ul)
+    return false;
+  const unsigned long elapsed = (millis() - lastChange) / 1000ul;
+  total = autoOff;
+  left = elapsed < total ? total - elapsed : 0ul;
+  return true;
 }
 
 Actuator *Actuator::changeState(StateOrigin origin, int state)

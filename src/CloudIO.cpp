@@ -1,4 +1,5 @@
 #include "CloudIO.h"
+#include "Irrigation.h"
 #include "ConfigOnofre.h"
 #include "CoreWiFi.h"
 #include <Ticker.h>
@@ -357,6 +358,32 @@ QueueCloudCommandResult queueCloudIOCommand(const char *topic, const char *paylo
 }
 }
 
+void notifyIrrigationToCloudIO()
+{
+  if (!cloudIOConnected() || config.cloudIOIrrigationStatusTopic[0] == '\0')
+    return;
+  JsonDocument doc;
+  JsonVariant root = doc.to<JsonObject>();
+  irrigation.jsonBody(root);
+  // Every open valve, not only the ones a cycle is watering: one opened by hand
+  // is on its own autoOff, and an app has no way to know that deadline.
+  JsonArray clocks = root["clocks"].to<JsonArray>();
+  for (const auto &sw : config.actuatores)
+  {
+    unsigned long left = 0ul;
+    unsigned long total = 0ul;
+    if (!sw.valveClock(left, total))
+      continue;
+    JsonObject item = clocks.add<JsonObject>();
+    item["zone"] = sw.uniqueId;
+    item["secondsLeft"] = left;
+    item["totalSeconds"] = total;
+  }
+  String payload;
+  serializeJson(doc, payload);
+  mqttClient.publish(config.cloudIOIrrigationStatusTopic, 0, true, payload.c_str());
+}
+
 void notifyStateToCloudIO(const char *topic, const char *state)
 {
   if (!loadCloudMqttConnectedState())
@@ -454,6 +481,8 @@ void serviceCloudMqttSubscriptions()
 
   mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1");
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
+  if (config.cloudIOIrrigationWriteTopic[0] != '\0')
+    subscribeOnMqttCloudIO(config.cloudIOIrrigationWriteTopic);
   for (auto &sw : config.actuatores)
   {
     if (sw.isVirtual())
@@ -462,6 +491,9 @@ void serviceCloudMqttSubscriptions()
     notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
   }
   config.endFeatureAccess();
+  // After the valve states, so an app that reconnects reads the cycle against
+  // states it already has rather than against the ones it is about to receive.
+  notifyIrrigationToCloudIO();
   cloudMqttSubscriptionsPending = false;
 }
 
@@ -604,6 +636,23 @@ void drainCloudIOCommands()
     {
       config.requestAutoUpdate();
     }
+  }
+  else if (strcmp(command.topic, config.cloudIOIrrigationWriteTopic) == 0)
+  {
+    // RUN:<programId> forces a cycle, STOP ends it. Deliberately not the schedule:
+    // editing programs over a retained-message channel would make a lost message
+    // look like a deleted program.
+    if (strcmp(command.payload, "STOP") == 0)
+    {
+      irrigation.stop();
+    }
+    else if (strncmp(command.payload, "RUN:", 4) == 0)
+    {
+      const long programId = atol(command.payload + 4);
+      if (programId > 0 && programId < 256)
+        irrigation.runProgram((uint8_t)programId);
+    }
+    notifyIrrigationToCloudIO();
   }
   else
   {
@@ -918,6 +967,10 @@ void connectToCloudIO()
     config.cloudIOReady = true;
     snprintf(config.cloudIOhealthTopic, sizeof(config.cloudIOhealthTopic), "%s/%s/available", config.cloudIOUsername, config.chipId);
     snprintf(config.cloudIOwriteTopic, sizeof(config.cloudIOwriteTopic), "%s/%s/config/set", config.cloudIOUsername, config.chipId);
+    snprintf(config.cloudIOIrrigationStatusTopic, sizeof(config.cloudIOIrrigationStatusTopic),
+             "%s/%s/irrigation/status", config.cloudIOUsername, config.chipId);
+    snprintf(config.cloudIOIrrigationWriteTopic, sizeof(config.cloudIOIrrigationWriteTopic),
+             "%s/%s/irrigation/set", config.cloudIOUsername, config.chipId);
     for (auto &sw : config.actuatores)
     {
       String family = sw.familyToText();

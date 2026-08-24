@@ -50,6 +50,10 @@ public:
   bool cloudIOReady{false};
   char cloudIOhealthTopic[128];
   char cloudIOwriteTopic[128];
+  // Irrigation is a device-wide thing, not a feature: the cycle spans several
+  // valves and the schedule belongs to none of them. So it gets its own pair.
+  char cloudIOIrrigationStatusTopic[128];
+  char cloudIOIrrigationWriteTopic[128];
   char cloudIOreadTopic[128];
   // WIFI
   char wifiSSID[32];

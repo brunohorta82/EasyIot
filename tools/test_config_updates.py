@@ -1553,16 +1553,41 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         # A valve is never open without a deadline: the program's minutes inside a
         # cycle, its own autoOff outside one (the loop enforces both). Reporting
         # only the remainder would leave a panel unable to draw a proportion.
-        block = block_after(self.config, r"void ConfigOnofre::json\(JsonVariant &root, bool allFields\)")
-        self.assertIn("irrigation.zoneCountdown(s.uniqueId, left, total)", block)
-        self.assertIn('a["secondsLeft"] = left;', block)
-        self.assertIn('a["totalSeconds"] = total;', block)
+        # One implementation, asked by both readers: /config for the panel and the
+        # retained cloud message for the apps. Two copies of this would drift.
+        clock = block_after(
+            self.actuator,
+            r"bool Actuator::valveClock\(unsigned long &left, unsigned long &total\) const")
+        self.assertIn("driver != ActuatorDriver::GARDEN_VALVE || state != ActuatorState::ON_CLOSE", clock)
         # The cycle wins: a zone the program is watering must not be measured
         # against a 30-minute autoOff that would cut it short on screen.
-        self.assertLess(block.index("irrigation.zoneCountdown"), block.index("s.autoOff > 0ul"))
-        # Nothing is published for a closed valve, or one with no deadline at all.
-        self.assertIn("if (s.isGardenValve() && s.state == ActuatorState::ON_CLOSE)", block)
-        self.assertIn("if (total > 0ul)", block)
+        self.assertLess(clock.index("irrigation.zoneCountdown"), clock.index("autoOff == 0ul"))
+        self.assertIn("total = autoOff;", clock)
+
+        block = block_after(self.config, r"void ConfigOnofre::json\(JsonVariant &root, bool allFields\)")
+        self.assertIn("if (s.valveClock(valveLeft, valveTotal))", block)
+        self.assertIn('a["secondsLeft"] = valveLeft;', block)
+        self.assertIn('a["totalSeconds"] = valveTotal;', block)
+
+    def test_irrigation_reaches_the_apps_over_its_own_topic(self) -> None:
+        # Irrigation is device-wide: the cycle spans valves and the schedule
+        # belongs to none of them, so it cannot travel on a feature topic.
+        self.assertIn('"%s/%s/irrigation/status"', self.cloud)
+        self.assertIn('"%s/%s/irrigation/set"', self.cloud)
+        publish = block_after(self.cloud, r"void notifyIrrigationToCloudIO\(\)")
+        self.assertIn("irrigation.jsonBody(root)", publish)
+        # Retained: an app opening after the cycle started must still see it.
+        self.assertIn("mqttClient.publish(config.cloudIOIrrigationStatusTopic, 0, true", publish)
+        # Every open valve, including one opened by hand on its own autoOff.
+        self.assertIn("sw.valveClock(left, total)", publish)
+        # Commands are RUN/STOP only. Editing the schedule over a retained channel
+        # would make a lost message look like a deleted program.
+        self.assertIn('strncmp(command.payload, "RUN:", 4)', self.cloud)
+        self.assertIn('strcmp(command.payload, "STOP")', self.cloud)
+        self.assertNotIn("irrigation.update(", self.cloud)
+        # A valve moving republishes; so does a schedule save, which moves none.
+        self.assertIn("if (isGardenValve())\n        notifyIrrigationToCloudIO();", self.actuator)
+        self.assertIn("notifyIrrigationToCloudIO();", self.server)
 
     def test_zone_dial_says_what_pressing_it_does(self) -> None:
         # The glyph is the action, not the state: a watering zone shows stop.

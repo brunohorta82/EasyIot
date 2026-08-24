@@ -5,6 +5,10 @@ void connectToCloudIO();
 void startCloudIOWatchdog();
 bool cloudIOConnected();
 void notifyStateToCloudIO(const char *topic, const char *state);
+/** Publishes the whole irrigation picture — schedule, running cycle, and the
+    countdown of every open valve — as one retained message. Cheap enough to call
+    on every valve change; there is nothing to publish while the cloud is down. */
+void notifyIrrigationToCloudIO();
 // Service callback-owned flags from the main execution context. Neither the
 // Ticker nor AsyncMqttClient callbacks perform logging, configuration access,
 // or connection lifecycle work directly.

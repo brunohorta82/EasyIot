@@ -2,6 +2,33 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.197] - 2026-08-24
+
+### Added
+- **The irrigation picture now reaches the cloud**, so the apps can show it. Until
+  now only the device's own panel knew about zones and cycles: the cloud carried one
+  state string per feature, and irrigation is not a feature — the cycle spans several
+  valves and the schedule belongs to none of them. It gets its own retained topic,
+  `{user}/{chip}/irrigation/status`, carrying the schedule, the running cycle, and
+  the countdown of every open valve. Retained, so an app opened halfway through a
+  cycle still sees it.
+- `{user}/{chip}/irrigation/set` accepts `RUN:<programId>` and `STOP`. Deliberately
+  not the schedule: editing programs over a retained-message channel would make a
+  lost message look like a deleted program, and the panel already does that job.
+- The device republishes on every valve movement and on every schedule save — a save
+  moves no valve, so nothing else would tell the apps.
+
+### Changed
+- `Actuator::valveClock` is now the single answer to "how long has this valve got
+  left", asked by both readers: `/config` for the panel and the retained message for
+  the apps. Two copies of that rule would have drifted apart.
+- No change is needed in CloudIO or in the EMQX rules: a phone's ACL is already
+  `{username}/#`, so the new topic is reachable the moment the firmware publishes it.
+
+### Para testers
+- Nada de novo para ver nesta versão — é a canalização para a rega aparecer nas apps
+  do telefone. As apps chegam a seguir.
+
 ## [9.196] - 2026-08-24
 
 ### Fixed

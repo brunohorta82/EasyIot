@@ -2161,21 +2161,12 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     // watering it, its own autoOff otherwise (the loop enforces both). Reporting
     // where it is between the two ends is what lets a panel show the time
     // draining away rather than a number that only moves when it is re-read.
-    if (s.isGardenValve() && s.state == ActuatorState::ON_CLOSE)
+    unsigned long valveLeft = 0ul;
+    unsigned long valveTotal = 0ul;
+    if (s.valveClock(valveLeft, valveTotal))
     {
-      unsigned long left = 0ul;
-      unsigned long total = 0ul;
-      if (!irrigation.zoneCountdown(s.uniqueId, left, total) && s.autoOff > 0ul)
-      {
-        const unsigned long elapsed = (millis() - s.lastChange) / 1000ul;
-        total = s.autoOff;
-        left = elapsed < total ? total - elapsed : 0ul;
-      }
-      if (total > 0ul)
-      {
-        a["secondsLeft"] = left;
-        a["totalSeconds"] = total;
-      }
+      a["secondsLeft"] = valveLeft;
+      a["totalSeconds"] = valveTotal;
     }
     a["area"] = s.knxAddress[0];
     a["line"] = s.knxAddress[1];

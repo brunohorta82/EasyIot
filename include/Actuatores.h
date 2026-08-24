@@ -110,6 +110,13 @@ public:
     {
         return driver == SWITCH_PUSH || driver == SWITCH_LATCH;
     };
+    /** Seconds left and the length behind them for an open valve: the program's
+        minutes while a cycle waters it, its own autoOff otherwise — the two the
+        main loop enforces. False when it is closed or has no deadline at all.
+        Lives here because both /config and the cloud publisher need the same
+        answer, and two copies of this would drift. */
+    bool valveClock(unsigned long &left, unsigned long &total) const;
+
     constexpr bool isGardenValve()
     {
         return driver == GARDEN_VALVE;
