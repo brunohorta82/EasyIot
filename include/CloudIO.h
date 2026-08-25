@@ -4,6 +4,10 @@
 void connectToCloudIO();
 void startCloudIOWatchdog();
 bool cloudIOConnected();
+/** Force the asynchronous cloud transport idle before ESP8266 OTA asks BearSSL
+    for its largest allocations. The normal service loop reconnects it if the
+    update fails and the running firmware returns. */
+void disconnectCloudIOForUpdate();
 void notifyStateToCloudIO(const char *topic, const char *state);
 /** Publishes the whole irrigation picture — schedule, running cycle, and the
     countdown of every open valve — as one retained message. Cheap enough to call

@@ -412,6 +412,24 @@ bool cloudIOConnected()
   return loadCloudMqttConnectedState();
 }
 
+void disconnectCloudIOForUpdate()
+{
+  // performUpdate() blocks the main service loop. Make the transport unavailable
+  // before closing it so no feature publisher can enqueue another packet while
+  // ESP8266 is trying to assemble one large free block for BearSSL.
+  cloudMqttSubscriptionsPending = false;
+  cloudMqttReconnectPending = false;
+  storeCloudMqttConnectedState(false);
+  mqttClient.disconnect(true);
+  // A clean session should leave no QoS state behind. Explicitly release any
+  // queued packet now rather than carry its heap across the OTA handshake.
+  mqttClient.clearQueue();
+  enterCloudMqttTransportState(CloudMqttTransportState::DISCONNECTED);
+  // On failure, serviceCloudIOMqtt() resumes on the next main-loop pass and
+  // reconnects from the immutable active runtime. Success reboots instead.
+  cloudMqttReconnectPending = activeCloudMqttRuntimeValid;
+}
+
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
   (void)properties;

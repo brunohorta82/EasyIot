@@ -32,6 +32,7 @@ PERSISTENCE_SOURCE = ROOT / "src" / "Persistence.cpp"
 IRRIGATION_SOURCE = ROOT / "src" / "Irrigation.cpp"
 HOME_ASSISTANT_SOURCE = ROOT / "src" / "HomeAssistantMqttDiscovery.cpp"
 MQTT_SOURCE = ROOT / "src" / "Mqtt.cpp"
+DEVICE_LOG_SOURCE = ROOT / "src" / "DeviceLog.cpp"
 
 
 def block_after(source: str, pattern: str) -> str:
@@ -124,6 +125,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         cls.irrigation = IRRIGATION_SOURCE.read_text(encoding="utf-8")
         cls.homeassistant = HOME_ASSISTANT_SOURCE.read_text(encoding="utf-8")
         cls.mqtt = MQTT_SOURCE.read_text(encoding="utf-8")
+        cls.device_log = DEVICE_LOG_SOURCE.read_text(encoding="utf-8")
 
     def assertOrdered(self, source: str, *needles: str) -> None:  # noqa: N802
         cursor = -1
@@ -1475,8 +1477,10 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
 
     def test_esp8266_https_uses_bounded_negotiated_tls_buffers(self) -> None:
         self.assertRegex(self.constants, r"cloudTlsReceiveBufferSize\s*\{\s*512\s*\}")
-        self.assertRegex(self.constants, r"otaTlsReceiveBufferSize\s*\{\s*2048\s*\}")
+        self.assertRegex(self.constants, r"otaTlsReceiveBufferSize\s*\{\s*512\s*\}")
         self.assertRegex(self.constants, r"tlsTransmitBufferSize\s*\{\s*512\s*\}")
+        self.assertRegex(self.constants, r"otaTlsMinimumFreeHeap\s*\{\s*15000\s*\}")
+        self.assertRegex(self.constants, r"otaTlsMinimumMaxBlock\s*\{\s*11000\s*\}")
         self.assertIn("client.setBufferSizes(constanstsCloudIO::cloudTlsReceiveBufferSize", self.cloud)
         self.assertIn("client.setBufferSizes(constanstsCloudIO::otaTlsReceiveBufferSize", self.server)
         self.assertIn("ESP.getFreeHeap() >= constanstsCloudIO::cloudTlsMinimumFreeHeap", self.cloud)
@@ -1491,6 +1495,47 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             "BearSSL::WiFiClientSecure client;",
         )
         self.assertIn("client.getLastSSLError(otaTlsError", self.server)
+
+    def test_esp8266_ota_releases_live_network_transports_before_tls(self) -> None:
+        routines = block_after(self.main, r"void\s+checkInternalRoutines\s*\(\s*\)")
+        ota = block_after(
+            routines,
+            r"if\s*\(\s*config\.takeAutoUpdateRequest\s*\(\s*\)\s*\)",
+        )
+        self.assertOrdered(
+            ota,
+            "stopWebserver();",
+            "disconnectMqttForUpdate();",
+            "disconnectCloudIOForUpdate();",
+            "delay(100);",
+            "performUpdate();",
+        )
+
+        stop = block_after(self.server, r"void\s+stopWebserver\s*\(\s*\)")
+        self.assertOrdered(stop, "events.close();", "server.end();")
+        self.assertIn("while (events.count() > 0", stop)
+        self.assertIn("millis() - closeStartedAt < 2000U", stop)
+
+        update = block_after(self.server, r"AutoUpdateResult\s+performUpdate\s*\(\s*\)")
+        self.assertOrdered(
+            update,
+            'deviceLog("atualizacao pedida");',
+            "deviceLogReleaseForUpdate();",
+            "ESPhttpUpdate.update(client, otaUrl, String(VERSION));",
+        )
+        self.assertIn("calloc(kDeviceLogLines, kDeviceLogLineSize)", self.device_log)
+        self.assertIn("free(buffer);", self.device_log)
+
+        cloud_disconnect = block_after(
+            self.cloud, r"void\s+disconnectCloudIOForUpdate\s*\(\s*\)"
+        )
+        self.assertOrdered(
+            cloud_disconnect,
+            "storeCloudMqttConnectedState(false);",
+            "mqttClient.disconnect(true);",
+            "mqttClient.clearQueue();",
+            "cloudMqttReconnectPending = activeCloudMqttRuntimeValid;",
+        )
     def test_firmware_header_badge_links_to_update_panel(self) -> None:
         self.assertIn('id="h-fw-link"', self.panel_html)
         self.assertIn('title="Firmware instalado" disabled', self.panel_html)

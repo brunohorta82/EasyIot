@@ -181,6 +181,21 @@ void checkInternalRoutines()
     else
     {
       stopWebserver();
+#ifdef ESP8266
+      disconnectMqttForUpdate();
+      disconnectCloudIOForUpdate();
+      // AsyncTCP releases its PCB/buffers from deferred callbacks. Yield briefly
+      // before measuring the OTA gate; otherwise the log can say the services
+      // stopped while their heap is still owned by the network stack.
+      delay(100);
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s OTA services stopped: heap=%u maxBlock=%u fragmentation=%u%%" CR,
+                 tags::system,
+                 ESP.getFreeHeap(),
+                 ESP.getMaxFreeBlockSize(),
+                 ESP.getHeapFragmentation());
+#endif
+#endif
       const AutoUpdateResult updateResult = performUpdate();
       if (updateResult == AutoUpdateResult::UPDATED)
       {
