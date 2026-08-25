@@ -174,6 +174,29 @@ def main() -> int:
                 ok(f"CHANGELOG.md contains entry for version {version}.")
             else:
                 fail(f"CHANGELOG.md is missing section header: ## [{version}]")
+
+            # A merged pull request leaves its notes under "Unreleased". Releasing
+            # without renaming that heading files shipped work as unshipped, and it is
+            # invisible: one such section sat in the middle of the history for nine
+            # releases before anybody noticed. There is nothing left to release once a
+            # version is being cut, so any of these is a mistake.
+            unreleased = sum(
+                1 for line in changelog_text.splitlines()
+                if line.strip().lower().startswith("## [unreleased]"))
+            if unreleased:
+                fail(f"CHANGELOG.md still has {unreleased} '## [Unreleased]' section(s); "
+                     f"fold them into ## [{version}] before releasing.")
+            else:
+                ok("CHANGELOG.md has no leftover Unreleased section.")
+
+            # Two sections claiming one version means one of them is not what shipped.
+            headers = [line.strip() for line in changelog_text.splitlines()
+                       if line.strip().startswith("## [")]
+            duplicates = {h for h in headers if headers.count(h) > 1}
+            if duplicates:
+                fail("CHANGELOG.md repeats section header(s): " + ", ".join(sorted(duplicates)))
+            else:
+                ok("CHANGELOG.md section headers are unique.")
         else:
             fail(f"CHANGELOG.md is missing section header: ## [{version}]")
 

@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [9.199] - 2026-08-25
 
 ### Fixed
 - **ESP8266 HTTPS firmware updates no longer run out of memory after v9.198.**
@@ -17,6 +17,19 @@ All notable changes to this project are documented in this file.
   the official 9.198 release completed successfully and rebooted into 9.198. The
   measured pre-TLS reserves were 16,792/12,712 bytes and 16,632/12,296 bytes
   (free heap/largest contiguous block).
+- Measured here before merging: ESP8266 static RAM went from 51,284 to 47,748 bytes,
+  which is the 3.5 KB the history buffer was holding. The regression came from
+  9.198's Home Assistant entities: they grew static RAM until BearSSL could no
+  longer allocate its X.509 validator — an update that failed at the last step, on
+  the family with the least memory to spare.
+
+### Para testers
+- **Os ESP8266 voltam a conseguir actualizar-se sozinhos.** A 9.198 deixou-os sem
+  memória a meio da ligação segura: a actualização começava e falhava, ou reiniciava
+  o equipamento. Se tens um equipamento assim, esta versão resolve.
+- O histórico do equipamento continua disponível como antes — é largado só durante a
+  actualização e recriado logo a seguir.
+- Sem alterações para ESP32 nem ESP32-C6.
 
 ## [9.198] - 2026-08-24
 
@@ -258,6 +271,24 @@ All notable changes to this project are documented in this file.
 - O cabeçalho mostra agora a versão disponível ao lado da instalada.
 - As mensagens de gravação aparecem num sítio visível, e os erros ficam mais tempo.
 
+### Fixed
+- **ESP8266 automatic HTTPS updates no longer fail from BearSSL memory
+  exhaustion.** Negotiated TLS buffers and separate memory guards keep OTA
+  within the device's measured heap limits, while low-memory CloudIO startup
+  safely uses its existing HTTP fallback instead of risking an OOM restart.
+- **Automatic-update progress no longer implies unobserved byte progress.** The
+  WebUI shows an accessible moving indicator while the device downloads and
+  installs, bypasses stale browser caches after reboot, and reaches 100% only
+  after confirming the new firmware version.
+- **ESP8266 OTA failures expose the BearSSL error detail** instead of reporting
+  only the generic HTTP connection error.
+### Validation
+- `ESP8266_DEBUG`, `ESP8266-HAN_DEBUG`, and `ESP32_DEBUG` builds pass.
+- An ESP8266 test device upgraded automatically over HTTPS from a local 9.186
+  build to official 9.188 and returned to Wi-Fi without manual browser refresh.
+- The untouched Safari page confirmed 9.188 and displayed the completed 100%
+  progress bar.
+
 ## [9.189] - 2026-08-21
 
 ### Fixed
@@ -278,27 +309,6 @@ All notable changes to this project are documented in this file.
   de poupança não chegava a ser aplicada. Corrigido.
 - Quem reportou isto: vale a pena reiniciar o equipamento depois de atualizar e ver
   se o sinal aparece logo bom, em vez de melhorar ao longo de minutos.
-## [Unreleased]
-
-### Fixed
-- **ESP8266 automatic HTTPS updates no longer fail from BearSSL memory
-  exhaustion.** Negotiated TLS buffers and separate memory guards keep OTA
-  within the device's measured heap limits, while low-memory CloudIO startup
-  safely uses its existing HTTP fallback instead of risking an OOM restart.
-- **Automatic-update progress no longer implies unobserved byte progress.** The
-  WebUI shows an accessible moving indicator while the device downloads and
-  installs, bypasses stale browser caches after reboot, and reaches 100% only
-  after confirming the new firmware version.
-- **ESP8266 OTA failures expose the BearSSL error detail** instead of reporting
-  only the generic HTTP connection error.
-
-### Validation
-- `ESP8266_DEBUG`, `ESP8266-HAN_DEBUG`, and `ESP32_DEBUG` builds pass.
-- An ESP8266 test device upgraded automatically over HTTPS from a local 9.186
-  build to official 9.188 and returned to Wi-Fi without manual browser refresh.
-- The untouched Safari page confirmed 9.188 and displayed the completed 100%
-  progress bar.
-
 ## [9.188] - 2026-08-21
 
 ### Changed
