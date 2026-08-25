@@ -149,6 +149,10 @@ AutoUpdateResult performUpdate()
   otaStatus.percent = 0;
   otaStatus.error[0] = '\0';
 #ifdef ESP8266
+  // Device history is useful while the firmware runs, but its 3.5 KB buffer is
+  // disposable across an update (success reboots; failure starts a fresh log).
+  // Reclaim it before HTTPClient and BearSSL begin their allocation sequence.
+  deviceLogReleaseForUpdate();
   ESPhttpUpdate.onProgress([](int done, int total)
                            { otaStatus.percent = total > 0 ? (int)((int64_t)done * 100 / total) : 0; });
 #else
@@ -165,20 +169,20 @@ AutoUpdateResult performUpdate()
   if (useHttps)
   {
 #ifdef ESP8266
+#ifdef DEBUG_ONOFRE
+    const uint32_t heapBeforeTls = ESP.getFreeHeap();
+    const uint32_t maxBlockBeforeTls = ESP.getMaxFreeBlockSize();
+    const uint8_t fragmentationBeforeTls = ESP.getHeapFragmentation();
+    Log.notice("%s OTA TLS gate: heap=%u maxBlock=%u fragmentation=%u%% rssi=%d" CR,
+               tags::system,
+               heapBeforeTls,
+               maxBlockBeforeTls,
+               fragmentationBeforeTls,
+               WiFi.RSSI());
+#endif
     if (ESP.getFreeHeap() >= constanstsCloudIO::otaTlsMinimumFreeHeap &&
         ESP.getMaxFreeBlockSize() >= constanstsCloudIO::otaTlsMinimumMaxBlock)
     {
-#ifdef DEBUG_ONOFRE
-      const uint32_t heapBeforeTls = ESP.getFreeHeap();
-      const uint32_t maxBlockBeforeTls = ESP.getMaxFreeBlockSize();
-      const uint8_t fragmentationBeforeTls = ESP.getHeapFragmentation();
-      Log.notice("%s OTA TLS before: heap=%u maxBlock=%u fragmentation=%u%% rssi=%d" CR,
-                 tags::system,
-                 heapBeforeTls,
-                 maxBlockBeforeTls,
-                 fragmentationBeforeTls,
-                 WiFi.RSSI());
-#endif
       BearSSL::WiFiClientSecure client;
       client.setInsecure();
       client.setBufferSizes(constanstsCloudIO::otaTlsReceiveBufferSize,
@@ -251,7 +255,9 @@ AutoUpdateResult performUpdate()
   case HTTP_UPDATE_OK:
     otaStatus.state = OtaState::DONE;
     otaStatus.percent = 100;
+#ifndef ESP8266
     deviceLog("atualizacao gravada");
+#endif
 #ifdef DEBUG_ONOFRE
     Log.notice("HTTP_UPDATE_OK");
 #endif
@@ -1185,7 +1191,32 @@ void stopWebserver()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s WEBSERVER STOP" CR, tags::system);
 #endif
+#ifdef ESP8266
+  const size_t eventClientsBeforeClose = events.count();
+#endif
+  // server.end() stops accepting new requests but does not close an established
+  // EventSource client. That live AsyncTCP connection kept scarce ESP8266 heap
+  // pinned throughout OTA and also left the browser attached to a dead stream.
+  events.close();
   server.end();
+#ifdef ESP8266
+  // AsyncEventSource closes gracefully: ESPAsyncTCP does not release its PCB
+  // until the next TCP poll (normally within 500 ms). A fixed short delay made
+  // OTA nondeterministic, so wait for the observed client to disappear while
+  // retaining a hard bound if the network stack is unhealthy.
+  const uint32_t closeStartedAt = millis();
+  while (events.count() > 0 && millis() - closeStartedAt < 2000U)
+  {
+    delay(10);
+  }
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s OTA WebUI drain: clients=%u->%u waited=%ums" CR,
+             tags::system,
+             static_cast<unsigned>(eventClientsBeforeClose),
+             static_cast<unsigned>(events.count()),
+             millis() - closeStartedAt);
+#endif
+#endif
 }
 void startWebserver()
 {

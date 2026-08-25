@@ -17,8 +17,9 @@
  * an update, a watering cycle, a configuration refused. A per-event log would fill
  * the buffer before anyone read it.
  *
- * RAM is the constraint that shapes it: entries are a fixed size and the buffer is
- * static, so it cannot fragment the heap on an ESP8266 that has ~30 KB to live on.
+ * RAM is the constraint that shapes it: entries are fixed-size. ESP32 keeps the
+ * storage static; ESP8266 allocates it once at boot so OTA can explicitly reclaim
+ * those bytes before BearSSL, then recreate an empty history after a failed update.
  */
 
 #ifdef ESP8266
@@ -36,5 +37,10 @@ String deviceLogText();
 
 /** Uptime-stamped so the reader can tell a boot-time line from a later one. */
 void deviceLogClear();
+
+/** Releases the ESP8266 history storage before a memory-heavy OTA handshake.
+ *  The next deviceLog/deviceLogText call recreates an empty buffer if the
+ *  running firmware returns after a failed or unnecessary update. */
+void deviceLogReleaseForUpdate();
 
 #endif

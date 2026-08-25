@@ -1,11 +1,40 @@
 #include "DeviceLog.h"
 #include <stdarg.h>
+#include <stdlib.h>
 
 namespace
 {
+#ifdef ESP8266
+  char *buffer{nullptr};
+#else
   char buffer[kDeviceLogLines][kDeviceLogLineSize];
+#endif
   size_t nextLine{0};
   bool wrapped{false};
+
+  bool ensureBuffer()
+  {
+#ifdef ESP8266
+    if (buffer == nullptr)
+    {
+      buffer = static_cast<char *>(calloc(kDeviceLogLines, kDeviceLogLineSize));
+      if (buffer == nullptr)
+        return false;
+      nextLine = 0;
+      wrapped = false;
+    }
+#endif
+    return true;
+  }
+
+  char *lineAt(size_t index)
+  {
+#ifdef ESP8266
+    return buffer + index * kDeviceLogLineSize;
+#else
+    return buffer[index];
+#endif
+  }
 
   /** Milliseconds since boot as h:mm:ss, which is what makes a line placeable:
       "at 0:00:00" is the boot itself, "at 2:14:07" is something that happened
@@ -23,7 +52,9 @@ void deviceLog(const char *format, ...)
   char stamp[12];
   stampInto(stamp, sizeof(stamp));
 
-  char *line = buffer[nextLine];
+  char fallback[kDeviceLogLineSize] = {};
+  const bool storeLine = ensureBuffer();
+  char *line = storeLine ? lineAt(nextLine) : fallback;
   const int written = snprintf(line, kDeviceLogLineSize, "%s ", stamp);
   if (written > 0 && (size_t)written < kDeviceLogLineSize)
   {
@@ -33,9 +64,12 @@ void deviceLog(const char *format, ...)
     va_end(args);
   }
 
-  nextLine = (nextLine + 1) % kDeviceLogLines;
-  if (nextLine == 0)
-    wrapped = true;
+  if (storeLine)
+  {
+    nextLine = (nextLine + 1) % kDeviceLogLines;
+    if (nextLine == 0)
+      wrapped = true;
+  }
 
 #ifdef DEBUG_ONOFRE
   // Also on the wire when someone is actually looking at it.
@@ -46,6 +80,8 @@ void deviceLog(const char *format, ...)
 String deviceLogText()
 {
   String out;
+  if (!ensureBuffer())
+    return out;
   // Reserve once: growing a String line by line on an ESP8266 is how the heap
   // gets fragmented by the very code meant to help diagnose it.
   const size_t count = wrapped ? kDeviceLogLines : nextLine;
@@ -53,7 +89,7 @@ String deviceLogText()
   const size_t start = wrapped ? nextLine : 0;
   for (size_t i = 0; i < count; i++)
   {
-    const char *line = buffer[(start + i) % kDeviceLogLines];
+    const char *line = lineAt((start + i) % kDeviceLogLines);
     if (line[0] == '\0')
       continue;
     out += line;
@@ -64,8 +100,20 @@ String deviceLogText()
 
 void deviceLogClear()
 {
+  if (!ensureBuffer())
+    return;
   nextLine = 0;
   wrapped = false;
   for (size_t i = 0; i < kDeviceLogLines; i++)
-    buffer[i][0] = '\0';
+    lineAt(i)[0] = '\0';
+}
+
+void deviceLogReleaseForUpdate()
+{
+#ifdef ESP8266
+  free(buffer);
+  buffer = nullptr;
+  nextLine = 0;
+  wrapped = false;
+#endif
 }

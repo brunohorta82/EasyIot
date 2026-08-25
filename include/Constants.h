@@ -173,11 +173,10 @@ namespace constanstsCloudIO
     // cloudio.bhonofre.pt negotiates RFC 6066 maximum fragment length. The
     // BearSSL default 16 KB receive buffer cannot coexist with the running
     // WebUI/MQTT heap on an ESP8266. Cloud sync can run during a memory-heavy
-    // startup, so it uses the smallest negotiated fragment. OTA runs only
-    // after the WebUI is stopped and has enough measured headroom for 2 KB,
-    // which avoids making the firmware download unnecessarily slow.
+    // startup, so it uses the smallest negotiated fragment. OTA also uses that
+    // fragment size now that v9.198's runtime state leaves less handshake heap.
     constexpr int cloudTlsReceiveBufferSize{512};
-    constexpr int otaTlsReceiveBufferSize{2048};
+    constexpr int otaTlsReceiveBufferSize{512};
     constexpr int tlsTransmitBufferSize{512};
     // Cloud sync runs with the WebUI and other services alive. HTTPClient also
     // allocates request/header storage after the TLS connection is established,
@@ -185,8 +184,12 @@ namespace constanstsCloudIO
     // reserve is unavailable, CloudIO uses its existing plain-HTTP fallback.
     constexpr uint32_t cloudTlsMinimumFreeHeap{22000};
     constexpr uint32_t cloudTlsMinimumMaxBlock{12000};
-    constexpr uint32_t otaTlsMinimumFreeHeap{10000};
-    constexpr uint32_t otaTlsMinimumMaxBlock{4096};
+    // v9.198 reproduced a BearSSL allocation failure at 12,960 bytes free with
+    // a 9,912-byte largest block. Never enter TLS near that measured cliff:
+    // close browser/MQTT transports first, then require useful reserve for both
+    // the handshake and the updater's request/header allocations.
+    constexpr uint32_t otaTlsMinimumFreeHeap{15000};
+    constexpr uint32_t otaTlsMinimumMaxBlock{11000};
 #endif
     constexpr const char *configUrl{"https://cloudio.bhonofre.pt/devices/config"};
 #ifdef HAN_MODE

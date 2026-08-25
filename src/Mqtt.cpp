@@ -111,6 +111,14 @@ void setupMQTT(bool forceDisconnect)
     mqttClient.setCallback(callbackMqtt);
 }
 
+void disconnectMqttForUpdate()
+{
+    if (mqttConnected())
+    {
+        mqttClient.disconnect();
+    }
+}
+
 void loopMqtt()
 {
     // PubSubClient is synchronous: connect(), loop(), callback dispatch, state

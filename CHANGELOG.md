@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **ESP8266 HTTPS firmware updates no longer run out of memory after v9.198.**
+  Before BearSSL starts, the firmware now drains the live WebUI event stream,
+  disconnects both MQTT transports, and temporarily releases the 3.5 KB device
+  history buffer. A strict heap gate still refuses unsafe attempts cleanly.
+- The device history remains available during normal operation and is recreated
+  automatically if an update fails and the running firmware resumes.
+
+### Validation
+- Two consecutive real-board updates from a 9.197-labelled ESP8266 test build to
+  the official 9.198 release completed successfully and rebooted into 9.198. The
+  measured pre-TLS reserves were 16,792/12,712 bytes and 16,632/12,296 bytes
+  (free heap/largest contiguous block).
+
 ## [9.198] - 2026-08-24
 
 ### Added
