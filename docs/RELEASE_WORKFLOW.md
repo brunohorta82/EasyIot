@@ -40,9 +40,17 @@ This document defines the standard flow for development, upstream cherry-pick PR
    - CloudIO HTTP result
    - MQTT connect
    - basic actuator/sensor control
-6. Update `CHANGELOG.md` for the release/dev line.
-7. Push `development` and prepare required CP PR(s).
-8. Keep open CP PRs minimal and grouped by scope.
+6. For any ESP8266 change that grows RAM or alters WebUI, MQTT, networking, TLS,
+   or OTA lifecycles, validate automatic HTTPS OTA on real hardware:
+   - flash the candidate with a version older than the current published release;
+   - load the WebUI and wait for CloudIO/MQTT so normal runtime allocations exist;
+   - start automatic OTA while recording free heap, largest block, and serial errors;
+   - confirm the board reboots and the WebUI reports the published version;
+   - repeat the full cycle when closing a timing-dependent or memory regression.
+   A successful build does not exercise BearSSL after all services are connected.
+7. Update `CHANGELOG.md` for the release/dev line.
+8. Push `development` and prepare required CP PR(s).
+9. Keep open CP PRs minimal and grouped by scope.
 
 ## Project Checks
 
@@ -178,9 +186,11 @@ not factory-reset the device as part of a routine rollback.
    application-only `ONOFRE_<MCU>_RELEASE_<VERSION>.bin` as a blank-chip image
    for ESP32-family devices; it does not include the bootloader and partition
    data.
-3. Expect full-flash recovery to be capable of erasing configuration. Re-enter
-   the configuration manually using a separately protected record. The current
-   WebUI export is a non-secret diagnostic snapshot, not a restorable backup.
+3. Expect full-flash recovery to be capable of erasing configuration. Provision
+   the replacement firmware with the required local passwords, then restore a
+   separately protected `easyiot-backup` from **System -> Access and Copy**. The
+   backup restores the complete persisted configuration for the exact hardware
+   variant but intentionally contains no Wi-Fi, panel, MQTT, or Cloud passwords.
 4. If rebuilding from source is unavoidable, check out the exact known-good
    commit/tag, select the exact PlatformIO environment, build it, and record the
    binary and checksum used.

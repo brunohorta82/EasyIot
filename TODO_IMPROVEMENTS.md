@@ -1,8 +1,8 @@
 # EasyIot - To Do
 
 - Created by: Alexandru Hauzman
-- Updated: 23.08.2026
-- Current upstream version: 9.192
+- Updated: 25.08.2026
+- Current upstream version: 9.198
 
 ## Important Notes
 
@@ -33,6 +33,7 @@
 
 1. [ ] Improve the Functions tab layout: make the add-function form clearer and more compact, visually delimit each configured feature as its own card, and use a responsive two-column grid on wider screens that stacks to one column on phones. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
 2. [ ] Add a subtle left-edge health indicator to relevant status badges and diagnostic cards: green for healthy/connected, orange for degraded/retrying, red only for actual errors/disconnection, and gray for disabled/unknown. Keep the existing text or icon so status never relies on color alone; normal actuator OFF states and intentionally disabled MQTT must not appear as errors. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
+3. [ ] Make the automatic-OTA page recover truthfully without a manual refresh: show the returned error after a failed attempt, and fully reload the WebUI/login state after the rebooted device confirms the new version. The current redirect page can remain on “updating” even though the firmware has already failed safely and restarted its WebServer. Files: `webpanel/js/index.js`, `src/WebServer.cpp`
 
 ## Testing & CI (P2 - Deferred / Later)
 
@@ -41,6 +42,7 @@
 3. [ ] Complete hardware testing of the 9.187 safety batch on ESP8266 and ESP32: accepted and rejected live pin changes, garden-valve OFF behavior after save/power-cycle, physical/MQTT/Cloud traffic during configuration, and failed/successful manual and automatic OTA recovery.
 4. [ ] Capture and diagnose the non-reproduced ESP32-C6 task-watchdog reset seen during WebUI/control stress; retain the complete task report and backtrace before changing watchdog or scheduling behavior.
 5. [ ] Hardware-test full non-secret recovery on ESP32, ESP32-C3 and ESP32-C6, including replacement-device recovery, wrong-variant rejection and interrupted two-file transaction rollback.
+6. [ ] Add an automated ESP8266 static-RAM regression budget and make the real-board HTTPS OTA gate mandatory for changes that grow RAM or alter WebUI/MQTT/network lifecycles. Build success alone does not exercise BearSSL heap after all services connect. Files: `tools/check_project.py`, `docs/RELEASE_WORKFLOW.md`
 
 #
 
@@ -71,6 +73,7 @@
 6. [x] Validated OTA update flow over HTTPS on ESP32 (`Update Success` + reboot + reconnect to CloudIO/MQTT; `HTTPS result: 200`, `fallback=0`). File: `src/WebServer.cpp`
 7. [x] Moved captive-portal credential saving to a non-cacheable POST submission and enabled POST-body parsing in the custom async handler. Files: `include/CaptivePortal.h`, `src/WebServer.cpp`, `tools/test_captive_portal.py`
 8. [x] Re-tested configured-device captive Wi-Fi repair on ESP8266 with 9.186-dev: Save persisted the new network/name, preserved the two existing functions and pin map, restarted into STA mode, and restored WebUI and Cloud access. Files: `include/CaptivePortal.h`, `src/WebServer.cpp`, `tools/test_captive_portal.py`
+9. [x] Fixed the ESP8266 v9.198 HTTPS OTA memory regression by draining live WebUI EventSource clients, disconnecting local/Cloud MQTT, using bounded BearSSL buffers, and temporarily releasing the 3.5 KB device-history buffer. Two consecutive 9.197-labelled -> official 9.198 hardware updates passed at -69 dBm and rebooted into 9.198. Files: `include/Constants.h`, `include/DeviceLog.h`, `src/CloudIO.cpp`, `src/DeviceLog.cpp`, `src/Mqtt.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `tools/test_config_updates.py`
 
 ## Firmware Safety
 
