@@ -590,6 +590,18 @@ void initHomeAssistantDiscovery()
 
 namespace
 {
+  /**
+   * Lets Home Assistant compose "<device> <entity>" itself, which is what makes the
+   * entity_id predictable: binary_sensor.quadro_geral_a_regar rather than
+   * binary_sensor.a_regar, a_regar_2, a_regar_3 as soon as a second controller
+   * exists. A dashboard cannot be written against names that depend on the order
+   * devices were discovered in.
+   */
+  void haEntityNaming(JsonObject &object)
+  {
+    object["has_entity_name"] = true;
+  }
+
   void haDevice(JsonObject &object)
   {
     JsonObject device = object["dev"].to<JsonObject>();
@@ -659,6 +671,7 @@ void createHaIrrigation()
     JsonObject clockAvailable = availability.add<JsonObject>();
     clockAvailable["t"] = zoneClockAvailabilityTopic(sw.uniqueId);
     object["avty_mode"] = "all";
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("sensor", uniqueId, doc);
   }
@@ -673,6 +686,7 @@ void createHaIrrigation()
     object["val_tpl"] = "{{ 'ON' if value_json.running else 'OFF' }}";
     object["dev_cla"] = "running";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("binary_sensor", uniqueId, doc);
   }
@@ -687,6 +701,7 @@ void createHaIrrigation()
     object["pl_prs"] = "STOP";
     object["ic"] = "mdi:water-off";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("button", uniqueId, doc);
   }
@@ -708,6 +723,7 @@ void createHaIrrigation()
     object["ic"] = "mdi:water-pump";
     object["ent_cat"] = "config";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("number", uniqueId, doc);
   }
@@ -739,6 +755,7 @@ void createHaIrrigation()
     object["pl_prs"] = "RUN:" + String(id);
     object["ic"] = "mdi:sprinkler-variant";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("button", uniqueId, doc);
   }

@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.200] - 2026-08-25
+
+### Fixed
+- **The irrigation entities now have predictable ids in Home Assistant.** They were
+  published with bare names — "A regar", "Parar rega" — so Home Assistant made
+  `binary_sensor.a_regar` for the first controller and `binary_sensor.a_regar_2` for
+  the next, decided by whichever was discovered first. A dashboard cannot be written
+  against that. With `has_entity_name` the platform composes "<device> <entity>"
+  itself and the ids become `binary_sensor.<device>_a_regar`.
+- Only the irrigation entities change. The switches, covers and sensors keep the ids
+  they have been in the field with for months; renaming those would break automations
+  people already wrote.
+
+### Para testers
+- **Quem usa Home Assistant:** as entidades da rega passam a ter nomes prefixados
+  pelo equipamento ("Quadro Geral A regar" em vez de "A regar"), o que torna os
+  identificadores previsíveis e permite escrever um cartão no painel sem depender da
+  ordem em que os equipamentos foram descobertos.
+- Se já tinhas automações a apontar para as entidades da rega criadas hoje, os
+  identificadores mudam uma vez — as dos interruptores e estores ficam iguais.
+
 ## [9.199] - 2026-08-25
 
 ### Fixed

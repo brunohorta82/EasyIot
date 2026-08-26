@@ -1666,6 +1666,13 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn('object["cmd_tpl"] = "MAX:{{ value | int }}"', block)
         # A device with no valves publishes none of this.
         self.assertIn("if (!mqttConnected() || !deviceHasValves())", block)
+        # Home Assistant composes "<device> <entity>", which is what makes the
+        # entity_id predictable enough to write a dashboard against: two irrigation
+        # controllers would otherwise give a_regar and a_regar_2, decided by
+        # whichever was discovered first.
+        self.assertEqual(block.count("haEntityNaming(object);"), 5)
+        naming = block_after(self.homeassistant, r"void haEntityNaming\(JsonObject &object\)")
+        self.assertIn('object["has_entity_name"] = true;', naming)
         # And the local broker is where Home Assistant listens, so the command
         # topic has to be subscribed there.
         self.assertIn("subscribeOnMqtt(config.irrigationWriteTopic)", self.mqtt)
