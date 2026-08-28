@@ -23,6 +23,7 @@ ACTUATOR_SOURCE = ROOT / "src" / "Actuatores.cpp"
 SENSOR_HEADER = ROOT / "include" / "Sensors.h"
 SENSOR_SOURCE = ROOT / "src" / "Sensors.cpp"
 MAIN_SOURCE = ROOT / "src" / "main.cpp"
+CORE_WIFI_SOURCE = ROOT / "src" / "CoreWiFi.cpp"
 TEMPLATES_SOURCE = ROOT / "src" / "Templates.cpp"
 WEB_SERVER = ROOT / "src" / "WebServer.cpp"
 CLOUD_SOURCE = ROOT / "src" / "CloudIO.cpp"
@@ -116,6 +117,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         cls.sensor_header = SENSOR_HEADER.read_text(encoding="utf-8")
         cls.sensor = SENSOR_SOURCE.read_text(encoding="utf-8")
         cls.main = MAIN_SOURCE.read_text(encoding="utf-8")
+        cls.wifi = CORE_WIFI_SOURCE.read_text(encoding="utf-8")
         cls.templates = TEMPLATES_SOURCE.read_text(encoding="utf-8")
         cls.server = WEB_SERVER.read_text(encoding="utf-8")
         cls.cloud = CLOUD_SOURCE.read_text(encoding="utf-8")
@@ -1230,8 +1232,11 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn("config.requestRestart();", irrigation_failure)
         self.assertNotIn("config.endFeatureAccess();", irrigation_failure)
 
+        captive_class = block_after(
+            self.server, r"class\s+CaptiveRequestHandler\s*:\s*public\s+AsyncWebHandler"
+        )
         captive = block_after(
-            self.server,
+            captive_class,
             r"void\s+handleRequest\s*\(\s*AsyncWebServerRequest\s*\*request\s*\)",
         )
         store = block_after(captive, r"if\s*\(\s*store\s*\)")
@@ -1462,7 +1467,11 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         follow = block_after(self.panel, r"function\s+followUpdate\s*\(")
 
         self.assertIn('const startingVersion = String(config.firmware || "");', follow)
-        self.assertIn("snapshot.firmware !== startingVersion", follow)
+        self.assertIn('const startingBuildDate = String(config.buildDate || "");', follow)
+        self.assertIn('const startingBootId = String(config.bootId || "");', follow)
+        self.assertIn("String(snapshot.firmware) !== startingVersion", follow)
+        self.assertIn("String(snapshot.buildDate) !== startingBuildDate", follow)
+        self.assertIn("String(snapshot.bootId) !== startingBootId", follow)
         self.assertIn("Date.now() >= deadline", follow)
         self.assertIn('bar.classList.add("indeterminate")', follow)
         self.assertIn('bar.classList.remove("indeterminate")', follow)
@@ -1474,6 +1483,149 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertNotRegex(follow, r"miss(?:es)?\s*>?=\s*\d+")
         catch = block_after(follow, r"catch\s*\(\s*e\s*\)")
         self.assertNotIn("finish(true", catch)
+
+    def test_auto_update_reloads_only_after_new_firmware_answers(self) -> None:
+        follow = block_after(self.panel, r"function\s+followUpdate\s*\(")
+        confirmed = block_after(
+            follow,
+            r"if\s*\(\s*versionChanged\s*\|\|\s*buildChanged\s*\)",
+        )
+        self.assertIn("confirmAndReload(snapshot.firmware);", confirmed)
+        self.assertNotIn("bootChanged", confirmed)
+
+        failed = block_after(
+            follow, r"if\s*\(\s*ota\.state\s*===\s*\"failed\"\s*\)"
+        )
+        rebooted = block_after(follow, r"else\s+if\s*\(\s*bootChanged\s*\)")
+        self.assertIn("A atualização falhou:", failed)
+        self.assertIn("continua na versão", rebooted)
+        self.assertNotIn("confirmAndReload", rebooted)
+
+        reload = block_after(follow, r"const\s+confirmAndReload\s*=\s*\(")
+        self.assertOrdered(
+            reload,
+            'finish(true, "Atualização confirmada',
+            "source.close();",
+            'window.location.replace(baseUrl + "/")',
+        )
+        self.assertIn('$("a-update").disabled = true;', reload)
+
+        done = block_after(follow, r"else\s+if\s*\(\s*ota\.state\s*===\s*\"done\"\s*\)")
+        self.assertIn("setProgress(100);", done)
+        self.assertIn("setTimeout(poll, 1500);", done)
+        self.assertNotIn("finish(true", done)
+
+        panel_route = block_after(self.server, r'server\.on\(\s*"/"\s*,\s*HTTP_GET')
+        self.assertIn('response->addHeader("Cache-Control", "no-store")', panel_route)
+        self.assertNotIn('response->addHeader("Cache-Control", "max-age=30")', panel_route)
+        config_json = block_after(
+            self.config, r"void\s+ConfigOnofre::json\s*\(\s*JsonVariant\s*&\s*root"
+        )
+        self.assertIn('root["bootId"] = kBootId;', config_json)
+
+    def test_failed_auto_update_reboots_esp8266_with_preserved_error(self) -> None:
+        observable = block_after(
+            self.server, r"class\s+ObservableAsyncWebServer\s*:\s*public\s+AsyncWebServer"
+        )
+        self.assertIn("_server.status() != 0", observable)
+
+        start = block_after(self.server, r"bool\s+startWebserver\s*\(\s*\)")
+        self.assertOrdered(
+            start,
+            "server.begin();",
+            "server.isListening()",
+            "delay(50);",
+            "millis() - startedAt < 2000U",
+        )
+        self.assertIn("WEBSERVER START FAILED", start)
+        self.assertIn("return server.isListening();", start)
+
+        routines = block_after(self.main, r"void\s+checkInternalRoutines\s*\(\s*\)")
+        ota = block_after(
+            routines,
+            r"if\s*\(\s*config\.takeAutoUpdateRequest\s*\(\s*\)\s*\)",
+        )
+        self.assertOrdered(
+            ota,
+            "config.endFeatureAccess();",
+            "#ifdef ESP8266",
+            "storeOtaFailureForRestart()",
+            "config.requestRestart();",
+            "#else",
+            "startWebserver();",
+        )
+        self.assertNotIn("config.requestReloadWifi();", ota)
+
+    def test_esp8266_ota_closes_listener_and_journals_failure(self) -> None:
+        stop = block_after(self.server, r"void\s+stopWebserver\s*\(\s*\)")
+        self.assertOrdered(
+            stop,
+            "events.close();",
+            "while (events.count() > 0",
+            "server.end();",
+        )
+
+        store = block_after(self.server, r"bool\s+storeOtaFailureForRestart\s*\(")
+        self.assertOrdered(
+            store,
+            'LittleFS.open(kOtaFailureTempPath, "w")',
+            "file.write",
+            "LittleFS.rename(kOtaFailureTempPath, kOtaFailurePath)",
+        )
+        restore = block_after(self.server, r"void\s+restoreOtaFailureStatus\s*\(")
+        self.assertOrdered(
+            restore,
+            'LittleFS.open(kOtaFailurePath, "r")',
+            "file.readBytes",
+            "LittleFS.remove(kOtaFailurePath)",
+            "otaStatus.state = OtaState::FAILED;",
+        )
+        setup = block_after(self.main, r"void\s+setup\s*\(")
+        self.assertOrdered(setup, "startFileSystem();", "restoreOtaFailureStatus();")
+
+    def test_web_handlers_are_installed_once_across_wifi_mode_changes(self) -> None:
+        self.assertIn('AsyncEventSource events("/events");', self.server)
+        self.assertNotIn("server.reset();", self.server)
+        panel = block_after(self.server, r"void\s+setupWebPanel\s*\(")
+        self.assertOrdered(
+            panel,
+            "if (panelHandlersConfigured)",
+            "return;",
+            "server.addHandler(&events);",
+            "loadWebPanel();",
+            "loadAPI();",
+            "panelHandlersConfigured = true;",
+        )
+        self.assertIn("if (!captiveHandlerConfigured)", panel)
+        self.assertIn(
+            "server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);",
+            panel,
+        )
+
+        captive = block_after(self.server, r"void\s+setupCaptivePortal\s*\(")
+        self.assertIn("if (!captiveHandlerConfigured)", captive)
+        self.assertIn(
+            "server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);",
+            captive,
+        )
+        self.assertNotIn("setupWebPanel();", captive)
+        self.assertNotIn("loadWebPanel();", captive)
+        self.assertNotIn("loadAPI();", captive)
+
+    def test_esp8266_releases_captive_resources_before_station_services(self) -> None:
+        connected = block_after(self.wifi, r"case\s+MESSAGE_CONNECTED\s*:")
+        self.assertOrdered(
+            connected,
+            "stopCaptivePortal();",
+            "dissableAP();",
+            "setupWebPanel();",
+            "startWebserver();",
+            "config.requestCloudIOSync();",
+            "config.startCloudIOWatchdog();",
+        )
+
+        stop_captive = block_after(self.server, r"void\s+stopCaptivePortal\s*\(")
+        self.assertOrdered(stop_captive, "dnsServer.stop();", "WiFi.scanDelete();")
 
     def test_esp8266_https_uses_bounded_negotiated_tls_buffers(self) -> None:
         self.assertRegex(self.constants, r"cloudTlsReceiveBufferSize\s*\{\s*512\s*\}")
@@ -1512,7 +1664,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         )
 
         stop = block_after(self.server, r"void\s+stopWebserver\s*\(\s*\)")
-        self.assertOrdered(stop, "events.close();", "server.end();")
+        self.assertOrdered(stop, "events.close();", "while (events.count() > 0", "server.end();")
         self.assertIn("while (events.count() > 0", stop)
         self.assertIn("millis() - closeStartedAt < 2000U", stop)
 

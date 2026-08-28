@@ -478,13 +478,16 @@ async function stopIrrigation() {
 
 /* The device answers first and performs the update in its main loop. The safe
    updater temporarily stops the web server, so a missed poll means only "still
-   unavailable" — never success. Success is confirmed by a new firmware version
-   (or an explicit done state); failures are shown after the old server returns. */
+   unavailable" — never success. Success is confirmed only after the restarted
+   firmware answers; ESP8266 failures are shown after its controlled recovery
+   reboot restores the journaled error. */
 function followUpdate() {
   const bar = $("ota-bar");
   const fill = bar.querySelector("i");
   const msg = $("ota-msg");
   const startingVersion = String(config.firmware || "");
+  const startingBuildDate = String(config.buildDate || "");
+  const startingBootId = String(config.bootId || "");
   const deadline = Date.now() + 180000;
   bar.classList.remove("hide");
   bar.classList.add("indeterminate");
@@ -512,6 +515,18 @@ function followUpdate() {
     msg.textContent = text;
     $("a-update").disabled = false;
   };
+  const confirmAndReload = (version) => {
+    finish(true, "Atualização confirmada · versão " + version + ". A reabrir o painel…", 100);
+    // Do not let the old page reconnect its EventSource while the new firmware
+    // is loading. replace() performs a real document navigation and keeps the
+    // Back button from returning to this stale pre-update panel.
+    $("a-update").disabled = true;
+    if (source) {
+      source.close();
+      source = null;
+    }
+    setTimeout(() => window.location.replace(baseUrl + "/"), 900);
+  };
 
   const poll = async () => {
     if (finished) return;
@@ -530,8 +545,14 @@ function followUpdate() {
     }
 
     const ota = snapshot.ota || null;
-    if (startingVersion && snapshot.firmware && snapshot.firmware !== startingVersion) {
-      finish(true, "Atualização confirmada · versão " + snapshot.firmware, 100);
+    const versionChanged = startingVersion && snapshot.firmware &&
+      String(snapshot.firmware) !== startingVersion;
+    const buildChanged = startingBuildDate && snapshot.buildDate &&
+      String(snapshot.buildDate) !== startingBuildDate;
+    const bootChanged = startingBootId && snapshot.bootId &&
+      String(snapshot.bootId) !== startingBootId;
+    if (versionChanged || buildChanged) {
+      confirmAndReload(snapshot.firmware);
       return;
     }
     if (!ota) {
@@ -545,8 +566,15 @@ function followUpdate() {
     if (ota.state === "failed") {
       if (ota.percent > 0) setProgress(ota.percent);
       finish(false, "A atualização falhou: " + (ota.error || "sem detalhe do equipamento"));
+    } else if (bootChanged) {
+      finish(false, "O equipamento reiniciou, mas continua na versão " + snapshot.firmware + ". A atualização falhou.");
     } else if (ota.state === "done") {
-      finish(true, "Gravado. A reiniciar…", 100);
+      // Flash completion is not the end of the user-visible operation. Keep
+      // polling until the restarted device answers with a different version;
+      // otherwise a failed restart would be presented as a successful update.
+      setProgress(100);
+      msg.textContent = "Firmware gravado. A aguardar reinício e confirmação…";
+      setTimeout(poll, 1500);
     } else if (Date.now() >= deadline) {
       finish(false, "A atualização não terminou dentro do tempo esperado. Verifica a versão antes de repetir.");
     } else {

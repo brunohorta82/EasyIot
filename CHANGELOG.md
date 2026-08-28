@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- The firmware-update page now confirms success only after the restarted device
+  reports a different firmware version or build, then performs a full browser
+  reload so the normal login flow and new assets appear without manual refresh.
+- A failed automatic update stops the progress indicator and displays the actual
+  device error instead of remaining indefinitely on "updating".
+- ESP8266 closes port 80 while BearSSL owns the limited heap, preserves a failed
+  update message through a controlled recovery restart, and releases captive AP
+  resources before starting the full station WebUI, CloudIO, and MQTT services.
+
+### Validation
+
+- An intentional ESP8266 HTTPS failure completed without OOM, retained Wi-Fi,
+  recovered CloudIO/MQTT, and showed `HTTP error: connection failed` in Safari.
+- A real ESP8266 automatic update from a 9.198-labelled candidate to official
+  v9.201 restarted successfully, reopened the login page automatically, and
+  reported `FW 9.201`.
+- 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
+  static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
+
 ## [9.201] - 2026-08-28
 
 ### Added
