@@ -72,9 +72,30 @@ three environments published by CI: `ESP8266_RELEASE`,
 `ESP8266-HAN_RELEASE`, and `ESP32_RELEASE`.
 
 The quick checks validate Python and JavaScript syntax, host tests, release
-metadata, generated web-header parity, conflict markers, and whitespace. Web
-asset parity is checked in a temporary directory, so the command does not
+metadata, ESP8266 RAM-budget configuration, generated web-header parity,
+conflict markers, and whitespace. Web asset parity is checked in a temporary
+directory, so the command does not
 rewrite working-tree headers.
+
+## ESP8266 Static-RAM Gate
+
+Every `ESP8266_RELEASE`, `ESP8266-HAN_RELEASE`, `ESP8266_DEBUG`, and
+`ESP8266-HAN_DEBUG` build checks `.data + .rodata + .bss` from its linked ELF
+before publishing the local candidate. Release CI repeats the check explicitly.
+The reviewed v9.200 baselines and ceilings live in
+`tools/esp8266_ram_budgets.json`; run a check against an existing build with:
+
+- `python3 tools/check_ram_budget.py --env ESP8266_RELEASE`
+
+An over-budget build is a required investigation, not permission to raise the
+number until CI turns green. Review which ELF sections/symbols grew and why. If
+an intentional change needs a new ceiling, record the measured baseline and
+repeat real-board automatic HTTPS OTA with normal WebUI, CloudIO, and MQTT
+allocations active before approving it.
+
+This gate catches static allocation growth only. It cannot measure runtime heap,
+largest contiguous block, fragmentation, or timing, so it does not replace the
+real-board OTA checklist above.
 
 ## Dependency Audit
 

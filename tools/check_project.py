@@ -175,6 +175,12 @@ def check_release_metadata() -> None:
         raise CheckWarning(f"metadata validator reported {warning_count} warning(s)")
 
 
+def check_ram_budget_config() -> None:
+    run_command(
+        [sys.executable, str(TOOLS / "check_ram_budget.py"), "--validate-config"]
+    )
+
+
 def check_javascript() -> None:
     node = require_command("node")
     run_command([node, "--check", str(ROOT / "webpanel" / "js" / "index.js")])
@@ -281,6 +287,7 @@ def main() -> int:
         ("Python syntax", check_python_syntax),
         ("Host unit tests", check_unit_tests),
         ("Release metadata", check_release_metadata),
+        ("ESP8266 RAM budget configuration", check_ram_budget_config),
         ("JavaScript syntax", check_javascript),
         ("Generated web assets", check_generated_web_assets),
         ("Conflict markers", check_conflict_markers),

@@ -1,8 +1,8 @@
 # EasyIot - To Do
 
 - Created by: Alexandru Hauzman
-- Updated: 25.08.2026
-- Current upstream version: 9.198
+- Updated: 28.08.2026
+- Current upstream version: 9.200
 
 ## Important Notes
 
@@ -42,7 +42,6 @@
 3. [ ] Complete hardware testing of the 9.187 safety batch on ESP8266 and ESP32: accepted and rejected live pin changes, garden-valve OFF behavior after save/power-cycle, physical/MQTT/Cloud traffic during configuration, and failed/successful manual and automatic OTA recovery.
 4. [ ] Capture and diagnose the non-reproduced ESP32-C6 task-watchdog reset seen during WebUI/control stress; retain the complete task report and backtrace before changing watchdog or scheduling behavior.
 5. [ ] Hardware-test full non-secret recovery on ESP32, ESP32-C3 and ESP32-C6, including replacement-device recovery, wrong-variant rejection and interrupted two-file transaction rollback.
-6. [ ] Add an automated ESP8266 static-RAM regression budget and make the real-board HTTPS OTA gate mandatory for changes that grow RAM or alter WebUI/MQTT/network lifecycles. Build success alone does not exercise BearSSL heap after all services connect. Files: `tools/check_project.py`, `docs/RELEASE_WORKFLOW.md`
 
 #
 
@@ -108,8 +107,9 @@
 1. [x] Added PR workflow guide (development -> cherry-pick branch -> upstream PR). File: `docs/RELEASE_WORKFLOW.md`
 2. [x] Added branch naming convention for external CP branches. File: `docs/RELEASE_WORKFLOW.md`
 3. [x] Added release checklist document in repo docs. File: `docs/RELEASE_WORKFLOW.md`
-4. [x] Added script to generate release notes draft from commits. File: `tools/generate_release_notes.sh`
-5. [x] Added an exact-variant rollback playbook for WebUI OTA recovery, full-flash recovery, configuration restore, containment, and post-rollback verification. File: `docs/RELEASE_WORKFLOW.md`
+4. [x] Added an evidence-based ESP8266 static-RAM guard for normal/HAN release and debug profiles. It measures `.data + .rodata + .bss` from the linked ELF before publishing a local candidate, repeats explicitly in release CI, reports byte margin/baseline delta, and fails above the reviewed limit. Real-board HTTPS OTA remains mandatory because static RAM cannot prove runtime heap/fragmentation safety. Files: `tools/check_ram_budget.py`, `tools/esp8266_ram_budgets.json`, `tools/post_extra_script.py`, `tools/check_project.py`, `.github/workflows/firmware-ota.yml`, `docs/RELEASE_WORKFLOW.md`
+5. [x] Added script to generate release notes draft from commits. File: `tools/generate_release_notes.sh`
+6. [x] Added an exact-variant rollback playbook for WebUI OTA recovery, full-flash recovery, configuration restore, containment, and post-rollback verification. File: `docs/RELEASE_WORKFLOW.md`
 
 ## Security & API
 

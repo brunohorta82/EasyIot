@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented in this file.
 
+## Development after 9.200 - 2026-08-28
+
+### Added
+- **ESP8266 builds now have an evidence-based static-RAM release gate.** Normal
+  and HAN release/debug profiles measure `.data + .rodata + .bss` directly from
+  the linked ELF, report their byte margin and change from the reviewed v9.200
+  baseline, and refuse to publish a candidate above the configured ceiling.
+- The release workflow repeats the guard explicitly in CI. Budget validation is
+  also part of the quick project checks, with host tests covering configuration,
+  ELF parsing, pass/fail boundaries, publication ordering, and CI wiring.
+
+### Validation
+- v9.200 baselines: 47,780 bytes (`ESP8266_RELEASE`), 47,796 bytes
+  (`ESP8266-HAN_RELEASE`), 52,188 bytes (`ESP8266_DEBUG`), and 52,204 bytes
+  (`ESP8266-HAN_DEBUG`). Release ceilings are 50,000 bytes and debug ceilings
+  are 54,000 bytes; both would reject the known v9.198 OTA regression builds.
+- Static RAM remains an early warning only. Changes affecting RAM or network
+  lifecycles still require automatic HTTPS OTA on real ESP8266 hardware because
+  an ELF cannot measure runtime heap fragmentation.
+
 ## [9.200] - 2026-08-25
 
 ### Fixed

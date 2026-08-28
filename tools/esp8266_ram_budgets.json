@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "baseline_version": "9.200",
+  "ram_sections": [".data", ".rodata", ".bss"],
+  "environments": {
+    "ESP8266_RELEASE": {
+      "baseline_bytes": 47780,
+      "limit_bytes": 50000
+    },
+    "ESP8266-HAN_RELEASE": {
+      "baseline_bytes": 47796,
+      "limit_bytes": 50000
+    },
+    "ESP8266_DEBUG": {
+      "baseline_bytes": 52188,
+      "limit_bytes": 54000
+    },
+    "ESP8266-HAN_DEBUG": {
+      "baseline_bytes": 52204,
+      "limit_bytes": 54000
+    }
+  }
+}

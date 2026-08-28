@@ -143,6 +143,10 @@ jobs:
       - name: Build ${{ matrix.env }}
         run: pio run -e ${{ matrix.env }}
 
+      - name: Verify ESP8266 static-RAM budget
+        if: ${{ startsWith(matrix.env, 'ESP8266') }}
+        run: python3 tools/check_ram_budget.py --env ${{ matrix.env }}
+
       - name: Rename binary
         id: bin
         run: |
