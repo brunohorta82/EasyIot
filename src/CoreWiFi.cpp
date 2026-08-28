@@ -446,6 +446,18 @@ void infoCallback(justwifi_messages_t code, char *parameter)
     const String connectedSecret = WiFi.psk();
     queuePendingWiFiCredentials(connectedSsid.c_str(), connectedSecret.c_str());
     drainPendingLegacyCredentials();
+    // A fallback AP can still be alive when a saved network finally connects.
+    // Tear its DNS/scan/radio resources down before the full WebUI, CloudIO and
+    // MQTT compete for the ESP8266's small heap. Waiting sixty seconds here was
+    // observed to leave only ~6.5 KB free and trigger an MQTT-side OOM reboot.
+#ifdef ESP8266
+    if (WiFi.getMode() & WIFI_AP)
+    {
+      stopCaptivePortal();
+      dissableAP();
+      delay(20);
+    }
+#endif
     // The clock can only sync once there is a network, and anything scheduled
     // on the device depends on it.
     setupDeviceClock();

@@ -17,6 +17,10 @@
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 static constexpr uint32_t kFeatureAccessYieldMs = 100;
+// A hardware-random boot identity lets the WebUI distinguish a restarted
+// device from the pre-update process. It is deliberately RAM-only and changes
+// again on every boot; firmware/build metadata still decides OTA success.
+static const uint32_t kBootId = static_cast<uint32_t>(random(1L, 0x7FFFFFFFL));
 
 static const char *currentMcuName()
 {
@@ -2062,6 +2066,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     root["maxFreeBlock"] = ESP.getMaxFreeBlockSize();
 #endif
     root["uptime"] = millis() / 1000;
+    root["bootId"] = kBootId;
     root["resetReason"] = deviceResetReason();
     root["sketchSize"] = ESP.getSketchSize();
     root["freeSketchSpace"] = ESP.getFreeSketchSpace();

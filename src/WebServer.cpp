@@ -10,6 +10,7 @@
 #include "Templates.h"
 #include "Irrigation.h"
 #include "DeviceLog.h"
+#include <LittleFS.h>
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
 #include "IndexHtml.h"
@@ -32,8 +33,26 @@
 extern ConfigOnofre config;
 
 DNSServer dnsServer;
-AsyncWebServer server(80);
+// AsyncWebServer::begin() returns void even when its underlying TCP listener
+// cannot bind. OTA failure must reopen this same server, so expose only the
+// listener state needed to retry instead of logging a false "started" message.
+class ObservableAsyncWebServer : public AsyncWebServer
+{
+public:
+  explicit ObservableAsyncWebServer(uint16_t port) : AsyncWebServer(port) {}
+  bool isListening() { return _server.status() != 0; }
+};
+
+ObservableAsyncWebServer server(80);
+
+// Keep the event endpoint in static storage on the ESP8266. Moving this object
+// to the heap makes AP-to-STA transitions more fragmented exactly when MQTT and
+// CloudIO allocate their transports. The server handlers are installed once
+// and never reset, so AsyncWebServer never mistakes this object for deletable
+// heap storage during the firmware lifetime.
 AsyncEventSource events("/events");
+static bool captiveHandlerConfigured = false;
+static bool panelHandlersConfigured = false;
 
 /**
  * Serve a PROGMEM blob (the gzipped web panel) through whichever
@@ -62,6 +81,54 @@ static AsyncWebServerResponse *beginProgmemResponse(AsyncWebServerRequest *reque
    keeps enough state for the panel to show progress and, more importantly, to show
    the reason when it fails. */
 OtaStatus otaStatus;
+
+namespace
+{
+#ifdef ESP8266
+constexpr const char *kOtaFailurePath = "/.ota-failure";
+constexpr const char *kOtaFailureTempPath = "/.ota-failure.tmp";
+#endif
+}
+
+bool storeOtaFailureForRestart()
+{
+#ifdef ESP8266
+  LittleFS.remove(kOtaFailureTempPath);
+  File file = LittleFS.open(kOtaFailureTempPath, "w");
+  if (!file)
+    return false;
+  const size_t length = strnlen(otaStatus.error, sizeof(otaStatus.error) - 1);
+  const bool written = file.write(reinterpret_cast<const uint8_t *>(otaStatus.error), length) == length;
+  file.close();
+  if (!written)
+  {
+    LittleFS.remove(kOtaFailureTempPath);
+    return false;
+  }
+  LittleFS.remove(kOtaFailurePath);
+  if (!LittleFS.rename(kOtaFailureTempPath, kOtaFailurePath))
+  {
+    LittleFS.remove(kOtaFailureTempPath);
+    return false;
+  }
+#endif
+  return true;
+}
+
+void restoreOtaFailureStatus()
+{
+#ifdef ESP8266
+  File file = LittleFS.open(kOtaFailurePath, "r");
+  if (!file)
+    return;
+  const size_t length = file.readBytes(otaStatus.error, sizeof(otaStatus.error) - 1);
+  otaStatus.error[length] = '\0';
+  file.close();
+  LittleFS.remove(kOtaFailurePath);
+  otaStatus.state = OtaState::FAILED;
+  otaStatus.percent = 0;
+#endif
+}
 
 void otaStatusJson(JsonVariant &root)
 {
@@ -552,7 +619,10 @@ void loadWebPanel()
                 return;
               AsyncWebServerResponse *response = beginProgmemResponse(request, 200, "text/html", index_html, sizeof(index_html));
               response->addHeader("Content-Encoding", "gzip");
-              response->addHeader("Cache-Control", "max-age=30");
+              // After OTA the browser must fetch the document containing the
+              // new versioned JS/CSS URLs. Caching this HTML could reopen the
+              // previous panel even after the new firmware was confirmed.
+              response->addHeader("Cache-Control", "no-store");
               request->send(response); });
 
   // JS
@@ -1181,10 +1251,23 @@ void loadAPI()
 
 void setupCaptivePortal()
 {
-  server.reset();
   WiFi.scanNetworks(true);
   dnsServer.start(53, "*", WiFi.softAPIP());
-  server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER); // only when requested from AP
+  // AP mode needs only the compact captive handler. Installing every panel and
+  // API route here consumed the heap later needed by MQTT when a saved network
+  // connected while the fallback AP was still alive.
+  if (!captiveHandlerConfigured)
+  {
+    server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+    captiveHandlerConfigured = true;
+  }
+}
+void stopCaptivePortal()
+{
+  // Release the DNS PCB and any retained scan results before the full panel,
+  // CloudIO and MQTT allocate their runtime buffers on an AP-to-STA transition.
+  dnsServer.stop();
+  WiFi.scanDelete();
 }
 void stopWebserver()
 {
@@ -1198,7 +1281,6 @@ void stopWebserver()
   // EventSource client. That live AsyncTCP connection kept scarce ESP8266 heap
   // pinned throughout OTA and also left the browser attached to a dead stream.
   events.close();
-  server.end();
 #ifdef ESP8266
   // AsyncEventSource closes gracefully: ESPAsyncTCP does not release its PCB
   // until the next TCP poll (normally within 500 ms). A fixed short delay made
@@ -1217,13 +1299,30 @@ void stopWebserver()
              millis() - closeStartedAt);
 #endif
 #endif
+  // No listener may remain during ESP8266 BearSSL setup. Even a rejected HTTP
+  // request allocates AsyncWebServerRequest before handlers run; hardware proved
+  // that one status poll at this point can exhaust TLS heap and panic.
+  server.end();
 }
-void startWebserver()
+bool startWebserver()
 {
+  // Checking the underlying listener state avoids logging a false start and
+  // gives lwIP a bounded retry when a stopped listener needs time to rebind.
+  const uint32_t startedAt = millis();
+  do
+  {
+    server.begin();
+    if (server.isListening())
+      break;
+    delay(50);
+  } while (millis() - startedAt < 2000U);
 #ifdef DEBUG_ONOFRE
-  Log.notice("%s WEBSERVER START" CR, tags::system);
+  if (server.isListening())
+    Log.notice("%s WEBSERVER START (waited=%ums)" CR, tags::system, millis() - startedAt);
+  else
+    Log.error("%s WEBSERVER START FAILED after %ums" CR, tags::system, millis() - startedAt);
 #endif
-  server.begin();
+  return server.isListening();
 }
 void setupCors()
 {
@@ -1233,7 +1332,18 @@ void setupCors()
 }
 void setupWebPanel()
 {
-  server.reset();
+  // Register each mode once. Captive mode deliberately postpones the much
+  // larger panel/API route set until STA is connected and AP resources have
+  // been released. Rebuilding this list on a live server fragments ESP8266
+  // heap and can delete the statically allocated EventSource.
+  if (panelHandlersConfigured)
+    return;
+
+  if (!captiveHandlerConfigured)
+  {
+    server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+    captiveHandlerConfigured = true;
+  }
   server.addHandler(&events);
   loadWebPanel();
   loadAPI();
@@ -1247,6 +1357,7 @@ void setupWebPanel()
     {
       request->send(404);
     } });
+  panelHandlersConfigured = true;
 }
 
 void sendToServerEvents(String topic, String payload)
