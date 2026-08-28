@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## Development after 9.200 - 2026-08-28
+## [9.201] - 2026-08-28
 
 ### Added
 - **ESP8266 builds now have an evidence-based static-RAM release gate.** Normal
@@ -21,6 +21,16 @@ All notable changes to this project are documented in this file.
 - Static RAM remains an early warning only. Changes affecting RAM or network
   lifecycles still require automatic HTTPS OTA on real ESP8266 hardware because
   an ELF cannot measure runtime heap fragmentation.
+- Verified here before merging: the guard passes the four protected builds with
+  measured margin, and a ceiling set one byte below the real figure fails the check
+  with exit code 1 — before the release workflow renames or uploads anything.
+
+### Para testers
+- **Nada de novo para ver.** Esta versão é uma rede de segurança na fábrica: a partir
+  de agora uma alteração que faça crescer a memória fixa dos ESP8266 acima do limite
+  revisto **não chega a ser publicada**.
+- É a resposta à falha da 9.198, em que o equipamento compilava bem e só depois
+  ficava sem memória a meio da actualização segura — o pior sítio para se descobrir.
 
 ## [9.200] - 2026-08-25
 

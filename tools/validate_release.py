@@ -180,14 +180,19 @@ def main() -> int:
             # invisible: one such section sat in the middle of the history for nine
             # releases before anybody noticed. There is nothing left to release once a
             # version is being cut, so any of these is a mistake.
-            unreleased = sum(
-                1 for line in changelog_text.splitlines()
-                if line.strip().lower().startswith("## [unreleased]"))
-            if unreleased:
-                fail(f"CHANGELOG.md still has {unreleased} '## [Unreleased]' section(s); "
-                     f"fold them into ## [{version}] before releasing.")
+            # The first section has to be the version being cut. "Unreleased" is the
+            # usual placeholder, but any heading that is not this version means notes
+            # are shipping filed as something else — which is how a stray section sat
+            # in the middle of the history for nine releases. Checking the shape of
+            # the first heading catches every spelling of the mistake, including
+            # "Development after 9.200".
+            headings = [line.strip() for line in changelog_text.splitlines()
+                        if line.strip().startswith("## ")]
+            if headings and not headings[0].startswith(f"## [{version}]"):
+                fail(f"CHANGELOG.md starts with '{headings[0]}'; the newest section must "
+                     f"be ## [{version}] so shipped notes are filed under what shipped.")
             else:
-                ok("CHANGELOG.md has no leftover Unreleased section.")
+                ok("CHANGELOG.md's newest section is the version being released.")
 
             # Two sections claiming one version means one of them is not what shipped.
             headers = [line.strip() for line in changelog_text.splitlines()
