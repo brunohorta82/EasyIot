@@ -112,8 +112,11 @@ every PlatformIO firmware build:
 
 - `python3 tools/check_dependency_pins.py`
 
-Registry libraries must use one exact version. Git libraries must use a full
-40-character commit hash; branches, tags, and abbreviated hashes are rejected.
+Registry libraries and platforms must use one exact version. Git libraries and
+Git-backed platforms must use a full 40-character commit hash; branches, tags,
+and abbreviated hashes are rejected. A platform release archive must identify
+a fixed GitHub release asset, never `latest` or a branch archive. PlatformIO
+Core and IntelHex are exact-pinned in the release workflow as well.
 Known moving transitive dependencies are declared explicitly where needed.
 Framework-bundled libraries are controlled by the pinned PlatformIO platform
 and framework package.

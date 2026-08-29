@@ -9,6 +9,8 @@ All notable changes to this project are documented in this file.
 - PlatformIO library dependencies are now reproducible: registry libraries use
   exact versions, Git libraries use full commit hashes, and the known moving
   transitive libraries are pinned explicitly for each board family.
+- Platform declarations and the release workflow's PlatformIO Core/IntelHex
+  build tools are pinned too, so the resolver itself cannot drift silently.
 - Every PlatformIO build and the quick project checks now reject floating
   dependency declarations before they can silently change a firmware build.
 

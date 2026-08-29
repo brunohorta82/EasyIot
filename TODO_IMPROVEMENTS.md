@@ -26,7 +26,7 @@
 
 ## Dependencies & Library Updates (P1/P2)
 
-1. [x] Pinned PlatformIO platforms to known-good versions (`espressif32@6.4.0`, `espressif8266@4.2.1`, and the fixed ESP32-C6 pioarduino release asset). File: `platformio.ini`
+1. [x] Pinned PlatformIO platforms to known-good versions (`espressif32@6.4.0`, `espressif8266@4.2.1`, and the fixed ESP32-C6 pioarduino release asset), pinned PlatformIO Core/IntelHex in release CI, and made the pre-build check reject future floating platform or CI-tool declarations. Files: `platformio.ini`, `.github/workflows/firmware-ota.yml`, `tools/check_dependency_pins.py`
 2. [x] Made all direct `lib_deps` immutable: registry packages use exact versions, Git packages use full commit hashes, known moving transitives are explicit per board family, and every PlatformIO build plus the quick-project checks reject future floating declarations. Files: `platformio.ini`, `tools/check_dependency_pins.py`, `tools/test_dependency_pins.py`, `tools/check_project.py`, `tools/extra_script.py`
 
 ## Webpanel UX (P1/P2)
