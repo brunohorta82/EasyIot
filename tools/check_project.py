@@ -181,6 +181,10 @@ def check_ram_budget_config() -> None:
     )
 
 
+def check_dependency_pins() -> None:
+    run_command([sys.executable, str(TOOLS / "check_dependency_pins.py")])
+
+
 def check_javascript() -> None:
     node = require_command("node")
     run_command([node, "--check", str(ROOT / "webpanel" / "js" / "index.js")])
@@ -287,6 +291,7 @@ def main() -> int:
         ("Python syntax", check_python_syntax),
         ("Host unit tests", check_unit_tests),
         ("Release metadata", check_release_metadata),
+        ("Immutable dependency declarations", check_dependency_pins),
         ("ESP8266 RAM budget configuration", check_ram_budget_config),
         ("JavaScript syntax", check_javascript),
         ("Generated web assets", check_generated_web_assets),

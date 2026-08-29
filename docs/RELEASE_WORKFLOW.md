@@ -106,6 +106,18 @@ real-board OTA checklist above.
 
 ## Dependency Audit
 
+Every direct library declaration must be immutable. Run the pin check directly
+when editing `platformio.ini`; it is also included in `--quick` and runs before
+every PlatformIO firmware build:
+
+- `python3 tools/check_dependency_pins.py`
+
+Registry libraries must use one exact version. Git libraries must use a full
+40-character commit hash; branches, tags, and abbreviated hashes are rejected.
+Known moving transitive dependencies are declared explicitly where needed.
+Framework-bundled libraries are controlled by the pinned PlatformIO platform
+and framework package.
+
 Run the periodic dependency audit across every configured PlatformIO
 environment:
 
@@ -125,10 +137,11 @@ environment could not be audited, while still printing results for the remaining
 environments.
 
 Treat the output as an investigation list, not an upgrade recommendation.
-`Wanted` follows the current declaration; `Latest` may be incompatible, and Git
-dependencies may point at a moving branch. Upgrade one dependency family at a
-time, then run the relevant build matrix and hardware checks before changing a
-pin.
+`Wanted` follows the current declaration and `Latest` may be incompatible. Git
+dependencies are commit-pinned, so the audit cannot decide whether a newer
+commit is safe. Upgrade one dependency family at a time, record the old and new
+pins, then run the relevant build matrix and hardware checks before accepting
+the change.
 
 ## Local Wi-Fi Override
 
