@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 - Created by: Alexandru Hauzman
-- Updated: 29.08.2026
+- Updated: 30.08.2026
 - Current upstream version: 9.201
 
 ## Important Notes
@@ -31,8 +31,10 @@
 
 ## Webpanel UX (P1/P2)
 
-1. [ ] Improve the Functions tab layout: make the add-function form clearer and more compact, visually delimit each configured feature as its own card, and use a responsive two-column grid on wider screens that stacks to one column on phones. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
-2. [ ] Add a subtle left-edge health indicator to relevant status badges and diagnostic cards: green for healthy/connected, orange for degraded/retrying, red only for actual errors/disconnection, and gray for disabled/unknown. Keep the existing text or icon so status never relies on color alone; normal actuator OFF states and intentionally disabled MQTT must not appear as errors. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
+1. [x] Improved the Functions tab layout with a clearer compact add-function form, individually delimited feature cards, and a responsive two-column grid that stacks to one column below 720 px. Already delivered in v9.177 through PR #119; this stale checkbox was corrected during the WebUI consistency review. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
+2. [x] Added a subtle left-edge health indicator to relevant status badges and diagnostic cards: green for healthy/connected, orange for degraded/retrying, red only for actual errors/disconnection, and gray for disabled/unknown. Existing text remains so status never relies on color alone; weak Wi-Fi is degraded rather than failed, and intentionally disabled MQTT remains neutral. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`, `tools/test_webui_health.py`
+3. [x] Added a matching left edge to Pinout rows using their existing category colors: green output, blue input and gray free. Text tags remain visible and pin ownership behavior is unchanged. Files: `webpanel/css/styles.css`, `webpanel/js/index.js`, `tools/test_webui_pinout.py`
+4. [x] Added live ON/OFF state to configured light/socket Function cards: neutral edge and `DESLIGADO` while off, green edge and `LIGADO` while on. SSE updates resolve the current feature object, accepted Web commands update the shared state, and opening Functions reconciles runtime states without rebuilding or losing unsaved form edits. This prevents Safari from showing stale state until a full refresh; virtual controls and non-binary drivers stay neutral. Files: `webpanel/css/styles.css`, `webpanel/js/index.js`, `tools/test_webui_function_state.py`
 
 ## Testing & CI (P2 - Deferred / Later)
 

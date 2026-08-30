@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Header and diagnostic health states now use a consistent left-edge indicator:
+  green for healthy, amber for degraded, red for a real connection failure, and
+  gray for disabled or unknown. Informational diagnostic cards keep the same
+  compact edge structure in neutral gray. Existing status text remains visible,
+  and a connected but weak Wi-Fi signal is no longer presented as a red failure.
+- Pinout rows now repeat their existing output, input and free category color on
+  the left edge, making occupied pins easier to scan without removing the text
+  labels or changing pin-assignment behavior.
+- Configured light and socket Function cards now show their live state with a
+  neutral/green left edge and explicit `DESLIGADO`/`LIGADO` label. SSE events,
+  accepted browser commands, and a state-only reconciliation when Functions is
+  opened keep the card current even when Safari delays an event; unsaved form
+  edits are not rebuilt. Controls without a truthful binary state remain neutral.
+
 ### Fixed
 
 - The firmware-update page now confirms success only after the restarted device
