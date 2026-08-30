@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Runtime actuator commands no longer discard atomic-storage failures. The WebUI
+  reports when a command was physically applied but its state could not be saved,
+  while MQTT, Cloud, GPIO and KNX paths record the source and feature in the
+  device log. Unknown actuator requests remain distinct from storage failures.
 - The firmware-update page now confirms success only after the restarted device
   reports a different firmware version or build, then performs a full browser
   reload so the normal login flow and new assets appear without manual refresh.
@@ -17,6 +21,12 @@ All notable changes to this project are documented in this file.
 
 ### Validation
 
+- 138 host tests, all quick project checks, and the ESP8266_DEBUG/ESP32_DEBUG
+  build pair passed. ESP8266 static RAM is 52,492 / 54,000 bytes, leaving 1,508
+  bytes of guard margin.
+- Normal command behavior compiles on both targets. The forced storage-failure
+  branch is covered by source contracts but was not induced on hardware because
+  deliberately exhausting or corrupting LittleFS would be a destructive test.
 - An intentional ESP8266 HTTPS failure completed without OOM, retained Wi-Fi,
   recovered CloudIO/MQTT, and showed `HTTP error: connection failed` in Safari.
 - A real ESP8266 automatic update from a 9.198-labelled candidate to official

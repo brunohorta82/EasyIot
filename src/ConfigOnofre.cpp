@@ -13,6 +13,7 @@
 #include "DeviceClock.h"
 #include "Irrigation.h"
 #include "Persistence.h"
+#include "DeviceLog.h"
 #include <algorithm>
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
@@ -122,7 +123,9 @@ ConfigOnofre &ConfigOnofre::init()
   // works: five zones and the rain sensor, without anyone picking a template.
   templateSelect(Template::GARDEN);
 #endif
-  return save();
+  if (!persist())
+    deviceLog("configuracao inicial nao guardada");
+  return *this;
 }
 bool ConfigOnofre::isSensorExists(int hwAddress)
 {
@@ -177,7 +180,8 @@ void ConfigOnofre::pzemDiscovery()
 
   if (needsSave)
   {
-    save();
+    if (!persist())
+      deviceLog("descoberta PZEM nao guardada");
   }
 }
 #endif
@@ -256,7 +260,10 @@ void ConfigOnofre::i2cDiscovery()
     }
   }
   if (needsSave)
-    save();
+  {
+    if (!persist())
+      deviceLog("descoberta I2C nao guardada");
+  }
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Smart Bus Done." CR, tags::config);
 #endif
@@ -742,12 +749,6 @@ void ConfigOnofre::backup(JsonVariant &root)
   irrigationRoot.remove("running");
 }
 
-ConfigOnofre &ConfigOnofre::save()
-{
-  persist();
-  return *this;
-}
-
 ConfigOnofre &ConfigOnofre::reloadFeatures()
 {
   for (auto &actuator : actuatores)
@@ -767,22 +768,25 @@ ConfigOnofre &ConfigOnofre::reloadFeatures()
   initHomeAssistantDiscovery();
   return *this;
 }
-void ConfigOnofre::controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result)
+ConfigUpdateResult ConfigOnofre::controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result)
 {
-  controlFeature(origin, action["id"] | "0", action["state"] | 0);
+  const ConfigUpdateResult controlResult =
+      controlFeature(origin, action["id"] | "0", action["state"] | 0);
+  result["result"] = static_cast<uint8_t>(controlResult);
+  return controlResult;
 }
-void ConfigOnofre::controlFeature(StateOrigin origin, String topic, String payload)
+ConfigUpdateResult ConfigOnofre::controlFeature(StateOrigin origin, String topic, String payload)
 {
   for (auto &a : actuatores)
   {
     if (strcmp(a.writeTopic, topic.c_str()) == 0 || strcmp(a.cloudIOwriteTopic, topic.c_str()) == 0)
     {
-      controlFeature(origin, a.uniqueId, payload.toInt());
-      return;
+      return controlFeature(origin, a.uniqueId, payload.toInt());
     }
   }
+  return ConfigUpdateResult::INVALID_REQUEST;
 }
-void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state)
+ConfigUpdateResult ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state)
 {
   for (auto &a : actuatores)
   {
@@ -793,10 +797,23 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
         state = a.state == ActuatorState::ON_CLOSE ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
       }
       a.changeState(origin, state);
-      this->save();
-      return;
+      return persist() ? ConfigUpdateResult::OK
+                       : ConfigUpdateResult::PERSISTENCE_FAILED;
     }
   }
+  return ConfigUpdateResult::INVALID_REQUEST;
+}
+
+void ConfigOnofre::reportControlPersistenceFailure(StateOrigin origin,
+                                                    const char *featureId)
+{
+  const char *safeFeatureId = featureId == nullptr ? "?" : featureId;
+  deviceLog("estado aplicado mas nao guardado origem=%u funcao=%s",
+            static_cast<unsigned int>(origin), safeFeatureId);
+#ifdef DEBUG_ONOFRE
+  Log.error("%s State applied but not persisted. origin=%u feature=%s" CR,
+            tags::config, static_cast<unsigned int>(origin), safeFeatureId);
+#endif
 }
 
 namespace

@@ -892,8 +892,8 @@ class FeatureAccessSourceContracts(unittest.TestCase):
                 ),
             ),
             (
-                "ConfigOnofre::save",
-                block_after(self.config, r"ConfigOnofre\s*&ConfigOnofre::save\s*\(\s*\)"),
+                "ConfigOnofre::persist",
+                block_after(self.config, r"bool\s+ConfigOnofre::persist\s*\(\s*\)"),
             ),
             (
                 "ConfigOnofre::reloadFeatures",
@@ -913,14 +913,14 @@ class FeatureAccessSourceContracts(unittest.TestCase):
                 "ConfigOnofre::controlFeature(Json)",
                 block_after(
                     self.config,
-                    r"void\s+ConfigOnofre::controlFeature\s*\(\s*StateOrigin\s+origin\s*,\s*JsonObject",
+                    r"ConfigUpdateResult\s+ConfigOnofre::controlFeature\s*\(\s*StateOrigin\s+origin\s*,\s*JsonObject",
                 ),
             ),
             (
                 "ConfigOnofre::controlFeature(topic)",
                 block_after(
                     self.config,
-                    r"void\s+ConfigOnofre::controlFeature\s*\(\s*StateOrigin\s+origin\s*,\s*String\s+topic",
+                    r"ConfigUpdateResult\s+ConfigOnofre::controlFeature\s*\(\s*StateOrigin\s+origin\s*,\s*String\s+topic",
                 ),
             ),
             ("performUpdate", block_after(self.web, r"AutoUpdateResult\s+performUpdate\s*\(\s*\)")),

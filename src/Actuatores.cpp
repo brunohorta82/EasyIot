@@ -12,6 +12,17 @@
 #include <time.h>
 extern ConfigOnofre config;
 
+namespace
+{
+void controlFromGpio(const char *featureId, int state)
+{
+  const ConfigUpdateResult result =
+      config.controlFeature(StateOrigin::GPIO_INPUT, featureId, state);
+  if (result == ConfigUpdateResult::PERSISTENCE_FAILED)
+    config.reportControlPersistenceFailure(StateOrigin::GPIO_INPUT, featureId);
+}
+}
+
 void shuttersOperationHandler(Shutters *s, ShuttersOperation operation)
 {
   switch (operation)
@@ -114,7 +125,8 @@ void actuatoresCallback(message_t const &msg, void *arg)
         if (s.state != state)
         {
           s.changeState(StateOrigin::KNX, state);
-          config.save();
+          if (!config.persist())
+            config.reportControlPersistenceFailure(StateOrigin::KNX, s.uniqueId);
         }
         break;
       }
@@ -128,7 +140,7 @@ void toogle(Button2 &btn)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::TOGGLE);
+      controlFromGpio(a.uniqueId, ActuatorState::TOGGLE);
     }
   }
 }
@@ -138,7 +150,7 @@ void openShutter(Button2 &btn)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::OFF_OPEN);
+      controlFromGpio(a.uniqueId, ActuatorState::OFF_OPEN);
     }
   }
 }
@@ -148,7 +160,7 @@ void openShutterLatch(Button2 &btn)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::OFF_OPEN);
+      controlFromGpio(a.uniqueId, ActuatorState::OFF_OPEN);
     }
   }
 }
@@ -160,7 +172,7 @@ void stopShutterLatch(Button2 &btn)
     {
       if ((digitalRead(a.inputs[0]) && digitalRead(a.inputs[1])))
       {
-        config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::STOP);
+        controlFromGpio(a.uniqueId, ActuatorState::STOP);
       }
     }
   }
@@ -171,7 +183,7 @@ void closeShutterLatch(Button2 &btn)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
+      controlFromGpio(a.uniqueId, ActuatorState::ON_CLOSE);
     }
   }
 }
@@ -181,7 +193,7 @@ void closeShutter(Button2 &btn)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
+      controlFromGpio(a.uniqueId, ActuatorState::ON_CLOSE);
     }
   }
 }
@@ -191,7 +203,7 @@ void rotateShutter(Button2 &btn)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::ON_CLOSE);
+      controlFromGpio(a.uniqueId, ActuatorState::ON_CLOSE);
     }
   }
 }
@@ -201,7 +213,7 @@ void stopShutter(Button2 &btn)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::STOP);
+      controlFromGpio(a.uniqueId, ActuatorState::STOP);
     }
   }
 }

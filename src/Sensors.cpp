@@ -152,12 +152,20 @@ void Sensor::persistWaterTotal()
 {
   if (waterUnsavedTurns == 0)
     return;
-  waterUnsavedTurns = 0;
   // The whole configuration file, because that is where the sensor's own fields
   // live. Deliberately rare: flash has a finite number of erases and a water meter
   // is expected to keep counting for years.
-  config.save();
-  deviceLog("contador agua: %d L gravados", (int)waterLiters);
+  if (config.persist())
+  {
+    waterUnsavedTurns = 0;
+    deviceLog("contador agua: %d L gravados", (int)waterLiters);
+  }
+  else
+  {
+    // Keep waterUnsavedTurns non-zero so the next checkpoint can retry. Clearing
+    // it here would silently treat a failed filesystem write as durable data.
+    deviceLog("contador agua: %d L nao gravados", (int)waterLiters);
+  }
 }
 
 void Sensor::publishWaterState()

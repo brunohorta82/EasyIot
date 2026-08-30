@@ -841,7 +841,19 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     JsonObject action = json.as<JsonObject>();
-    config.controlFeature(StateOrigin::WEBPANEL,action,root);
+    const ConfigUpdateResult result =
+        config.controlFeature(StateOrigin::WEBPANEL, action, root);
+    if (result == ConfigUpdateResult::PERSISTENCE_FAILED)
+    {
+      root["applied"] = true;
+      response->setCode(507);
+      config.reportControlPersistenceFailure(
+          StateOrigin::WEBPANEL, action["id"] | "?");
+    }
+    else if (result != ConfigUpdateResult::OK)
+    {
+      response->setCode(404);
+    }
     config.endFeatureAccess();
     response->setLength();
     request->send(response); }));

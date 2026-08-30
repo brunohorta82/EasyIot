@@ -1,7 +1,7 @@
 # EasyIot - To Do
 
 - Created by: Alexandru Hauzman
-- Updated: 29.08.2026
+- Updated: 30.08.2026
 - Current upstream version: 9.201
 
 ## Important Notes
@@ -13,7 +13,7 @@
 
 ## Firmware & Versioning (P1)
 
-1. [ ] Propagate atomic-save failures from runtime actuator-state changes to Web/MQTT/Cloud/GPIO callers instead of letting the legacy `save()` wrapper discard the result. Files: `include/ConfigOnofre.h`, `src/ConfigOnofre.cpp`, `src/WebServer.cpp`
+1. [x] Propagate atomic-save failures from runtime actuator-state changes to Web/MQTT/Cloud/GPIO/KNX callers instead of letting the legacy `save()` wrapper discard the result. Web commands distinguish “applied but not saved” with HTTP 507; non-Web callers record the source and feature in the device log. Files: `include/ConfigOnofre.h`, `src/ConfigOnofre.cpp`, `src/WebServer.cpp`, `src/Mqtt.cpp`, `src/CloudIO.cpp`, `src/Actuatores.cpp`, `webpanel/js/index.js`, `tools/test_runtime_persistence.py`
 
 ## Security & OTA (P1)
 

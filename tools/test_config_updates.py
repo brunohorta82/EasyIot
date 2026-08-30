@@ -331,6 +331,19 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn('a["waterLiters"] = ss.waterLiters;', self.config)
         self.assertIn('sensor.waterLiters = d["waterLiters"] | 0.0;', self.config)
 
+    def test_water_meter_keeps_dirty_state_when_persistence_fails(self) -> None:
+        persist_total = block_after(
+            self.sensors, r"void\s+Sensor::persistWaterTotal\s*\(\s*\)",
+        )
+        self.assertIn("if (config.persist())", persist_total)
+        success = block_after(
+            persist_total, r"if\s*\(\s*config\.persist\(\)\s*\)",
+        )
+        self.assertIn("waterUnsavedTurns = 0;", success)
+        self.assertEqual(persist_total.count("waterUnsavedTurns = 0;"), 1)
+        self.assertIn("else", persist_total)
+        self.assertIn("nao gravados", persist_total)
+
     def test_water_meter_reaches_home_assistant_as_water(self) -> None:
         # device_class water plus state_class total_increasing is what Home
         # Assistant's water dashboard looks for; with those two it appears there on
@@ -627,7 +640,8 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         discovery = block_after(
             self.config, r"void\s+ConfigOnofre::i2cDiscovery\s*\(\s*\)",
         )
-        self.assertEqual(discovery.count("save();"), 1)
+        self.assertEqual(discovery.count("persist()"), 1)
+        self.assertIn("if (!persist())", discovery)
         self.assertIn("bool needsSave = false;", discovery)
         tmf_start = discovery.index("Discovery::I2C_TMF880X_ADDRESS")
         tmf = discovery[tmf_start:]

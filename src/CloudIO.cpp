@@ -658,7 +658,10 @@ void drainCloudIOCommands()
   }
   else
   {
-    config.controlFeature(StateOrigin::CLOUDIO, command.topic, command.payload);
+    const ConfigUpdateResult result =
+        config.controlFeature(StateOrigin::CLOUDIO, command.topic, command.payload);
+    if (result == ConfigUpdateResult::PERSISTENCE_FAILED)
+      config.reportControlPersistenceFailure(StateOrigin::CLOUDIO, command.topic);
   }
 
   releasePendingCloudCommand(readIndex + 1);
