@@ -22,7 +22,8 @@ enum SensorDriver
   SHT4X = 91,
   TMF882X = 92,
   HCSR04 = 93,
-  LD2410 = 94
+  LD2410 = 94,
+  LDC1612 = 95
 
 };
 
@@ -65,6 +66,7 @@ public:
     case TMF882X:
     case HCSR04:
     case LD2410:
+    case LDC1612:
       return 2;
     case INVALID_SENSOR:
     default:
@@ -96,6 +98,7 @@ public:
     case TMF882X:
     case HCSR04:
     case LD2410:
+    case LDC1612:
       break;
     case INVALID_SENSOR:
     default:
@@ -124,6 +127,7 @@ public:
     case LTR303X:
     case SHT4X:
     case TMF882X:
+    case LDC1612:
       runtimeInputs = {static_cast<unsigned int>(DefaultPins::SDA),
                        static_cast<unsigned int>(DefaultPins::SCL)};
       return true;
@@ -164,6 +168,32 @@ public:
   // CONTROL VARIABLES
   int lastBinaryState = -1;
   unsigned long delayRead = 5000ul;
+
+  /**
+   * Water-meter pickup state (LDC1612 only).
+   *
+   * The count is what the meter's own register says, in litres, and it is seeded by
+   * hand from the dial — the coil counts revolutions of a target and has no idea how
+   * much water preceded it. Kept as a double because a domestic meter reaches six
+   * digits of litres and the value has to survive being written and read as JSON.
+   */
+  double waterLiters = 0.0;
+  double litersPerTurn = 1.0;
+  /** Litres per minute, from the interval between the last turns. */
+  double waterFlow = 0.0;
+  /** Slow average subtracted from every sample so the thermal drift, which is
+   *  larger than the signal, does not swamp it. Measured on an Itron Aquadis+:
+   *  84,000 counts of drift over two seconds against a 1,400-count signal. */
+  long waterSlowAverage = 0;
+  bool waterPrimed = false;
+  long waterResidualMin = 0;
+  long waterResidualMax = 0;
+  long waterAmplitude = 0;
+  unsigned long waterWindowStart = 0ul;
+  unsigned long waterLastTurn = 0ul;
+  bool waterAbove = false;
+  /** Turns since the last time the total was written to flash. */
+  unsigned int waterUnsavedTurns = 0;
   unsigned long lastRead = 0ul;
   bool initialized = false;
   // A pin-map change is applied by reboot. Once the old driver is quiesced,
@@ -197,6 +227,7 @@ public:
       return Family::SECURITY;
     case LTR303X:
     case HCSR04:
+    case LDC1612:
       return Family::LEVEL_METER;
     case INVALID_SENSOR:
       return Family::NONE;
@@ -242,11 +273,22 @@ public:
       return FeatureDrivers::LD2410;
     case TMF882X:
       return FeatureDrivers::TMF882X;
+    case LDC1612:
+      return FeatureDrivers::LDC1612;
     case INVALID_SENSOR:
       return FeatureDrivers::INVALID;
     }
     return FeatureDrivers::INVALID;
   };
+  /** True once the LDC1612 answers and has been configured. */
+  bool ldcWaterBegin();
+  /** The 28-bit conversion, or -1 when the channel reports an error. */
+  long ldcWaterRead();
+  /** Publishes litres and flow as this sensor's state. */
+  void publishWaterState();
+  /** Writes the running total to flash. Rare on purpose. */
+  void persistWaterTotal();
+
   const bool isInitialized()
   {
     if (!initialized)

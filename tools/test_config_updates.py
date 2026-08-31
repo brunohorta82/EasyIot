@@ -30,6 +30,7 @@ WEB_PANEL = ROOT / "webpanel" / "js" / "index.js"
 WEB_PANEL_HTML = ROOT / "webpanel" / "index.html"
 PERSISTENCE_SOURCE = ROOT / "src" / "Persistence.cpp"
 IRRIGATION_SOURCE = ROOT / "src" / "Irrigation.cpp"
+SENSORS_SOURCE = ROOT / "src" / "Sensors.cpp"
 HOME_ASSISTANT_SOURCE = ROOT / "src" / "HomeAssistantMqttDiscovery.cpp"
 MQTT_SOURCE = ROOT / "src" / "Mqtt.cpp"
 DEVICE_LOG_SOURCE = ROOT / "src" / "DeviceLog.cpp"
@@ -123,6 +124,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         cls.panel_html = WEB_PANEL_HTML.read_text(encoding="utf-8")
         cls.persistence = PERSISTENCE_SOURCE.read_text(encoding="utf-8")
         cls.irrigation = IRRIGATION_SOURCE.read_text(encoding="utf-8")
+        cls.sensors = SENSORS_SOURCE.read_text(encoding="utf-8")
         cls.homeassistant = HOME_ASSISTANT_SOURCE.read_text(encoding="utf-8")
         cls.mqtt = MQTT_SOURCE.read_text(encoding="utf-8")
         cls.device_log = DEVICE_LOG_SOURCE.read_text(encoding="utf-8")
@@ -305,12 +307,54 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             r"case\s+TMF882X\s*:\s*"
             r"case\s+HCSR04\s*:\s*"
             r"case\s+LD2410\s*:\s*"
+            r"case\s+LDC1612\s*:\s*"
             r"return\s+2\s*;",
         )
         self.assertRegex(
             expected_count,
             r"case\s+INVALID_SENSOR\s*:\s*default\s*:\s*return\s+0\s*;",
         )
+
+    def test_water_meter_totaliser_survives_a_configuration_save(self) -> None:
+        # The coil counts turns of a target and knows nothing of the water that ran
+        # before it was fitted, so the total is typed in from the meter's own dial.
+        # That makes it one of the very few live values a config save may overwrite —
+        # and it must be left alone when absent, or a panel that does not know the
+        # field would reset somebody's meter reading to zero.
+        update = block_after(self.config, r"ConfigUpdateResult ConfigOnofre::update\(JsonObject &root, JsonVariant &responseRoot\)")
+        self.assertIn("if (sensor.driver == SensorDriver::LDC1612)", update)
+        self.assertIn('JsonVariantConst liters = feature["waterLiters"];', update)
+        self.assertIn("if (liters.is<double>() || liters.is<unsigned int>())", update)
+        # And it has to be written to flash, or a reboot loses the count.
+        self.assertIn('a["waterLiters"] = ss.waterLiters;', self.config)
+        self.assertIn('sensor.waterLiters = d["waterLiters"] | 0.0;', self.config)
+
+    def test_water_meter_reaches_home_assistant_as_water(self) -> None:
+        # device_class water plus state_class total_increasing is what Home
+        # Assistant's water dashboard looks for; with those two it appears there on
+        # its own, with no template or helper for anybody to write.
+        block = block_after(self.homeassistant, r"void addToHomeAssistant\(Sensor &s\)")
+        self.assertIn('object["dev_cla"] = "water";', block)
+        self.assertIn('object["stat_cla"] = "total_increasing";', block)
+        self.assertIn('object["unit_of_meas"] = "L";', block)
+        # And the flow as its own entity, which is a measurement rather than a total.
+        self.assertIn('object["dev_cla"] = "volume_flow_rate";', block)
+        self.assertIn('object["unit_of_meas"] = "L/min";', block)
+
+    def test_water_meter_counts_on_the_residual_not_the_raw_value(self) -> None:
+        # Measured against a real meter's register: comparing the raw value with the
+        # slow average lost one turn in seven, because a shallow cycle riding on a
+        # moving average never reached a fixed offset from it.
+        block = block_after(self.sensors, r"case LDC1612:")
+        self.assertIn("waterSlowAverage += (value - waterSlowAverage) / 256;", block)
+        self.assertIn("const long residual = value - waterSlowAverage;", block)
+        self.assertIn("const long trigger = waterAmplitude / 10;", block)
+        self.assertIn("if (!waterAbove && residual > trigger)", block)
+        # The error flags are not data: a reading taken while the oscillator is
+        # unhappy would be counted as a turn.
+        clock = block_after(self.sensors, r"long Sensor::ldcWaterRead\(\)")
+        self.assertIn("if (msb & 0xF000)", clock)
+        self.assertIn("return -1;", clock)
 
     def test_ld2410_template_preserves_uart_rx_tx_slot_order(self) -> None:
         template = block_after(

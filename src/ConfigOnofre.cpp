@@ -530,6 +530,13 @@ ConfigOnofre &ConfigOnofre::load()
       sensor.delayRead = d["delayRead"];
       sensor.driver = d["driver"];
       sensor.hwAddress = d["hwAddress"] | 0x10;
+      // A water totaliser has to come back with the same reading it went down with:
+      // the coil counts turns of a target and knows nothing of the water that ran
+      // before it. Both values are seeded by hand from the meter's own dial.
+      sensor.waterLiters = d["waterLiters"] | 0.0;
+      sensor.litersPerTurn = d["litersPerTurn"] | 1.0;
+      if (sensor.litersPerTurn <= 0.0)
+        sensor.litersPerTurn = 1.0;
       sensor.id = featureIds++;
       String family = sensor.familyToText();
       family.toLowerCase();
@@ -637,6 +644,11 @@ bool ConfigOnofre::persist()
     a["driver"] = ss.driver;
     a["hwAddress"] = ss.hwAddress;
     a["delayRead"] = ss.delayRead;
+    if (ss.driver == SensorDriver::LDC1612)
+    {
+      a["waterLiters"] = ss.waterLiters;
+      a["litersPerTurn"] = ss.litersPerTurn;
+    }
     JsonArray inputs = a["inputs"].to<JsonArray>();
     for (auto in : ss.inputs)
     {
@@ -1975,6 +1987,28 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
           Sensor &sensor = *match;
           if (strlen(feature["name"] | I18N::NO_NAME) > 0)
             strlcpy(sensor.name, feature["name"] | I18N::NO_NAME, sizeof(sensor.name));
+
+          // A water totaliser is set by hand from the meter's own dial, so it is one
+          // of the very few live values a configuration save is allowed to overwrite.
+          // Absent means "leave it alone": a panel or app that does not know the
+          // field must not reset somebody's meter reading to zero.
+          if (sensor.driver == SensorDriver::LDC1612)
+          {
+            JsonVariantConst liters = feature["waterLiters"];
+            if (liters.is<double>() || liters.is<unsigned int>())
+            {
+              const double value = liters.as<double>();
+              if (value >= 0.0)
+                sensor.waterLiters = value;
+            }
+            JsonVariantConst perTurn = feature["litersPerTurn"];
+            if (perTurn.is<double>() || perTurn.is<unsigned int>())
+            {
+              const double value = perTurn.as<double>();
+              if (value > 0.0)
+                sensor.litersPerTurn = value;
+            }
+          }
 
           FeaturePinPlan *plan = findPlan(pinPlans, id, FeatureKind::SENSOR);
           if (plan != nullptr && plan->inputsProvided)

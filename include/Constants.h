@@ -208,6 +208,7 @@ namespace Discovery
 {
     constexpr int I2C_SHT4X_ADDRESS{0x44};           // TEMPERATURE/HUMIDITY
     constexpr int I2C_LTR303_ADDRESS{0x29};          // ILLUMINANCE
+    constexpr int I2C_LDC1612_ADDRESS{0x2B};         // WATER METER (0x2A if ADDR high)
     constexpr int I2C_SSD1306_ADDRESS{0x3C};         // DISPLAY
     constexpr int I2C_TMF880X_ADDRESS{0x41};         // TIME OF FLY
     constexpr int MODBUS_PZEM_ADDRESS_START{0x10};   // POWER METER
@@ -274,6 +275,7 @@ namespace FeatureDrivers
     constexpr const char *PIR{"PIR"};
     constexpr const char *GARDEN_VALVE{"GARDEN_VALVE"};
     constexpr const char *HCSR04{"HCSR04"};
+    constexpr const char *LDC1612{"LDC1612"};
     constexpr const char *LD2410{"LD2410"};
     constexpr const char *TMF882X{"TMF882X"};
 

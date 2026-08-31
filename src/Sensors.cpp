@@ -1,4 +1,5 @@
 #include "Sensors.h"
+#include "DeviceLog.h"
 #include <algorithm> // std::min, used to bound the HAN clock read
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
@@ -67,6 +68,109 @@ void Sensor::notifyState()
   }
   // Notify by SSW Webpanel
   sendToServerEvents(uniqueId, state.c_str());
+}
+
+namespace
+{
+  /**
+   * The LDC1612's registers, named as the datasheet names them.
+   *
+   * Written out rather than pulled from a library: the whole driver is seven writes
+   * and two reads, and a dependency for that would be more code to keep than the
+   * code it saves.
+   */
+  namespace LdcWater
+  {
+    constexpr uint8_t dataMsbCh0 = 0x00;
+    constexpr uint8_t dataLsbCh0 = 0x01;
+    constexpr uint8_t rcountCh0 = 0x08;
+    constexpr uint8_t settleCountCh0 = 0x10;
+    constexpr uint8_t clockDividersCh0 = 0x14;
+    constexpr uint8_t errorConfig = 0x19;
+    constexpr uint8_t config = 0x1A;
+    constexpr uint8_t muxConfig = 0x1B;
+    constexpr uint8_t driveCurrentCh0 = 0x1E;
+    constexpr uint8_t manufacturerId = 0x7E;
+  }
+
+  bool ldcWaterWrite(uint8_t reg, uint16_t value)
+  {
+    Wire.beginTransmission(Discovery::I2C_LDC1612_ADDRESS);
+    Wire.write(reg);
+    Wire.write(value >> 8);
+    Wire.write(value & 0xFF);
+    return Wire.endTransmission() == 0;
+  }
+
+  bool ldcWaterReadRegister(uint8_t reg, uint16_t &value)
+  {
+    Wire.beginTransmission(Discovery::I2C_LDC1612_ADDRESS);
+    Wire.write(reg);
+    if (Wire.endTransmission(false) != 0)
+      return false;
+    if (Wire.requestFrom(Discovery::I2C_LDC1612_ADDRESS, 2) != 2)
+      return false;
+    value = ((uint16_t)Wire.read() << 8) | Wire.read();
+    return true;
+  }
+}
+
+bool Sensor::ldcWaterBegin()
+{
+  uint16_t manufacturer = 0;
+  if (!ldcWaterReadRegister(LdcWater::manufacturerId, manufacturer) || manufacturer != 0x5449)
+    return false;
+
+  // Resolution over speed. The target turns once per litre — under 1 Hz even at a
+  // domestic meter's maximum flow — so the long conversion costs nothing and buys
+  // the sensitivity needed to see a target through the meter's cover.
+  ldcWaterWrite(LdcWater::config, 0x2801); // sleep while configuring, as required
+  ldcWaterWrite(LdcWater::rcountCh0, 0x8000);
+  ldcWaterWrite(LdcWater::settleCountCh0, 0x0080);
+  ldcWaterWrite(LdcWater::clockDividersCh0, 0x1002);
+  ldcWaterWrite(LdcWater::errorConfig, 0x0000);
+  ldcWaterWrite(LdcWater::driveCurrentCh0, 0x9000);
+  ldcWaterWrite(LdcWater::muxConfig, 0x020C);
+  ldcWaterWrite(LdcWater::config, 0x1601); // wake, channel 0, continuous
+  return true;
+}
+
+long Sensor::ldcWaterRead()
+{
+  uint16_t msb = 0, lsb = 0;
+  if (!ldcWaterReadRegister(LdcWater::dataMsbCh0, msb) ||
+      !ldcWaterReadRegister(LdcWater::dataLsbCh0, lsb))
+    return -1;
+  // The top four bits are error flags, not data: amplitude too high or low, or a
+  // conversion that over-ran. Any of them makes the reading meaningless.
+  if (msb & 0xF000)
+    return -1;
+  return ((long)(msb & 0x0FFF) << 16) | lsb;
+}
+
+void Sensor::persistWaterTotal()
+{
+  if (waterUnsavedTurns == 0)
+    return;
+  waterUnsavedTurns = 0;
+  // The whole configuration file, because that is where the sensor's own fields
+  // live. Deliberately rare: flash has a finite number of erases and a water meter
+  // is expected to keep counting for years.
+  config.save();
+  deviceLog("contador agua: %d L gravados", (int)waterLiters);
+}
+
+void Sensor::publishWaterState()
+{
+  JsonDocument doc;
+  JsonObject obj = doc.to<JsonObject>();
+  state.clear();
+  // Litres, because that is the unit the dial counts in and the unit Home Assistant
+  // wants for a total_increasing water sensor.
+  obj["liters"] = waterLiters;
+  obj["flow"] = waterFlow;
+  serializeJson(doc, state);
+  notifyState();
 }
 
 void Sensor::loop()
@@ -293,6 +397,106 @@ void Sensor::loop()
 #ifdef DEBUG_ONOFRE
       Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
+    }
+  }
+  break;
+  case LDC1612:
+  {
+    // No delayRead gate: a turn missed is a litre lost for ever, so this reads on
+    // every loop. Two 16-bit registers at 100 kHz costs about a millisecond.
+    if (!isInitialized())
+    {
+      if (!ldcWaterBegin())
+      {
+        // Say so once per second rather than on every loop, and keep trying: a long
+        // cable to a meter pit is exactly where an intermittent bus shows up.
+        if (lastRead + 1000ul < millis())
+        {
+          lastRead = millis();
+          reInit();
+          deviceLog("contador agua: sem resposta i2c");
+        }
+        return;
+      }
+      deviceLog("contador agua: %s ligado", FeatureDrivers::LDC1612);
+    }
+
+    const long value = ldcWaterRead();
+    if (value < 0)
+      return;
+
+    if (!waterPrimed)
+    {
+      waterSlowAverage = value;
+      waterPrimed = true;
+      waterWindowStart = millis();
+      waterResidualMin = waterResidualMax = 0;
+    }
+    // ~10 s time constant at this read rate. Integer maths: no floats in a loop that
+    // runs hundreds of times a second on an 80 MHz part.
+    waterSlowAverage += (value - waterSlowAverage) / 256;
+    const long residual = value - waterSlowAverage;
+
+    if (residual < waterResidualMin)
+      waterResidualMin = residual;
+    if (residual > waterResidualMax)
+      waterResidualMax = residual;
+
+    // Three seconds: the target turns once per litre, so under 1 Hz even at this
+    // meter's maximum flow. A shorter window would not contain a whole revolution.
+    if (millis() - waterWindowStart > 3000ul)
+    {
+      waterAmplitude = waterResidualMax - waterResidualMin;
+      waterResidualMin = waterResidualMax = residual;
+      waterWindowStart = millis();
+    }
+
+    // Below this the window is the sensor breathing, not water. Measured in place
+    // with the tap shut: 267 counts against 1,430 with it running.
+    constexpr long kWaterNoiseFloor = 800;
+    if (waterAmplitude > kWaterNoiseFloor)
+    {
+      // Trigger on the residual against its own amplitude. Comparing the raw value
+      // against the slow average instead lost one turn in seven on a real meter,
+      // because a shallow cycle riding on a moving average never reached a fixed
+      // offset from it.
+      const long trigger = waterAmplitude / 10;
+      if (!waterAbove && residual > trigger)
+      {
+        waterAbove = true;
+        const unsigned long now = millis();
+        if (waterLastTurn > 0ul && now > waterLastTurn)
+        {
+          // Litres per minute from the gap between turns. Clamped: the first turn
+          // after a long silence would otherwise read as an absurd flow.
+          const double minutes = (now - waterLastTurn) / 60000.0;
+          waterFlow = minutes > 0.0 ? litersPerTurn / minutes : 0.0;
+          if (waterFlow > 1000.0)
+            waterFlow = 0.0;
+        }
+        waterLastTurn = now;
+        waterLiters += litersPerTurn;
+        waterUnsavedTurns++;
+        publishWaterState();
+        // A long continuous draw — filling a pool — would otherwise reach the next
+        // checkpoint only when it stopped, and lose everything to a power cut.
+        if (waterUnsavedTurns >= 100)
+          persistWaterTotal();
+      }
+      else if (waterAbove && residual < -trigger)
+      {
+        waterAbove = false;
+      }
+    }
+
+    // No turn for twenty seconds means the tap is shut, not that the flow held.
+    if (waterLastTurn > 0ul && millis() - waterLastTurn > 20000ul && waterFlow != 0.0)
+    {
+      waterFlow = 0.0;
+      publishWaterState();
+      // The end of a draw is the natural moment to write the total: once per use of
+      // water rather than once per litre. A domestic day is a handful of writes.
+      persistWaterTotal();
     }
   }
   break;

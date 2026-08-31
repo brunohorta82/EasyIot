@@ -2,6 +2,46 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.202] - 2026-08-31
+
+### Added
+- **Water meters are now a feature: an inductive pickup on the meter's own rotating
+  target, read by an LDC1612 over I2C.** It is the same principle Itron's own Cyble
+  module uses — "detection is by change of induction", in their words — so it works
+  through a sealed cover, is immune to magnets, and needs no cooperation from the
+  water company. Validated on an Itron Aquadis+ before being written: 48 turns
+  counted against 56 litres on the meter's own register.
+- Publishes litres and flow, and reaches Home Assistant as two entities: the total
+  with `device_class: water` and `state_class: total_increasing`, which is what puts
+  it in the water dashboard on its own with daily and monthly consumption, and the
+  flow as `volume_flow_rate` in L/min.
+- The panel takes the meter's current reading in m³ and the litres-per-turn from the
+  meter's face. The coil counts turns of a target and cannot know what ran through
+  before it was fitted, so that number is typed in once — and it is written to flash
+  at the end of each draw, not once per litre, because flash wears out and a meter is
+  meant to keep counting for years.
+
+### Notes on what was measured
+- Thermal drift on this meter reached 84,000 counts over two seconds against a
+  1,400-count signal, so the driver subtracts a ten-second average and works on the
+  residual. Judged against a fixed baseline instead, the drift alone counted 1,638
+  litres in a minute that used none.
+- The trigger compares the residual with its own amplitude. Comparing the raw value
+  with the slow average — the obvious first attempt — lost one turn in seven, because
+  a shallow cycle riding on a moving average never reaches a fixed offset from it.
+- Accuracy at maximum flow was 86% with the coil hand-held over the target. A coil
+  made to fit the target would raise the margin considerably; the signal is 1,470
+  counts out of 43.9 million, which works but leaves little room.
+
+### Para testers
+- **Já se pode ler um contador de água.** Precisa de um sensor LDC1612 no I²C e de
+  uma bobina encostada ao contador, sobre o alvo — nos Itron Aquadis+ é o círculo
+  marcado na face, onde encaixaria o módulo da Itron.
+- Escreve-se a leitura actual do contador no painel (em m³, com os dígitos vermelhos)
+  e os litros por volta, que estão impressos na face — no Aquadis+ é **HF 1L**.
+- Em Home Assistant aparece sozinho no **painel de água**, com consumo diário e
+  mensal, sem configurares nada.
+
 ## [9.201] - 2026-08-28
 
 ### Added

@@ -43,6 +43,7 @@ const DRIVERS = [
     { v: 82, t: "PIR", n: "Movimento (PIR)", pins: 1 },
     { v: 83, t: "RAIN", n: "Chuva", pins: 1 },
     { v: 93, t: "HCSR04", n: "Distância (HC-SR04)", pins: 2 },
+    { v: 95, t: "LDC1612", n: "Contador de água (LDC1612)", pins: 2 },
     { v: 94, t: "LD2410", n: "Presença (LD2410)", pins: 2 },
     { v: 71, t: "PZEM_004T_V03", n: "Contador PZEM v3", pins: 2 },
     { v: 72, t: "PZEM_004T_V01", n: "Contador PZEM v1", pins: 2 },
@@ -973,6 +974,13 @@ function sensorText(state, driver) {
   if (o.power != null) bits.push(Math.round(o.power) + "W");
   if (o.distance != null) bits.push(Math.round(o.distance) + " cm");
   if (o.illuminance != null) bits.push(Math.round(o.illuminance) + " lx");
+  if (o.liters != null) {
+    // Cubic metres are how a water bill and the meter's own dial read; litres are
+    // what the last three digits say. Show both rather than making anyone divide.
+    const m3 = Number(o.liters) / 1000;
+    bits.push(m3.toFixed(3) + " m³");
+    if (Number(o.flow) > 0) bits.push(Number(o.flow).toFixed(1) + " L/min");
+  }
   if (o.motion != null) bits.push(o.motion === "detected" ? "movimento" : "sem movimento");
   if (o.rain != null) bits.push(o.rain === "rain" ? "a chover" : "sem chuva");
   if (o.state != null && !bits.length) {
@@ -984,7 +992,7 @@ function sensorText(state, driver) {
 }
 
 /* Numeric readings deserve the width; binary states do not. */
-const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "TMF882X"];
+const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "TMF882X", "LDC1612"];
 const CLIMATE_DRIVERS = ["DS18B20", "SHT4X", "DHT_11", "DHT_21", "DHT_22"];
 const CLIMATE_MAX_SAMPLES = 360;
 const isClimate = (f) => CLIMATE_DRIVERS.indexOf(f.driver) >= 0;
@@ -1193,6 +1201,20 @@ function renderFeatures() {
         '<input type="number" min="1" max="300" data-f="upCourseTime" data-i="' + i + '" value="' + (f.upCourseTime || 0) + '"></div>' +
         '<div class="field"><label>DESCIDA (s)</label>' +
         '<input type="number" min="1" max="300" data-f="downCourseTime" data-i="' + i + '" value="' + (f.downCourseTime || 0) + '"></div></div>' : "") +
+      (f.driver === "LDC1612" ?
+        // The coil counts turns of a target; it cannot know what ran through the
+        // meter before it was fitted. Typing the dial's own reading here is what
+        // makes the total mean something, and it is the one field that must be
+        // editable after installation.
+        '<div class="field"><label>LEITURA ACTUAL DO CONTADOR (m³)</label>' +
+        '<input type="number" step="0.001" min="0" data-f="waterCubic" data-i="' + i + '"' +
+        ' value="' + ((f.waterLiters || 0) / 1000).toFixed(3) + '"></div>' +
+        '<div class="field"><label>LITROS POR VOLTA</label>' +
+        '<input type="number" step="0.1" min="0.1" data-f="litersPerTurn" data-i="' + i + '"' +
+        ' value="' + (f.litersPerTurn || 1) + '"></div>' +
+        '<p class="note" style="margin:0 2px 10px">Copia os dígitos do mostrador, ' +
+        'incluindo os vermelhos (são litros). Os litros por volta estão marcados na ' +
+        'face do contador — no Itron Aquadis+ é <b>HF 1L</b>.</p>' : "") +
       (isActuator(f) ? '<div class="field"><label>DESLIGAR SOZINHO (segundos, 0 = nunca)</label>' +
         '<input type="number" min="0" data-f="autoOff" data-i="' + i + '" value="' + (f.autoOff || 0) + '"></div>' +
         '<div class="field"><label>ENDEREÇO KNX (área / linha / membro)</label><div class="row2" style="grid-template-columns:1fr 1fr 1fr">' +
@@ -1902,6 +1924,23 @@ document.addEventListener("change", (ev) => {
     // A <select> reports type "select-one", so numeric ones say so explicitly;
     // the firmware validates inputMode as an unsigned integer when it is sent.
     const numeric = f.type === "number" || f.dataset.num === "1";
+    // Cubic metres on screen, litres on the wire: the dial reads in m3 and the
+    // firmware counts litres, and doing the conversion here keeps a fractional
+    // field out of the device's parser.
+    if (key === "waterCubic") {
+      if (config.features[i]) {
+        config.features[i].waterLiters = Math.round((parseFloat(f.value) || 0) * 1000);
+        markDirty();
+      }
+      return;
+    }
+    if (key === "litersPerTurn") {
+      if (config.features[i]) {
+        config.features[i].litersPerTurn = Math.max(0.1, parseFloat(f.value) || 1);
+        markDirty();
+      }
+      return;
+    }
     const val = numeric ? (parseInt(f.value, 10) || 0) : f.value;
     if (config.features[i]) { config.features[i][key] = val; markDirty(); }
     return;
