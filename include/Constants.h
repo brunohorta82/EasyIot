@@ -135,8 +135,22 @@ namespace DefaultPins
     // Unused here, but referenced by ESP32-wide code paths.
     constexpr unsigned int PZEM_TX{6u};
     constexpr unsigned int PZEM_RX{7u};
+    // Overridable from the build. The pair below is this target's Smart Bus, and it
+    // is also the ESP32-C6's LP-I2C pair — the only one a low-power core can drive
+    // in deep sleep, which is why it is the default. But boards disagree: an M5Stack
+    // Unit C6L puts its Grove connector on GPIO5/4 and spends GPIO6 on a display's
+    // chip select, so a fixed constant makes that board unusable rather than merely
+    // inconvenient.
+#ifdef ONOFRE_I2C_SDA
+    constexpr int SDA{ONOFRE_I2C_SDA};
+#else
     constexpr int SDA{6u};
+#endif
+#ifdef ONOFRE_I2C_SCL
+    constexpr int SCL{ONOFRE_I2C_SCL};
+#else
     constexpr int SCL{7u};
+#endif
     constexpr int HAN_TX{6u};
     constexpr int HAN_RX{7u};
     // GPIO6/7 are the fixed Smart Bus I2C pins above. Exposing either one as a
