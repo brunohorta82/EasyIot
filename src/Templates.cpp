@@ -123,6 +123,25 @@ void prepareSHT4X(int hwAddress)
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
+void prepareWaterMeter()
+{
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::WATER_METER_NAME, sizeof(sensor.name));
+    sensor.inputs = {DefaultPins::SDA, DefaultPins::SCL};
+    sensor.driver = LDC1612;
+    sensor.hwAddress = Discovery::I2C_LDC1612_ADDRESS;
+    // The driver paces itself at 50 Hz; delayRead is descriptive here.
+    sensor.delayRead = 1000ul;
+    // Litres per turn is printed on the meter's face — HF 1L on an Itron Aquadis+ —
+    // and the running total is typed in from the dial. Starting at zero is honest:
+    // it says nothing is known yet rather than inventing a reading.
+    sensor.litersPerTurn = 1.0;
+    sensor.waterLiters = 0.0;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, sensor.hwAddress, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
 void prepareHCSR04(String name, unsigned int triggerPin, unsigned int echoPin)
 {
     Sensor sensor;
@@ -395,7 +414,7 @@ bool templateSelect(enum Template _template)
 {
     if (config.templateId != Template::NO_TEMPLATE)
         return false;
-    if (_template < Template::NO_TEMPLATE || _template > Template::GARDEN)
+    if (_template < Template::NO_TEMPLATE || _template > Template::WATER_METER)
         return false;
 #ifdef DEBUG_ONOFRE
     Log.info("%s Template selected: %d" CR, tags::webserver, _template);
@@ -427,6 +446,13 @@ bool templateSelect(enum Template _template)
         break;
     case HAN_MODULE:
         prepareHAN();
+        break;
+    case WATER_METER:
+        // Nothing but the meter. A board reading a water meter has no relays to
+        // drive, and any actuator the template invented would claim pins the I2C
+        // bus needs — which is exactly how the garden template, whose valves sit on
+        // the same GPIOs as I2C on some boards, made a water meter unconfigurable.
+        prepareWaterMeter();
         break;
     case GARDEN:
 #ifdef ESP32C6

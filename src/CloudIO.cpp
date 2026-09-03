@@ -487,7 +487,7 @@ void serviceCloudMqttSubscriptions()
     cloudMqttSubscriptionsPending = false;
     return;
   }
-  if (!config.tryBeginFeatureAccess())
+  if (!config.tryBeginFeatureAccess("cloudio"))
     return;
 
   mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1");
@@ -567,7 +567,7 @@ void serviceCloudIOMqtt()
       // retained pointer storage until onMqttDisconnect confirms completion.
       // Briefly gate feature publishers, mark the link unavailable, then drop
       // the gate before calling into the network client.
-      if (!config.tryBeginFeatureAccess())
+      if (!config.tryBeginFeatureAccess("cloudio"))
         return;
       enterCloudMqttTransportState(CloudMqttTransportState::DISCONNECTING);
       cloudMqttSubscriptionsPending = false;
@@ -627,7 +627,7 @@ void drainCloudIOCommands()
   // A busy graph is not an error: leave the command queued for the next pass.
   // Process at most one command so Cloud MQTT can never monopolize the feature
   // lease during a burst.
-  if (!config.tryBeginFeatureAccess())
+  if (!config.tryBeginFeatureAccess("cloudio"))
   {
     return;
   }
@@ -745,7 +745,7 @@ void connectToCloudIO()
     JsonVariant root = requestDoc.to<JsonVariant>();
     // Snapshot the vectors under a short lease, then release before any TLS,
     // HTTP, delay, or response parsing work.
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
 #ifdef DEBUG_ONOFRE
       Log.warning("%s Feature configuration busy; CloudIO snapshot deferred" CR, tags::cloudIO);
@@ -917,7 +917,7 @@ void connectToCloudIO()
 #endif
   if (httpCode == HTTP_CODE_NO_CONTENT)
   {
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
       config.requestCloudIOSync();
       return;
@@ -935,7 +935,7 @@ void connectToCloudIO()
   }
   if (httpCode != HTTP_CODE_OK)
   {
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
       config.requestCloudIOSync();
       return;
@@ -956,7 +956,7 @@ void connectToCloudIO()
     }
     // Applying credentials and all per-feature topics is one atomic view of
     // the returned configuration. Never wait in this networking callback.
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
 #ifdef DEBUG_ONOFRE
       Log.warning("%s Feature configuration busy; CloudIO apply deferred" CR, tags::cloudIO);

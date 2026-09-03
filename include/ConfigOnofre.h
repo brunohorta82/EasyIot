@@ -83,8 +83,26 @@ public:
   ConfigOnofre &save();
   ConfigOnofre &init();
   ConfigOnofre &load();
-  bool tryBeginFeatureAccess();
+  bool tryBeginFeatureAccess(const char *owner = "web");
+  /** Acquire the feature lease, retrying for up to timeoutMs.
+   *
+   *  A single attempt is the wrong contract for a request a person is waiting
+   *  on: the periodic feature loops hold the lease for a millisecond or two at
+   *  a time, so a one-shot caller loses often, and the yield window that a
+   *  failed attempt opens is wasted because a browser never retries a 409.
+   *  Waiting turns that collision into a brief pause instead of a failure.
+   *
+   *  ESP32 only waits. On ESP8266 networking and feature work share one
+   *  cooperative context, so waiting could never see the holder finish; there
+   *  this behaves exactly like tryBeginFeatureAccess(). */
+  bool waitBeginFeatureAccess(const char *owner, uint32_t timeoutMs);
   void endFeatureAccess();
+#ifdef DEBUG_ONOFRE
+  /** Who owns the feature lease right now, and since when. Read by the refusal
+   *  paths so a "busy" answer says what it lost to instead of nothing at all. */
+  const char *featureAccessOwnerName() const;
+  uint32_t featureAccessHeldMs() const;
+#endif
   ConfigOnofre &reloadFeatures();
   void i2cDiscovery();
   void requestI2cDiscovery();
@@ -113,6 +131,8 @@ public:
   void requestAutoUpdate();
   bool isAutoUpdateRequested();
   bool takeAutoUpdateRequest();
+  void requestSaveConfiguration();
+  bool takeSaveConfigurationRequest();
 
   void requestLoadDefaults();
   bool isLoadDefaultsRequested();
@@ -181,6 +201,8 @@ public:
     case SensorDriver::LTR303X:
     case SensorDriver::SHT4X:
     case SensorDriver::TMF882X:
+    case SensorDriver::LDC1612:
+      // I2C: both slots are bus lines, so both have to be drivable.
       return slot < 2 && validOutputPin(pin);
     case SensorDriver::INVALID_SENSOR:
     default:
@@ -224,7 +246,10 @@ public:
   void controlFeature(StateOrigin origin, String uniqueId, int state);
 
 private:
-  bool tryBeginFeatureLoopAccess();
+  bool tryBeginFeatureLoopAccess(const char *owner = "loop");
+  /** Notes who won the lease. A no-op in release builds, and called outside any
+   *  target conditional so the acquire paths stay free of nested #ifdefs. */
+  void recordFeatureAccessOwner(const char *owner);
   bool tryBeginConfigUpdate();
   void endConfigUpdate();
 #ifdef ESP32
@@ -237,6 +262,10 @@ private:
   std::atomic<bool> cloudIOSync{false};
   std::atomic<bool> wifiScan{false};
   std::atomic<bool> i2cDiscoveryRequested{false};
+  /** A water totaliser asked for its running count to be written. Coalesces: the
+   *  value lives in the sensor, so a second request before the first is served
+   *  saves the same number once. */
+  std::atomic<bool> saveConfiguration{false};
   // One non-reentrant lease serializes every top-level reader or writer of the
   // live feature vectors. Callers must fail fast instead of waiting while an
   // AsyncTCP/MQTT callback or another task owns it.
@@ -256,10 +285,22 @@ private:
   bool cloudIOSync = false;
   bool wifiScan = false;
   bool i2cDiscoveryRequested = false;
+  /** A water totaliser asked for its running count to be written. Coalesces: the
+   *  value lives in the sensor, so a second request before the first is served
+   *  saves the same number once. */
+  bool saveConfiguration = false;
   // ESP8266 runs cooperatively. Never wait or yield for this lease: nested or
   // competing access is rejected and retried by the top-level caller.
   bool featureAccessInProgress = false;
   uint32_t featureAccessYieldUntilMs = 0;
   int requestedTemplateId = Template::NO_TEMPLATE;
+#endif
+#ifdef DEBUG_ONOFRE
+  // Diagnostics only, and deliberately outside the atomic/plain split above:
+  // these two are never read to make a decision, only to name in a log the
+  // owner that a refused request lost to. A torn read would misname a line of
+  // text; it cannot affect the lease itself.
+  const char *featureAccessOwner = nullptr;
+  uint32_t featureAccessSinceMs = 0;
 #endif
 };

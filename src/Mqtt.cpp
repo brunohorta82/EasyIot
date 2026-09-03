@@ -124,7 +124,7 @@ void loopMqtt()
     // PubSubClient is synchronous: connect(), loop(), callback dispatch, state
     // publication, and configuration changes must never use the client or its
     // backing config strings concurrently from another task.
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("mqtt"))
         return;
     if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
     {
@@ -154,16 +154,17 @@ void loopMqtt()
     config.endFeatureAccess();
 }
 
-void publishOnMqtt(const char *topic, const char *payload, bool retain)
+bool publishOnMqtt(const char *topic, const char *payload, bool retain)
 {
     if (!mqttConnected())
     {
 #ifdef DEBUG_ONOFRE
         Log.warning("%s Connection Required" CR, tags::mqtt);
 #endif
-        return;
+        return false;
     }
-    if (mqttClient.publish(topic, payload, retain))
+    const bool published = mqttClient.publish(topic, payload, retain);
+    if (published)
     {
 #ifdef DEBUG_ONOFRE
         Log.error("%s Message %s published to the topic %s successfully" CR, tags::mqtt, payload, topic);
@@ -176,6 +177,7 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
         Log.error("%s Error on try publish to the topic %s with message %s" CR, tags::mqtt, topic, payload);
     }
 #endif
+    return published;
 }
 bool mqttConnected()
 {

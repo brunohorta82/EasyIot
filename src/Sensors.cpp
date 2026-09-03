@@ -153,15 +153,79 @@ void Sensor::persistWaterTotal()
   if (waterUnsavedTurns == 0)
     return;
   waterUnsavedTurns = 0;
-  // The whole configuration file, because that is where the sensor's own fields
-  // live. Deliberately rare: flash has a finite number of erases and a water meter
-  // is expected to keep counting for years.
-  config.save();
-  deviceLog("contador agua: %d L gravados", (int)waterLiters);
+  // Asked for, not done here. Writing the configuration file takes hundreds of
+  // milliseconds of LittleFS, and this runs inside loopSensors() with the feature
+  // lease held — every web request during the write would be answered "busy". The
+  // main loop performs it once the lease is free.
+  config.requestSaveConfiguration();
+  deviceLog("contador agua: %d L por gravar", (int)waterLiters);
+}
+
+void Sensor::updateWaterFloor()
+{
+  // The quiet level is the smallest amplitude seen recently. Two buckets give a
+  // sliding window of fifteen to thirty minutes in constant memory: a domestic
+  // supply is idle for part of any quarter hour, and thirty minutes bounds how
+  // long a wrong guess can persist.
+  constexpr unsigned long kQuietPeriodMs = 900000ul;
+  if (waterQuietPeriodStart == 0ul)
+    waterQuietPeriodStart = millis();
+  if (millis() - waterQuietPeriodStart >= kQuietPeriodMs)
+  {
+    waterQuietPrev = waterQuietNow;
+    waterQuietNow = -1;
+    waterQuietPeriodStart = millis();
+  }
+  // Only windows the detector treats as quiet feed the estimate, so a draw does
+  // not teach the ceiling its own signal. waterFloor starts at the conservative
+  // maximum, which makes everything quiet on the first pass and lets the true
+  // ceiling be learnt from below within a period.
+  if (waterAmplitude < waterFloor &&
+      (waterQuietNow < 0 || waterAmplitude > waterQuietNow))
+    waterQuietNow = waterAmplitude;
+
+  long quiet = waterQuietNow;
+  if (waterQuietPrev > quiet)
+    quiet = waterQuietPrev;
+  if (quiet < 0)
+    return;  // Nothing measured yet: leave the conservative threshold in place.
+
+  // Twice the quiet ceiling. Measured on an installed meter: the quiet amplitude
+  // peaks around 266 counts and a cistern refilling reads 806-1098, so double the
+  // ceiling sits at about 530 — clear of the loudest silence by two, and below the
+  // quietest real flow by one and a half. A fixed constant cannot do that on
+  // somebody else's meter, mount and coil distance, and choosing one by hand
+  // already cost a litre in seven.
+  long floor = quiet * 2;
+
+  // The clamps bound what the adaptation can get wrong.
+  //
+  // The lower one stops an unusually still sensor from setting a threshold near
+  // zero and counting its own breathing. The quiet level measured here was 130 to
+  // 208, so twice it clears 200 anyway and this rarely binds.
+  //
+  // The upper one is chosen from the flowing amplitude, not picked round: 600 is
+  // below the 806 counts measured while a cistern refilled, so the threshold can
+  // never climb past a real signal. That matters because amplitude alone cannot
+  // tell a steady leak from steady noise — both look like an unvarying level, and
+  // over half an hour a leak would teach the sliding minimum its own amplitude.
+  // The cap is what keeps the meter counting through it. A leak whose flow is so
+  // steady and so weak that it sits under 600 counts remains undetectable this
+  // way; separating that from noise needs periodicity, not a threshold, and
+  // guessing a number here instead would be exactly the mistake that has already
+  // cost a litre in seven.
+  constexpr long kFloorMin = 300;
+  constexpr long kFloorMax = 600;
+  if (floor < kFloorMin)
+    floor = kFloorMin;
+  if (floor > kFloorMax)
+    floor = kFloorMax;
+  waterFloor = floor;
 }
 
 void Sensor::publishWaterState()
 {
+  waterLastPublish = millis();
   JsonDocument doc;
   JsonObject obj = doc.to<JsonObject>();
   state.clear();
@@ -169,6 +233,15 @@ void Sensor::publishWaterState()
   // wants for a total_increasing water sensor.
   obj["liters"] = waterLiters;
   obj["flow"] = waterFlow;
+  // The signal strength behind those numbers. Published so a count can be judged
+  // rather than trusted: the noise floor was calibrated at one meter, and on a
+  // bench with no target in front of the coil this sensor counted fourteen
+  // phantom litres in seven minutes. Whoever installs the next one needs to see
+  // the amplitude, not guess it.
+  obj["amplitude"] = waterAmplitude;
+  // The threshold the device chose for itself, so an installation can be judged
+  // from its own numbers rather than from a constant somebody once measured.
+  obj["floor"] = waterFloor;
   serializeJson(doc, state);
   notifyState();
 }
@@ -184,11 +257,18 @@ void Sensor::loop()
   if (!hasRuntimeInputTopology())
   {
 #ifdef DEBUG_ONOFRE
+    // Do not report this as a count mismatch: a driver missing from the
+    // topology switch fails here with the counts matching, and a message
+    // reading "expected 2, found 2" sends the reader hunting the wrong bug.
     if (!error)
-      Log.error("%s Invalid input topology for %s: expected %u, found %u" CR,
-                tags::sensors, uniqueId,
+      Log.error("%s Rejected input topology for %s: driver %s, %u pin(s), "
+                "expected %u%s" CR,
+                tags::sensors, uniqueId, driverToText().c_str(),
+                static_cast<unsigned int>(inputs.size()),
                 static_cast<unsigned int>(expectedInputCount(driver)),
-                static_cast<unsigned int>(inputs.size()));
+                isSupportedOnCurrentTarget(driver)
+                    ? ""
+                    : " (driver not supported on this target)");
 #endif
     setError();
     return;
@@ -402,18 +482,43 @@ void Sensor::loop()
   break;
   case LDC1612:
   {
-    // No delayRead gate: a turn missed is a litre lost for ever, so this reads on
-    // every loop. Two 16-bit registers at 100 kHz costs about a millisecond.
+    // Fifty samples a second, and not one per loop iteration.
+    //
+    // Reading on every pass was written when the target was assumed to spin fast. It
+    // does not — once per litre, so under 1 Hz even at a domestic meter's maximum —
+    // and the cost of the assumption was severe: an I2C transaction every iteration
+    // holds the feature lease almost continuously, so the panel answered "feature
+    // configuration is busy" and the captive portal would not open at all.
+    //
+    // At 50 Hz there are still seventy samples per revolution, and the lease is free
+    // the rest of the time.
+    // 2^8 samples at fifty a second is 5.1 s.
+    //
+    // A ten-minute constant (shift 15) was tried and measured 5% against the
+    // dial where this measures 65%: with a long constant the residual carries a
+    // slow offset instead of sitting on zero, and the hysteresis below — which
+    // rearms only when the residual falls past minus the trigger — then never
+    // rearms. One turn per draw gets counted and the rest are lost. Lengthening
+    // the constant needs the trigger referred to the residual's own local mean
+    // first, which is a design change, not a constant.
+    constexpr int kWaterSlowShift = 8;
+    constexpr unsigned long kWaterReadInterval = 20ul;
+    if (lastRead + kWaterReadInterval > millis())
+      return;
+    lastRead = millis();
+
     if (!isInitialized())
     {
       if (!ldcWaterBegin())
       {
-        // Say so once per second rather than on every loop, and keep trying: a long
-        // cable to a meter pit is exactly where an intermittent bus shows up.
-        if (lastRead + 1000ul < millis())
+        // Keep trying rather than giving up until the next reboot: a long cable to a
+        // meter pit is exactly where an intermittent bus shows up. Complaining once a
+        // minute, because the log is a small ring buffer and a dead sensor would
+        // otherwise fill it and push out everything else.
+        reInit();
+        if (waterWindowStart == 0ul || millis() - waterWindowStart > 60000ul)
         {
-          lastRead = millis();
-          reInit();
+          waterWindowStart = millis();
           deviceLog("contador agua: sem resposta i2c");
         }
         return;
@@ -422,19 +527,37 @@ void Sensor::loop()
     }
 
     const long value = ldcWaterRead();
-    if (value < 0)
+    // Zero is not a reading. Asked immediately after begin(), before the first
+    // conversion has finished, the LDC1612 answers zero with no error bit set —
+    // and seeding the baseline with it left the filter climbing from zero to
+    // forty-four million, which at a ten-minute time constant blinded the
+    // detector for the best part of an hour after every restart. A coil in front
+    // of a target never reads anywhere near zero.
+    if (value <= 0)
       return;
 
     if (!waterPrimed)
     {
+      waterSlowScaled = static_cast<int64_t>(value) << kWaterSlowShift;
       waterSlowAverage = value;
+      waterLongMinNow = waterLongMaxNow = 0;
+      waterLongMinPrev = waterLongMaxPrev = 0;
+      waterLongPeriodStart = millis();
       waterPrimed = true;
+      waterPrimedAt = millis();
       waterWindowStart = millis();
       waterResidualMin = waterResidualMax = 0;
     }
-    // ~10 s time constant at this read rate. Integer maths: no floats in a loop that
-    // runs hundreds of times a second on an 80 MHz part.
-    waterSlowAverage += (value - waterSlowAverage) / 256;
+    // Integer arithmetic throughout: no floats in a loop that runs fifty times a
+    // second on a part without an FPU to spare.
+    //
+    // Ten minutes of time constant, chosen by simulation against three hours of
+    // real samples taken while the house slept and the only water moving was a
+    // leak: at five seconds the detector found one litre where ten had passed,
+    // and at this setting it found eleven. The old five seconds came from an
+    // assumption that the target span fast, which it does not.
+    waterSlowScaled += value - (waterSlowScaled >> kWaterSlowShift);
+    waterSlowAverage = static_cast<long>(waterSlowScaled >> kWaterSlowShift);
     const long residual = value - waterSlowAverage;
 
     if (residual < waterResidualMin)
@@ -442,26 +565,116 @@ void Sensor::loop()
     if (residual > waterResidualMax)
       waterResidualMax = residual;
 
-    // Three seconds: the target turns once per litre, so under 1 Hz even at this
-    // meter's maximum flow. A shorter window would not contain a whole revolution.
-    if (millis() - waterWindowStart > 3000ul)
+    // Eight seconds, measured and not chosen.
+    //
+    // Three seconds was justified by the meter's *maximum* flow and never held
+    // against a real one. At 4.7 L/min a revolution takes 12.7 s, so a
+    // three-second window measured 42% of the swing: the device published
+    // amplitudes of 166 to 714 against its own floor of 600 while water was
+    // visibly running, and counted 9 litres out of 35 — 26%.
+    //
+    // Full-rate bursts through one draw put the real cycle at 950 counts over
+    // 12.7 s. Simulating the whole detector, hysteresis included, over five of
+    // those bursts: three seconds finds 6 turns of 12, eight seconds finds 11,
+    // fifteen finds 6 again — a longer window raises the amplitude, which raises
+    // the trigger, which makes the rearm harder. Eight is the top of a plateau
+    // that holds across every trigger fraction tried, not a fragile maximum.
+    if (millis() - waterWindowStart > 8000ul)
     {
       waterAmplitude = waterResidualMax - waterResidualMin;
       waterResidualMin = waterResidualMax = residual;
       waterWindowStart = millis();
+      if (waterWindowsSettled < 2)
+        waterWindowsSettled++;
     }
 
-    // Below this the window is the sensor breathing, not water. Measured in place
-    // with the tap shut: 267 counts against 1,430 with it running.
-    constexpr long kWaterNoiseFloor = 800;
-    if (waterAmplitude > kWaterNoiseFloor)
+    // The long window, twenty minutes to a bucket, so its span is twenty to
+    // forty. Long enough to hold a whole revolution at three litres an hour,
+    // which is the regime the three-second window cannot see at all.
+    constexpr unsigned long kWaterLongPeriodMs = 1200000ul;
+    if (waterLongPeriodStart == 0ul ||
+        millis() - waterLongPeriodStart >= kWaterLongPeriodMs)
+    {
+      waterLongMinPrev = waterLongMinNow;
+      waterLongMaxPrev = waterLongMaxNow;
+      waterLongMinNow = waterLongMaxNow = residual;
+      waterLongPeriodStart = millis();
+    }
+    if (residual < waterLongMinNow)
+      waterLongMinNow = residual;
+    if (residual > waterLongMaxNow)
+      waterLongMaxNow = residual;
+    const long longMin = waterLongMinPrev < waterLongMinNow ? waterLongMinPrev : waterLongMinNow;
+    const long longMax = waterLongMaxPrev > waterLongMaxNow ? waterLongMaxPrev : waterLongMaxNow;
+    const long longAmplitude = longMax - longMin;
+    // Measured, not used. Taking the larger of the two windows inflated the
+    // trigger, and with it the amount the residual had to fall by to rearm — the
+    // same defect as the long time constant, from the other side. The long window
+    // stays here because it is what a leak needs, and it costs nothing to keep
+    // measuring while the trigger is made independent of it.
+    (void)longAmplitude;
+
+    // Three time constants of the high-pass filter. Until the slow average has
+    // caught up with the raw reading there is no meaningful residual to threshold,
+    // so measure the noise but never count a turn.
+    constexpr unsigned long kWaterWarmupMs = 30000ul;
+    if (millis() - waterPrimedAt < kWaterWarmupMs)
+    {
+      // Keep the window fresh so the first amplitude after warm-up describes the
+      // settled signal rather than the settling.
+      waterResidualMin = waterResidualMax = residual;
+      waterAmplitude = 0;
+      waterWindowsSettled = 0;
+      return;
+    }
+
+    // Wait for one whole window before trusting an amplitude. Counting on the
+    // first one after warm-up invented a litre on a real board: that window's
+    // extremes were reset at the warm-up boundary, so it measured a fraction of
+    // three seconds. Three seconds of caution, against a litre per restart.
+    if (waterWindowsSettled < 2)
+      return;
+
+    // Below the threshold the window is the sensor breathing, not water. The
+    // threshold is measured, not compiled in: see updateWaterFloor().
+    updateWaterFloor();
+
+    // An amplitude far above anything water can produce is a bus glitch or a
+    // re-initialisation, not flow. Measured on an installed meter: the quiet
+    // ceiling sits near 300 counts and a real draw reads 800 to 1400, so the
+    // signal is about five times the silence. Fifty times is therefore an order
+    // of magnitude above any genuine reading, and it catches what actually
+    // happened: a window of 90,911 counts counted a litre that never flowed.
+    // Expressed against the learnt ceiling rather than as a constant, because
+    // the ratio holds across installations while the absolute value does not.
+    if (waterQuietNow > 0 && waterAmplitude / 50 > waterQuietNow)
+    {
+      // Drop the window rather than the reading: the next one is measured from
+      // scratch, so a single glitch cannot leave a stale amplitude behind.
+      waterResidualMin = waterResidualMax = residual;
+      waterAmplitude = 0;
+      waterWindowStart = millis();
+      return;
+    }
+
+    if (waterAmplitude > waterFloor)
     {
       // Trigger on the residual against its own amplitude. Comparing the raw value
       // against the slow average instead lost one turn in seven on a real meter,
       // because a shallow cycle riding on a moving average never reached a fixed
       // offset from it.
       const long trigger = waterAmplitude / 10;
-      if (!waterAbove && residual > trigger)
+      // A DN15 domestic meter turns once per litre and cannot pass more than its
+      // overload flow, Q4 = 3.125 m3/h on this Aquadis+ — about 52 L/min, or one
+      // turn every 1.15 s. Anything faster is not water, so refuse to count it.
+      //
+      // 1200 and not 1000: a one-second gate admits 60 L/min, which is above that
+      // ceiling, and a bench board duly reported a turn at 58.88 L/min. The
+      // number here has to come from the meter's rating, not from a round figure.
+      constexpr unsigned long kWaterMinTurnIntervalMs = 1200ul;
+      const bool tooSoon = waterLastTurn > 0ul &&
+                           millis() - waterLastTurn < kWaterMinTurnIntervalMs;
+      if (!waterAbove && residual > trigger && !tooSoon)
       {
         waterAbove = true;
         const unsigned long now = millis();
@@ -480,7 +693,13 @@ void Sensor::loop()
         publishWaterState();
         // A long continuous draw — filling a pool — would otherwise reach the next
         // checkpoint only when it stopped, and lose everything to a power cut.
-        if (waterUnsavedTurns >= 100)
+        //
+        // Ten litres, not a hundred. A hundred was chosen to spare the flash and
+        // it costs too much: whatever has not reached disk is lost on any restart,
+        // and two litres went missing during a single installation simply because
+        // the board was power-cycled twice. Ten litres of granularity is a couple
+        // of dozen writes a day on a domestic supply, which the flash will outlive.
+        if (waterUnsavedTurns >= 10)
           persistWaterTotal();
       }
       else if (waterAbove && residual < -trigger)
@@ -488,6 +707,90 @@ void Sensor::loop()
         waterAbove = false;
       }
     }
+
+#ifdef DEBUG_ONOFRE
+    // A burst at the full read rate, once a minute. Filled one sample per pass,
+    // so the lease is never held for longer than a single I2C transaction.
+    if (waterBurst == nullptr)
+      waterBurst = static_cast<long *>(malloc(kWaterBurstSamples * sizeof(long)));
+    if (waterBurst != nullptr)
+    {
+      // Decimation first, on its own. Folding it into the condition below made
+      // the else branch run on four passes out of five, and since its timer had
+      // long expired it wiped the half-filled buffer every time — so the burst
+      // never completed and nothing was ever published, not even a failure.
+      if (++waterBurstDecimate >= 5)
+      {
+        waterBurstDecimate = 0;
+        if (waterBurstCount < kWaterBurstSamples)
+        {
+        waterBurst[waterBurstCount++] = value;
+        if (waterBurstCount == kWaterBurstSamples)
+        {
+          // Deltas between consecutive samples, not against the first: the step
+          // between two readings twenty milliseconds apart is tens of counts,
+          // where the offset from the first sample reaches hundreds. Smaller
+          // numbers make a smaller payload, and payload size is why the bursts
+          // that mattered never arrived — the ones published during a draw, when
+          // the client was busiest, were dropped in silence.
+          String payload = String("{\"t\":") + String(millis()) +
+                           ",\"base\":" + String(waterBurst[0]) + ",\"s\":[";
+          for (size_t i = 1; i < kWaterBurstSamples; i++)
+          {
+            if (i > 1)
+              payload += ',';
+            payload += String(waterBurst[i] - waterBurst[i - 1]);
+          }
+          payload += "]}";
+          const bool sent = publishOnMqtt(
+              String(String(readTopic) + "/burst").c_str(), payload.c_str(), false);
+          if (!sent)
+            deviceLog("contador agua: lote perdido (%u bytes)", payload.length());
+          waterBurstArmedAt = millis();
+          // Left full on purpose. Zeroing it here restarted the fill on the very
+          // next pass, so the sixty-second gate below was dead code and this
+          // published a kilobyte and a half every five seconds.
+          waterBurstCount = kWaterBurstSamples;
+        }
+        }
+        else if (millis() - waterBurstArmedAt >= 60000ul)
+        {
+          waterBurstCount = 0;
+        }
+      }
+    }
+
+    // Temporary instrumentation, debug builds only: raw samples every two
+    // seconds on a topic of their own, so the drift of the baseline over minutes
+    // can be measured before a slow channel is designed around it. The fast
+    // detector cannot see flow slower than about 15 L/h — not because the signal
+    // is weaker, it is the same size, but because the five-second high-pass
+    // follows it and cancels it. Whether a minutes-long window is usable depends
+    // entirely on how far the baseline wanders, which is a measurement, not a
+    // guess. A separate topic keeps this out of the state payload, where a
+    // Home Assistant value template would choke on it.
+    //
+    // One shared timer: this build carries a single meter, and the alternative is
+    // a member that ships in release for no reason.
+    static unsigned long rawPublishedAt = 0ul;
+    if (millis() - rawPublishedAt >= 2000ul)
+    {
+      rawPublishedAt = millis();
+      char payload[96];
+      snprintf(payload, sizeof(payload),
+               "{\"raw\":%ld,\"avg\":%ld,\"res\":%ld,\"amp\":%ld}",
+               value, waterSlowAverage, residual, waterAmplitude);
+      publishOnMqtt(String(String(readTopic) + "/raw").c_str(), payload, false);
+    }
+#endif
+
+    // Announce the total even when nothing is running. The first publish happens
+    // as soon as the sensor has a reading, so the panel never sits on a dash
+    // waiting for somebody to open a tap.
+    constexpr unsigned long kWaterPublishInterval = 60000ul;
+    if (waterLastPublish == 0ul ||
+        millis() - waterLastPublish >= kWaterPublishInterval)
+      publishWaterState();
 
     // No turn for twenty seconds means the tap is shut, not that the flow held.
     if (waterLastTurn > 0ul && millis() - waterLastTurn > 20000ul && waterFlow != 0.0)

@@ -74,6 +74,7 @@ function driverLabel(token) {
 const TEMPLATES = [
   { v: 1, n: "Duas luzes" }, { v: 2, n: "Duas tomadas" }, { v: 3, n: "Estore" },
   { v: 4, n: "Portão" }, { v: 5, n: "Contador HAN" }, { v: 6, n: "Rega" },
+  { v: 7, n: "Contador de água" },
 ];
 
 /* Inline so the panel keeps working with no network: an icon set is the first
@@ -1206,15 +1207,24 @@ function renderFeatures() {
         // meter before it was fitted. Typing the dial's own reading here is what
         // makes the total mean something, and it is the one field that must be
         // editable after installation.
-        '<div class="field"><label>LEITURA ACTUAL DO CONTADOR (m³)</label>' +
-        '<input type="number" step="0.001" min="0" data-f="waterCubic" data-i="' + i + '"' +
-        ' value="' + ((f.waterLiters || 0) / 1000).toFixed(3) + '"></div>' +
+        // Two fields because the dial has two registers, in two colours. A single
+        // field in m3 asked people to divide the red digits by a thousand in their
+        // head, and the note telling them to copy every digit contradicted the
+        // unit on the label — so a reading of 400 m3 and 450 L was entered as
+        // 400450 m3, a thousandfold error that looks perfectly reasonable.
+        '<div class="row2"><div class="field"><label>M³ · DÍGITOS PRETOS</label>' +
+        '<input type="number" step="1" min="0" data-f="waterCubicWhole" data-i="' + i + '"' +
+        ' value="' + Math.floor((f.waterLiters || 0) / 1000) + '"></div>' +
+        '<div class="field"><label>LITROS · DÍGITOS VERMELHOS</label>' +
+        '<input type="number" step="1" min="0" max="999" data-f="waterLitresPart" data-i="' + i + '"' +
+        ' value="' + Math.round((f.waterLiters || 0) % 1000) + '"></div></div>' +
         '<div class="field"><label>LITROS POR VOLTA</label>' +
         '<input type="number" step="0.1" min="0.1" data-f="litersPerTurn" data-i="' + i + '"' +
         ' value="' + (f.litersPerTurn || 1) + '"></div>' +
-        '<p class="note" style="margin:0 2px 10px">Copia os dígitos do mostrador, ' +
-        'incluindo os vermelhos (são litros). Os litros por volta estão marcados na ' +
-        'face do contador — no Itron Aquadis+ é <b>HF 1L</b>.</p>' : "") +
+        '<p class="note" style="margin:0 2px 10px">Copia os dígitos tal como estão no ' +
+        'mostrador: os <b>pretos</b> são metros cúbicos, os <b>vermelhos</b> são litros. ' +
+        'Os litros por volta estão marcados na face do contador — no Itron Aquadis+ é ' +
+        '<b>HF 1L</b>.</p>' : "") +
       (isActuator(f) ? '<div class="field"><label>DESLIGAR SOZINHO (segundos, 0 = nunca)</label>' +
         '<input type="number" min="0" data-f="autoOff" data-i="' + i + '" value="' + (f.autoOff || 0) + '"></div>' +
         '<div class="field"><label>ENDEREÇO KNX (área / linha / membro)</label><div class="row2" style="grid-template-columns:1fr 1fr 1fr">' +
@@ -1924,12 +1934,18 @@ document.addEventListener("change", (ev) => {
     // A <select> reports type "select-one", so numeric ones say so explicitly;
     // the firmware validates inputMode as an unsigned integer when it is sent.
     const numeric = f.type === "number" || f.dataset.num === "1";
-    // Cubic metres on screen, litres on the wire: the dial reads in m3 and the
-    // firmware counts litres, and doing the conversion here keeps a fractional
-    // field out of the device's parser.
-    if (key === "waterCubic") {
+    // The dial reads in two registers and the firmware counts one total, so the
+    // two inputs are combined here. Both are read from the DOM rather than from
+    // the model: whichever one was just typed is not in the model yet.
+    if (key === "waterCubicWhole" || key === "waterLitresPart") {
       if (config.features[i]) {
-        config.features[i].waterLiters = Math.round((parseFloat(f.value) || 0) * 1000);
+        const readField = function (name) {
+          const el = document.querySelector(
+            '[data-f="' + name + '"][data-i="' + i + '"]');
+          return el ? Math.max(0, Math.floor(parseFloat(el.value) || 0)) : 0;
+        };
+        const litres = Math.min(999, readField("waterLitresPart"));
+        config.features[i].waterLiters = readField("waterCubicWhole") * 1000 + litres;
         markDirty();
       }
       return;

@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG_HEADER = ROOT / "include" / "ConfigOnofre.h"
 CONFIG_SOURCE = ROOT / "src" / "ConfigOnofre.cpp"
 CONSTANTS_HEADER = ROOT / "include" / "Constants.h"
+CAPTIVE_PORTAL_HEADER = ROOT / "include" / "CaptivePortal.h"
 ACTUATOR_HEADER = ROOT / "include" / "Actuatores.h"
 ACTUATOR_SOURCE = ROOT / "src" / "Actuatores.cpp"
 SENSOR_HEADER = ROOT / "include" / "Sensors.h"
@@ -346,10 +347,33 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         # slow average lost one turn in seven, because a shallow cycle riding on a
         # moving average never reached a fixed offset from it.
         block = block_after(self.sensors, r"case LDC1612:")
-        self.assertIn("waterSlowAverage += (value - waterSlowAverage) / 256;", block)
+        # The high-pass is a fixed-point accumulator, not a plain average with a
+        # divisor: the ten-minute time constant is 32,768 samples, and integer
+        # `+= diff / 32768` truncates to zero and never moves the baseline.
+        # Back to 5.1 s: shift 15 measured 5% against the dial where this
+        # measures 65%, because a long constant leaves the residual with a slow
+        # offset and the hysteresis never rearms.
+        self.assertIn("kWaterSlowShift = 8;", block)
+        self.assertIn("waterSlowScaled += value - (waterSlowScaled >> kWaterSlowShift);", block)
+        # Two amplitude windows, and the detector takes the larger. A three-second
+        # window measures a flush perfectly and a leak not at all: simulated
+        # against three hours of real night samples, the old single window found
+        # one litre where ten had passed, and this pair found eleven.
+        # The long window is measured but must not feed the trigger: doing so
+        # inflated how far the residual had to fall to rearm.
+        self.assertIn("(void)longAmplitude;", block)
+        self.assertIn("kWaterLongPeriodMs = 1200000ul;", block)
+        # Eight seconds, measured: three saw 42% of a 12.7 s revolution and the
+        # device counted 9 litres of 35, while eight recovers 11 turns of 12 in
+        # simulation over real bursts. Fifteen counts fewer again, because a
+        # larger amplitude means a larger trigger and a harder rearm.
+        self.assertIn("millis() - waterWindowStart > 8000ul", block)
         self.assertIn("const long residual = value - waterSlowAverage;", block)
         self.assertIn("const long trigger = waterAmplitude / 10;", block)
-        self.assertIn("if (!waterAbove && residual > trigger)", block)
+        # The guards that follow the comparison may grow; what must not change is
+        # that the decision is the residual against its own amplitude.
+        self.assertIn("const long trigger = waterAmplitude / 10;", block)
+        self.assertRegex(block, r"if \(!waterAbove && residual > trigger")
         # The error flags are not data: a reading taken while the oscillator is
         # unhappy would be counted as a turn.
         clock = block_after(self.sensors, r"long Sensor::ldcWaterRead\(\)")
@@ -489,6 +513,8 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             r"case\s+SensorDriver::LTR303X\s*:\s*"
             r"case\s+SensorDriver::SHT4X\s*:\s*"
             r"case\s+SensorDriver::TMF882X\s*:\s*"
+            r"case\s+SensorDriver::LDC1612\s*:\s*"
+            r"(//[^\n]*\n\s*)*"
             r"return\s+slot\s*<\s*2\s*&&\s*validOutputPin",
         )
         self.assertRegex(
@@ -604,7 +630,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertOrdered(
             service,
             "i2cDiscoveryRequested.exchange(false",
-            "if (!tryBeginFeatureAccess())",
+            'if (!tryBeginFeatureAccess("i2cDiscovery"))',
             "requestI2cDiscovery();",
             "i2cDiscovery();",
             "endFeatureAccess();",
@@ -667,7 +693,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         )
         self.assertOrdered(
             config_loop,
-            "if (!tryBeginFeatureLoopAccess())",
+            'if (!tryBeginFeatureLoopAccess("loopSensors"))',
             "if (!sensor.ready)",
             "endFeatureAccess();",
             "return;",
@@ -677,7 +703,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
 
     def test_feature_access_lease_is_non_reentrant_and_non_blocking(self) -> None:
         begin = block_after(
-            self.config, r"bool\s+ConfigOnofre::tryBeginFeatureAccess\s*\(\s*\)"
+            self.config, r"bool\s+ConfigOnofre::tryBeginFeatureAccess\s*\([^)]*\)"
         )
         esp32, esp8266 = esp32_branches(begin)
         self.assertOrdered(
@@ -710,9 +736,294 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         )
         self.assertIn("featureAccessInProgress = false;", end_esp8266)
 
+    def test_discovery_never_publishes_an_empty_state(self) -> None:
+        # Observed on a live broker: a freshly booted device published a
+        # zero-byte payload to its own state topic before any reading existed.
+        # A value template over an empty payload fails, so the entity goes
+        # unknown and Home Assistant logs an error on every reconnect — and a
+        # zero-byte retained publish also deletes the retained state, leaving a
+        # later-starting Home Assistant with no value at all.
+        body = block_after(self.homeassistant, r"void\s+initHomeAssistantDiscovery\s*\(")
+        self.assertIn("if (ss.state.length() > 0)", body)
+        # The entity must claim the topic before its state is sent.
+        self.assertLess(
+            body.index("addToHomeAssistant(ss);"),
+            body.index("publishOnMqtt(ss.readTopic"),
+            "state is published before the entity that claims the topic exists",
+        )
+
+    def test_the_water_detector_refuses_impossible_and_unsettled_turns(self) -> None:
+        # Measured on a bench board: the first amplitude window after boot read
+        # 43,721,205 against a working signal of roughly 1,500, because the slow
+        # average starts at the raw reading and needs three time constants to
+        # catch up. Counting during that window invents turns out of nothing.
+        sensors = self.sensors
+        self.assertIn("kWaterWarmupMs", sensors)
+        self.assertIn("waterPrimedAt = millis();", sensors)
+        warmup = sensors[sensors.index("kWaterWarmupMs") :][:600]
+        self.assertIn("waterAmplitude = 0;", warmup)
+        self.assertIn("return;", warmup)
+
+        # A DN15 meter turns once per litre and cannot exceed its overload flow,
+        # so turns closer together than a second are not water.
+        # The gate must come from the meter's rating: Q4 = 52 L/min is one turn
+        # every 1.15 s, so a one-second gate admits an impossible 60 L/min — and
+        # a bench board duly reported 58.88 L/min through it.
+        # The first amplitude window after warm-up is half-filled and read 4,404
+        # on a real board where the settled figure was about 170, inventing one
+        # litre per restart. Wait for a whole window.
+        # The threshold is measured by the device, not compiled in: this firmware
+        # ships to meters, mounts and coil distances nobody here has seen, and a
+        # constant chosen by hand was wrong twice — 800 (taken while the sensor
+        # was being handled) cost a litre in seven on a real flush.
+        self.assertNotIn("kWaterNoiseFloor", sensors)
+        self.assertIn("updateWaterFloor();", sensors)
+        self.assertIn("waterAmplitude > waterFloor", sensors)
+        floor = block_after(sensors, r"void\s+Sensor::updateWaterFloor\s*\(")
+        # Two buckets: a sliding window in constant memory.
+        self.assertIn("waterQuietPrev = waterQuietNow;", floor)
+        self.assertIn("long floor = quiet * 2;", floor)
+        # The CEILING of the quiet amplitude, not its minimum. Twice the minimum
+        # was tried on a real meter whose quiet level wanders between 125 and 266
+        # counts: it put the threshold at 250, in the middle of the noise, left
+        # the detector permanently armed and counted ten phantom litres in an
+        # hour. The comparison must therefore keep the largest quiet sample.
+        self.assertIn("waterAmplitude > waterQuietNow", floor)
+        self.assertIn("waterAmplitude < waterFloor", floor)
+        self.assertIn("waterQuietPrev > quiet", floor)
+        # And it must start high: a threshold that begins low invents water,
+        # while one that begins high only delays it until the ceiling is known.
+        self.assertIn("long waterFloor = 600;", self.sensor_header)
+        # The cap comes from the measured flowing amplitude (806), so the
+        # threshold can never climb above a real signal — which is what keeps a
+        # steady leak from teaching the minimum its own level and silencing it.
+        self.assertIn("kFloorMax = 600;", floor)
+        self.assertIn("kFloorMin = 300;", floor)
+        # The chosen threshold travels with the reading, so an installation can be
+        # judged from its own numbers.
+        self.assertIn('obj["floor"] = waterFloor;', sensors)
+
+        self.assertIn("waterWindowsSettled < 2", sensors)
+        self.assertIn("waterWindowsSettled = 0;", sensors)
+
+        self.assertIn("kWaterMinTurnIntervalMs = 1200ul;", sensors)
+        self.assertIn("!tooSoon", sensors)
+
+        # The amplitude travels with the reading: the noise floor was calibrated
+        # at one meter, and a count is only trustworthy if the signal behind it
+        # can be seen. Bench idle noise measured 7,254 against a floor of 800.
+        self.assertIn('obj["amplitude"] = waterAmplitude;', sensors)
+
+        # A window far above anything water can produce is a glitch. Measured on
+        # an installed meter, a real draw is about five times the quiet ceiling;
+        # a window of 90,911 counts counted a litre that never flowed.
+        # Division, not multiplication: while the filter settles the ceiling can
+        # reach tens of millions, and 43e6 * 50 overflows a 32-bit long into a
+        # negative value, which rejects every window instead of the absurd ones.
+        self.assertIn("waterAmplitude / 50 > waterQuietNow", sensors)
+        # And a reading of zero is not a reading: that is what the LDC1612
+        # answers before its first conversion completes, and seeding the
+        # baseline with it blinded the detector for an hour after each restart.
+        self.assertIn("if (value <= 0)", sensors)
+
+        # Whatever has not reached disk is lost on a restart, so the checkpoint
+        # bounds how much water a power cut can erase. A hundred litres was too
+        # generous: two litres vanished across one installation's power cycles.
+        self.assertIn("if (waterUnsavedTurns >= 10)", sensors)
+
+    def test_every_sensor_driver_is_named_in_the_topology_switch(self) -> None:
+        # A driver missing from hasRuntimeInputTopology() falls through to
+        # default:false, which marks the sensor permanently failed. Worse, the
+        # log then blamed the pin count and printed "expected 2, found 2",
+        # because a count mismatch was assumed to be the only way to get here.
+        header = self.sensor_header
+        members = re.search(r"enum\s+SensorDriver\s*\{(.*?)\}", header, re.S)
+        self.assertIsNotNone(members)
+        names = [
+            entry.split("=")[0].strip()
+            for entry in members.group(1).split(",")
+            if entry.split("=")[0].strip()
+        ]
+        self.assertIn("LDC1612", names)
+
+        start = header.index("bool hasRuntimeInputTopology() const")
+        body = header[start : header.index("\n  }", start)]
+        missing = [name for name in names if f"case {name}:" not in body]
+        self.assertEqual(
+            missing,
+            [],
+            f"drivers absent from hasRuntimeInputTopology(): {missing}",
+        )
+
+        # The rejection message must not name a count mismatch as the cause.
+        self.assertIn("Rejected input topology", self.sensors)
+        self.assertNotIn("Invalid input topology", self.sensors)
+
+    def test_the_water_total_survives_every_round_trip(self) -> None:
+        # The total is the one value a coil cannot rediscover: it counts turns
+        # from the moment it was fitted. It was written to flash but exposed by
+        # neither /config nor /backup, so the panel showed zero and a restore
+        # dropped the reading without saying so.
+        for name, source in (
+            ("persist", self.config),
+            ("json", self.config),
+            ("backup", self.config),
+        ):
+            self.assertIn("waterLiters", source, name)
+        for func in (
+            r"bool\s+ConfigOnofre::persist\s*\(",
+            r"void\s+ConfigOnofre::json\s*\(",
+            r"void\s+ConfigOnofre::backup\s*\(",
+        ):
+            body = block_after(self.config, func)
+            self.assertIn(
+                "waterLiters",
+                body,
+                f"{func} does not carry the meter total",
+            )
+            self.assertIn("litersPerTurn", body)
+
+        # The dial has two registers in two colours; the panel must ask for them
+        # the same way. A single m3 field with a note saying "copy the red digits
+        # too" invited a thousandfold error.
+        self.assertIn('data-f="waterCubicWhole"', self.panel)
+        self.assertIn('data-f="waterLitresPart"', self.panel)
+        self.assertNotIn('data-f="waterCubic"', self.panel)
+        self.assertIn('readField("waterCubicWhole") * 1000', self.panel)
+
+        # A meter with the tap shut produces no turns. Without a heartbeat the
+        # panel and Home Assistant would show nothing until somebody drew water.
+        sensors = self.sensors
+        self.assertIn("kWaterPublishInterval", sensors)
+        self.assertIn("waterLastPublish", sensors)
+        self.assertIn("waterLastPublish = millis();", sensors)
+
+    def test_every_template_upper_bound_tracks_the_last_enum_member(self) -> None:
+        # Adding WATER_METER meant raising four separate upper bounds, spread
+        # over three files, and missing any one of them rejected the template
+        # with a message that named no reason. Pin them all to the last member
+        # so the next template addition fails here instead of in the field.
+        members = [
+            m.strip()
+            for m in self.constants[
+                self.constants.index("enum Template") : self.constants.index("};")
+            ]
+            .split("{")[1]
+            .split(",")
+            if m.strip()
+        ]
+        last = members[-1]
+
+        bound = re.compile(
+            r">\s*(?:static_cast\s*<\s*unsigned int\s*>\s*\(\s*)?Template::(\w+)"
+        )
+        checked = 0
+        for name, source in (
+            ("WebServer.cpp", self.server),
+            ("ConfigOnofre.cpp", self.config),
+            ("Templates.cpp", self.templates),
+        ):
+            for found in bound.findall(source):
+                checked += 1
+                self.assertEqual(
+                    found,
+                    last,
+                    f"{name} bounds templates at Template::{found}, "
+                    f"but the enum now ends at Template::{last}",
+                )
+        self.assertGreaterEqual(checked, 3)
+
+    def test_the_water_meter_template_is_offered_in_both_places(self) -> None:
+        # A fresh board is configured from the captive portal, whose template
+        # list is HTML in the firmware and entirely separate from the panel's.
+        # Adding a template to only one of them leaves it unreachable exactly
+        # where it is needed most.
+        self.assertIn("WATER_METER,", self.constants)
+        water_id = (
+            self.constants[self.constants.index("enum Template") :]
+            .split("};")[0]
+            .replace("enum Template", "")
+            .strip(" \n{")
+            .split(",")
+        )
+        water_id = [x.strip() for x in water_id if x.strip()].index("WATER_METER")
+        self.assertEqual(water_id, 7)
+
+        portal = CAPTIVE_PORTAL_HEADER.read_text(encoding="utf-8")
+        self.assertIn(f"<option value='{water_id}'>", portal)
+        self.assertRegex(self.panel, r"\{\s*v:\s*7\s*,\s*n:\s*\"Contador de água\"")
+
+    def test_web_requests_wait_for_the_lease_instead_of_failing_once(self) -> None:
+        # Measured on a C6: the feature loops hold the lease for 1-3ms at a
+        # time, so a single attempt loses often enough that saving Wi-Fi from
+        # the captive portal failed repeatedly. A browser never retries a 409,
+        # so the wait has to happen on the device.
+        wait = block_after(
+            self.config,
+            r"bool\s+ConfigOnofre::waitBeginFeatureAccess\s*\([^)]*\)",
+        )
+        esp32, esp8266 = esp32_branches(wait)
+        self.assertIn("delay(2);", esp32)
+        self.assertIn("tryBeginFeatureAccess(owner)", esp32)
+        # ESP8266 shares one cooperative context with networking: waiting there
+        # could never see the holder finish.
+        self.assertNotIn("delay(", esp8266)
+        self.assertNotIn("while", esp8266)
+
+        # No web handler may keep the one-shot form: that is the bug.
+        self.assertNotIn("config.tryBeginFeatureAccess(", self.server)
+        self.assertIn("kRequestLeaseWaitMs", self.server)
+        self.assertGreaterEqual(
+            self.server.count("config.waitBeginFeatureAccess("), 11
+        )
+
+        # The main loop and feature loops must NOT wait: they run in the context
+        # the waiters are waiting for.
+        self.assertNotIn("waitBeginFeatureAccess", self.main)
+
+    def test_a_refused_request_names_the_lease_owner(self) -> None:
+        # A "busy" answer with nothing in the log cost a full debugging session:
+        # both refusal paths returned before any log statement, so a debug build
+        # was as silent as a release one. Keep the owner in the message.
+        self.assertIn("void recordFeatureAccessOwner(const char *owner);", self.header)
+        self.assertIn("const char *featureAccessOwnerName() const;", self.header)
+        self.assertIn("uint32_t featureAccessHeldMs() const;", self.header)
+
+        captive = block_after(self.server, r"void\s+handleRequest\s*\(")
+        self.assertOrdered(
+            captive,
+            'config.waitBeginFeatureAccess("captive", kRequestLeaseWaitMs)',
+            "config.featureAccessOwnerName()",
+            "config.featureAccessHeldMs()",
+            "response->setCode(409);",
+        )
+
+        busy = block_after(self.server, r"void\s+sendFeatureBusy\s*\(")
+        self.assertIn("config.featureAccessOwnerName()", busy)
+        self.assertIn("config.featureAccessHeldMs()", busy)
+
+        # Every acquirer carries a name, so the log can never say "web" for work
+        # that came from a feature loop or the Wi-Fi task.
+        for owner in (
+            '"loopSensors"',
+            '"loopActuators"',
+            '"i2cDiscovery"',
+            '"saveConfiguration"',
+            '"autoUpdate"',
+            '"templateApply"',
+        ):
+            self.assertTrue(
+                owner in self.config or owner in self.main,
+                f"lease owner label missing: {owner}",
+            )
+
     def test_single_feature_access_lease_replaces_the_old_nested_gate(self) -> None:
         public_api = self.header[: self.header.index("private:")]
-        self.assertIn("bool tryBeginFeatureAccess();", public_api)
+        # The owner label is diagnostics carried by a default argument, so
+        # every existing call site still acquires the one non-reentrant lease.
+        self.assertIn(
+            'bool tryBeginFeatureAccess(const char *owner = "web");', public_api
+        )
         self.assertIn("void endFeatureAccess();", public_api)
 
         obsolete = (
@@ -733,8 +1044,12 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         begin = block_after(
             self.config, r"bool\s+ConfigOnofre::tryBeginConfigUpdate\s*\(\s*\)"
         )
-        self.assertEqual(begin.count("tryBeginFeatureAccess()"), 1)
-        self.assertRegex(begin, r"return\s+tryBeginFeatureAccess\s*\(\s*\)\s*;")
+        # A save is a person waiting, so it waits for the lease like every other
+        # request rather than failing on the first collision.
+        self.assertEqual(begin.count("waitBeginFeatureAccess("), 1)
+        self.assertRegex(
+            begin, r'return\s+waitBeginFeatureAccess\s*\(\s*"configUpdate"'
+        )
         self.assertNotIn("featureAccessInProgress", begin)
         self.assertNotIn("#ifdef", begin)
 
@@ -1470,15 +1785,20 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             r"\[\]\s*\(\s*AsyncWebServerRequest\s*\*request\s*,\s*String\s+filename\s*,\s*"
             r"size_t\s+index\s*,\s*uint8_t\s*\*data\s*,\s*size_t\s+len\s*,\s*bool\s+final\s*\)",
         )
-        self.assertEqual(upload.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(
+            upload.count('config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs)'),
+            1,
+        )
         first_chunk = block_after(upload, r"if\s*\(\s*!index\s*\)")
-        self.assertIn("config.tryBeginFeatureAccess()", first_chunk)
+        self.assertIn(
+            'config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs)', first_chunk
+        )
         self.assertIn("authorizeRequest(request, false, &authBusy)", first_chunk)
         self.assertIn("state->busy = true;", first_chunk)
         self.assertIn("state->ownsFeatureAccess = true;", first_chunk)
         self.assertNotIn("requestAuthentication", first_chunk)
         before_first_chunk = upload[: upload.index("if (!index)")]
-        self.assertNotIn("config.tryBeginFeatureAccess()", before_first_chunk)
+        self.assertNotIn("config.waitBeginFeatureAccess(", before_first_chunk)
         self.assertNotIn("authorizeRequest(request)", before_first_chunk)
         self.assertNotIn("pauseFeatures", upload)
         self.assertNotIn("resumeFeatures", upload)

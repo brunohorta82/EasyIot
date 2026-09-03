@@ -29,6 +29,11 @@
 #include <ESP8266mDNS.h>
 #include <WiFiClientSecureBearSSL.h>
 #endif
+// Requests a person is waiting on wait for the feature lease instead of failing
+// on the first collision. 300ms is far longer than any feature loop holds it,
+// and short enough that a genuinely stuck lease still answers rather than
+// hanging the connection.
+static constexpr uint32_t kRequestLeaseWaitMs = 300;
 extern ConfigOnofre config;
 
 DNSServer dnsServer;
@@ -132,6 +137,7 @@ bool isCaptiveTemplateAllowed(int templateId)
   case Template::COVER:
   case Template::GARAGE:
   case Template::GARDEN:
+  case Template::WATER_METER:
     return true;
   default:
     return false;
@@ -309,8 +315,13 @@ public:
     // silently truncate the ESP8266 response before the form was appended.
     AsyncResponseStream *response = request->beginResponseStream("text/html", 4096);
     response->addHeader("Cache-Control", "no-store");
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("captive", kRequestLeaseWaitMs))
     {
+#ifdef DEBUG_ONOFRE
+      Log.error("%s Captive portal refused: lease held by %s for %ums" CR,
+                tags::system, config.featureAccessOwnerName(),
+                config.featureAccessHeldMs());
+#endif
       response->setCode(409);
       response->print("Feature configuration is busy; retry shortly.");
       request->send(response);
@@ -511,6 +522,11 @@ AsyncJsonResponse *errorResponse(const char *cause, int status = 400)
 
 void sendFeatureBusy(AsyncWebServerRequest *request)
 {
+#ifdef DEBUG_ONOFRE
+  Log.error("%s %s refused: lease held by %s for %ums" CR, tags::system,
+            request->url().c_str(), config.featureAccessOwnerName(),
+            config.featureAccessHeldMs());
+#endif
   request->send(errorResponse("Feature configuration is busy; retry shortly", 409));
 }
 
@@ -583,7 +599,7 @@ void loadAPI()
             {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -618,7 +634,7 @@ void loadAPI()
           request->send(errorResponse("Restore request must be a JSON object"));
           return;
         }
-        if (!config.tryBeginFeatureAccess())
+        if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
         {
           sendFeatureBusy(request);
           return;
@@ -654,7 +670,7 @@ void loadAPI()
           {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -717,7 +733,7 @@ void loadAPI()
       request->send(errorResponse("Feature request must be a JSON object"));
       return;
     }
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -763,7 +779,7 @@ void loadAPI()
       request->send(errorResponse("Actuator request must be a JSON object"));
       return;
     }
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -794,7 +810,7 @@ void loadAPI()
     }
     else
     {
-      if (!config.tryBeginFeatureAccess())
+      if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
       {
         delete response;
         sendFeatureBusy(request);
@@ -822,7 +838,7 @@ void loadAPI()
   {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -842,7 +858,7 @@ void loadAPI()
   {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -884,7 +900,7 @@ void loadAPI()
       request->send(errorResponse("Irrigation request must be a JSON object"));
       return;
     }
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -958,7 +974,7 @@ void loadAPI()
     templateValue.trim();
     const int templateId = templateValue.toInt();
     if (templateValue != String(templateId) ||
-        templateId < Template::DUAL_LIGHT || templateId > Template::GARDEN)
+        templateId < Template::DUAL_LIGHT || templateId > Template::WATER_METER)
     {
       request->send(errorResponse("Template id is invalid"));
       return;
@@ -1114,7 +1130,7 @@ void loadAPI()
               // The updater and the feature graph are process-global. A second
               // upload or any competing feature operation must retry instead
               // of waiting inside the AsyncWebServer callback.
-              if (!config.tryBeginFeatureAccess())
+              if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
               {
                 state->busy = true;
                 return;

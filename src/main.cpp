@@ -83,7 +83,7 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Applying template: %d" CR, tags::system, requestedTemplateId);
 #endif
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("templateApply"))
     {
       // Leave the occupied request slot untouched. A later pass retries it,
       // while concurrent requests receive BUSY instead of overwriting it.
@@ -147,7 +147,7 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Load Defaults requested." CR, tags::system);
 #endif
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("loadDefaults"))
     {
       config.requestLoadDefaults();
     }
@@ -169,12 +169,29 @@ void checkInternalRoutines()
     }
   }
 
+  // Written here rather than where it is counted: the sensor loop holds the feature
+  // lease, and a LittleFS write under it answers every web request with "busy".
+  if (config.takeSaveConfigurationRequest())
+  {
+    if (config.tryBeginFeatureAccess("saveConfiguration"))
+    {
+      config.save();
+      config.endFeatureAccess();
+    }
+    else
+    {
+      // Somebody else has the lease; ask again next time round rather than
+      // dropping the count.
+      config.requestSaveConfiguration();
+    }
+  }
+
   if (config.takeAutoUpdateRequest())
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Auto Update Request." CR, tags::system);
 #endif
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("autoUpdate"))
     {
       config.requestAutoUpdate();
     }
