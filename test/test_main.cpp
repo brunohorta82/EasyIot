@@ -1,6 +1,9 @@
 #include <unity.h>
 #include <string>
 
+void setUp(void) {}
+void tearDown(void) {}
+
 // Test type assertions (corresponding to fix/esp32-compilation containsKey->is<const char*> fix)
 void test_type_assertions(void) {
     const char* test_val = "secret";
