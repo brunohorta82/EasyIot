@@ -2,6 +2,7 @@
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
+#include "AquaDance.h"
 extern ConfigOnofre config;
 
 bool homeAssistantOnline(String topic, String payload)
@@ -612,6 +613,8 @@ void initHomeAssistantDiscovery()
   // listens to a state topic once an entity claims it.
   createHaIrrigation();
   publishIrrigationHomeAssistantState();
+  createHaAquaDance();
+  publishAquaDanceHomeAssistantState();
 }
 
 namespace
@@ -810,4 +813,75 @@ void publishIrrigationHomeAssistantState()
                   hasClock ? constantsMqtt::availablePayload : constantsMqtt::unavailablePayload,
                   true);
   }
+}
+
+void createHaAquaDance()
+{
+  if (!mqttConnected() || !deviceHasValves())
+    return;
+  String chip = String(config.chipId);
+
+  // Binary sensor: AquaDance Running
+  {
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    const String uniqueId = chip + "_aquadance_running";
+    object["name"] = "AquaDance Ativo";
+    object["uniq_id"] = uniqueId;
+    object["stat_t"] = String("onofre/") + chip + "/aquadance/state";
+    object["val_tpl"] = "{{ 'ON' if value_json.running else 'OFF' }}";
+    object["dev_cla"] = "running";
+    object["ic"] = "mdi:music-note";
+    object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
+    haDevice(object);
+    publishHaConfig("binary_sensor", uniqueId, doc);
+  }
+
+  // Button: Stop AquaDance
+  {
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    const String uniqueId = chip + "_aquadance_stop";
+    object["name"] = "Parar AquaDance";
+    object["uniq_id"] = uniqueId;
+    object["cmd_t"] = String("onofre/") + chip + "/aquadance/set";
+    object["pl_prs"] = "STOP";
+    object["ic"] = "mdi:stop-circle-outline";
+    object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
+    haDevice(object);
+    publishHaConfig("button", uniqueId, doc);
+  }
+
+  // Button per AquaDance show
+  for (size_t idx = 0; idx < aquadance.shows.size(); idx++)
+  {
+    const auto &show = aquadance.shows[idx];
+    const String uniqueId = chip + "_aquadance_show_" + String(show.id);
+    JsonDocument doc;
+    JsonObject object = doc.to<JsonObject>();
+    object["name"] = "AquaDance: " + String(show.name);
+    object["uniq_id"] = uniqueId;
+    object["cmd_t"] = String("onofre/") + chip + "/aquadance/set";
+    object["pl_prs"] = "RUN:" + String(show.id);
+    object["ic"] = "mdi:fountain";
+    object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
+    haDevice(object);
+    publishHaConfig("button", uniqueId, doc);
+  }
+}
+
+void publishAquaDanceHomeAssistantState()
+{
+  if (!mqttConnected() || !deviceHasValves())
+    return;
+  JsonDocument doc;
+  JsonVariant root = doc.to<JsonObject>();
+  aquadance.statusJson(root);
+  String payload;
+  serializeJson(doc, payload);
+  String topic = String("onofre/") + config.chipId + "/aquadance/state";
+  publishOnMqtt(topic.c_str(), payload.c_str(), true);
 }
