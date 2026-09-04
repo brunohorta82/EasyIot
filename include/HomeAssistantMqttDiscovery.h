@@ -14,3 +14,9 @@ void createHaIrrigation();
 
 /** The state behind those entities, on the local broker. */
 void publishIrrigationHomeAssistantState();
+
+/** Publishes AquaDance choreography shows and controls to Home Assistant. */
+void createHaAquaDance();
+
+/** The state behind AquaDance entities. */
+void publishAquaDanceHomeAssistantState();

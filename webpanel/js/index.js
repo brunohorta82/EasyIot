@@ -45,6 +45,8 @@ const DRIVERS = [
     { v: 93, t: "HCSR04", n: "Distância (HC-SR04)", pins: 2 },
     { v: 95, t: "LDC1612", n: "Contador de água (LDC1612)", pins: 2 },
     { v: 94, t: "LD2410", n: "Presença (LD2410)", pins: 2 },
+    { v: 96, t: "LD2450", n: "Presença 2D (LD2450)", pins: 2 },
+    { v: 97, t: "LD2460", n: "Presença 2D (LD2460)", pins: 2 },
     { v: 71, t: "PZEM_004T_V03", n: "Contador PZEM v3", pins: 2 },
     { v: 72, t: "PZEM_004T_V01", n: "Contador PZEM v1", pins: 2 },
   ]},
@@ -142,6 +144,7 @@ function renderIrrigationTab() {
   renderIrrStatus();
   renderIrrZones();
   renderIrrPrograms();
+  renderAquaDanceTab();
 }
 
 /* Firmware from before concurrency sends only running.zone/secondsLeft, so treat
@@ -475,6 +478,1216 @@ async function stopIrrigation() {
     renderIrrStatus();
     renderIrrZones();
   } catch (e) { toast("Não foi possível parar", "err"); }
+}
+
+/* ---------------- AquaDance (Fontaine Musical Matrix & 2D Simulator) ---------------- */
+var aquadance = null;
+var danceDirty = false;
+var danceActiveShowIdx = 0;
+var danceIsPlaying = false;
+var dancePlayTimer = null;
+var dancePlayStep = 0;
+var isDrawingDance = false;
+var drawDanceValue = 1;
+var activeColorHex = "#00e5ff";
+
+const RGBW_PALETTE = [
+  { name: "Cyan", hex: "#00e5ff" },
+  { name: "Deep Blue", hex: "#0066ff" },
+  { name: "Emerald", hex: "#00ff88" },
+  { name: "Amber", hex: "#ffcc00" },
+  { name: "Orange", hex: "#ff6600" },
+  { name: "Fire Red", hex: "#ff0033" },
+  { name: "Magenta", hex: "#ff00aa" },
+  { name: "Purple", hex: "#9900ff" },
+  { name: "Warm White", hex: "#ffeedd" },
+  { name: "Cold White", hex: "#ffffff" },
+];
+
+const isLight = (f) => f && f.driver && (String(f.driver).indexOf("LIGHT") !== -1);
+const isDanceFixture = (f) => isZone(f) || isLight(f);
+const danceFixtures = () => (config.features || []).filter(isDanceFixture);
+
+function markDanceDirty() {
+  danceDirty = true;
+  const btn = $("dance-save");
+  if (btn) btn.disabled = false;
+}
+
+function activeDanceShow() {
+  if (!aquadance || !aquadance.shows || !aquadance.shows.length) return null;
+  if (danceActiveShowIdx >= aquadance.shows.length) danceActiveShowIdx = 0;
+  return aquadance.shows[danceActiveShowIdx];
+}
+
+function ensureDanceTracks(show) {
+  if (!show) return;
+  show.tracks = show.tracks || [];
+  const fixtures = danceFixtures();
+  const n = fixtures.length;
+  fixtures.forEach((f, idx) => {
+    let t = show.tracks.find((x) => x.uniqueId === f.id);
+    if (!t) {
+      // Default circular distribution if new
+      const angle = (2 * Math.PI * idx) / Math.max(1, n);
+      const px = Math.round(50 + 32 * Math.cos(angle));
+      const py = Math.round(50 + 32 * Math.sin(angle));
+      t = {
+        uniqueId: f.id,
+        trackType: isLight(f) ? (f.driver === "LIGHT_DIMMER" ? 1 : 2) : 0,
+        posX: px,
+        posY: py,
+        steps: new Array(show.totalSteps || 32).fill(0),
+        rgbw: new Array(show.totalSteps || 32).fill(0x00e5ff),
+      };
+      show.tracks.push(t);
+    }
+    if (t.steps.length < show.totalSteps) {
+      while (t.steps.length < show.totalSteps) t.steps.push(0);
+    } else if (t.steps.length > show.totalSteps) {
+      t.steps = t.steps.slice(0, show.totalSteps);
+    }
+    if (t.rgbw && t.rgbw.length < show.totalSteps) {
+      while (t.rgbw.length < show.totalSteps) t.rgbw.push(0x00e5ff);
+    }
+  });
+}
+
+async function loadAquaDanceConfig() {
+  try {
+    const res = await api("/aquadance");
+    aquadance = res;
+    if (!aquadance.shows || !aquadance.shows.length) {
+      aquadance.shows = [{
+        id: 1,
+        name: "Dança 1",
+        stepMs: 400,
+        totalSteps: 32,
+        loop: false,
+        tracks: []
+      }];
+    }
+    renderAquaDanceTab();
+  } catch (e) {
+    if (!aquadance) {
+      aquadance = {
+        enabled: true,
+        shows: [{
+          id: 1,
+          name: "Dança 1",
+          stepMs: 400,
+          totalSteps: 32,
+          loop: false,
+          tracks: []
+        }]
+      };
+    }
+    renderAquaDanceTab();
+  }
+}
+
+function renderDanceSwatches() {
+  const wrap = $("dance-swatches");
+  if (!wrap) return;
+  wrap.innerHTML = RGBW_PALETTE.map((p) =>
+    '<button type="button" class="dance-swatch' + (p.hex === activeColorHex ? " selected" : "") +
+    '" data-swatch="' + p.hex + '" style="background:' + p.hex + '" title="' + p.name + '"></button>'
+  ).join("");
+}
+
+function renderAquaDanceTab() {
+  if (!aquadance && config && config.aquadance) {
+    aquadance = config.aquadance;
+  }
+  if (!aquadance) {
+    loadAquaDanceConfig();
+    return;
+  }
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+
+  const sel = $("dance-select");
+  if (sel) {
+    sel.innerHTML = aquadance.shows.map((s, idx) =>
+      '<option value="' + idx + '"' + (idx === danceActiveShowIdx ? " selected" : "") + '>' +
+      esc(s.name || ("Coreografia " + s.id)) + '</option>'
+    ).join("");
+  }
+
+  const nameInp = $("dance-name");
+  if (nameInp) nameInp.value = show.name || "";
+  const tempoSel = $("dance-tempo");
+  if (tempoSel) tempoSel.value = String(show.stepMs || 400);
+  const stepsSel = $("dance-steps");
+  if (stepsSel) stepsSel.value = String(show.totalSteps || 32);
+  const loopChk = $("dance-loop");
+  if (loopChk) loopChk.checked = !!show.loop;
+
+  renderDanceSwatches();
+  renderDanceMatrix();
+  renderDancePoolBasin();
+}
+
+function renderDanceMatrix() {
+  const wrap = $("dance-matrix-wrap");
+  if (!wrap) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+
+  const fixtures = danceFixtures();
+  const total = show.totalSteps || 32;
+
+  let html = '<div class="dance-matrix">';
+  html += '<div class="dance-matrix-header">';
+  html += '<div class="dance-th-corner">DISPOSITIVO / NOTA</div>';
+  for (let s = 0; s < total; s++) {
+    const isMeasureStart = (s % 4 === 0);
+    const measureNum = Math.floor(s / 4) + 1;
+    const beatInMeasure = (s % 4) + 1;
+    html += '<div class="dance-th-step' + (isMeasureStart ? ' measure-start' : '') +
+            '" data-step-col="' + s + '" title="Compasso ' + measureNum + ', Tempo ' + beatInMeasure + '">' +
+            (isMeasureStart ? measureNum + '.1' : (s + 1)) + '</div>';
+  }
+  html += '</div>';
+
+  fixtures.forEach((f) => {
+    const track = show.tracks.find((t) => t.uniqueId === f.id) || { steps: [], trackType: 0 };
+    const isLightFixture = isLight(f);
+    const isDimmer = track.trackType === 1;
+    const icon = isLightFixture ? "💡" : ICONS.valve;
+    html += '<div class="dance-matrix-row">';
+    html += '<div class="dance-td-valve">' + icon + ' ' + esc(f.name) + '</div>';
+    for (let s = 0; s < total; s++) {
+      const isMeasureStart = (s % 4 === 0);
+      const stepVal = track.steps ? track.steps[s] : 0;
+      const on = stepVal > 0;
+      let style = "";
+      if (track.trackType === 2 && on && track.rgbw && track.rgbw[s]) {
+        const hex = "#" + (track.rgbw[s] & 0xFFFFFF).toString(16).padStart(6, "0");
+        style = ' style="background:' + hex + '; border-color:#fff; box-shadow:0 0 10px ' + hex + ';"';
+      }
+      html += '<div class="dance-cell' + (isDimmer ? ' dimmer-cell' : '') + (on ? ' on' : '') + (isMeasureStart ? ' measure-start' : '') +
+              '" data-dtrack="' + esc(f.id) + '" data-dstep="' + s + '"' + style + '>' +
+              (isDimmer && on ? stepVal + '%' : '') + '</div>';
+    }
+    html += '</div>';
+  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function renderDancePoolBasin() {
+  const basin = $("dance-pool-basin");
+  if (!basin) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+
+  const fixtures = danceFixtures();
+  basin.innerHTML = fixtures.map((f, idx) => {
+    const track = show.tracks.find((t) => t.uniqueId === f.id);
+    const posX = track ? track.posX : 50;
+    const posY = track ? track.posY : 50;
+    const isLightFix = isLight(f);
+    const icon = isLightFix ? "💡" : "⛲";
+    return '<div class="pool-node' + (isLightFix ? ' is-light' : '') +
+      '" data-node-id="' + esc(f.id) + '" style="left:' + posX + '%; top:' + posY + '%;">' +
+      '<div class="pool-node-badge">' + icon + '</div>' +
+      '<span class="pool-node-label">' + esc(f.name) + '</span>' +
+      '</div>';
+  }).join("");
+
+  wirePoolNodeDragging();
+}
+
+function wirePoolNodeDragging() {
+  const basin = $("dance-pool-basin");
+  if (!basin) return;
+  const nodes = basin.querySelectorAll(".pool-node");
+  nodes.forEach((node) => {
+    let startX, startY, origLeft, origTop, rect;
+    const onStart = (e) => {
+      e.preventDefault();
+      rect = basin.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      startX = clientX;
+      startY = clientY;
+      origLeft = parseFloat(node.style.left) || 50;
+      origTop = parseFloat(node.style.top) || 50;
+
+      const onMove = (mv) => {
+        const cx = mv.touches ? mv.touches[0].clientX : mv.clientX;
+        const cy = mv.touches ? mv.touches[0].clientY : mv.clientY;
+        const dx = ((cx - startX) / rect.width) * 100;
+        const dy = ((cy - startY) / rect.height) * 100;
+        const newLeft = Math.max(5, Math.min(95, Math.round(origLeft + dx)));
+        const newTop = Math.max(5, Math.min(95, Math.round(origTop + dy)));
+        node.style.left = newLeft + "%";
+        node.style.top = newTop + "%";
+        const trackId = node.dataset.nodeId;
+        const show = activeDanceShow();
+        if (show) {
+          const t = show.tracks.find((x) => x.uniqueId === trackId);
+          if (t) { t.posX = newLeft; t.posY = newTop; }
+        }
+      };
+
+      const onEnd = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onEnd);
+        window.removeEventListener("touchmove", onMove);
+        window.removeEventListener("touchend", onEnd);
+        markDanceDirty();
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onEnd);
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend", onEnd);
+    };
+
+    node.addEventListener("mousedown", onStart);
+    node.addEventListener("touchstart", onStart, { passive: false });
+  });
+}
+
+function applyPoolLayoutPreset(type) {
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+  const tracks = show.tracks;
+  const n = tracks.length;
+  if (!n) return;
+
+  tracks.forEach((t, i) => {
+    if (type === "ring") {
+      const angle = (2 * Math.PI * i) / n;
+      t.posX = Math.round(50 + 35 * Math.cos(angle));
+      t.posY = Math.round(50 + 35 * Math.sin(angle));
+    } else if (type === "line") {
+      t.posX = n === 1 ? 50 : Math.round(15 + (70 * i) / (n - 1));
+      t.posY = 50;
+    } else if (type === "cross") {
+      if (i % 2 === 0) {
+        t.posX = Math.round(20 + (60 * i) / Math.max(1, n - 1));
+        t.posY = 50;
+      } else {
+        t.posX = 50;
+        t.posY = Math.round(20 + (60 * i) / Math.max(1, n - 1));
+      }
+    } else if (type === "arc") {
+      const angle = Math.PI + (Math.PI * i) / Math.max(1, n - 1);
+      t.posX = Math.round(50 + 38 * Math.cos(angle));
+      t.posY = Math.round(65 + 32 * Math.sin(angle));
+    }
+  });
+
+  markDanceDirty();
+  renderDancePoolBasin();
+}
+
+function exportHomeAssistant2DCard() {
+  const show = activeDanceShow();
+  if (!show) return;
+  const chip = config.chipId || "easyiot";
+  const fixtures = danceFixtures();
+
+  let yaml = "# Cartão 2D Home Assistant para AquaDance\n";
+  yaml += "type: picture-elements\n";
+  yaml += "image: /local/fountain_basin.jpg\n";
+  yaml += "title: " + (show.name || "AquaDance") + "\n";
+  yaml += "elements:\n";
+  yaml += "  - type: state-badge\n";
+  yaml += "    entity: binary_sensor." + chip + "_aquadance_running\n";
+  yaml += "    style:\n      top: 8%\n      left: 10%\n";
+  yaml += "  - type: state-icon\n";
+  yaml += "    entity: button." + chip + "_aquadance_stop\n";
+  yaml += "    style:\n      top: 8%\n      left: 90%\n";
+
+  fixtures.forEach((f) => {
+    const track = show.tracks.find((t) => t.uniqueId === f.id);
+    const px = track ? track.posX : 50;
+    const py = track ? track.posY : 50;
+    const isLightFix = isLight(f);
+    yaml += "  - type: state-icon\n";
+    yaml += "    entity: " + (isLightFix ? "light." : "switch.") + esc(f.id) + "\n";
+    yaml += "    title: " + esc(f.name) + "\n";
+    yaml += "    style:\n";
+    yaml += "      top: " + py + "%\n";
+    yaml += "      left: " + px + "%\n";
+    yaml += "    tap_action:\n      action: toggle\n";
+  });
+
+  navigator.clipboard.writeText(yaml).then(() => {
+    toast("Cartão Home Assistant (2D Lovelace) copiado!", "ok");
+  }).catch(() => {
+    toast("Erro ao copiar para a área de transferência", "err");
+  });
+}
+
+function applyDancePreset(type) {
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+  const total = show.totalSteps || 32;
+  const numTracks = show.tracks.length;
+  if (!numTracks) return;
+
+  const hexVal = parseInt(activeColorHex.replace("#", ""), 16);
+
+  show.tracks.forEach((t, tIdx) => {
+    t.steps = new Array(total).fill(0);
+    t.rgbw = new Array(total).fill(hexVal);
+    for (let s = 0; s < total; s++) {
+      if (type === "wave") {
+        if (s % numTracks === tIdx) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "chase") {
+        const cycle = Math.floor(s / numTracks);
+        const pos = cycle % 2 === 0 ? (s % numTracks) : (numTracks - 1 - (s % numTracks));
+        if (pos === tIdx) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "alternate") {
+        const beat = Math.floor(s / 2);
+        if (beat % 2 === tIdx % 2) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "pulse") {
+        if (s % 4 === 0) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "clear") {
+        t.steps[s] = 0;
+      }
+    }
+  });
+
+  markDanceDirty();
+  renderDanceMatrix();
+}
+
+function updatePlayheadUI(stepIndex) {
+  const oldCols = document.querySelectorAll(".playhead-col, .dance-th-step.playhead");
+  oldCols.forEach((el) => {
+    el.classList.remove("playhead-col");
+    el.classList.remove("playhead");
+  });
+
+  const show = activeDanceShow();
+  const basin = $("dance-pool-basin");
+
+  if (stepIndex >= 0) {
+    const th = document.querySelector('.dance-th-step[data-step-col="' + stepIndex + '"]');
+    if (th) th.classList.add("playhead");
+    const cells = document.querySelectorAll('.dance-cell[data-dstep="' + stepIndex + '"]');
+    cells.forEach((c) => c.classList.add("playhead-col"));
+
+    if (show && basin) {
+      show.tracks.forEach((t, tIdx) => {
+        const node = basin.querySelector('.pool-node[data-node-id="' + cssEscape(t.uniqueId) + '"]');
+        if (!node) return;
+        const stepVal = t.steps && stepIndex < t.steps.length ? t.steps[stepIndex] : 0;
+        if (t.trackType === 0) { // Valve
+          node.classList.toggle("active-jet", stepVal > 0);
+          if (stepVal > 0) playDanceTone(0, tIdx, stepVal);
+        } else { // Light
+          node.classList.toggle("active-light", stepVal > 0);
+          if (stepVal > 0) {
+            playDanceTone(1, tIdx, stepVal);
+            if (t.rgbw && t.rgbw[stepIndex]) {
+              const hex = "#" + (t.rgbw[stepIndex] & 0xFFFFFF).toString(16).padStart(6, "0");
+              const badge = node.querySelector(".pool-node-badge");
+              if (badge) badge.style.backgroundColor = hex;
+            }
+          }
+        }
+      });
+    }
+  } else {
+    if (basin) {
+      basin.querySelectorAll(".pool-node").forEach((n) => {
+        n.classList.remove("active-jet");
+        n.classList.remove("active-light");
+      });
+    }
+  }
+}
+
+/* ---------------- AquaDance Audio Tone Synthesis ---------------- */
+var danceAudioActive = false;
+var danceAudioCtx = null;
+
+function getDanceAudioContext() {
+  if (!danceAudioCtx && (window.AudioContext || window.webkitAudioContext)) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    danceAudioCtx = new AudioCtx();
+  }
+  if (danceAudioCtx && danceAudioCtx.state === "suspended") {
+    danceAudioCtx.resume();
+  }
+  return danceAudioCtx;
+}
+
+function toggleDanceAudio() {
+  danceAudioActive = !danceAudioActive;
+  const btn = $("dance-btn-audio");
+  if (btn) {
+    btn.textContent = danceAudioActive ? "🔊 Áudio: Ligado" : "🔊 Áudio: Desligado";
+    btn.classList.toggle("active-audio", danceAudioActive);
+  }
+  if (danceAudioActive) {
+    getDanceAudioContext();
+  }
+}
+
+const VALVE_NOTES = [261.63, 293.66, 329.63, 392.00, 523.25, 587.33, 659.25, 783.99]; // C4, D4, E4, G4, C5, D5, E5, G5
+const LIGHT_NOTES = [659.25, 783.99, 1046.50, 1174.66, 1318.51];
+
+function playDanceTone(trackType, trackIdx, stepVal) {
+  if (!danceAudioActive || stepVal <= 0) return;
+  const ctx = getDanceAudioContext();
+  if (!ctx) return;
+
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    const dur = 0.15;
+
+    if (trackType === 0) { // Valve (plucked marimba / water drop effect)
+      const freq = VALVE_NOTES[trackIdx % VALVE_NOTES.length];
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    } else { // Light (ambient shimmer / chime)
+      const freq = LIGHT_NOTES[trackIdx % LIGHT_NOTES.length];
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.10, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    }
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + dur);
+  } catch (e) {}
+}
+
+function exportDanceShow() {
+  const show = activeDanceShow();
+  if (!show) return;
+  const data = JSON.stringify(show, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "AQUADANCE_" + (show.name ? show.name.replace(/[^a-zA-Z0-9_-]/g, "_") : "show") + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Coreografia exportada com sucesso!", "ok");
+}
+
+function importDanceShow(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported || typeof imported !== "object" || !imported.tracks) {
+        throw new Error("Formato inválido.");
+      }
+      imported.id = activeDanceShow() ? activeDanceShow().id : 1;
+      imported.name = (imported.name || "Dança Importada") + " (Importada)";
+      if (!aquadance.shows) aquadance.shows = [];
+      aquadance.shows[danceActiveShowIdx] = imported;
+      markDanceDirty();
+      renderAquaDanceTab();
+      toast("Coreografia importada com sucesso!", "ok");
+    } catch (err) {
+      toast("Erro ao ler ficheiro de coreografia", "err");
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function runAquaDanceShow() {
+  const show = activeDanceShow();
+  if (!show) return;
+  if (danceDirty) {
+    await saveAquaDanceConfig();
+  }
+  try {
+    await api("/aquadance-run", { method: "POST", body: JSON.stringify({ showId: show.id }) });
+    danceIsPlaying = true;
+    dancePlayStep = 0;
+    const playBtn = $("dance-play");
+    const stopBtn = $("dance-stop");
+    if (playBtn) playBtn.classList.add("hide");
+    if (stopBtn) stopBtn.classList.remove("hide");
+
+    if (dancePlayTimer) clearInterval(dancePlayTimer);
+    updatePlayheadUI(0);
+    dancePlayTimer = setInterval(() => {
+      if (!danceIsPlaying) return;
+      dancePlayStep++;
+      if (dancePlayStep >= show.totalSteps) {
+        if (show.loop) {
+          dancePlayStep = 0;
+        } else {
+          stopAquaDanceShow();
+          return;
+        }
+      }
+      updatePlayheadUI(dancePlayStep);
+    }, show.stepMs || 400);
+
+    toast("Coreografia iniciada", "ok");
+  } catch (e) {
+    toast("Não foi possível iniciar a dança", "err");
+  }
+}
+
+async function stopAquaDanceShow() {
+  try {
+    await api("/aquadance-stop", { method: "POST" });
+  } catch (e) {}
+  danceIsPlaying = false;
+  if (dancePlayTimer) {
+    clearInterval(dancePlayTimer);
+    dancePlayTimer = null;
+  }
+  updatePlayheadUI(-1);
+  const playBtn = $("dance-play");
+  const stopBtn = $("dance-stop");
+  if (playBtn) playBtn.classList.remove("hide");
+  if (stopBtn) stopBtn.classList.add("hide");
+}
+
+async function saveAquaDanceConfig() {
+  const show = activeDanceShow();
+  if (!show) return;
+  const msg = $("dance-msg");
+  if (msg) {
+    msg.className = "note";
+    msg.textContent = "A guardar coreografia…";
+  }
+  try {
+    const res = await api("/aquadance", { method: "POST", body: JSON.stringify(aquadance) });
+    aquadance = res;
+    danceDirty = false;
+    const saveBtn = $("dance-save");
+    if (saveBtn) saveBtn.disabled = true;
+    if (msg) {
+      msg.className = "note ok";
+      msg.textContent = "Coreografia guardada no equipamento.";
+    }
+    toast("Coreografia guardada", "ok");
+    renderAquaDanceTab();
+  } catch (e) {
+    if (msg) {
+      msg.className = "note err";
+      msg.textContent = "O equipamento recusou a coreografia.";
+    }
+    toast("Erro ao guardar", "err");
+  }
+}
+
+/* ---------------- Radar & Presence Studio (2D Visualizer & Simulator) ---------------- */
+const RADAR_DRIVERS = ["LD2450", "LD2460", "LD2410", "PIR", "DOOR", "WINDOW", "RAIN", "TMF882X", "HCSR04"];
+const isRadarSensor = (f) => f && RADAR_DRIVERS.indexOf(f.driver) >= 0;
+const radarSensors = () => (config.features || []).filter(isRadarSensor);
+
+var activeRadarFeatureId = null;
+var radarSimActive = false;
+var radarSimTimer = null;
+var radarSimTarget = { x: 0, y: 2400, vx: 60, vy: 30 };
+var radarTargetHistory = {};
+var radarHeatmapActive = false;
+var radarHeatmapPoints = [];
+var activeRadarFloorplan = "none";
+var radarEngActive = false;
+var radarGateConfigs = {
+  timeout: 5,
+  maxGate: 8,
+  gates: [
+    { gate: 0, move: 50, stat: 0 },
+    { gate: 1, move: 50, stat: 50 },
+    { gate: 2, move: 40, stat: 40 },
+    { gate: 3, move: 40, stat: 40 },
+    { gate: 4, move: 30, stat: 30 },
+    { gate: 5, move: 30, stat: 30 },
+    { gate: 6, move: 20, stat: 20 },
+    { gate: 7, move: 20, stat: 20 },
+    { gate: 8, move: 15, stat: 15 }
+  ]
+};
+var radarZones = [
+  { id: "z1", name: "Mesa de Trabalho", x: -1400, y: 1500, w: 1000, h: 1000 },
+  { id: "z2", name: "Entrada / Porta", x: 400, y: 3200, w: 1200, h: 1000 },
+];
+var radarEventsBound = false;
+
+function activeRadarSensor() {
+  const list = radarSensors();
+  if (!list.length) return null;
+  if (!activeRadarFeatureId) activeRadarFeatureId = list[0].id;
+  const found = list.find((f) => f.id === activeRadarFeatureId);
+  return found || list[0];
+}
+
+function handleRadarLiveEvent(feat, rawData) {
+  if (activeRadarFeatureId && feat.id !== activeRadarFeatureId) return;
+  renderRadarStudioState(rawData);
+}
+
+function renderRadarStudio() {
+  const list = radarSensors();
+  const title = $("ov-radar-title");
+  const card = $("ov-radar-studio");
+  if (!title || !card) return;
+
+  if (!list.length && !radarSimActive) {
+    title.classList.add("hide");
+    card.classList.add("hide");
+    return;
+  }
+
+  title.classList.remove("hide");
+  card.classList.remove("hide");
+
+  const sel = $("radar-sensor-select");
+  if (sel) {
+    if (list.length) {
+      sel.innerHTML = list.map((f) =>
+        '<option value="' + esc(f.id) + '"' + (f.id === activeRadarFeatureId ? " selected" : "") + ">" +
+        esc(f.name) + " (" + esc(f.driver) + ")</option>"
+      ).join("");
+    } else {
+      sel.innerHTML = '<option value="sim">Simulador Virtual</option>';
+    }
+  }
+
+  const current = activeRadarSensor();
+  renderRadarStudioState(current ? current.state : null);
+  renderRadarZones();
+  renderRadarFloorplan(activeRadarFloorplan);
+  wireRadarStudioEvents();
+}
+
+function parseRadarPayload(state) {
+  if (!state) return null;
+  const o = parseState(state);
+  if (!o || typeof o !== "object") return null;
+  return o;
+}
+
+function renderRadarStudioState(state) {
+  const o = parseRadarPayload(state) || {};
+  const current = activeRadarSensor();
+  const is2DRadar = current && (current.driver === "LD2450" || current.driver === "LD2460");
+  const is10 = current && current.driver === "LD2410";
+
+  const badgeState = $("radar-badge-state");
+  const badgeCount = $("radar-badge-count");
+  const isOcc = o.occupancy === "detected" || o.motion === "detected" || o.state === 1 || o.state === "open";
+  if (badgeState) {
+    badgeState.className = "pill " + (isOcc ? "ok" : "off");
+    badgeState.innerHTML = "Presença: <b>" + (isOcc ? "detetada" : "ausente") + "</b>";
+  }
+
+  const ldCard = $("radar-ld2410-card");
+  if (ldCard) {
+    ldCard.classList.toggle("hide", !is10);
+    if (is10) {
+      const moveE = Math.min(100, Math.max(0, Number(o.movingTargetEnergy || 0)));
+      const statE = Math.min(100, Math.max(0, Number(o.stationaryTargetEnergy || 0)));
+      const moveD = Number(o.movingTargetDistance || 0);
+      const statD = Number(o.stationaryTargetDistance || 0);
+
+      const mb = $("radar-move-energy-bar"); if (mb) mb.style.width = moveE + "%";
+      const sb = $("radar-stat-energy-bar"); if (sb) sb.style.width = statE + "%";
+      const md = $("radar-move-dist"); if (md) md.textContent = (moveD > 0 ? moveD + " cm" : "—");
+      const me = $("radar-move-energy"); if (me) me.textContent = moveE + "%";
+      const sd = $("radar-stat-dist"); if (sd) sd.textContent = (statD > 0 ? statD + " cm" : "—");
+      const se = $("radar-stat-energy"); if (se) se.textContent = statE + "%";
+    }
+  }
+
+  const targets = [];
+  const maxT = current && current.driver === "LD2460" ? 5 : 3;
+
+  if (is2DRadar) {
+    for (let i = 1; i <= maxT; i++) {
+      const px = o["t" + i + "_x"];
+      const py = o["t" + i + "_y"];
+      const sp = o["t" + i + "_s"] || 0;
+      const res = o["t" + i + "_r"] || 0;
+      if (py != null && Number(py) > 0) {
+        targets.push({ id: "t" + i, index: i, x: Number(px), y: Number(py), speed: Number(sp), resolution: Number(res) });
+        if (radarHeatmapActive) addRadarHeatmapPoint(Number(px), Number(py));
+      }
+    }
+  } else if (is10) {
+    if (o.movingTargetDistance && Number(o.movingTargetDistance) > 0) {
+      targets.push({ id: "t1", index: 1, x: 0, y: Number(o.movingTargetDistance) * 10, speed: 15, resolution: 0 });
+      if (radarHeatmapActive) addRadarHeatmapPoint(0, Number(o.movingTargetDistance) * 10);
+    } else if (o.stationaryTargetDistance && Number(o.stationaryTargetDistance) > 0) {
+      targets.push({ id: "t2", index: 2, x: 0, y: Number(o.stationaryTargetDistance) * 10, speed: 0, resolution: 0 });
+      if (radarHeatmapActive) addRadarHeatmapPoint(0, Number(o.stationaryTargetDistance) * 10);
+    }
+  } else if (isOcc) {
+    targets.push({ id: "t1", index: 1, x: 0, y: 2000, speed: 0, resolution: 0 });
+    if (radarHeatmapActive) addRadarHeatmapPoint(0, 2000);
+  }
+
+  if (badgeCount) {
+    badgeCount.innerHTML = "Alvos: <b>" + targets.length + "</b>";
+  }
+
+  renderRadarTargetsSvg(targets);
+  renderRadarTargetsTable(targets);
+  checkZoneOccupancy(targets);
+}
+
+function renderRadarTargetsSvg(targets) {
+  const tgGroup = $("radar-targets-group");
+  const trGroup = $("radar-trails-group");
+  if (!tgGroup || !trGroup) return;
+
+  const now = Date.now();
+
+  targets.forEach((t) => {
+    if (!radarTargetHistory[t.id]) radarTargetHistory[t.id] = [];
+    radarTargetHistory[t.id].push({ x: t.x, y: t.y, at: now });
+    if (radarTargetHistory[t.id].length > 10) radarTargetHistory[t.id].shift();
+  });
+
+  const activeIds = targets.map((x) => x.id);
+  Object.keys(radarTargetHistory).forEach((k) => {
+    if (activeIds.indexOf(k) === -1) {
+      radarTargetHistory[k] = (radarTargetHistory[k] || []).filter((pt) => now - pt.at < 2000);
+      if (!radarTargetHistory[k].length) delete radarTargetHistory[k];
+    }
+  });
+
+  let trailsSvg = "";
+  Object.keys(radarTargetHistory).forEach((k) => {
+    const hist = radarTargetHistory[k];
+    hist.forEach((pt, idx) => {
+      const agePct = (idx + 1) / hist.length;
+      const cy = 6000 - pt.y;
+      trailsSvg += '<circle cx="' + pt.x + '" cy="' + cy + '" r="' + (40 * agePct) + '" class="radar-trail-dot" style="opacity:' + (agePct * 0.5).toFixed(2) + '"/>';
+    });
+  });
+  trGroup.innerHTML = trailsSvg;
+
+  let targetsSvg = "";
+  targets.forEach((t) => {
+    const cy = 6000 - t.y;
+    targetsSvg += '<g class="radar-target-node" data-target="' + t.id + '">' +
+      '<circle cx="' + t.x + '" cy="' + cy + '" r="110" class="radar-target-dot ' + t.id + '"/>' +
+      '<text x="' + (t.x + 130) + '" y="' + (cy + 40) + '" class="radar-target-label">T' + t.index + ' (' + (t.x / 100).toFixed(1) + 'm, ' + (t.y / 100).toFixed(1) + 'm)</text>' +
+      '</g>';
+  });
+  tgGroup.innerHTML = targetsSvg;
+}
+
+function renderRadarTargetsTable(targets) {
+  const table = $("radar-targets-table");
+  if (!table) return;
+  if (!targets.length) {
+    table.innerHTML = '<div class="note">Nenhum alvo detetado no campo de visão.</div>';
+    return;
+  }
+  table.innerHTML = targets.map((t) =>
+    '<div class="radar-target-row">' +
+      '<span class="radar-target-tag"><span class="radar-target-badge ' + t.id + '"></span> Alvo ' + t.index + '</span>' +
+      '<span class="radar-target-coords">X: ' + (t.x / 10).toFixed(0) + 'cm · Y: ' + (t.y / 10).toFixed(0) + 'cm</span>' +
+      '<span>' + (t.speed !== 0 ? Math.abs(t.speed) + ' cm/s' : 'Estático') + '</span>' +
+    '</div>'
+  ).join("");
+}
+
+function renderRadarZones() {
+  const group = $("radar-zones-group");
+  const listEl = $("radar-zones-list");
+  if (!group || !listEl) return;
+
+  group.innerHTML = radarZones.map((z) => {
+    const svgY = 6000 - z.y - z.h;
+    return '<g class="radar-zone-group" data-zone-id="' + z.id + '">' +
+      '<rect x="' + z.x + '" y="' + svgY + '" width="' + z.w + '" height="' + z.h + '" class="radar-zone-shape" id="svg-zone-' + z.id + '"/>' +
+      '<text x="' + (z.x + 40) + '" y="' + (svgY + 160) + '" class="radar-zone-label">' + esc(z.name) + '</text>' +
+    '</g>';
+  }).join("");
+
+  listEl.innerHTML = radarZones.map((z) =>
+    '<div class="radar-zone-item" id="zone-item-' + z.id + '">' +
+      '<input type="text" value="' + esc(z.name) + '" data-zone-name="' + z.id + '" maxlength="24">' +
+      '<button type="button" class="btn btn-sm d" data-del-zone="' + z.id + '">✕</button>' +
+    '</div>'
+  ).join("");
+
+  wireRadarZoneDragging();
+}
+
+function checkZoneOccupancy(targets) {
+  radarZones.forEach((z) => {
+    const isOccupied = targets.some((t) =>
+      t.x >= z.x && t.x <= (z.x + z.w) &&
+      t.y >= z.y && t.y <= (z.y + z.h)
+    );
+    const svgShape = $("svg-zone-" + z.id);
+    const itemEl = $("zone-item-" + z.id);
+    if (svgShape) svgShape.classList.toggle("active-occupied", isOccupied);
+    if (itemEl) itemEl.classList.toggle("active", isOccupied);
+  });
+}
+
+function wireRadarZoneDragging() {
+  const wrap = $("radar-canvas-wrap");
+  if (!wrap) return;
+  const zoneGroups = wrap.querySelectorAll(".radar-zone-group");
+
+  zoneGroups.forEach((g) => {
+    const zid = g.dataset.zoneId;
+    const zone = radarZones.find((x) => x.id === zid);
+    if (!zone) return;
+
+    const onStart = (e) => {
+      e.preventDefault();
+      const rect = wrap.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const startClientX = clientX;
+      const startClientY = clientY;
+      const origX = zone.x;
+      const origY = zone.y;
+
+      const onMove = (mv) => {
+        const cx = mv.touches ? mv.touches[0].clientX : mv.clientX;
+        const cy = mv.touches ? mv.touches[0].clientY : mv.clientY;
+        const dx = ((cx - startClientX) / rect.width) * 6000;
+        const dy = ((cy - startClientY) / rect.height) * 6000;
+        zone.x = Math.round(Math.max(-2800, Math.min(2800 - zone.w, origX + dx)));
+        zone.y = Math.round(Math.max(200, Math.min(5800 - zone.h, origY - dy)));
+        renderRadarZones();
+      };
+
+      const onEnd = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onEnd);
+        window.removeEventListener("touchmove", onMove);
+        window.removeEventListener("touchend", onEnd);
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onEnd);
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend", onEnd);
+    };
+
+    g.addEventListener("mousedown", onStart);
+    g.addEventListener("touchstart", onStart, { passive: false });
+  });
+}
+
+/* ---------------- Radar Heatmap, Floorplan & Engineering Mode ---------------- */
+function toggleRadarHeatmap() {
+  radarHeatmapActive = !radarHeatmapActive;
+  const btn = $("radar-btn-heatmap");
+  if (btn) {
+    btn.textContent = radarHeatmapActive ? "🔥 Mapa de Calor (Ativo)" : "🔥 Mapa de Calor";
+    btn.classList.toggle("active-heatmap", radarHeatmapActive);
+  }
+  if (!radarHeatmapActive) {
+    radarHeatmapPoints = [];
+  }
+  renderRadarHeatmap();
+}
+
+function renderRadarHeatmap() {
+  const g = $("radar-heatmap-group");
+  if (!g) return;
+  if (!radarHeatmapActive || !radarHeatmapPoints.length) {
+    g.innerHTML = "";
+    return;
+  }
+  g.innerHTML = radarHeatmapPoints.map((pt) =>
+    '<circle cx="' + pt.x + '" cy="' + (6000 - pt.y) + '" r="280" class="radar-heatmap-point" opacity="' + pt.alpha + '"/>'
+  ).join("");
+}
+
+function addRadarHeatmapPoint(x, y) {
+  if (!radarHeatmapActive) return;
+  radarHeatmapPoints.push({ x: x, y: y, alpha: 0.7 });
+  if (radarHeatmapPoints.length > 50) {
+    radarHeatmapPoints.shift();
+  }
+  radarHeatmapPoints.forEach((p) => { p.alpha = Math.max(0.15, p.alpha * 0.98); });
+  renderRadarHeatmap();
+}
+
+function renderRadarFloorplan(type) {
+  const g = $("radar-floorplan-group");
+  if (!g) return;
+  activeRadarFloorplan = type || "none";
+
+  if (type === "living") {
+    g.innerHTML =
+      '<rect x="-2400" y="800" width="4800" height="5000" class="radar-floorplan-room" rx="40"/>' +
+      '<text x="-2200" y="1100" class="radar-floorplan-label">SALA DE ESTAR</text>' +
+      '<rect x="-2000" y="1400" width="1300" height="900" class="radar-floorplan-furniture"/>' +
+      '<text x="-1900" y="1900" class="radar-floorplan-label" style="font-size:90px">Sofá</text>' +
+      '<rect x="-500" y="4800" width="1000" height="400" class="radar-floorplan-furniture"/>' +
+      '<text x="-350" y="5050" class="radar-floorplan-label" style="font-size:90px">Móvel TV</text>' +
+      '<rect x="1400" y="850" width="700" height="300" class="radar-floorplan-furniture" style="stroke:#00ffaa"/>' +
+      '<text x="1450" y="1050" class="radar-floorplan-label" style="font-size:80px">Porta</text>';
+  } else if (type === "bedroom") {
+    g.innerHTML =
+      '<rect x="-2400" y="800" width="4800" height="5000" class="radar-floorplan-room" rx="40"/>' +
+      '<text x="-2200" y="1100" class="radar-floorplan-label">QUARTO</text>' +
+      '<rect x="-900" y="3200" width="1800" height="2200" class="radar-floorplan-furniture"/>' +
+      '<text x="-500" y="4400" class="radar-floorplan-label" style="font-size:110px">Cama Casal</text>' +
+      '<rect x="-2200" y="1400" width="600" height="2400" class="radar-floorplan-furniture"/>' +
+      '<text x="-2150" y="2600" class="radar-floorplan-label" style="font-size:80px">Roupeiro</text>' +
+      '<rect x="1200" y="1600" width="900" height="700" class="radar-floorplan-furniture"/>' +
+      '<text x="1350" y="2000" class="radar-floorplan-label" style="font-size:80px">Secretária</text>';
+  } else if (type === "office") {
+    g.innerHTML =
+      '<rect x="-2400" y="800" width="4800" height="5000" class="radar-floorplan-room" rx="40"/>' +
+      '<text x="-2200" y="1100" class="radar-floorplan-label">ESCRITÓRIO</text>' +
+      '<rect x="-1400" y="2400" width="1800" height="900" class="radar-floorplan-furniture"/>' +
+      '<text x="-900" y="2900" class="radar-floorplan-label" style="font-size:90px">Mesa Trabalho</text>' +
+      '<rect x="-2200" y="3800" width="600" height="1600" class="radar-floorplan-furniture"/>' +
+      '<text x="-2150" y="4700" class="radar-floorplan-label" style="font-size:80px">Estante</text>' +
+      '<rect x="700" y="1400" width="1300" height="1800" class="radar-floorplan-furniture"/>' +
+      '<text x="900" y="2350" class="radar-floorplan-label" style="font-size:80px">Reuniões</text>';
+  } else {
+    g.innerHTML = "";
+  }
+}
+
+function toggleRadarEngMode() {
+  radarEngActive = !radarEngActive;
+  const card = $("radar-eng-card");
+  if (card) {
+    card.classList.toggle("hide", !radarEngActive);
+    if (radarEngActive) {
+      renderRadarGatesGrid();
+    }
+  }
+}
+
+function renderRadarGatesGrid() {
+  const container = $("radar-gates-grid");
+  if (!container) return;
+  const maxGate = parseInt($("radar-eng-max-gate").value, 10) || 8;
+
+  let html = "";
+  radarGateConfigs.gates.forEach((g) => {
+    if (g.gate > maxGate) return;
+    const distM = (0.75 * (g.gate + 1)).toFixed(2);
+    html += '<div class="radar-gate-item" data-gate="' + g.gate + '">' +
+      '<div class="radar-gate-head"><span>Portão ' + g.gate + ' (' + distM + 'm)</span></div>' +
+      '<div class="radar-gate-row">' +
+        '<span>Mov:</span>' +
+        '<input type="range" min="0" max="100" value="' + g.move + '" data-gmove="' + g.gate + '">' +
+        '<span class="radar-gate-val" id="gmove-val-' + g.gate + '">' + g.move + '%</span>' +
+      '</div>' +
+      '<div class="radar-gate-row stat">' +
+        '<span>Estát:</span>' +
+        '<input type="range" min="0" max="100" value="' + g.stat + '" data-gstat="' + g.gate + '">' +
+        '<span class="radar-gate-val" id="gstat-val-' + g.gate + '">' + g.stat + '%</span>' +
+      '</div>' +
+    '</div>';
+  });
+  container.innerHTML = html;
+
+  container.querySelectorAll('input[data-gmove]').forEach((inp) => {
+    inp.addEventListener("input", (e) => {
+      const gnum = parseInt(e.target.dataset.gmove, 10);
+      const val = parseInt(e.target.value, 10);
+      const entry = radarGateConfigs.gates.find((x) => x.gate === gnum);
+      if (entry) entry.move = val;
+      const lbl = $("gmove-val-" + gnum);
+      if (lbl) lbl.textContent = val + "%";
+    });
+  });
+
+  container.querySelectorAll('input[data-gstat]').forEach((inp) => {
+    inp.addEventListener("input", (e) => {
+      const gnum = parseInt(e.target.dataset.gstat, 10);
+      const val = parseInt(e.target.value, 10);
+      const entry = radarGateConfigs.gates.find((x) => x.gate === gnum);
+      if (entry) entry.stat = val;
+      const lbl = $("gstat-val-" + gnum);
+      if (lbl) lbl.textContent = val + "%";
+    });
+  });
+}
+
+async function saveRadarEngConfig() {
+  const current = activeRadarSensor();
+  const timeout = parseInt($("radar-eng-timeout").value, 10) || 5;
+  const maxGate = parseInt($("radar-eng-max-gate").value, 10) || 8;
+  radarGateConfigs.timeout = timeout;
+  radarGateConfigs.maxGate = maxGate;
+
+  const body = {
+    sensorId: current ? current.id : "radar1",
+    timeout: timeout,
+    maxGate: maxGate,
+    gates: radarGateConfigs.gates.filter((g) => g.gate <= maxGate)
+  };
+
+  try {
+    await api("/sensors/radar-config", { method: "POST", body: JSON.stringify(body) });
+    toast("Calibração gravada no sensor!", "ok");
+  } catch (err) {
+    toast("Configuração guardada localmente", "ok");
+  }
+}
+
+function wireRadarStudioEvents() {
+  if (radarEventsBound) return;
+  radarEventsBound = true;
+
+  const sel = $("radar-sensor-select");
+  if (sel) {
+    sel.addEventListener("change", () => {
+      activeRadarFeatureId = sel.value;
+      renderRadarStudio();
+    });
+  }
+
+  const simBtn = $("radar-btn-sim");
+  if (simBtn) simBtn.addEventListener("click", toggleRadarSimulation);
+
+  const hmBtn = $("radar-btn-heatmap");
+  if (hmBtn) hmBtn.addEventListener("click", toggleRadarHeatmap);
+
+  const fpSel = $("radar-floorplan-select");
+  if (fpSel) fpSel.addEventListener("change", (e) => renderRadarFloorplan(e.target.value));
+
+  const engBtn = $("radar-btn-eng");
+  if (engBtn) engBtn.addEventListener("click", toggleRadarEngMode);
+
+  const engMaxGateSel = $("radar-eng-max-gate");
+  if (engMaxGateSel) engMaxGateSel.addEventListener("change", renderRadarGatesGrid);
+
+  const engSaveBtn = $("radar-eng-save");
+  if (engSaveBtn) engSaveBtn.addEventListener("click", saveRadarEngConfig);
+
+  const expBtn = $("radar-btn-export-ha");
+  if (expBtn) expBtn.addEventListener("click", exportRadarHomeAssistantCard);
+
+  const addBtn = $("radar-add-zone");
+  if (addBtn) {
+    addBtn.addEventListener("click", () => {
+      const newId = "z" + (radarZones.length + 1);
+      radarZones.push({ id: newId, name: "Zona " + (radarZones.length + 1), x: -500, y: 2000, w: 1000, h: 1000 });
+      renderRadarZones();
+    });
+  }
+
+  const listEl = $("radar-zones-list");
+  if (listEl) {
+    listEl.addEventListener("input", (e) => {
+      const zid = e.target.dataset.zoneName;
+      const zone = radarZones.find((x) => x.id === zid);
+      if (zone) {
+        zone.name = e.target.value;
+        const label = document.querySelector('[data-zone-id="' + zid + '"] .radar-zone-label');
+        if (label) label.textContent = zone.name;
+      }
+    });
+    listEl.addEventListener("click", (e) => {
+      const delId = e.target.dataset.delZone;
+      if (delId) {
+        radarZones = radarZones.filter((x) => x.id !== delId);
+        renderRadarZones();
+      }
+    });
+  }
+}
+
+function toggleRadarSimulation() {
+  radarSimActive = !radarSimActive;
+  const btn = $("radar-btn-sim");
+  if (btn) {
+    btn.textContent = radarSimActive ? "⏹ Parar Simulação" : "▶ Modo Simulação";
+    btn.classList.toggle("d", radarSimActive);
+  }
+
+  if (radarSimActive) {
+    const card = $("ov-radar-studio");
+    const title = $("ov-radar-title");
+    if (card) card.classList.remove("hide");
+    if (title) title.classList.remove("hide");
+
+    radarSimTimer = setInterval(() => {
+      radarSimTarget.x += radarSimTarget.vx;
+      radarSimTarget.y += radarSimTarget.vy;
+
+      if (radarSimTarget.x > 1800 || radarSimTarget.x < -1800) radarSimTarget.vx = -radarSimTarget.vx;
+      if (radarSimTarget.y > 4500 || radarSimTarget.y < 1200) radarSimTarget.vy = -radarSimTarget.vy;
+
+      const simState = {
+        occupancy: "detected",
+        motion: "detected",
+        count: 1,
+        t1_x: Math.round(radarSimTarget.x),
+        t1_y: Math.round(radarSimTarget.y),
+        t1_s: Math.round(Math.sqrt(radarSimTarget.vx * radarSimTarget.vx + radarSimTarget.vy * radarSimTarget.vy)),
+        t1_r: 200,
+        movingTargetDistance: Math.round(radarSimTarget.y / 10),
+        movingTargetEnergy: 85,
+        stationaryTargetDistance: 0,
+        stationaryTargetEnergy: 0,
+      };
+      renderRadarStudioState(simState);
+    }, 150);
+  } else {
+    clearInterval(radarSimTimer);
+    radarSimTimer = null;
+    const current = activeRadarSensor();
+    renderRadarStudioState(current ? current.state : null);
+  }
+}
+
+function exportRadarHomeAssistantCard() {
+  const current = activeRadarSensor();
+  const chip = config.chipId || "easyiot";
+  const name = current ? current.name.toLowerCase().replace(/\s+/g, "_") : "radar";
+
+  let yaml = "# Cartão 2D Home Assistant para Radar & Presença\n";
+  yaml += "type: custom:plotly-graph\n";
+  yaml += "title: " + (current ? current.name : "Radar de Presença") + "\n";
+  yaml += "hours_to_show: current_day\n";
+  yaml += "refresh_interval: 1\n";
+  yaml += "layout:\n";
+  yaml += "  xaxis: { range: [-3000, 3000], title: 'X (mm)' }\n";
+  yaml += "  yaxis: { range: [0, 6000], title: 'Y (mm)' }\n";
+  yaml += "entities:\n";
+  yaml += "  - entity: sensor." + chip + "_" + name + "_t1_x\n";
+  yaml += "    name: Alvo 1 (X)\n";
+  yaml += "  - entity: sensor." + chip + "_" + name + "_t1_y\n";
+  yaml += "    name: Alvo 1 (Y)\n";
+  yaml += "  - entity: binary_sensor." + chip + "_" + name + "_occupancy\n";
+  yaml += "    name: Ocupação\n";
+
+  if (radarZones.length) {
+    yaml += "# Zonas configuradas:\n";
+    radarZones.forEach((z) => {
+      yaml += "# - " + z.name + ": X[" + z.x + ".." + (z.x + z.w) + "] Y[" + z.y + ".." + (z.y + z.h) + "]\n";
+    });
+  }
+
+  navigator.clipboard.writeText(yaml).then(() => {
+    toast("Cartão Home Assistant (Radar 2D) copiado!", "ok");
+  }).catch(() => {
+    toast("Erro ao copiar para a área de transferência", "err");
+  });
 }
 
 /* The device answers first and performs the update in its main loop. The safe
@@ -833,6 +2046,8 @@ function renderOverview() {
       '<div class="card' + (MEASURE_DRIVERS.indexOf(f.driver) >= 0 ? " wide" : "") +
       '"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
       esc(sensorText(f.state, f.driver)) + "</div></div>").join("");
+
+  renderRadarStudio();
 }
 
 /* Energy meters report a dozen fields; a one-line summary would throw away
@@ -982,6 +2197,8 @@ function sensorText(state, driver) {
     if (Number(o.flow) > 0) bits.push(Number(o.flow).toFixed(1) + " L/min");
   }
   if (o.motion != null) bits.push(o.motion === "detected" ? "movimento" : "sem movimento");
+  if (o.occupancy != null) bits.push(o.occupancy === "detected" ? "presença" : "ausente");
+  if (o.count != null) bits.push(o.count + " alvo" + (o.count === 1 ? "" : "s"));
   if (o.rain != null) bits.push(o.rain === "rain" ? "a chover" : "sem chuva");
   if (o.state != null && !bits.length) {
     const words = BINARY_WORDS[driver];
@@ -992,7 +2209,7 @@ function sensorText(state, driver) {
 }
 
 /* Numeric readings deserve the width; binary states do not. */
-const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "TMF882X", "LDC1612"];
+const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "LD2450", "LD2460", "TMF882X", "LDC1612"];
 const CLIMATE_DRIVERS = ["DS18B20", "SHT4X", "DHT_11", "DHT_21", "DHT_22"];
 const CLIMATE_MAX_SAMPLES = 360;
 const isClimate = (f) => CLIMATE_DRIVERS.indexOf(f.driver) >= 0;
@@ -1797,6 +3014,9 @@ function wireFeatureEvents() {
         } else {
           const el = $("sv-" + feat.id);
           if (el) el.textContent = sensorText(e.data, feat.driver);
+          if (isRadarSensor(feat)) {
+            handleRadarLiveEvent(feat, e.data);
+          }
         }
         addLog("i", "[" + feat.name + "] " + String(e.data).slice(0, 90));
       };
@@ -1848,6 +3068,73 @@ document.addEventListener("click", (ev) => {
   }
   if (ev.target.closest("#irr-stop")) { stopIrrigation(); return; }
   if (ev.target.closest("#irr-save")) { saveIrrigation(); return; }
+  const subtab = ev.target.closest(".tab-sub");
+  if (subtab) {
+    document.querySelectorAll(".tab-sub").forEach((t) => t.classList.remove("on"));
+    subtab.classList.add("on");
+    const isDance = subtab.dataset.subview === "irr-dance";
+    $("pane-irr-trad").classList.toggle("hide", isDance);
+    $("pane-irr-dance").classList.toggle("hide", !isDance);
+    if (isDance) renderAquaDanceTab();
+    return;
+  }
+  if (ev.target.closest("#dance-preset-wave")) { applyDancePreset("wave"); return; }
+  if (ev.target.closest("#dance-preset-chase")) { applyDancePreset("chase"); return; }
+  if (ev.target.closest("#dance-preset-alternate")) { applyDancePreset("alternate"); return; }
+  if (ev.target.closest("#dance-preset-pulse")) { applyDancePreset("pulse"); return; }
+  if (ev.target.closest("#dance-preset-clear")) { applyDancePreset("clear"); return; }
+  if (ev.target.closest("#dance-layout-ring")) { applyPoolLayoutPreset("ring"); return; }
+  if (ev.target.closest("#dance-layout-line")) { applyPoolLayoutPreset("line"); return; }
+  if (ev.target.closest("#dance-layout-cross")) { applyPoolLayoutPreset("cross"); return; }
+  if (ev.target.closest("#dance-layout-arc")) { applyPoolLayoutPreset("arc"); return; }
+  if (ev.target.closest("#dance-export-ha")) { exportHomeAssistant2DCard(); return; }
+  if (ev.target.closest("#dance-btn-audio")) { toggleDanceAudio(); return; }
+  if (ev.target.closest("#dance-btn-export")) { exportDanceShow(); return; }
+  if (ev.target.closest("#dance-btn-import")) {
+    const inp = $("dance-file-import");
+    if (inp) {
+      inp.onchange = (e) => { const f = (e.target.files || [])[0]; if (f) importDanceShow(f); };
+      inp.click();
+    }
+    return;
+  }
+  const swatchBtn = ev.target.closest("[data-swatch]");
+  if (swatchBtn) {
+    activeColorHex = swatchBtn.dataset.swatch;
+    document.querySelectorAll(".dance-swatch").forEach((s) => s.classList.remove("selected"));
+    swatchBtn.classList.add("selected");
+    return;
+  }
+  if (ev.target.closest("#dance-play")) { runAquaDanceShow(); return; }
+  if (ev.target.closest("#dance-stop")) { stopAquaDanceShow(); return; }
+  if (ev.target.closest("#dance-save")) { saveAquaDanceConfig(); return; }
+  if (ev.target.closest("#dance-add-show")) {
+    aquadance.shows = aquadance.shows || [];
+    const newId = Math.max(0, ...aquadance.shows.map((x) => x.id || 0)) + 1;
+    aquadance.shows.push({
+      id: newId,
+      name: "Dança " + newId,
+      stepMs: 400,
+      totalSteps: 32,
+      loop: false,
+      tracks: []
+    });
+    danceActiveShowIdx = aquadance.shows.length - 1;
+    markDanceDirty();
+    renderAquaDanceTab();
+    return;
+  }
+  if (ev.target.closest("#dance-del-show")) {
+    if (aquadance.shows && aquadance.shows.length > 1) {
+      aquadance.shows.splice(danceActiveShowIdx, 1);
+      danceActiveShowIdx = Math.max(0, danceActiveShowIdx - 1);
+      markDanceDirty();
+      renderAquaDanceTab();
+    } else {
+      toast("Tem de manter pelo menos uma coreografia", "err");
+    }
+    return;
+  }
   const day = ev.target.closest("[data-ipday]");
   if (day) {
     const parts = day.dataset.ipday.split(":");
@@ -2003,6 +3290,31 @@ document.addEventListener("change", (ev) => {
     markIrrDirty();
     return;
   }
+  if (ev.target.id === "dance-select") {
+    danceActiveShowIdx = parseInt(ev.target.value, 10) || 0;
+    renderAquaDanceTab();
+    return;
+  }
+  if (ev.target.id === "dance-tempo") {
+    const show = activeDanceShow();
+    if (show) { show.stepMs = parseInt(ev.target.value, 10) || 400; markDanceDirty(); }
+    return;
+  }
+  if (ev.target.id === "dance-steps") {
+    const show = activeDanceShow();
+    if (show) {
+      show.totalSteps = parseInt(ev.target.value, 10) || 32;
+      ensureDanceTracks(show);
+      markDanceDirty();
+      renderDanceMatrix();
+    }
+    return;
+  }
+  if (ev.target.id === "dance-loop") {
+    const show = activeDanceShow();
+    if (show) { show.loop = ev.target.checked; markDanceDirty(); }
+    return;
+  }
   if (ev.target.id === "nf-driver") { onDriverChange(); return; }
   if (ev.target.id === "nf-p1" || ev.target.id === "nf-p2") { onNewPinChange(); return; }
   if (ev.target.id === "s-dhcp") { $("s-static").classList.toggle("hide", ev.target.checked); markDirty(); return; }
@@ -2010,11 +3322,127 @@ document.addEventListener("change", (ev) => {
 });
 
 document.addEventListener("input", (ev) => {
+  if (ev.target.id === "dance-name") {
+    const show = activeDanceShow();
+    if (show) {
+      show.name = ev.target.value.trim();
+      markDanceDirty();
+      const opt = document.querySelector('#dance-select option[value="' + danceActiveShowIdx + '"]');
+      if (opt) opt.textContent = show.name || ("Coreografia " + show.id);
+    }
+    return;
+  }
   if (ev.target.id === "s-nodeId") updateNameDirty();
 });
 
+/* Drawing interactions on the partition matrix */
+function applyCellStepChange(cell, track, stepIdx, forceVal) {
+  if (track.trackType === 0) { // Valve: toggle 0/1
+    const next = forceVal !== undefined ? forceVal : (track.steps[stepIdx] > 0 ? 0 : 1);
+    track.steps[stepIdx] = next;
+    cell.classList.toggle("on", next === 1);
+    cell.style.background = "";
+    cell.style.borderColor = "";
+    cell.style.boxShadow = "";
+    return next;
+  } else if (track.trackType === 1) { // Dimmer: 0 -> 25 -> 50 -> 75 -> 100 -> 0
+    const cur = track.steps[stepIdx] || 0;
+    const next = forceVal !== undefined ? forceVal : (cur === 0 ? 25 : (cur === 25 ? 50 : (cur === 50 ? 75 : (cur === 75 ? 100 : 0))));
+    track.steps[stepIdx] = next;
+    cell.classList.toggle("on", next > 0);
+    cell.textContent = next > 0 ? next + "%" : "";
+    return next;
+  } else { // RGBW: apply active color
+    const cur = track.steps[stepIdx] || 0;
+    const next = forceVal !== undefined ? forceVal : (cur > 0 ? 0 : 1);
+    track.steps[stepIdx] = next;
+    const hexVal = parseInt(activeColorHex.replace("#", ""), 16);
+    track.rgbw = track.rgbw || [];
+    track.rgbw[stepIdx] = hexVal;
+    cell.classList.toggle("on", next > 0);
+    if (next > 0) {
+      cell.style.background = activeColorHex;
+      cell.style.borderColor = "#fff";
+      cell.style.boxShadow = "0 0 10px " + activeColorHex;
+    } else {
+      cell.style.background = "";
+      cell.style.borderColor = "";
+      cell.style.boxShadow = "";
+    }
+    return next;
+  }
+}
+
+document.addEventListener("mousedown", (ev) => {
+  const cell = ev.target.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  drawDanceValue = applyCellStepChange(cell, track, stepIdx);
+  isDrawingDance = true;
+  markDanceDirty();
+});
+
+document.addEventListener("mouseover", (ev) => {
+  if (!isDrawingDance) return;
+  const cell = ev.target.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  applyCellStepChange(cell, track, stepIdx, drawDanceValue);
+});
+
+window.addEventListener("mouseup", () => {
+  isDrawingDance = false;
+});
+
+document.addEventListener("touchstart", (ev) => {
+  const cell = ev.target.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  drawDanceValue = applyCellStepChange(cell, track, stepIdx);
+  isDrawingDance = true;
+  markDanceDirty();
+}, { passive: true });
+
+document.addEventListener("touchmove", (ev) => {
+  if (!isDrawingDance || !ev.touches.length) return;
+  const touch = ev.touches[0];
+  const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (!elem) return;
+  const cell = elem.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  if (track.steps[stepIdx] !== drawDanceValue) {
+    track.steps[stepIdx] = drawDanceValue;
+    cell.classList.toggle("on", drawDanceValue === 1);
+  }
+}, { passive: true });
+
+window.addEventListener("touchend", () => {
+  isDrawingDance = false;
+});
+
 window.addEventListener("beforeunload", (e) => {
-  if (dirty) { e.preventDefault(); e.returnValue = ""; }
+  if (dirty || danceDirty) { e.preventDefault(); e.returnValue = ""; }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
