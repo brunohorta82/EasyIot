@@ -43,7 +43,6 @@ const DRIVERS = [
     { v: 82, t: "PIR", n: "Movimento (PIR)", pins: 1 },
     { v: 83, t: "RAIN", n: "Chuva", pins: 1 },
     { v: 93, t: "HCSR04", n: "Distância (HC-SR04)", pins: 2 },
-    { v: 95, t: "LDC1612", n: "Contador de água (LDC1612)", pins: 2 },
     { v: 94, t: "LD2410", n: "Presença (LD2410)", pins: 2 },
     { v: 71, t: "PZEM_004T_V03", n: "Contador PZEM v3", pins: 2 },
     { v: 72, t: "PZEM_004T_V01", n: "Contador PZEM v1", pins: 2 },
@@ -142,6 +141,7 @@ function renderIrrigationTab() {
   renderIrrStatus();
   renderIrrZones();
   renderIrrPrograms();
+  renderAquaDanceTab();
 }
 
 /* Firmware from before concurrency sends only running.zone/secondsLeft, so treat
@@ -475,6 +475,515 @@ async function stopIrrigation() {
     renderIrrStatus();
     renderIrrZones();
   } catch (e) { toast("Não foi possível parar", "err"); }
+}
+
+/* ---------------- AquaDance (Fontaine Musical Matrix & 2D Simulator) ---------------- */
+var aquadance = null;
+var danceDirty = false;
+var danceActiveShowIdx = 0;
+var danceIsPlaying = false;
+var dancePlayTimer = null;
+var dancePlayStep = 0;
+var isDrawingDance = false;
+var drawDanceValue = 1;
+var activeColorHex = "#00e5ff";
+
+const RGBW_PALETTE = [
+  { name: "Cyan", hex: "#00e5ff" },
+  { name: "Deep Blue", hex: "#0066ff" },
+  { name: "Emerald", hex: "#00ff88" },
+  { name: "Amber", hex: "#ffcc00" },
+  { name: "Orange", hex: "#ff6600" },
+  { name: "Fire Red", hex: "#ff0033" },
+  { name: "Magenta", hex: "#ff00aa" },
+  { name: "Purple", hex: "#9900ff" },
+  { name: "Warm White", hex: "#ffeedd" },
+  { name: "Cold White", hex: "#ffffff" },
+];
+
+const isLight = (f) => f && f.driver && (String(f.driver).indexOf("LIGHT") !== -1);
+const isDanceFixture = (f) => isZone(f) || isLight(f);
+const danceFixtures = () => (config.features || []).filter(isDanceFixture);
+
+function markDanceDirty() {
+  danceDirty = true;
+  const btn = $("dance-save");
+  if (btn) btn.disabled = false;
+}
+
+function activeDanceShow() {
+  if (!aquadance || !aquadance.shows || !aquadance.shows.length) return null;
+  if (danceActiveShowIdx >= aquadance.shows.length) danceActiveShowIdx = 0;
+  return aquadance.shows[danceActiveShowIdx];
+}
+
+function ensureDanceTracks(show) {
+  if (!show) return;
+  show.tracks = show.tracks || [];
+  const fixtures = danceFixtures();
+  const n = fixtures.length;
+  fixtures.forEach((f, idx) => {
+    let t = show.tracks.find((x) => x.uniqueId === f.id);
+    if (!t) {
+      // Default circular distribution if new
+      const angle = (2 * Math.PI * idx) / Math.max(1, n);
+      const px = Math.round(50 + 32 * Math.cos(angle));
+      const py = Math.round(50 + 32 * Math.sin(angle));
+      t = {
+        uniqueId: f.id,
+        trackType: isLight(f) ? (f.driver === "LIGHT_DIMMER" ? 1 : 2) : 0,
+        posX: px,
+        posY: py,
+        steps: new Array(show.totalSteps || 32).fill(0),
+        rgbw: new Array(show.totalSteps || 32).fill(0x00e5ff),
+      };
+      show.tracks.push(t);
+    }
+    if (t.steps.length < show.totalSteps) {
+      while (t.steps.length < show.totalSteps) t.steps.push(0);
+    } else if (t.steps.length > show.totalSteps) {
+      t.steps = t.steps.slice(0, show.totalSteps);
+    }
+    if (t.rgbw && t.rgbw.length < show.totalSteps) {
+      while (t.rgbw.length < show.totalSteps) t.rgbw.push(0x00e5ff);
+    }
+  });
+}
+
+async function loadAquaDanceConfig() {
+  try {
+    const res = await api("/aquadance");
+    aquadance = res;
+    if (!aquadance.shows || !aquadance.shows.length) {
+      aquadance.shows = [{
+        id: 1,
+        name: "Dança 1",
+        stepMs: 400,
+        totalSteps: 32,
+        loop: false,
+        tracks: []
+      }];
+    }
+    renderAquaDanceTab();
+  } catch (e) {
+    if (!aquadance) {
+      aquadance = {
+        enabled: true,
+        shows: [{
+          id: 1,
+          name: "Dança 1",
+          stepMs: 400,
+          totalSteps: 32,
+          loop: false,
+          tracks: []
+        }]
+      };
+    }
+    renderAquaDanceTab();
+  }
+}
+
+function renderDanceSwatches() {
+  const wrap = $("dance-swatches");
+  if (!wrap) return;
+  wrap.innerHTML = RGBW_PALETTE.map((p) =>
+    '<button type="button" class="dance-swatch' + (p.hex === activeColorHex ? " selected" : "") +
+    '" data-swatch="' + p.hex + '" style="background:' + p.hex + '" title="' + p.name + '"></button>'
+  ).join("");
+}
+
+function renderAquaDanceTab() {
+  if (!aquadance && config && config.aquadance) {
+    aquadance = config.aquadance;
+  }
+  if (!aquadance) {
+    loadAquaDanceConfig();
+    return;
+  }
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+
+  const sel = $("dance-select");
+  if (sel) {
+    sel.innerHTML = aquadance.shows.map((s, idx) =>
+      '<option value="' + idx + '"' + (idx === danceActiveShowIdx ? " selected" : "") + '>' +
+      esc(s.name || ("Coreografia " + s.id)) + '</option>'
+    ).join("");
+  }
+
+  const nameInp = $("dance-name");
+  if (nameInp) nameInp.value = show.name || "";
+  const tempoSel = $("dance-tempo");
+  if (tempoSel) tempoSel.value = String(show.stepMs || 400);
+  const stepsSel = $("dance-steps");
+  if (stepsSel) stepsSel.value = String(show.totalSteps || 32);
+  const loopChk = $("dance-loop");
+  if (loopChk) loopChk.checked = !!show.loop;
+
+  renderDanceSwatches();
+  renderDanceMatrix();
+  renderDancePoolBasin();
+}
+
+function renderDanceMatrix() {
+  const wrap = $("dance-matrix-wrap");
+  if (!wrap) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+
+  const fixtures = danceFixtures();
+  const total = show.totalSteps || 32;
+
+  let html = '<div class="dance-matrix">';
+  html += '<div class="dance-matrix-header">';
+  html += '<div class="dance-th-corner">DISPOSITIVO / NOTA</div>';
+  for (let s = 0; s < total; s++) {
+    const isMeasureStart = (s % 4 === 0);
+    const measureNum = Math.floor(s / 4) + 1;
+    const beatInMeasure = (s % 4) + 1;
+    html += '<div class="dance-th-step' + (isMeasureStart ? ' measure-start' : '') +
+            '" data-step-col="' + s + '" title="Compasso ' + measureNum + ', Tempo ' + beatInMeasure + '">' +
+            (isMeasureStart ? measureNum + '.1' : (s + 1)) + '</div>';
+  }
+  html += '</div>';
+
+  fixtures.forEach((f) => {
+    const track = show.tracks.find((t) => t.uniqueId === f.id) || { steps: [], trackType: 0 };
+    const isLightFixture = isLight(f);
+    const isDimmer = track.trackType === 1;
+    const icon = isLightFixture ? "💡" : ICONS.valve;
+    html += '<div class="dance-matrix-row">';
+    html += '<div class="dance-td-valve">' + icon + ' ' + esc(f.name) + '</div>';
+    for (let s = 0; s < total; s++) {
+      const isMeasureStart = (s % 4 === 0);
+      const stepVal = track.steps ? track.steps[s] : 0;
+      const on = stepVal > 0;
+      let style = "";
+      if (track.trackType === 2 && on && track.rgbw && track.rgbw[s]) {
+        const hex = "#" + (track.rgbw[s] & 0xFFFFFF).toString(16).padStart(6, "0");
+        style = ' style="background:' + hex + '; border-color:#fff; box-shadow:0 0 10px ' + hex + ';"';
+      }
+      html += '<div class="dance-cell' + (isDimmer ? ' dimmer-cell' : '') + (on ? ' on' : '') + (isMeasureStart ? ' measure-start' : '') +
+              '" data-dtrack="' + esc(f.id) + '" data-dstep="' + s + '"' + style + '>' +
+              (isDimmer && on ? stepVal + '%' : '') + '</div>';
+    }
+    html += '</div>';
+  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function renderDancePoolBasin() {
+  const basin = $("dance-pool-basin");
+  if (!basin) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+
+  const fixtures = danceFixtures();
+  basin.innerHTML = fixtures.map((f, idx) => {
+    const track = show.tracks.find((t) => t.uniqueId === f.id);
+    const posX = track ? track.posX : 50;
+    const posY = track ? track.posY : 50;
+    const isLightFix = isLight(f);
+    const icon = isLightFix ? "💡" : "⛲";
+    return '<div class="pool-node' + (isLightFix ? ' is-light' : '') +
+      '" data-node-id="' + esc(f.id) + '" style="left:' + posX + '%; top:' + posY + '%;">' +
+      '<div class="pool-node-badge">' + icon + '</div>' +
+      '<span class="pool-node-label">' + esc(f.name) + '</span>' +
+      '</div>';
+  }).join("");
+
+  wirePoolNodeDragging();
+}
+
+function wirePoolNodeDragging() {
+  const basin = $("dance-pool-basin");
+  if (!basin) return;
+  const nodes = basin.querySelectorAll(".pool-node");
+  nodes.forEach((node) => {
+    let startX, startY, origLeft, origTop, rect;
+    const onStart = (e) => {
+      e.preventDefault();
+      rect = basin.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      startX = clientX;
+      startY = clientY;
+      origLeft = parseFloat(node.style.left) || 50;
+      origTop = parseFloat(node.style.top) || 50;
+
+      const onMove = (mv) => {
+        const cx = mv.touches ? mv.touches[0].clientX : mv.clientX;
+        const cy = mv.touches ? mv.touches[0].clientY : mv.clientY;
+        const dx = ((cx - startX) / rect.width) * 100;
+        const dy = ((cy - startY) / rect.height) * 100;
+        const newLeft = Math.max(5, Math.min(95, Math.round(origLeft + dx)));
+        const newTop = Math.max(5, Math.min(95, Math.round(origTop + dy)));
+        node.style.left = newLeft + "%";
+        node.style.top = newTop + "%";
+        const trackId = node.dataset.nodeId;
+        const show = activeDanceShow();
+        if (show) {
+          const t = show.tracks.find((x) => x.uniqueId === trackId);
+          if (t) { t.posX = newLeft; t.posY = newTop; }
+        }
+      };
+
+      const onEnd = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onEnd);
+        window.removeEventListener("touchmove", onMove);
+        window.removeEventListener("touchend", onEnd);
+        markDanceDirty();
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onEnd);
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend", onEnd);
+    };
+
+    node.addEventListener("mousedown", onStart);
+    node.addEventListener("touchstart", onStart, { passive: false });
+  });
+}
+
+function applyPoolLayoutPreset(type) {
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+  const tracks = show.tracks;
+  const n = tracks.length;
+  if (!n) return;
+
+  tracks.forEach((t, i) => {
+    if (type === "ring") {
+      const angle = (2 * Math.PI * i) / n;
+      t.posX = Math.round(50 + 35 * Math.cos(angle));
+      t.posY = Math.round(50 + 35 * Math.sin(angle));
+    } else if (type === "line") {
+      t.posX = n === 1 ? 50 : Math.round(15 + (70 * i) / (n - 1));
+      t.posY = 50;
+    } else if (type === "cross") {
+      if (i % 2 === 0) {
+        t.posX = Math.round(20 + (60 * i) / Math.max(1, n - 1));
+        t.posY = 50;
+      } else {
+        t.posX = 50;
+        t.posY = Math.round(20 + (60 * i) / Math.max(1, n - 1));
+      }
+    } else if (type === "arc") {
+      const angle = Math.PI + (Math.PI * i) / Math.max(1, n - 1);
+      t.posX = Math.round(50 + 38 * Math.cos(angle));
+      t.posY = Math.round(65 + 32 * Math.sin(angle));
+    }
+  });
+
+  markDanceDirty();
+  renderDancePoolBasin();
+}
+
+function exportHomeAssistant2DCard() {
+  const show = activeDanceShow();
+  if (!show) return;
+  const chip = config.chipId || "easyiot";
+  const fixtures = danceFixtures();
+
+  let yaml = "# Cartão 2D Home Assistant para AquaDance\n";
+  yaml += "type: picture-elements\n";
+  yaml += "image: /local/fountain_basin.jpg\n";
+  yaml += "title: " + (show.name || "AquaDance") + "\n";
+  yaml += "elements:\n";
+  yaml += "  - type: state-badge\n";
+  yaml += "    entity: binary_sensor." + chip + "_aquadance_running\n";
+  yaml += "    style:\n      top: 8%\n      left: 10%\n";
+  yaml += "  - type: state-icon\n";
+  yaml += "    entity: button." + chip + "_aquadance_stop\n";
+  yaml += "    style:\n      top: 8%\n      left: 90%\n";
+
+  fixtures.forEach((f) => {
+    const track = show.tracks.find((t) => t.uniqueId === f.id);
+    const px = track ? track.posX : 50;
+    const py = track ? track.posY : 50;
+    const isLightFix = isLight(f);
+    yaml += "  - type: state-icon\n";
+    yaml += "    entity: " + (isLightFix ? "light." : "switch.") + esc(f.id) + "\n";
+    yaml += "    title: " + esc(f.name) + "\n";
+    yaml += "    style:\n";
+    yaml += "      top: " + py + "%\n";
+    yaml += "      left: " + px + "%\n";
+    yaml += "    tap_action:\n      action: toggle\n";
+  });
+
+  navigator.clipboard.writeText(yaml).then(() => {
+    toast("Cartão Home Assistant (2D Lovelace) copiado!", "ok");
+  }).catch(() => {
+    toast("Erro ao copiar para a área de transferência", "err");
+  });
+}
+
+function applyDancePreset(type) {
+  const show = activeDanceShow();
+  if (!show) return;
+  ensureDanceTracks(show);
+  const total = show.totalSteps || 32;
+  const numTracks = show.tracks.length;
+  if (!numTracks) return;
+
+  const hexVal = parseInt(activeColorHex.replace("#", ""), 16);
+
+  show.tracks.forEach((t, tIdx) => {
+    t.steps = new Array(total).fill(0);
+    t.rgbw = new Array(total).fill(hexVal);
+    for (let s = 0; s < total; s++) {
+      if (type === "wave") {
+        if (s % numTracks === tIdx) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "chase") {
+        const cycle = Math.floor(s / numTracks);
+        const pos = cycle % 2 === 0 ? (s % numTracks) : (numTracks - 1 - (s % numTracks));
+        if (pos === tIdx) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "alternate") {
+        const beat = Math.floor(s / 2);
+        if (beat % 2 === tIdx % 2) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "pulse") {
+        if (s % 4 === 0) t.steps[s] = (t.trackType === 1 ? 100 : 1);
+      } else if (type === "clear") {
+        t.steps[s] = 0;
+      }
+    }
+  });
+
+  markDanceDirty();
+  renderDanceMatrix();
+}
+
+function updatePlayheadUI(stepIndex) {
+  const oldCols = document.querySelectorAll(".playhead-col, .dance-th-step.playhead");
+  oldCols.forEach((el) => {
+    el.classList.remove("playhead-col");
+    el.classList.remove("playhead");
+  });
+
+  const show = activeDanceShow();
+  const basin = $("dance-pool-basin");
+
+  if (stepIndex >= 0) {
+    const th = document.querySelector('.dance-th-step[data-step-col="' + stepIndex + '"]');
+    if (th) th.classList.add("playhead");
+    const cells = document.querySelectorAll('.dance-cell[data-dstep="' + stepIndex + '"]');
+    cells.forEach((c) => c.classList.add("playhead-col"));
+
+    if (show && basin) {
+      show.tracks.forEach((t) => {
+        const node = basin.querySelector('.pool-node[data-node-id="' + cssEscape(t.uniqueId) + '"]');
+        if (!node) return;
+        const stepVal = t.steps && stepIndex < t.steps.length ? t.steps[stepIndex] : 0;
+        if (t.trackType === 0) { // Valve
+          node.classList.toggle("active-jet", stepVal > 0);
+        } else { // Light
+          node.classList.toggle("active-light", stepVal > 0);
+          if (stepVal > 0 && t.rgbw && t.rgbw[stepIndex]) {
+            const hex = "#" + (t.rgbw[stepIndex] & 0xFFFFFF).toString(16).padStart(6, "0");
+            const badge = node.querySelector(".pool-node-badge");
+            if (badge) badge.style.backgroundColor = hex;
+          }
+        }
+      });
+    }
+  } else {
+    if (basin) {
+      basin.querySelectorAll(".pool-node").forEach((n) => {
+        n.classList.remove("active-jet");
+        n.classList.remove("active-light");
+      });
+    }
+  }
+}
+
+async function runAquaDanceShow() {
+  const show = activeDanceShow();
+  if (!show) return;
+  if (danceDirty) {
+    await saveAquaDanceConfig();
+  }
+  try {
+    await api("/aquadance-run", { method: "POST", body: JSON.stringify({ showId: show.id }) });
+    danceIsPlaying = true;
+    dancePlayStep = 0;
+    const playBtn = $("dance-play");
+    const stopBtn = $("dance-stop");
+    if (playBtn) playBtn.classList.add("hide");
+    if (stopBtn) stopBtn.classList.remove("hide");
+
+    if (dancePlayTimer) clearInterval(dancePlayTimer);
+    updatePlayheadUI(0);
+    dancePlayTimer = setInterval(() => {
+      if (!danceIsPlaying) return;
+      dancePlayStep++;
+      if (dancePlayStep >= show.totalSteps) {
+        if (show.loop) {
+          dancePlayStep = 0;
+        } else {
+          stopAquaDanceShow();
+          return;
+        }
+      }
+      updatePlayheadUI(dancePlayStep);
+    }, show.stepMs || 400);
+
+    toast("Coreografia iniciada", "ok");
+  } catch (e) {
+    toast("Não foi possível iniciar a dança", "err");
+  }
+}
+
+async function stopAquaDanceShow() {
+  try {
+    await api("/aquadance-stop", { method: "POST" });
+  } catch (e) {}
+  danceIsPlaying = false;
+  if (dancePlayTimer) {
+    clearInterval(dancePlayTimer);
+    dancePlayTimer = null;
+  }
+  updatePlayheadUI(-1);
+  const playBtn = $("dance-play");
+  const stopBtn = $("dance-stop");
+  if (playBtn) playBtn.classList.remove("hide");
+  if (stopBtn) stopBtn.classList.add("hide");
+}
+
+async function saveAquaDanceConfig() {
+  const show = activeDanceShow();
+  if (!show) return;
+  const msg = $("dance-msg");
+  if (msg) {
+    msg.className = "note";
+    msg.textContent = "A guardar coreografia…";
+  }
+  try {
+    const res = await api("/aquadance", { method: "POST", body: JSON.stringify(aquadance) });
+    aquadance = res;
+    danceDirty = false;
+    const saveBtn = $("dance-save");
+    if (saveBtn) saveBtn.disabled = true;
+    if (msg) {
+      msg.className = "note ok";
+      msg.textContent = "Coreografia guardada no equipamento.";
+    }
+    toast("Coreografia guardada", "ok");
+    renderAquaDanceTab();
+  } catch (e) {
+    if (msg) {
+      msg.className = "note err";
+      msg.textContent = "O equipamento recusou a coreografia.";
+    }
+    toast("Erro ao guardar", "err");
+  }
 }
 
 /* The device answers first and performs the update in its main loop. The safe
@@ -974,13 +1483,6 @@ function sensorText(state, driver) {
   if (o.power != null) bits.push(Math.round(o.power) + "W");
   if (o.distance != null) bits.push(Math.round(o.distance) + " cm");
   if (o.illuminance != null) bits.push(Math.round(o.illuminance) + " lx");
-  if (o.liters != null) {
-    // Cubic metres are how a water bill and the meter's own dial read; litres are
-    // what the last three digits say. Show both rather than making anyone divide.
-    const m3 = Number(o.liters) / 1000;
-    bits.push(m3.toFixed(3) + " m³");
-    if (Number(o.flow) > 0) bits.push(Number(o.flow).toFixed(1) + " L/min");
-  }
   if (o.motion != null) bits.push(o.motion === "detected" ? "movimento" : "sem movimento");
   if (o.rain != null) bits.push(o.rain === "rain" ? "a chover" : "sem chuva");
   if (o.state != null && !bits.length) {
@@ -992,7 +1494,7 @@ function sensorText(state, driver) {
 }
 
 /* Numeric readings deserve the width; binary states do not. */
-const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "TMF882X", "LDC1612"];
+const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "TMF882X"];
 const CLIMATE_DRIVERS = ["DS18B20", "SHT4X", "DHT_11", "DHT_21", "DHT_22"];
 const CLIMATE_MAX_SAMPLES = 360;
 const isClimate = (f) => CLIMATE_DRIVERS.indexOf(f.driver) >= 0;
@@ -1201,20 +1703,6 @@ function renderFeatures() {
         '<input type="number" min="1" max="300" data-f="upCourseTime" data-i="' + i + '" value="' + (f.upCourseTime || 0) + '"></div>' +
         '<div class="field"><label>DESCIDA (s)</label>' +
         '<input type="number" min="1" max="300" data-f="downCourseTime" data-i="' + i + '" value="' + (f.downCourseTime || 0) + '"></div></div>' : "") +
-      (f.driver === "LDC1612" ?
-        // The coil counts turns of a target; it cannot know what ran through the
-        // meter before it was fitted. Typing the dial's own reading here is what
-        // makes the total mean something, and it is the one field that must be
-        // editable after installation.
-        '<div class="field"><label>LEITURA ACTUAL DO CONTADOR (m³)</label>' +
-        '<input type="number" step="0.001" min="0" data-f="waterCubic" data-i="' + i + '"' +
-        ' value="' + ((f.waterLiters || 0) / 1000).toFixed(3) + '"></div>' +
-        '<div class="field"><label>LITROS POR VOLTA</label>' +
-        '<input type="number" step="0.1" min="0.1" data-f="litersPerTurn" data-i="' + i + '"' +
-        ' value="' + (f.litersPerTurn || 1) + '"></div>' +
-        '<p class="note" style="margin:0 2px 10px">Copia os dígitos do mostrador, ' +
-        'incluindo os vermelhos (são litros). Os litros por volta estão marcados na ' +
-        'face do contador — no Itron Aquadis+ é <b>HF 1L</b>.</p>' : "") +
       (isActuator(f) ? '<div class="field"><label>DESLIGAR SOZINHO (segundos, 0 = nunca)</label>' +
         '<input type="number" min="0" data-f="autoOff" data-i="' + i + '" value="' + (f.autoOff || 0) + '"></div>' +
         '<div class="field"><label>ENDEREÇO KNX (área / linha / membro)</label><div class="row2" style="grid-template-columns:1fr 1fr 1fr">' +
@@ -1848,6 +2336,63 @@ document.addEventListener("click", (ev) => {
   }
   if (ev.target.closest("#irr-stop")) { stopIrrigation(); return; }
   if (ev.target.closest("#irr-save")) { saveIrrigation(); return; }
+  const subtab = ev.target.closest(".tab-sub");
+  if (subtab) {
+    document.querySelectorAll(".tab-sub").forEach((t) => t.classList.remove("on"));
+    subtab.classList.add("on");
+    const isDance = subtab.dataset.subview === "irr-dance";
+    $("pane-irr-trad").classList.toggle("hide", isDance);
+    $("pane-irr-dance").classList.toggle("hide", !isDance);
+    if (isDance) renderAquaDanceTab();
+    return;
+  }
+  if (ev.target.closest("#dance-preset-wave")) { applyDancePreset("wave"); return; }
+  if (ev.target.closest("#dance-preset-chase")) { applyDancePreset("chase"); return; }
+  if (ev.target.closest("#dance-preset-alternate")) { applyDancePreset("alternate"); return; }
+  if (ev.target.closest("#dance-preset-pulse")) { applyDancePreset("pulse"); return; }
+  if (ev.target.closest("#dance-preset-clear")) { applyDancePreset("clear"); return; }
+  if (ev.target.closest("#dance-layout-ring")) { applyPoolLayoutPreset("ring"); return; }
+  if (ev.target.closest("#dance-layout-line")) { applyPoolLayoutPreset("line"); return; }
+  if (ev.target.closest("#dance-layout-cross")) { applyPoolLayoutPreset("cross"); return; }
+  if (ev.target.closest("#dance-layout-arc")) { applyPoolLayoutPreset("arc"); return; }
+  if (ev.target.closest("#dance-export-ha")) { exportHomeAssistant2DCard(); return; }
+  const swatchBtn = ev.target.closest("[data-swatch]");
+  if (swatchBtn) {
+    activeColorHex = swatchBtn.dataset.swatch;
+    document.querySelectorAll(".dance-swatch").forEach((s) => s.classList.remove("selected"));
+    swatchBtn.classList.add("selected");
+    return;
+  }
+  if (ev.target.closest("#dance-play")) { runAquaDanceShow(); return; }
+  if (ev.target.closest("#dance-stop")) { stopAquaDanceShow(); return; }
+  if (ev.target.closest("#dance-save")) { saveAquaDanceConfig(); return; }
+  if (ev.target.closest("#dance-add-show")) {
+    aquadance.shows = aquadance.shows || [];
+    const newId = Math.max(0, ...aquadance.shows.map((x) => x.id || 0)) + 1;
+    aquadance.shows.push({
+      id: newId,
+      name: "Dança " + newId,
+      stepMs: 400,
+      totalSteps: 32,
+      loop: false,
+      tracks: []
+    });
+    danceActiveShowIdx = aquadance.shows.length - 1;
+    markDanceDirty();
+    renderAquaDanceTab();
+    return;
+  }
+  if (ev.target.closest("#dance-del-show")) {
+    if (aquadance.shows && aquadance.shows.length > 1) {
+      aquadance.shows.splice(danceActiveShowIdx, 1);
+      danceActiveShowIdx = Math.max(0, danceActiveShowIdx - 1);
+      markDanceDirty();
+      renderAquaDanceTab();
+    } else {
+      toast("Tem de manter pelo menos uma coreografia", "err");
+    }
+    return;
+  }
   const day = ev.target.closest("[data-ipday]");
   if (day) {
     const parts = day.dataset.ipday.split(":");
@@ -1924,23 +2469,6 @@ document.addEventListener("change", (ev) => {
     // A <select> reports type "select-one", so numeric ones say so explicitly;
     // the firmware validates inputMode as an unsigned integer when it is sent.
     const numeric = f.type === "number" || f.dataset.num === "1";
-    // Cubic metres on screen, litres on the wire: the dial reads in m3 and the
-    // firmware counts litres, and doing the conversion here keeps a fractional
-    // field out of the device's parser.
-    if (key === "waterCubic") {
-      if (config.features[i]) {
-        config.features[i].waterLiters = Math.round((parseFloat(f.value) || 0) * 1000);
-        markDirty();
-      }
-      return;
-    }
-    if (key === "litersPerTurn") {
-      if (config.features[i]) {
-        config.features[i].litersPerTurn = Math.max(0.1, parseFloat(f.value) || 1);
-        markDirty();
-      }
-      return;
-    }
     const val = numeric ? (parseInt(f.value, 10) || 0) : f.value;
     if (config.features[i]) { config.features[i][key] = val; markDirty(); }
     return;
@@ -2003,6 +2531,31 @@ document.addEventListener("change", (ev) => {
     markIrrDirty();
     return;
   }
+  if (ev.target.id === "dance-select") {
+    danceActiveShowIdx = parseInt(ev.target.value, 10) || 0;
+    renderAquaDanceTab();
+    return;
+  }
+  if (ev.target.id === "dance-tempo") {
+    const show = activeDanceShow();
+    if (show) { show.stepMs = parseInt(ev.target.value, 10) || 400; markDanceDirty(); }
+    return;
+  }
+  if (ev.target.id === "dance-steps") {
+    const show = activeDanceShow();
+    if (show) {
+      show.totalSteps = parseInt(ev.target.value, 10) || 32;
+      ensureDanceTracks(show);
+      markDanceDirty();
+      renderDanceMatrix();
+    }
+    return;
+  }
+  if (ev.target.id === "dance-loop") {
+    const show = activeDanceShow();
+    if (show) { show.loop = ev.target.checked; markDanceDirty(); }
+    return;
+  }
   if (ev.target.id === "nf-driver") { onDriverChange(); return; }
   if (ev.target.id === "nf-p1" || ev.target.id === "nf-p2") { onNewPinChange(); return; }
   if (ev.target.id === "s-dhcp") { $("s-static").classList.toggle("hide", ev.target.checked); markDirty(); return; }
@@ -2010,11 +2563,127 @@ document.addEventListener("change", (ev) => {
 });
 
 document.addEventListener("input", (ev) => {
+  if (ev.target.id === "dance-name") {
+    const show = activeDanceShow();
+    if (show) {
+      show.name = ev.target.value.trim();
+      markDanceDirty();
+      const opt = document.querySelector('#dance-select option[value="' + danceActiveShowIdx + '"]');
+      if (opt) opt.textContent = show.name || ("Coreografia " + show.id);
+    }
+    return;
+  }
   if (ev.target.id === "s-nodeId") updateNameDirty();
 });
 
+/* Drawing interactions on the partition matrix */
+function applyCellStepChange(cell, track, stepIdx, forceVal) {
+  if (track.trackType === 0) { // Valve: toggle 0/1
+    const next = forceVal !== undefined ? forceVal : (track.steps[stepIdx] > 0 ? 0 : 1);
+    track.steps[stepIdx] = next;
+    cell.classList.toggle("on", next === 1);
+    cell.style.background = "";
+    cell.style.borderColor = "";
+    cell.style.boxShadow = "";
+    return next;
+  } else if (track.trackType === 1) { // Dimmer: 0 -> 25 -> 50 -> 75 -> 100 -> 0
+    const cur = track.steps[stepIdx] || 0;
+    const next = forceVal !== undefined ? forceVal : (cur === 0 ? 25 : (cur === 25 ? 50 : (cur === 50 ? 75 : (cur === 75 ? 100 : 0))));
+    track.steps[stepIdx] = next;
+    cell.classList.toggle("on", next > 0);
+    cell.textContent = next > 0 ? next + "%" : "";
+    return next;
+  } else { // RGBW: apply active color
+    const cur = track.steps[stepIdx] || 0;
+    const next = forceVal !== undefined ? forceVal : (cur > 0 ? 0 : 1);
+    track.steps[stepIdx] = next;
+    const hexVal = parseInt(activeColorHex.replace("#", ""), 16);
+    track.rgbw = track.rgbw || [];
+    track.rgbw[stepIdx] = hexVal;
+    cell.classList.toggle("on", next > 0);
+    if (next > 0) {
+      cell.style.background = activeColorHex;
+      cell.style.borderColor = "#fff";
+      cell.style.boxShadow = "0 0 10px " + activeColorHex;
+    } else {
+      cell.style.background = "";
+      cell.style.borderColor = "";
+      cell.style.boxShadow = "";
+    }
+    return next;
+  }
+}
+
+document.addEventListener("mousedown", (ev) => {
+  const cell = ev.target.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  drawDanceValue = applyCellStepChange(cell, track, stepIdx);
+  isDrawingDance = true;
+  markDanceDirty();
+});
+
+document.addEventListener("mouseover", (ev) => {
+  if (!isDrawingDance) return;
+  const cell = ev.target.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  applyCellStepChange(cell, track, stepIdx, drawDanceValue);
+});
+
+window.addEventListener("mouseup", () => {
+  isDrawingDance = false;
+});
+
+document.addEventListener("touchstart", (ev) => {
+  const cell = ev.target.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  drawDanceValue = applyCellStepChange(cell, track, stepIdx);
+  isDrawingDance = true;
+  markDanceDirty();
+}, { passive: true });
+
+document.addEventListener("touchmove", (ev) => {
+  if (!isDrawingDance || !ev.touches.length) return;
+  const touch = ev.touches[0];
+  const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (!elem) return;
+  const cell = elem.closest(".dance-cell");
+  if (!cell) return;
+  const show = activeDanceShow();
+  if (!show) return;
+  const trackId = cell.dataset.dtrack;
+  const stepIdx = parseInt(cell.dataset.dstep, 10);
+  const track = show.tracks.find((t) => t.uniqueId === trackId);
+  if (!track) return;
+  if (track.steps[stepIdx] !== drawDanceValue) {
+    track.steps[stepIdx] = drawDanceValue;
+    cell.classList.toggle("on", drawDanceValue === 1);
+  }
+}, { passive: true });
+
+window.addEventListener("touchend", () => {
+  isDrawingDance = false;
+});
+
 window.addEventListener("beforeunload", (e) => {
-  if (dirty) { e.preventDefault(); e.returnValue = ""; }
+  if (dirty || danceDirty) { e.preventDefault(); e.returnValue = ""; }
 });
 
 document.addEventListener("DOMContentLoaded", () => {

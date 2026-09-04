@@ -104,24 +104,124 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   <div class="feature-grid" id="feat-list"></div>
 </div></div>
 
-<!-- ============ REGA ============ -->
+<!-- ============ REGA / FONTE ============ -->
 <div class="view" id="v-irrigation"><div class="wrap">
-  <div class="sec">ESTADO</div>
-  <div id="irr-status"></div>
-  <div class="sec">ZONAS</div>
-  <p class="note" id="irr-zones-note" style="margin:0 2px 10px"></p>
-  <div class="tiles" id="irr-zones"></div>
-  <div class="sec">PROGRAMAS</div>
-  <p class="note" style="margin:0 2px 10px">
-    Os programas correm no próprio equipamento, por isso continuam a regar se a
-    internet falhar. Um ciclo interrompido por falta de energia não é retomado.
-  </p>
-  <div id="irr-programs"></div>
-  <div class="btns" style="margin-top:12px">
-    <button class="btn" id="irr-add">Novo programa</button>
-    <button class="btn p" id="irr-save" disabled>Guardar programas</button>
+  <div class="irr-view-selector">
+    <button type="button" class="tab-sub on" id="btn-sub-irr" data-subview="irr-trad">PROGRAMAÇÃO REGA</button>
+    <button type="button" class="tab-sub" id="btn-sub-dance" data-subview="irr-dance">FONTE AQUADANCE</button>
   </div>
-  <div class="note" id="irr-msg"></div>
+
+  <div class="sub-pane" id="pane-irr-trad">
+    <div class="sec">ESTADO</div>
+    <div id="irr-status"></div>
+    <div class="sec">ZONAS</div>
+    <p class="note" id="irr-zones-note" style="margin:0 2px 10px"></p>
+    <div class="tiles" id="irr-zones"></div>
+    <div class="sec">PROGRAMAS</div>
+    <p class="note" style="margin:0 2px 10px">
+      Os programas correm no próprio equipamento, por isso continuam a regar se a
+      internet falhar. Um ciclo interrompido por falta de energia não é retomado.
+    </p>
+    <div id="irr-programs"></div>
+    <div class="btns" style="margin-top:12px">
+      <button class="btn" id="irr-add">Novo programa</button>
+      <button class="btn p" id="irr-save" disabled>Guardar programas</button>
+    </div>
+    <div class="note" id="irr-msg"></div>
+  </div>
+
+  <div class="sub-pane hide" id="pane-irr-dance">
+    <div class="sec">DANÇA AQUÁTICA (PARTIÇÃO MUSICAL)</div>
+    <p class="note" style="margin:0 2px 10px">
+      Cria e desenha coreografias de água como notas numa partitura musical. Cada linha representa uma válvula / jato de água e as colunas definem os tempos em que a água abre e fecha.
+    </p>
+    <div class="card dance-control-card">
+      <div class="dance-toolbar">
+        <div class="dance-show-select">
+          <label>COREOGRAFIA</label>
+          <select id="dance-select"></select>
+        </div>
+        <div class="dance-field">
+          <label>NOME</label>
+          <input id="dance-name" maxlength="31" placeholder="Nome da dança">
+        </div>
+        <div class="dance-field">
+          <label>TEMPO / PASSO</label>
+          <select id="dance-tempo">
+            <option value="100">100 ms (Muito Rápido)</option>
+            <option value="200">200 ms (Rápido)</option>
+            <option value="300">300 ms (Moderado)</option>
+            <option value="400" selected>400 ms (Normal)</option>
+            <option value="500">500 ms (Largo)</option>
+            <option value="800">800 ms (Lento)</option>
+            <option value="1000">1000 ms (1 segundo)</option>
+          </select>
+        </div>
+        <div class="dance-field">
+          <label>PASSOS</label>
+          <select id="dance-steps">
+            <option value="16">16 passos (4 compassos)</option>
+            <option value="24">24 passos (6 compassos)</option>
+            <option value="32" selected>32 passos (8 compassos)</option>
+            <option value="48">48 passos (12 compassos)</option>
+            <option value="64">64 passos (16 compassos)</option>
+          </select>
+        </div>
+        <div class="dance-field-check">
+          <label class="f-check"><input type="checkbox" id="dance-loop"> Repetir (Loop contínuo)</label>
+        </div>
+      </div>
+      <div class="dance-presets-row">
+        <span class="dance-presets-label">Padrões rápidos:</span>
+        <button type="button" class="btn btn-sm" id="dance-preset-wave">Cascata / Onda</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-chase">Perseguição</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-alternate">Cruzado</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-pulse">Pulso / Staccato</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-clear">Limpar tudo</button>
+      </div>
+      <div class="dance-presets-row" id="dance-color-picker-row">
+        <span class="dance-presets-label">Cor ativa (RGBW):</span>
+        <div class="dance-swatches" id="dance-swatches"></div>
+      </div>
+    </div>
+
+    <div class="dance-matrix-container">
+      <div class="dance-matrix-wrap" id="dance-matrix-wrap"></div>
+    </div>
+
+    <div class="sec">SIMULADOR 2D DA FONTE & ILUMINAÇÃO (PLANO DO LAGO)</div>
+    <div class="card dance-2d-card">
+      <div class="dance-2d-toolbar">
+        <div class="dance-2d-presets">
+          <span class="dance-presets-label">Disposição 2D:</span>
+          <button type="button" class="btn btn-sm" id="dance-layout-ring">Círculo</button>
+          <button type="button" class="btn btn-sm" id="dance-layout-line">Linha</button>
+          <button type="button" class="btn btn-sm" id="dance-layout-cross">Cruz</button>
+          <button type="button" class="btn btn-sm" id="dance-layout-arc">Arco</button>
+        </div>
+        <div class="dance-2d-actions">
+          <button type="button" class="btn btn-sm" id="dance-export-ha">Copiar Cartão Home Assistant (2D)</button>
+        </div>
+      </div>
+      <div class="dance-pool-canvas-wrap">
+        <div class="dance-pool-basin" id="dance-pool-basin"></div>
+      </div>
+      <p class="note" style="margin:8px 0 0">
+        Arrasta os bicos de água e focos de luz para mapear a posição exata no teu lago ou piscina. A simulação em tempo real reproduz os jatos e as cores durante a dança.
+      </p>
+    </div>
+
+    <div class="dance-actions-bar">
+      <div class="btns">
+        <button class="btn p" id="dance-play">▶ Reproduzir Dança</button>
+        <button class="btn d hide" id="dance-stop">⏹ Parar</button>
+        <button class="btn" id="dance-add-show">Nova Coreografia</button>
+        <button class="btn d" id="dance-del-show">Apagar</button>
+        <button class="btn p" id="dance-save" disabled>Guardar Coreografia</button>
+      </div>
+      <div class="note" id="dance-msg"></div>
+    </div>
+  </div>
 </div></div>
 
 <!-- ============ DIAGNÓSTICO ============ -->
