@@ -1,0 +1,19 @@
+{
+  "name": "easyiot-web-tests",
+  "version": "1.0.0",
+  "description": "Integration and E2E tests for the EasyIot web panel interface.",
+  "main": "test-runner.js",
+  "scripts": {
+    "test": "node test-all.js",
+    "test:system": "node test-runner.js",
+    "test:radar": "node test-radar-studio.js",
+    "test:aquadance": "node test-aquadance.js",
+    "test:irrigation": "node test-irrigation.js",
+    "test:diagnostics": "node test-diagnostics.js",
+    "test:resiliency": "node test-resiliency.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "playwright": "^1.44.0"
+  }
+}
