@@ -4,6 +4,7 @@
 #include "Sensors.h"
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
+#include "AquaDance.h"
 #include <algorithm>
 extern ConfigOnofre config;
 
@@ -48,6 +49,8 @@ void clearLiveFeatureGraphSafely()
 
     if (irrigation.isRunning())
         irrigation.stop();
+    if (aquadance.isRunning())
+        aquadance.stop();
 
     std::vector<unsigned int> releasedOutputs;
     for (auto &actuator : config.actuatores)
@@ -91,6 +94,30 @@ void prepareLD2410(String name, unsigned int rx, unsigned int tx)
     // Sensor::loop passes slot 0 as UART RX and slot 1 as UART TX.
     sensor.inputs = {rx, tx};
     sensor.driver = LD2410;
+    sensor.delayRead = constantsConfig::ld2410Delay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, rx, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
+void prepareLD2450(String name, unsigned int rx, unsigned int tx)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    sensor.inputs = {rx, tx};
+    sensor.driver = LD2450;
+    sensor.delayRead = constantsConfig::ld2410Delay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, rx, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
+void prepareLD2460(String name, unsigned int rx, unsigned int tx)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    sensor.inputs = {rx, tx};
+    sensor.driver = LD2460;
     sensor.delayRead = constantsConfig::ld2410Delay;
     String idStr;
     config.generateId(idStr, sensor.name, sensor.driver, rx, sizeof(sensor.uniqueId));
@@ -321,6 +348,12 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             break;
         case SensorDriver::LD2410:
             prepareLD2410(name, input1, input2);
+            break;
+        case SensorDriver::LD2450:
+            prepareLD2450(name, input1, input2);
+            break;
+        case SensorDriver::LD2460:
+            prepareLD2460(name, input1, input2);
             break;
         case SensorDriver::PZEM_004T_V03:
         case SensorDriver::PZEM_004T_V01:

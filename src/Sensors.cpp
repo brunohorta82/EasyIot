@@ -53,6 +53,129 @@ static DallasTemperature *getDallasForPin(unsigned int pin)
   dallasBuses.push_back(bus);
   return dallasBuses.back().dallas;
 }
+
+#ifdef ESP32
+struct LD2450Parser {
+  uint8_t buffer[32];
+  uint8_t pos = 0;
+  
+  struct Target {
+    int16_t x = 0;
+    int16_t y = 0;
+    int16_t speed = 0;
+    uint16_t resolution = 0;
+  } targets[3];
+  
+  uint8_t target_count = 0;
+  
+  static int16_t decode_coordinate(uint8_t low_byte, uint8_t high_byte) {
+    int16_t coordinate = (high_byte & 0x7F) << 8 | low_byte;
+    if ((high_byte & 0x80) == 0) {
+      coordinate = -coordinate;
+    }
+    return coordinate;  // mm
+  }
+
+  static int16_t decode_speed(uint8_t low_byte, uint8_t high_byte) {
+    int16_t speed = (high_byte & 0x7F) << 8 | low_byte;
+    if ((high_byte & 0x80) == 0) {
+      speed = -speed;
+    }
+    return speed * 10;  // mm/s
+  }
+  
+  bool read(HardwareSerial& serial) {
+    bool new_data = false;
+    while (serial.available()) {
+      uint8_t b = serial.read();
+      
+      // Look for header
+      if (pos == 0 && b != 0xAA) continue;
+      if (pos == 1 && b != 0xFF) { pos = 0; continue; }
+      if (pos == 2 && b != 0x03) { pos = 0; continue; }
+      if (pos == 3 && b != 0x00) { pos = 0; continue; }
+      
+      buffer[pos++] = b;
+      
+      if (pos == 30) {
+        // Verify footer
+        if (buffer[28] == 0x55 && buffer[29] == 0xCC) {
+          target_count = 0;
+          for (int i = 0; i < 3; i++) {
+            int offset = 4 + i * 8;
+            targets[i].x = decode_coordinate(buffer[offset + 0], buffer[offset + 1]) / 10;
+            targets[i].y = decode_coordinate(buffer[offset + 2], buffer[offset + 3]) / 10;
+            targets[i].speed = decode_speed(buffer[offset + 4], buffer[offset + 5]) / 10;
+            targets[i].resolution = ((buffer[offset + 7] << 8) | buffer[offset + 6]) / 10;
+            
+            if (targets[i].y > 0) {
+              target_count++;
+            }
+          }
+          new_data = true;
+        }
+        pos = 0;
+      }
+    }
+    return new_data;
+  }
+};
+
+struct LD2460Parser {
+  uint8_t buffer[64];
+  uint8_t pos = 0;
+  
+  struct Target {
+    int16_t x = 0;
+    int16_t y = 0;
+  } targets[5];
+  
+  uint8_t target_count = 0;
+  
+  bool read(HardwareSerial& serial) {
+    bool new_data = false;
+    while (serial.available()) {
+      uint8_t b = serial.read();
+      
+      // Look for header
+      if (pos == 0 && b != 0xF4) continue;
+      if (pos == 1 && b != 0xF3) { pos = 0; continue; }
+      if (pos == 2 && b != 0xF2) { pos = 0; continue; }
+      if (pos == 3 && b != 0xF1) { pos = 0; continue; }
+      
+      buffer[pos++] = b;
+      
+      if (pos >= 7) {
+        uint16_t len = (buffer[6] == 0) ? buffer[5] : buffer[6];
+        uint16_t total_packet_len = 7 + len;
+        
+        if (pos == total_packet_len) {
+          if (buffer[pos - 4] == 0xF8 && buffer[pos - 3] == 0xF7 && buffer[pos - 2] == 0xF6 && buffer[pos - 1] == 0xF5) {
+            uint16_t target_bytes = len - 4;
+            target_count = target_bytes / 4;
+            if (target_count > 5) target_count = 5;
+            
+            for (int i = 0; i < target_count; i++) {
+              int offset = 7 + i * 4;
+              int16_t raw_x = (int16_t)(buffer[offset + 0] | (buffer[offset + 1] << 8));
+              int16_t raw_y = (int16_t)(buffer[offset + 2] | (buffer[offset + 3] << 8));
+              
+              targets[i].x = raw_x * 10;
+              targets[i].y = raw_y * 10;
+            }
+            new_data = true;
+          }
+          pos = 0;
+        } else if (pos >= 64) {
+          pos = 0;
+        }
+      }
+    }
+    return new_data;
+  }
+};
+#endif
+
 } // namespace
 void Sensor::notifyState()
 {
@@ -837,19 +960,22 @@ void Sensor::loop()
 #ifdef ESP32
   case LD2410:
   {
-    static ld2410 radar;
+    if (context == nullptr)
+    {
+      context = new ld2410();
+    }
+    ld2410* radar = (ld2410*)context;
     if (initialized)
     {
-      radar.read();
+      radar->read();
     }
     if (lastRead + delayRead < millis())
     {
       if (!isInitialized())
       {
-
         Serial1.begin(256000, SERIAL_8N1, inputs[0], inputs[1]);
         delay(500);
-        if (radar.begin(Serial1))
+        if (!radar->begin(Serial1))
         {
 #ifdef DEBUG_ONOFRE
           Log.error("Ld2410 error " CR, tags::sensors);
@@ -859,31 +985,30 @@ void Sensor::loop()
       }
       lastRead = millis();
 
-      if (radar.isConnected())
+      if (radar->isConnected())
       {
-        JsonDocument
-            doc;
+        JsonDocument doc;
         JsonObject obj = doc.to<JsonObject>();
         state.clear();
 
-        if (radar.presenceDetected())
+        if (radar->presenceDetected())
         {
           lastBinaryState = true;
           obj["occupancy"] = Payloads::presenceOnPayload;
-          if (radar.stationaryTargetDetected())
+          if (radar->stationaryTargetDetected())
           {
-            obj["stationaryTargetDistance"] = radar.stationaryTargetDistance();
-            obj["stationaryTargetEnergy"] = radar.stationaryTargetEnergy();
+            obj["stationaryTargetDistance"] = radar->stationaryTargetDistance();
+            obj["stationaryTargetEnergy"] = radar->stationaryTargetEnergy();
           }
           else
           {
             obj["stationaryTargetDistance"] = 0;
             obj["stationaryTargetEnergy"] = 0;
           }
-          if (radar.movingTargetDetected())
+          if (radar->movingTargetDetected())
           {
-            obj["movingTargetDistance"] = radar.movingTargetDistance();
-            obj["movingTargetEnergy"] = radar.movingTargetEnergy();
+            obj["movingTargetDistance"] = radar->movingTargetDistance();
+            obj["movingTargetEnergy"] = radar->movingTargetEnergy();
             obj["motion"] = Payloads::motionOnPayload;
           }
           else
@@ -912,6 +1037,104 @@ void Sensor::loop()
         Log.notice("%s %s " CR, tags::sensors, state.c_str());
 #endif
       }
+    }
+    break;
+  }
+  case LD2450:
+  {
+    if (context == nullptr)
+    {
+      context = new LD2450Parser();
+    }
+    LD2450Parser* parser = (LD2450Parser*)context;
+    
+    if (initialized)
+    {
+      if (parser->read(Serial1))
+      {
+        if (lastRead + delayRead < millis())
+        {
+          lastRead = millis();
+          JsonDocument doc;
+          JsonObject obj = doc.to<JsonObject>();
+          state.clear();
+          
+          obj["count"] = parser->target_count;
+          obj["motion"] = (parser->target_count > 0) ? Payloads::motionOnPayload : Payloads::motionOffPayload;
+          obj["occupancy"] = (parser->target_count > 0) ? Payloads::presenceOnPayload : Payloads::presenceOffPayload;
+          
+          for (int i = 0; i < 3; i++)
+          {
+            String prefix = "t" + String(i + 1) + "_";
+            obj[prefix + "x"] = parser->targets[i].x;
+            obj[prefix + "y"] = parser->targets[i].y;
+            obj[prefix + "s"] = parser->targets[i].speed;
+            obj[prefix + "r"] = parser->targets[i].resolution;
+          }
+          
+          serializeJson(doc, state);
+          doc.clear();
+          notifyState();
+#ifdef DEBUG_ONOFRE
+          Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+        }
+      }
+    }
+    
+    if (!isInitialized())
+    {
+      Serial1.begin(256000, SERIAL_8N1, inputs[0], inputs[1]);
+      delay(500);
+      lastRead = millis();
+    }
+    break;
+  }
+  case LD2460:
+  {
+    if (context == nullptr)
+    {
+      context = new LD2460Parser();
+    }
+    LD2460Parser* parser = (LD2460Parser*)context;
+    
+    if (initialized)
+    {
+      if (parser->read(Serial1))
+      {
+        if (lastRead + delayRead < millis())
+        {
+          lastRead = millis();
+          JsonDocument doc;
+          JsonObject obj = doc.to<JsonObject>();
+          state.clear();
+          
+          obj["count"] = parser->target_count;
+          obj["motion"] = (parser->target_count > 0) ? Payloads::motionOnPayload : Payloads::motionOffPayload;
+          obj["occupancy"] = (parser->target_count > 0) ? Payloads::presenceOnPayload : Payloads::presenceOffPayload;
+          
+          for (int i = 0; i < 5; i++)
+          {
+            String prefix = "t" + String(i + 1) + "_";
+            obj[prefix + "x"] = parser->targets[i].x;
+            obj[prefix + "y"] = parser->targets[i].y;
+          }
+          
+          serializeJson(doc, state);
+          doc.clear();
+          notifyState();
+#ifdef DEBUG_ONOFRE
+          Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+        }
+      }
+    }
+    
+    if (!isInitialized())
+    {
+      Serial1.begin(115200, SERIAL_8N1, inputs[0], inputs[1]);
+      delay(500);
+      lastRead = millis();
     }
     break;
   }
@@ -1167,5 +1390,7 @@ void Sensor::loop()
     // These drivers are ESP32-only and intentionally no-op on ESP8266 builds.
     break;
 #endif
+  default:
+    break;
   }
 }
