@@ -23,7 +23,9 @@ enum SensorDriver
   TMF882X = 92,
   HCSR04 = 93,
   LD2410 = 94,
-  LDC1612 = 95
+  LDC1612 = 95,
+  LD2450 = 96,
+  LD2460 = 97
 
 };
 
@@ -203,7 +205,9 @@ public:
   int errorCounter = 0;
   unsigned long lastErrorTimestamp = 0ul;
   int id = 0;
+  void* context = nullptr;
   String
+
   familyToText()
   {
     switch (driver)
@@ -224,6 +228,8 @@ public:
     case DOOR:
     case WINDOW:
     case LD2410:
+    case LD2450:
+    case LD2460:
       return Family::SECURITY;
     case LTR303X:
     case HCSR04:
@@ -271,6 +277,10 @@ public:
       return FeatureDrivers::HCSR04;
     case LD2410:
       return FeatureDrivers::LD2410;
+    case LD2450:
+      return FeatureDrivers::LD2450;
+    case LD2460:
+      return FeatureDrivers::LD2460;
     case TMF882X:
       return FeatureDrivers::TMF882X;
     case LDC1612:
