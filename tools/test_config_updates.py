@@ -368,6 +368,13 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         # simulation over real bursts. Fifteen counts fewer again, because a
         # larger amplitude means a larger trigger and a harder rearm.
         self.assertIn("millis() - waterWindowStart > 8000ul", block)
+        # Fast attack: the amplitude has to rise the moment the signal does.
+        # Recomputed only at window boundaries it still described the silence
+        # before a draw — the first turn was judged with 605-850 where the
+        # settled figure was 1800, against a floor of 600, and about one litre
+        # per draw was lost.
+        self.assertIn("const long liveSpan = waterResidualMax - waterResidualMin;", block)
+        self.assertIn("if (liveSpan > waterAmplitude)", block)
         self.assertIn("const long residual = value - waterSlowAverage;", block)
         self.assertIn("const long trigger = waterAmplitude / 10;", block)
         # The guards that follow the comparison may grow; what must not change is
@@ -454,7 +461,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             "if (!hasRuntimeInputTopology())",
             "setError();",
             "return;",
-            "if (!wifiConnected())",
+            "if (!wifiConnected() && !accumulatesTotal(driver))",
             "switch (driver)",
         )
 
@@ -687,7 +694,15 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         )
         self.assertIn("bool ready = true;", self.sensor_header)
         sensor_loop = block_after(self.sensor, r"void\s+Sensor::loop\s*\(\s*\)")
-        self.assertOrdered(sensor_loop, "if (!ready)", "if (!wifiConnected())")
+        # A totaliser keeps counting with the network down: the reading is the
+        # state, nobody else counts the litres, and a skipped one is water that
+        # disappears from the total. Three hours offline cost exactly that.
+        self.assertOrdered(
+            sensor_loop, "if (!ready)",
+            "if (!wifiConnected() && !accumulatesTotal(driver))")
+        self.assertIn(
+            "static bool accumulatesTotal(SensorDriver driver)", self.sensor_header)
+        self.assertIn("driver == SensorDriver::LDC1612", self.sensor_header)
         config_loop = block_after(
             self.config, r"void\s+ConfigOnofre::loopSensors\s*\(\s*\)"
         )

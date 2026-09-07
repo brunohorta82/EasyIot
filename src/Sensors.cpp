@@ -274,7 +274,10 @@ void Sensor::loop()
     return;
   }
 
-  if (!wifiConnected())
+  // A totaliser must keep counting with the network down. Everything else may
+  // wait: publishing is all it would do, and publishOnMqtt already returns
+  // without a broker while the event stream sends nothing without a listener.
+  if (!wifiConnected() && !accumulatesTotal(driver))
   {
     return;
   }
@@ -565,6 +568,22 @@ void Sensor::loop()
     if (residual > waterResidualMax)
       waterResidualMax = residual;
 
+    // Fast attack, slow release.
+    //
+    // The amplitude used to be recomputed only at the window boundaries, so at
+    // the start of a draw it still described the silence before it. Measured
+    // overnight: the first turn of a draw was judged with an amplitude of 605 to
+    // 850 while the settled figure six seconds later was about 1800, and the
+    // floor sits at 600 — so a draw that begins gently loses its first litre.
+    // Ten litres went missing over fifteen hours that way, about one per draw.
+    //
+    // Rising immediately can only open the gate sooner; it never lowers the
+    // amplitude, because the value from the last completed window is kept as the
+    // floor of this comparison. The release stays on the eight-second window.
+    const long liveSpan = waterResidualMax - waterResidualMin;
+    if (liveSpan > waterAmplitude)
+      waterAmplitude = liveSpan;
+
     // Eight seconds, measured and not chosen.
     //
     // Three seconds was justified by the meter's *maximum* flow and never held
@@ -708,7 +727,12 @@ void Sensor::loop()
       }
     }
 
-#ifdef DEBUG_ONOFRE
+#if defined(DEBUG_ONOFRE) && defined(WATER_TRACE)
+    // Gated behind WATER_TRACE, not just DEBUG_ONOFRE: these two streams —
+    // 2 s samples and 25.6 s bursts — are what decided the amplitude window
+    // and the fast attack, and they will be needed again. But they cost about
+    // 1.7 KB/s of radio, and carrying that through a multi-day reliability run
+    // is the wrong trade at -86 dBm.
     // A burst at the full read rate, once a minute. Filled one sample per pass,
     // so the lease is never held for longer than a single I2C transaction.
     if (waterBurst == nullptr)
@@ -744,7 +768,12 @@ void Sensor::loop()
           payload += "]}";
           const bool sent = publishOnMqtt(
               String(String(readTopic) + "/burst").c_str(), payload.c_str(), false);
-          if (!sent)
+          // Only a real loss is worth a line. publishOnMqtt also returns false
+          // when there is simply no broker connected, and reporting that as a
+          // lost burst fills a small ring buffer every eighty seconds on any
+          // device that is not talking to a broker — pushing out the entries
+          // that matter during an installation.
+          if (!sent && mqttConnected())
             deviceLog("contador agua: lote perdido (%u bytes)", payload.length());
           waterBurstArmedAt = millis();
           // Left full on purpose. Zeroing it here restarted the fill on the very

@@ -423,6 +423,19 @@ public:
   void notifyState();
 
 private:
+  /** True when the driver keeps a running total rather than only reporting a
+   *  present value.
+   *
+   *  The distinction decides whether a reading may be skipped while the network
+   *  is down. For a thermometer, reading without being able to publish is wasted
+   *  work. For a meter it is the opposite: the reading *is* the state, nobody
+   *  else counts the litres, and a skipped one is water that vanishes from the
+   *  total. Three hours offline cost exactly that. */
+  static bool accumulatesTotal(SensorDriver driver)
+  {
+    return driver == SensorDriver::LDC1612;
+  }
+
   bool hasRuntimeInputTopology() const
   {
     if (!isSupportedOnCurrentTarget(driver))
