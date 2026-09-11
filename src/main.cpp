@@ -206,10 +206,21 @@ void checkInternalRoutines()
       }
       else
       {
-        // Failed and no-update checks both return to the running firmware.
-        // Restore the lease and web service around the blocking updater.
+        // ESP8266 cannot safely reopen the same port-80 listener while old TCP
+        // connections drain. Preserve the actual failure, then reboot into a
+        // fresh listener; the old browser page will read the journaled error.
         config.endFeatureAccess();
+#ifdef ESP8266
+        if (!storeOtaFailureForRestart())
+        {
+#ifdef DEBUG_ONOFRE
+          Log.error("%s OTA failure status could not be preserved" CR, tags::system);
+#endif
+        }
+        config.requestRestart();
+#else
         startWebserver();
+#endif
       }
     }
   }
@@ -264,6 +275,7 @@ void setup()
 #endif
 
   startFileSystem();
+  restoreOtaFailureStatus();
   if (!applyPendingRestore())
   {
     deviceLog("recuperacao pendente falhou");
