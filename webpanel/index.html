@@ -47,6 +47,155 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   <div id="ov-actuators"></div>
   <div class="sec" id="ov-sensors-title">SENSORES</div>
   <div class="grid g3" id="ov-sensors"></div>
+
+  <div class="sec hide" id="ov-radar-title">RADAR &amp; PRESENÇA (VISUALIZADOR 2D)</div>
+  <div class="card radar-studio-card hide" id="ov-radar-studio">
+    <div class="radar-toolbar">
+      <div class="radar-select-wrap">
+        <label for="radar-sensor-select">SENSOR ATIVO</label>
+        <select id="radar-sensor-select"></select>
+      </div>
+      <div class="radar-meta-badges" id="radar-meta-badges">
+        <span class="pill" id="radar-badge-state">Presença: <b>—</b></span>
+        <span class="pill" id="radar-badge-count">Alvos: <b>0</b></span>
+      </div>
+      <div class="radar-actions">
+        <button type="button" class="btn btn-sm" id="radar-btn-sim">▶ Modo Simulação</button>
+        <button type="button" class="btn btn-sm" id="radar-btn-heatmap">🔥 Mapa de Calor</button>
+        <select id="radar-floorplan-select" title="Planta da Divisão">
+          <option value="none">Sem Planta</option>
+          <option value="living">Planta: Sala</option>
+          <option value="bedroom">Planta: Quarto</option>
+          <option value="office">Planta: Escritório</option>
+        </select>
+        <button type="button" class="btn btn-sm" id="radar-btn-eng">⚙ Engenharia</button>
+        <button type="button" class="btn btn-sm" id="radar-btn-export-ha">Copiar Cartão Home Assistant</button>
+      </div>
+    </div>
+
+    <div class="radar-viewport-grid">
+      <!-- 2D Radar Canvas Viewport -->
+      <div class="radar-canvas-wrap" id="radar-canvas-wrap">
+        <svg class="radar-svg" id="radar-svg" viewBox="-3000 0 6000 6000" preserveAspectRatio="xMidYMax meet">
+          <defs>
+            <radialGradient id="radar-glow" cx="50%" cy="100%" r="90%">
+              <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.18"/>
+              <stop offset="60%" stop-color="#0077aa" stop-opacity="0.06"/>
+              <stop offset="100%" stop-color="#020b14" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Floorplan Backdrop Layer -->
+          <g id="radar-floorplan-group"></g>
+
+          <path class="radar-cone" d="M 0,6000 L -3000,803 A 6000,6000 0 0,1 3000,803 Z" fill="url(#radar-glow)" stroke="rgba(0, 229, 255, 0.25)" stroke-width="12"/>
+
+          <!-- Heatmap Density Layer -->
+          <g id="radar-heatmap-group"></g>
+
+          <!-- Distance range arcs -->
+          <circle cx="0" cy="6000" r="1000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="2000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="3000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="4000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="5000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="6000" class="radar-grid-arc" fill="none"/>
+
+          <!-- Distance labels -->
+          <text x="50" y="5040" class="radar-grid-lbl">1m</text>
+          <text x="50" y="4040" class="radar-grid-lbl">2m</text>
+          <text x="50" y="3040" class="radar-grid-lbl">3m</text>
+          <text x="50" y="2040" class="radar-grid-lbl">4m</text>
+          <text x="50" y="1040" class="radar-grid-lbl">5m</text>
+          <text x="50" y="80" class="radar-grid-lbl">6m</text>
+
+          <!-- Angle rays -->
+          <line x1="0" y1="6000" x2="0" y2="0" class="radar-grid-ray"/>
+          <line x1="0" y1="6000" x2="-2121" y2="2121" class="radar-grid-ray"/>
+          <line x1="0" y1="6000" x2="2121" y2="2121" class="radar-grid-ray"/>
+          <text x="-2150" y="2050" class="radar-grid-lbl">-45°</text>
+          <text x="2150" y="2050" class="radar-grid-lbl">+45°</text>
+          <text x="0" y="-30" class="radar-grid-lbl">0°</text>
+
+          <!-- Detection Zones group -->
+          <g id="radar-zones-group"></g>
+
+          <!-- Target motion trails and blips -->
+          <g id="radar-trails-group"></g>
+          <g id="radar-targets-group"></g>
+
+          <!-- Radar Sensor origin point -->
+          <circle cx="0" cy="6000" r="90" class="radar-origin-point"/>
+        </svg>
+      </div>
+
+      <!-- Radar Telemetry & Zones Sidebar -->
+      <div class="radar-sidebar">
+        <!-- LD2410 Energy & Gate Visualizer -->
+        <div class="radar-subcard hide" id="radar-ld2410-card">
+          <h4>ENERGIA &amp; PORTÕES (LD2410)</h4>
+          <div class="radar-gauge-group">
+            <div class="radar-gauge-item">
+              <span class="radar-gauge-title">Alvo em movimento</span>
+              <div class="radar-gauge-bar"><div class="radar-gauge-fill move" id="radar-move-energy-bar" style="width:0%"></div></div>
+              <div class="radar-gauge-meta"><span id="radar-move-dist">— cm</span><span id="radar-move-energy">0%</span></div>
+            </div>
+            <div class="radar-gauge-item">
+              <span class="radar-gauge-title">Alvo estático</span>
+              <div class="radar-gauge-bar"><div class="radar-gauge-fill stat" id="radar-stat-energy-bar" style="width:0%"></div></div>
+              <div class="radar-gauge-meta"><span id="radar-stat-dist">— cm</span><span id="radar-stat-energy">0%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target Tracking Telemetry Table -->
+        <div class="radar-subcard" id="radar-targets-card">
+          <h4>ALVOS DETETADOS (2D)</h4>
+          <div class="radar-targets-table" id="radar-targets-table">
+            <div class="note">Nenhum alvo detetado no campo de visão.</div>
+          </div>
+        </div>
+
+        <!-- Spatial Zones Management -->
+        <div class="radar-subcard">
+          <div class="radar-subcard-head">
+            <h4>ZONAS DE PRESENÇA</h4>
+            <button type="button" class="btn btn-sm" id="radar-add-zone">+ Nova Zona</button>
+          </div>
+          <div class="radar-zones-list" id="radar-zones-list"></div>
+        </div>
+
+        <!-- Radar Engineering & Gate Thresholds Tuning Drawer -->
+        <div class="radar-subcard hide" id="radar-eng-card">
+          <div class="radar-subcard-head">
+            <h4>CALIBRAÇÃO DE PORTÕES &amp; SENSIBILIDADE</h4>
+          </div>
+          <div class="radar-eng-controls">
+            <div class="field">
+              <label>TEMPO SEM PRESENÇA (s)</label>
+              <input type="number" id="radar-eng-timeout" min="0" max="300" value="5">
+            </div>
+            <div class="field">
+              <label>PORTÃO MÁXIMO DE DETEÇÃO</label>
+              <select id="radar-eng-max-gate">
+                <option value="2">Portão 2 (1.5 m)</option>
+                <option value="3">Portão 3 (2.25 m)</option>
+                <option value="4">Portão 4 (3.0 m)</option>
+                <option value="5">Portão 5 (3.75 m)</option>
+                <option value="6">Portão 6 (4.5 m)</option>
+                <option value="7">Portão 7 (5.25 m)</option>
+                <option value="8" selected>Portão 8 (6.0 m)</option>
+              </select>
+            </div>
+            <div class="radar-gates-grid" id="radar-gates-grid"></div>
+            <div class="btns" style="margin-top:8px">
+              <button type="button" class="btn p btn-sm" id="radar-eng-save">Gravar no Sensor</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div></div>
 
 <!-- ============ PINOUT ============ -->
@@ -104,24 +253,128 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   <div class="feature-grid" id="feat-list"></div>
 </div></div>
 
-<!-- ============ REGA ============ -->
+<!-- ============ REGA / FONTE ============ -->
 <div class="view" id="v-irrigation"><div class="wrap">
-  <div class="sec">ESTADO</div>
-  <div id="irr-status"></div>
-  <div class="sec">ZONAS</div>
-  <p class="note" id="irr-zones-note" style="margin:0 2px 10px"></p>
-  <div class="tiles" id="irr-zones"></div>
-  <div class="sec">PROGRAMAS</div>
-  <p class="note" style="margin:0 2px 10px">
-    Os programas correm no próprio equipamento, por isso continuam a regar se a
-    internet falhar. Um ciclo interrompido por falta de energia não é retomado.
-  </p>
-  <div id="irr-programs"></div>
-  <div class="btns" style="margin-top:12px">
-    <button class="btn" id="irr-add">Novo programa</button>
-    <button class="btn p" id="irr-save" disabled>Guardar programas</button>
+  <div class="irr-view-selector">
+    <button type="button" class="tab-sub on" id="btn-sub-irr" data-subview="irr-trad">PROGRAMAÇÃO REGA</button>
+    <button type="button" class="tab-sub" id="btn-sub-dance" data-subview="irr-dance">FONTE AQUADANCE</button>
   </div>
-  <div class="note" id="irr-msg"></div>
+
+  <div class="sub-pane" id="pane-irr-trad">
+    <div class="sec">ESTADO</div>
+    <div id="irr-status"></div>
+    <div class="sec">ZONAS</div>
+    <p class="note" id="irr-zones-note" style="margin:0 2px 10px"></p>
+    <div class="tiles" id="irr-zones"></div>
+    <div class="sec">PROGRAMAS</div>
+    <p class="note" style="margin:0 2px 10px">
+      Os programas correm no próprio equipamento, por isso continuam a regar se a
+      internet falhar. Um ciclo interrompido por falta de energia não é retomado.
+    </p>
+    <div id="irr-programs"></div>
+    <div class="btns" style="margin-top:12px">
+      <button class="btn" id="irr-add">Novo programa</button>
+      <button class="btn p" id="irr-save" disabled>Guardar programas</button>
+    </div>
+    <div class="note" id="irr-msg"></div>
+  </div>
+
+  <div class="sub-pane hide" id="pane-irr-dance">
+    <div class="sec">DANÇA AQUÁTICA (PARTIÇÃO MUSICAL)</div>
+    <p class="note" style="margin:0 2px 10px">
+      Cria e desenha coreografias de água como notas numa partitura musical. Cada linha representa uma válvula / jato de água e as colunas definem os tempos em que a água abre e fecha.
+    </p>
+    <div class="card dance-control-card">
+      <div class="dance-toolbar">
+        <div class="dance-show-select">
+          <label>COREOGRAFIA</label>
+          <select id="dance-select"></select>
+        </div>
+        <div class="dance-field">
+          <label>NOME</label>
+          <input id="dance-name" maxlength="31" placeholder="Nome da dança">
+        </div>
+        <div class="dance-field">
+          <label>TEMPO / PASSO</label>
+          <select id="dance-tempo">
+            <option value="100">100 ms (Muito Rápido)</option>
+            <option value="200">200 ms (Rápido)</option>
+            <option value="300">300 ms (Moderado)</option>
+            <option value="400" selected>400 ms (Normal)</option>
+            <option value="500">500 ms (Largo)</option>
+            <option value="800">800 ms (Lento)</option>
+            <option value="1000">1000 ms (1 segundo)</option>
+          </select>
+        </div>
+        <div class="dance-field">
+          <label>PASSOS</label>
+          <select id="dance-steps">
+            <option value="16">16 passos (4 compassos)</option>
+            <option value="24">24 passos (6 compassos)</option>
+            <option value="32" selected>32 passos (8 compassos)</option>
+            <option value="48">48 passos (12 compassos)</option>
+            <option value="64">64 passos (16 compassos)</option>
+          </select>
+        </div>
+        <div class="dance-field-check">
+          <label class="f-check"><input type="checkbox" id="dance-loop"> Repetir (Loop contínuo)</label>
+        </div>
+      </div>
+      <div class="dance-presets-row">
+        <span class="dance-presets-label">Padrões rápidos:</span>
+        <button type="button" class="btn btn-sm" id="dance-preset-wave">Cascata / Onda</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-chase">Perseguição</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-alternate">Cruzado</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-pulse">Pulso / Staccato</button>
+        <button type="button" class="btn btn-sm" id="dance-preset-clear">Limpar tudo</button>
+        <button type="button" class="btn btn-sm" id="dance-btn-audio">🔊 Áudio: Desligado</button>
+        <button type="button" class="btn btn-sm" id="dance-btn-import">📂 Importar</button>
+        <button type="button" class="btn btn-sm" id="dance-btn-export">💾 Exportar</button>
+        <input type="file" id="dance-file-import" accept=".json" class="hide">
+      </div>
+      <div class="dance-presets-row" id="dance-color-picker-row">
+        <span class="dance-presets-label">Cor ativa (RGBW):</span>
+        <div class="dance-swatches" id="dance-swatches"></div>
+      </div>
+    </div>
+
+    <div class="dance-matrix-container">
+      <div class="dance-matrix-wrap" id="dance-matrix-wrap"></div>
+    </div>
+
+    <div class="sec">SIMULADOR 2D DA FONTE & ILUMINAÇÃO (PLANO DO LAGO)</div>
+    <div class="card dance-2d-card">
+      <div class="dance-2d-toolbar">
+        <div class="dance-2d-presets">
+          <span class="dance-presets-label">Disposição 2D:</span>
+          <button type="button" class="btn btn-sm" id="dance-layout-ring">Círculo</button>
+          <button type="button" class="btn btn-sm" id="dance-layout-line">Linha</button>
+          <button type="button" class="btn btn-sm" id="dance-layout-cross">Cruz</button>
+          <button type="button" class="btn btn-sm" id="dance-layout-arc">Arco</button>
+        </div>
+        <div class="dance-2d-actions">
+          <button type="button" class="btn btn-sm" id="dance-export-ha">Copiar Cartão Home Assistant (2D)</button>
+        </div>
+      </div>
+      <div class="dance-pool-canvas-wrap">
+        <div class="dance-pool-basin" id="dance-pool-basin"></div>
+      </div>
+      <p class="note" style="margin:8px 0 0">
+        Arrasta os bicos de água e focos de luz para mapear a posição exata no teu lago ou piscina. A simulação em tempo real reproduz os jatos e as cores durante a dança.
+      </p>
+    </div>
+
+    <div class="dance-actions-bar">
+      <div class="btns">
+        <button class="btn p" id="dance-play">▶ Reproduzir Dança</button>
+        <button class="btn d hide" id="dance-stop">⏹ Parar</button>
+        <button class="btn" id="dance-add-show">Nova Coreografia</button>
+        <button class="btn d" id="dance-del-show">Apagar</button>
+        <button class="btn p" id="dance-save" disabled>Guardar Coreografia</button>
+      </div>
+      <div class="note" id="dance-msg"></div>
+    </div>
+  </div>
 </div></div>
 
 <!-- ============ DIAGNÓSTICO ============ -->
