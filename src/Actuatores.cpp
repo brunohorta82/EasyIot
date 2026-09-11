@@ -124,11 +124,19 @@ void actuatoresCallback(message_t const &msg, void *arg)
 }
 void toogle(Button2 &btn)
 {
-  for (auto a : config.actuatores)
+  for (auto &a : config.actuatores)
   {
     if (a.id == btn.getID())
     {
-      config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::TOGGLE);
+      if (a.isDimmer() && btn.wasPressedFor() > 500)
+      {
+        a.dimmingUp = !a.dimmingUp;
+        config.save();
+      }
+      else
+      {
+        config.controlFeature(StateOrigin::GPIO_INPUT, a.uniqueId, ActuatorState::TOGGLE);
+      }
     }
   }
 }
@@ -232,6 +240,7 @@ void Actuator::rebuildInputHandlers()
       {
       case ActuatorDriver::LIGHT_PUSH:
       case ActuatorDriver::SWITCH_PUSH:
+      case ActuatorDriver::LIGHT_DIMMER:
       case ActuatorDriver::GARDEN_VALVE:
         button.setPressedHandler(toogle);
         break;
@@ -329,7 +338,14 @@ void Actuator::setup()
     writeToPIN(output, 0);
     if (isLight() || isSwitch() || isGardenValve())
     {
-      writeToPIN(output, state);
+      if (isDimmer())
+      {
+        writePWMToPIN(output, state);
+      }
+      else
+      {
+        writeToPIN(output, state);
+      }
     }
   }
 
@@ -476,10 +492,18 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
     }
     else if ((isLight() || isSwitch() || isGardenValve()))
     {
-      if (state == ActuatorState::ON_CLOSE || state == ActuatorState::OFF_OPEN)
+      if (isDimmer())
+      {
+        writePWMToPIN(outputs[0], state);
+      }
+      else if (state == ActuatorState::ON_CLOSE || state == ActuatorState::OFF_OPEN)
+      {
         writeToPIN(outputs[0], state ? HIGH : LOW);
+      }
       else
+      {
         return this;
+      }
     }
   }
   else if (typeControl == ActuatorControlType::VIRTUAL)
