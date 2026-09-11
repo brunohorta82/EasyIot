@@ -291,7 +291,17 @@ namespace FeatureDrivers
     constexpr const char *HCSR04{"HCSR04"};
     constexpr const char *LDC1612{"LDC1612"};
     constexpr const char *LD2410{"LD2410"};
+    constexpr const char *LD2450{"LD2450"};
+    constexpr const char *LD2460{"LD2460"};
     constexpr const char *TMF882X{"TMF882X"};
 
     constexpr const char *INVALID{"INVALID"};
+}
+
+namespace Payloads
+{
+    constexpr const char *motionOnPayload{"ON"};
+    constexpr const char *motionOffPayload{"OFF"};
+    constexpr const char *presenceOnPayload{"detected"};
+    constexpr const char *presenceOffPayload{"clear"};
 }
