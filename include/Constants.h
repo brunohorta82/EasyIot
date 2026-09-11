@@ -64,6 +64,8 @@ namespace configFilenames
        such file and starts with no programs. */
     constexpr const char *irrigation = "/irrigation.json";
     constexpr const char *irrigationTemporary = "/irrigation.tmp";
+    constexpr const char *aquadance = "/aquadance.json";
+    constexpr const char *aquadanceTemporary = "/aquadance.tmp";
     constexpr const char *configRollback = "/config.rollback";
     constexpr const char *irrigationRollback = "/irrigation.rollback";
     constexpr const char *restore = "/restore.json";
@@ -135,22 +137,8 @@ namespace DefaultPins
     // Unused here, but referenced by ESP32-wide code paths.
     constexpr unsigned int PZEM_TX{6u};
     constexpr unsigned int PZEM_RX{7u};
-    // Overridable from the build. The pair below is this target's Smart Bus, and it
-    // is also the ESP32-C6's LP-I2C pair — the only one a low-power core can drive
-    // in deep sleep, which is why it is the default. But boards disagree: an M5Stack
-    // Unit C6L puts its Grove connector on GPIO5/4 and spends GPIO6 on a display's
-    // chip select, so a fixed constant makes that board unusable rather than merely
-    // inconvenient.
-#ifdef ONOFRE_I2C_SDA
-    constexpr int SDA{ONOFRE_I2C_SDA};
-#else
     constexpr int SDA{6u};
-#endif
-#ifdef ONOFRE_I2C_SCL
-    constexpr int SCL{ONOFRE_I2C_SCL};
-#else
     constexpr int SCL{7u};
-#endif
     constexpr int HAN_TX{6u};
     constexpr int HAN_RX{7u};
     // GPIO6/7 are the fixed Smart Bus I2C pins above. Exposing either one as a
@@ -222,7 +210,6 @@ namespace Discovery
 {
     constexpr int I2C_SHT4X_ADDRESS{0x44};           // TEMPERATURE/HUMIDITY
     constexpr int I2C_LTR303_ADDRESS{0x29};          // ILLUMINANCE
-    constexpr int I2C_LDC1612_ADDRESS{0x2B};         // WATER METER (0x2A if ADDR high)
     constexpr int I2C_SSD1306_ADDRESS{0x3C};         // DISPLAY
     constexpr int I2C_TMF880X_ADDRESS{0x41};         // TIME OF FLY
     constexpr int MODBUS_PZEM_ADDRESS_START{0x10};   // POWER METER
@@ -272,6 +259,7 @@ namespace FeatureDrivers
     constexpr const char *LOCK_PUSH{"LOCK_PUSH"};
     constexpr const char *LIGHT_PUSH{"LIGHT_PUSH"};
     constexpr const char *LIGHT_LATCH{"LIGHT_LATCH"};
+    constexpr const char *LIGHT_DIMMER{"LIGHT_DIMMER"};
     constexpr const char *GARAGE_PUSH{"GARAGE_PUSH"};
     constexpr const char *LTR303{"LTR303"};
     constexpr const char *DS18B20{"DS18B20"};
@@ -289,8 +277,9 @@ namespace FeatureDrivers
     constexpr const char *PIR{"PIR"};
     constexpr const char *GARDEN_VALVE{"GARDEN_VALVE"};
     constexpr const char *HCSR04{"HCSR04"};
-    constexpr const char *LDC1612{"LDC1612"};
     constexpr const char *LD2410{"LD2410"};
+    constexpr const char *LD2450{"LD2450"};
+    constexpr const char *LD2460{"LD2460"};
     constexpr const char *TMF882X{"TMF882X"};
 
     constexpr const char *INVALID{"INVALID"};

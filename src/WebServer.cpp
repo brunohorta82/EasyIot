@@ -9,6 +9,7 @@
 #include <ConfigOnofre.h>
 #include "Templates.h"
 #include "Irrigation.h"
+#include "AquaDance.h"
 #include "DeviceLog.h"
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
@@ -925,6 +926,106 @@ void loadAPI()
 
   /*FORCE A PROGRAM NOW*/
   server.addHandler(new AsyncCallbackJsonWebHandler("/irrigation-run", irrigationRunHandler));
+
+  auto aquaDanceRunHandler = [](AsyncWebServerRequest *request, JsonVariant json)
+  {
+    if (!authorizeRequest(request))
+      return;
+    if (!config.tryBeginFeatureAccess())
+    {
+      sendFeatureBusy(request);
+      return;
+    }
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    const bool started = aquadance.play((uint8_t)(json["showId"] | 1));
+    aquadance.jsonBody(root);
+    config.endFeatureAccess();
+    if (!started)
+      response->setCode(404);
+    response->setLength();
+    request->send(response);
+  };
+
+  auto aquaDanceStopHandler = [](AsyncWebServerRequest *request)
+  {
+    if (!authorizeRequest(request))
+      return;
+    if (!config.tryBeginFeatureAccess())
+    {
+      sendFeatureBusy(request);
+      return;
+    }
+    aquadance.stop();
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    aquadance.jsonBody(root);
+    config.endFeatureAccess();
+    response->setLength();
+    request->send(response);
+  };
+
+  server.on("/aquadance/stop", HTTP_POST, aquaDanceStopHandler);
+  server.on("/aquadance/stop", HTTP_GET, aquaDanceStopHandler);
+  server.addHandler(new AsyncCallbackJsonWebHandler("/aquadance/run", aquaDanceRunHandler));
+
+  /*AQUADANCE CONFIG & SHOWS*/
+  server.on("/aquadance", HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    if (!authorizeRequest(request))
+      return;
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    aquadance.statusJson(root);
+    response->setLength();
+    request->send(response);
+  });
+
+  server.addHandler(new AsyncCallbackJsonWebHandler("/aquadance", [](AsyncWebServerRequest *request, JsonVariant json)
+  {
+    if (!authorizeRequest(request))
+      return;
+    if (!json.is<JsonObject>())
+    {
+      request->send(errorResponse("AquaDance request must be a JSON object"));
+      return;
+    }
+    if (!config.tryBeginFeatureAccess())
+    {
+      sendFeatureBusy(request);
+      return;
+    }
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    JsonObject body = json.as<JsonObject>();
+    if (!aquadance.update(body))
+    {
+      root["result"] = "Invalid AquaDance configuration";
+      response->setCode(400);
+      config.endFeatureAccess();
+    }
+    else if (!aquadance.save())
+    {
+      root["result"] = "Failed to store AquaDance configuration";
+      response->setCode(507);
+      response->addHeader("Connection", "close");
+      request->onDisconnect([]()
+                            { config.requestRestart(); });
+    }
+    else
+    {
+      aquadance.jsonBody(root);
+      config.endFeatureAccess();
+      createHaAquaDance();
+      publishAquaDanceHomeAssistantState();
+    }
+    response->setLength();
+    request->send(response);
+  }));
+
+  server.addHandler(new AsyncCallbackJsonWebHandler("/aquadance-run", aquaDanceRunHandler));
+  server.on("/aquadance-stop", HTTP_POST, aquaDanceStopHandler);
+  server.on("/aquadance-stop", HTTP_GET, aquaDanceStopHandler);
 
   auto rebootHandler = [](AsyncWebServerRequest *request)
   {
