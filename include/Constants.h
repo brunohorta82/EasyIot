@@ -64,6 +64,8 @@ namespace configFilenames
        such file and starts with no programs. */
     constexpr const char *irrigation = "/irrigation.json";
     constexpr const char *irrigationTemporary = "/irrigation.tmp";
+    constexpr const char *aquadance = "/aquadance.json";
+    constexpr const char *aquadanceTemporary = "/aquadance.tmp";
     constexpr const char *configRollback = "/config.rollback";
     constexpr const char *irrigationRollback = "/irrigation.rollback";
     constexpr const char *restore = "/restore.json";
@@ -272,6 +274,7 @@ namespace FeatureDrivers
     constexpr const char *LOCK_PUSH{"LOCK_PUSH"};
     constexpr const char *LIGHT_PUSH{"LIGHT_PUSH"};
     constexpr const char *LIGHT_LATCH{"LIGHT_LATCH"};
+    constexpr const char *LIGHT_DIMMER{"LIGHT_DIMMER"};
     constexpr const char *GARAGE_PUSH{"GARAGE_PUSH"};
     constexpr const char *LTR303{"LTR303"};
     constexpr const char *DS18B20{"DS18B20"};
@@ -291,7 +294,10 @@ namespace FeatureDrivers
     constexpr const char *HCSR04{"HCSR04"};
     constexpr const char *LDC1612{"LDC1612"};
     constexpr const char *LD2410{"LD2410"};
+    constexpr const char *LD2450{"LD2450"};
+    constexpr const char *LD2460{"LD2460"};
     constexpr const char *TMF882X{"TMF882X"};
 
     constexpr const char *INVALID{"INVALID"};
 }
+
