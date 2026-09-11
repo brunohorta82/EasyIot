@@ -1,8 +1,8 @@
 # EasyIot - To Do
 
 - Created by: Alexandru Hauzman
-- Updated: 28.08.2026
-- Current upstream version: 9.200
+- Updated: 29.08.2026
+- Current upstream version: 9.201
 
 ## Important Notes
 
@@ -33,7 +33,6 @@
 
 1. [ ] Improve the Functions tab layout: make the add-function form clearer and more compact, visually delimit each configured feature as its own card, and use a responsive two-column grid on wider screens that stacks to one column on phones. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
 2. [ ] Add a subtle left-edge health indicator to relevant status badges and diagnostic cards: green for healthy/connected, orange for degraded/retrying, red only for actual errors/disconnection, and gray for disabled/unknown. Keep the existing text or icon so status never relies on color alone; normal actuator OFF states and intentionally disabled MQTT must not appear as errors. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`
-3. [ ] Make the automatic-OTA page recover truthfully without a manual refresh: show the returned error after a failed attempt, and fully reload the WebUI/login state after the rebooted device confirms the new version. The current redirect page can remain on “updating” even though the firmware has already failed safely and restarted its WebServer. Files: `webpanel/js/index.js`, `src/WebServer.cpp`
 
 ## Testing & CI (P2 - Deferred / Later)
 
@@ -95,6 +94,7 @@
 8. [x] Made template replacement truthful on provisioned devices: validate and queue the request, quiesce active feature readers, save the replacement, and restart before using it. Files: `include/ConfigOnofre.h`, `include/Templates.h`, `src/ConfigOnofre.cpp`, `src/Templates.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `webpanel/js/index.js`
 9. [x] Added a firmware-update badge beside the installed header version: it stays quiet and disabled when current, shows an amber check failure, and uses the primary lime update pattern plus direct System -> Firmware navigation only when a newer version is available. Files: `webpanel/index.html`, `webpanel/css/styles.css`, `webpanel/js/index.js`, `tools/test_config_updates.py`
 10. [x] Added versioned full-device recovery without passwords: exact hardware-variant validation, stable actuator/sensor IDs, complete feature metadata and pin preflight, irrigation programs, a reboot-time two-file transaction journal, rollback after interrupted/failed writes, and replacement-device support. Files: `include/ConfigOnofre.h`, `include/Constants.h`, `include/Persistence.h`, `src/ConfigOnofre.cpp`, `src/Persistence.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `webpanel/index.html`, `webpanel/js/index.js`, `tools/test_config_updates.py`
+11. [x] Made automatic OTA completion truthful: success is confirmed only after a different firmware version or build answers, then the browser performs a full reload/login transition; failure stops the progress bar and shows the device error. ESP8266 closes port 80 during BearSSL, journals the failure across a controlled recovery reboot, and releases captive-portal resources before STA services. Hardware tests covered an intentional HTTPS failure with retained Wi-Fi and a successful 9.198 -> official 9.201 update. Files: `include/WebServer.h`, `src/ConfigOnofre.cpp`, `src/CoreWiFi.cpp`, `src/WebServer.cpp`, `src/main.cpp`, `webpanel/js/index.js`, `tools/test_config_updates.py`
 
 ## Code Quality
 

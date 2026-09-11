@@ -89,7 +89,14 @@ def run_release_validation(source, target, env):
     if pioenv:
         cmd.extend(["--env", pioenv])
 
-    if "RELEASE" in pioenv:
+    # Deliberately not strict here. Strict mode refuses a CHANGELOG [Unreleased]
+    # section anywhere, and an environment merely *named* RELEASE gets built dozens
+    # of times a day during development — so tying the two together means the first
+    # pending note in the changelog stops ESP8266_RELEASE and ESP32_RELEASE from
+    # compiling at all. Cutting a release is a different event from building a
+    # release target, and it has its own gate: the documented procedure runs
+    # tools/validate_release.sh --release --fail-on-http.
+    if os.environ.get("ONOFRE_STRICT_RELEASE"):
         cmd.extend(["--release"])
 
     subprocess.run(cmd, check=True, env=_subprocess_env())
