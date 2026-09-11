@@ -187,8 +187,7 @@ Comandos de publicação e promoção em
 
 ## Mais
 
-* [Site oficial](http://onofre.store/)
-* [OnOfre Doctor](https://doctor.onofre.store) — diagnóstico remoto
+* [bhonofre.pt](https://bhonofre.pt) — painel CloudIO, para gerir os equipamentos à distância
 * [Tutoriais em vídeo](https://www.youtube.com/watch?v=OZenBfHWtak&list=PLxDLawCWayzDqAgOpIDJ-DHFAXYd_S-pr)
 
 ## Donativos
