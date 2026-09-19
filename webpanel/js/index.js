@@ -687,7 +687,13 @@ function rssiText(dbm) {
   const q = dbm >= -60 ? "bom" : dbm >= -70 ? "razoável" : dbm >= -80 ? "fraco" : "muito fraco";
   return dbm + " dBm · " + q;
 }
-function rssiClass(dbm) { return dbm == null ? "" : dbm >= -70 ? "ok" : dbm >= -80 ? "warn" : "bad"; }
+function rssiClass(dbm) {
+  const signal = Number(dbm);
+  if (dbm == null || !Number.isFinite(signal) || signal === 0) return "off";
+  // A weak station link is degraded, not disconnected. Reserve red for an
+  // actual failed service/link instead of alarming on a connected -81 dBm AP.
+  return signal >= -70 ? "ok" : "warn";
+}
 
 async function api(path, opts) {
   let res;
@@ -768,7 +774,7 @@ function setFirmwareHeaderState(state, latest) {
 }
 function setStatusBadge(el, state, text) {
   if (!el) return;
-  el.className = "status-badge " + state;
+  el.className = "status-badge health-badge " + state;
   el.textContent = text;
 }
 function setMqttPill(on) {
@@ -791,6 +797,9 @@ const isCover = (f) => (f.driver || "").indexOf("COVER") === 0;
 const isVirtual = (f) => f.typeControl === 2;
 const isDashboardAccessory = (f) => isActuator(f) && !isVirtual(f);
 const tileAction = (on) => on ? "desligar" : "ligar";
+const BINARY_STATE_DRIVERS = ["LIGHT_PUSH", "LIGHT_LATCH", "SWITCH_PUSH", "SWITCH_LATCH"];
+const hasBinaryFunctionState = (f) => isActuator(f) && !isVirtual(f) &&
+  BINARY_STATE_DRIVERS.indexOf(f.driver) >= 0;
 
 function setToggleTileState(tile, on) {
   tile.classList.toggle("on", on);
@@ -800,6 +809,36 @@ function setToggleTileState(tile, on) {
   if (subtitle) subtitle.textContent = action;
   const name = tile.querySelector("b");
   tile.setAttribute("aria-label", action + (name ? " " + name.textContent : " acessório"));
+}
+
+function setFeatureCardState(feature) {
+  if (!hasBinaryFunctionState(feature)) return;
+  const on = (parseInt(feature.state, 10) || 0) > 0;
+  const card = $("fc-" + feature.id);
+  if (card) card.classList.toggle("on", on);
+  const badge = $("fs-" + feature.id);
+  if (badge) {
+    badge.className = "feature-badge feature-state " + (on ? "on" : "off");
+    badge.textContent = on ? "LIGADO" : "DESLIGADO";
+  }
+}
+
+function applyFeatureState(id, state) {
+  const feature = (config.features || []).find((f) => f.id === id);
+  if (!feature) return null;
+  feature.state = state;
+  setFeatureCardState(feature);
+  return feature;
+}
+
+async function refreshFeatureStates() {
+  try {
+    const snapshot = await api("/config?featureState=" + Date.now(), { cache: "no-store" });
+    (snapshot.features || []).forEach((fresh) => applyFeatureState(fresh.id, fresh.state));
+  } catch (e) {
+    // EventSource still carries live updates. A transient refresh failure must
+    // not block navigation or discard edits already made in the Function form.
+  }
 }
 
 /* Jump from a tile straight to that feature's settings, highlighted so it is
@@ -1124,10 +1163,11 @@ function renderPinout() {
   const draw = (pins, right) => pins.map((p) => {
     const u = used[p];
     const only = inputOnly.indexOf(p) >= 0;
-    const tag = u ? (u.k === "out" ? '<span class="tag t-out">SAÍDA</span>' : '<span class="tag t-in">ENTRADA</span>')
-                  : '<span class="tag t-free">LIVRE</span>';
+    const pinState = u ? u.k : "free";
+    const tag = pinState === "out" ? '<span class="tag t-out">SAÍDA</span>' :
+      pinState === "in" ? '<span class="tag t-in">ENTRADA</span>' : '<span class="tag t-free">LIVRE</span>';
     const what = u ? esc(u.n) : (only ? "livre · só entrada" : "livre");
-    return '<div class="pin' + (right ? " r" : "") + '"><span class="n">GPIO' + p + '</span>' +
+    return '<div class="pin pin-' + pinState + (right ? " r" : "") + '"><span class="n">GPIO' + p + '</span>' +
       '<span class="u">' + what + "</span>" + tag + "</div>";
   }).join("");
   $("pin-left").innerHTML = draw(all.slice(0, half), false);
@@ -1218,9 +1258,13 @@ function renderFeatures() {
   $("feat-list").innerHTML = feats.length ? feats.map((f, i) => {
     const cover = isCover(f);
     const kind = featureKind(f);
-    return '<div class="card feature-card" data-fi="' + i + '">' +
+    const hasState = hasBinaryFunctionState(f);
+    const stateOn = hasState && (parseInt(f.state, 10) || 0) > 0;
+    const stateBadge = hasState ? '<span class="feature-badge feature-state ' + (stateOn ? "on" : "off") +
+      '" id="fs-' + esc(f.id) + '">' + (stateOn ? "LIGADO" : "DESLIGADO") + "</span>" : "";
+    return '<div class="card feature-card' + (stateOn ? " on" : "") + '" id="fc-' + esc(f.id) + '" data-fi="' + i + '">' +
       '<div class="feature-card-head"><span class="feature-index">FUNÇÃO ' + (i + 1) + '</span>' +
-      '<div class="feature-badges"><span class="feature-badge ' + kind.cls + '">' + kind.label + '</span>' +
+      '<div class="feature-badges">' + stateBadge + '<span class="feature-badge ' + kind.cls + '">' + kind.label + '</span>' +
       '<span class="feature-badge kind-driver">' + esc(driverLabel(f.driver)) + '</span></div></div>' +
       '<div class="field"><label>NOME</label><input data-f="name" data-i="' + i + '" maxlength="23" value="' + esc(f.name) + '"></div>' +
       inputModeField(f, i) +
@@ -1274,8 +1318,8 @@ function renderDiag() {
   $("d-ssid").textContent = config.wifiSSID || "—";
   $("d-rssi").textContent = rssiText(config.signal);
   const netState = config.signal == null ? "off" : rssiClass(config.signal);
-  const netLabel = netState === "ok" ? "bom" : netState === "warn" ? "fraco" :
-    netState === "bad" ? "muito fraco" : "desconhecido";
+  const netLabel = netState === "ok" ? "bom" : netState === "warn" ?
+    (config.signal < -80 ? "muito fraco" : "fraco") : "desconhecido";
   $("d-net-card").className = "card status-card " + netState;
   setStatusBadge($("d-net-status"), netState, netLabel);
   $("d-ip").textContent = config.wifiIp || "—";
@@ -1291,9 +1335,18 @@ function renderDiag() {
   setStatusBadge($("d-cloud"), cloudState, cloudText);
   // Without a synced clock the device refuses to run a schedule rather than
   // guess the hour, so the panel has to be able to say that out loud.
+  const clockState = config.clockSynced ? "ok" : "warn";
   setStatusBadge($("d-clock"),
-    config.clockSynced ? "ok" : "warn",
+    clockState,
     config.clockSynced ? (config.clockNow || "certo").replace("T", " ") : "sem hora (NTP)");
+  // The card edge summarizes the worst active condition while the badges keep
+  // the cause visible. Intentionally disabled services are excluded so an
+  // unused local MQTT broker cannot turn an otherwise healthy card red.
+  const linkStates = [clockState, cloudState];
+  if ((config.mqttIpDns || "").trim()) linkStates.push(config.mqttConnected ? "ok" : "bad");
+  const linksState = linkStates.includes("bad") ? "bad" :
+    linkStates.includes("warn") ? "warn" : linkStates.includes("ok") ? "ok" : "off";
+  $("d-links-card").className = "card status-card " + linksState;
 }
 
 function drawSpark(id, values, colour) {
@@ -1395,8 +1448,14 @@ function onNewPinChange() {
 }
 
 /* ---------------- actions ---------------- */
-async function control(id, state) {
-  try { await api("/actuators/control", { method: "POST", body: JSON.stringify({ id: id, state: state }) }); }
+async function control(id, state, confirmedState) {
+  try {
+    await api("/actuators/control", { method: "POST", body: JSON.stringify({ id: id, state: state }) });
+    // The Overview tile moves optimistically. Persist the state in the shared
+    // model after the device accepts the command as well, so a delayed/missed
+    // Safari EventSource message cannot leave Functions stale until reload.
+    if (confirmedState != null) applyFeatureState(id, confirmedState);
+  }
   catch (e) { toast("Não foi possível comandar", "err"); }
 }
 
@@ -1788,45 +1847,48 @@ function wireFeatureEvents() {
   for (const f of config.features || []) {
     (function (feat) {
       const handler = (e) => {
-        feat.state = e.data;
-        if (isActuator(feat)) {
-          const sw = document.querySelector('[data-toggle="' + feat.id + '"]');
+        // Always resolve the current object. Saving or restoring configuration
+        // replaces config.features, and an older closure must not update a
+        // detached object that only becomes visible after a full page reload.
+        const current = applyFeatureState(feat.id, e.data) || feat;
+        if (isActuator(current)) {
+          const sw = document.querySelector('[data-toggle="' + current.id + '"]');
           if (sw) {
             const on = (parseInt(e.data, 10) || 0) > 0;
             setToggleTileState(sw, on);
           }
-          const rng = document.querySelector('[data-cover="' + feat.id + '"]');
+          const rng = document.querySelector('[data-cover="' + current.id + '"]');
           if (rng) rng.value = 100 - (parseInt(e.data, 10) || 0);
           // A valve tile carries more than a switch position (open/closed plus
           // the countdown), so redraw the strip instead of poking one node.
-          if (isZone(feat) && irrigation) {
+          if (isZone(current) && irrigation) {
             // The device cancels the cycle when a valve is taken over by hand,
             // so the state card must not keep counting down a dead program.
             const run = irrigation.running;
             const open = (parseInt(e.data, 10) || 0) > 0;
-            seedZoneClock(feat, open, run);
+            seedZoneClock(current, open, run);
             // Any valve of the cycle closing, or a valve outside it opening, means
             // the device cancelled the cycle: it must not keep counting down.
-            if (run && (open ? !isRunningZone(run, feat.id) : isRunningZone(run, feat.id))) {
+            if (run && (open ? !isRunningZone(run, current.id) : isRunningZone(run, current.id))) {
               irrigation.running = null;
               renderIrrStatus();
             }
             renderIrrZones();
           }
-        } else if (isEnergy(feat)) {
+        } else if (isEnergy(current)) {
           // The whole card is derived from the payload, so redraw it in place.
-          const el = $("sv-" + feat.id);
+          const el = $("sv-" + current.id);
           const card = el && el.closest(".card");
-          if (card) card.outerHTML = energyCard(feat);
-        } else if (isClimate(feat)) {
-          recordClimate(feat);
-          const card = $("climate-" + feat.id);
-          if (card) card.outerHTML = climateCard(feat, false);
+          if (card) card.outerHTML = energyCard(current);
+        } else if (isClimate(current)) {
+          recordClimate(current);
+          const card = $("climate-" + current.id);
+          if (card) card.outerHTML = climateCard(current, false);
         } else {
-          const el = $("sv-" + feat.id);
-          if (el) el.textContent = sensorText(e.data, feat.driver);
+          const el = $("sv-" + current.id);
+          if (el) el.textContent = sensorText(e.data, current.driver);
         }
-        addLog("i", "[" + feat.name + "] " + String(e.data).slice(0, 90));
+        addLog("i", "[" + current.name + "] " + String(e.data).slice(0, 90));
       };
       source.addEventListener(feat.id, handler);
       featureEventHandlers.push({ id: feat.id, handler: handler });
@@ -1845,6 +1907,10 @@ document.addEventListener("click", (ev) => {
   if (tab) {
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === tab));
     document.querySelectorAll(".view").forEach((v) => v.classList.toggle("on", v.id === "v-" + tab.dataset.view));
+    // Do not rebuild the form: that would destroy unsaved edits. Reconcile only
+    // runtime state when Functions opens, covering events missed while Safari
+    // throttled the background EventSource connection.
+    if (tab.dataset.view === "features") refreshFeatureStates();
     // Read once on arrival, so nobody has to know there is a button for it.
     if (tab.dataset.view === "diag") loadDeviceLog();
     return;
@@ -1859,7 +1925,7 @@ document.addEventListener("click", (ev) => {
   if (sw) {
     const on = sw.classList.toggle("on");
     setToggleTileState(sw, on);
-    control(sw.dataset.toggle, 102);
+    control(sw.dataset.toggle, 102, on ? 100 : 0);
     return;
   }
   const tpl = ev.target.closest("[data-tpl]");

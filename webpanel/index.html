@@ -127,13 +127,13 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
 <!-- ============ DIAGNÓSTICO ============ -->
 <div class="view" id="v-diag"><div class="wrap">
   <div class="grid g2">
-    <div class="card">
+    <div class="card status-card off">
       <h4>MEMÓRIA LIVRE</h4>
       <div class="big" id="d-heap">—</div>
       <svg class="spark" id="d-heap-spark" viewBox="0 0 200 36" preserveAspectRatio="none"></svg>
       <div class="note" id="d-heap-note"></div>
     </div>
-    <div class="card">
+    <div class="card status-card off">
       <h4>SISTEMA</h4>
       <div class="kv"><span>último arranque</span><b id="d-reset">—</b></div>
       <div class="kv"><span>ligado há</span><b id="d-uptime">—</b></div>
@@ -141,18 +141,18 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
       <div class="kv"><span>programa</span><b id="d-sketch">—</b></div>
     </div>
     <div class="card status-card" id="d-net-card">
-      <div class="diag-card-head"><h4>REDE</h4><span class="status-badge off" id="d-net-status">—</span></div>
+      <div class="diag-card-head"><h4>REDE</h4><span class="status-badge health-badge off" id="d-net-status">—</span></div>
       <div class="kv"><span>rede</span><b id="d-ssid">—</b></div>
       <div class="kv"><span>sinal</span><b id="d-rssi">—</b></div>
       <div class="kv"><span>IP</span><b id="d-ip">—</b></div>
       <div class="kv"><span>máscara / gateway</span><b id="d-net">—</b></div>
     </div>
-    <div class="card">
+    <div class="card status-card" id="d-links-card">
       <h4>LIGAÇÕES</h4>
-      <div class="kv"><span>MQTT local</span><b class="status-badge off" id="d-mqtt">—</b></div>
+      <div class="kv"><span>MQTT local</span><b class="status-badge health-badge off" id="d-mqtt">—</b></div>
       <div class="kv"><span>servidor</span><b id="d-broker">—</b></div>
-      <div class="kv"><span>cloud</span><b class="status-badge off" id="d-cloud">—</b></div>
-      <div class="kv"><span>relógio</span><b class="status-badge off" id="d-clock">—</b></div>
+      <div class="kv"><span>cloud</span><b class="status-badge health-badge off" id="d-cloud">—</b></div>
+      <div class="kv"><span>relógio</span><b class="status-badge health-badge off" id="d-clock">—</b></div>
     </div>
   </div>
   <div class="sec">REGISTO DO EQUIPAMENTO</div>
