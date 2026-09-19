@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Documented independent topic PRs and shared Unreleased notes so unrelated work
+  can continue during review, including dependency and post-merge conflict rules.
 - PlatformIO library dependencies are now reproducible: registry libraries use
   exact versions, Git libraries use full commit hashes, and the known moving
   transitive libraries are pinned explicitly for each board family.
