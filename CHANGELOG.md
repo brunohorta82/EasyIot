@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Water-meter checkpoints use the persistence result, report failed writes, and
+  retain the unsaved-turn count for a later retry instead of reporting success.
 - Runtime actuator commands no longer discard atomic-storage failures. The WebUI
   reports when a command was physically applied but its state could not be saved,
   while MQTT, Cloud, GPIO and KNX paths record the source and feature in the
@@ -21,8 +23,8 @@ All notable changes to this project are documented in this file.
 
 ### Validation
 
-- 138 host tests, all quick project checks, and the ESP8266_DEBUG/ESP32_DEBUG
-  build pair passed. ESP8266 static RAM is 52,492 / 54,000 bytes, leaving 1,508
+- 142 host tests, all quick project checks, and the ESP8266_DEBUG/ESP32_DEBUG
+  build pair passed on the v9.202 base. ESP8266 static RAM is 52,764 / 54,000 bytes, leaving 1,236
   bytes of guard margin.
 - Normal command behavior compiles on both targets. The forced storage-failure
   branch is covered by source contracts but was not induced on hardware because
