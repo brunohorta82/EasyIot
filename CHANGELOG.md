@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Documented independent topic PRs and shared Unreleased notes so unrelated work
+  can continue during review, including dependency and post-merge conflict rules.
+- PlatformIO library dependencies are now reproducible: registry libraries use
+  exact versions, Git libraries use full commit hashes, and the known moving
+  transitive libraries are pinned explicitly for each board family.
+- Platform declarations and the release workflow's PlatformIO Core/IntelHex
+  build tools are pinned too, so the resolver itself cannot drift silently.
+- Every PlatformIO build and the quick project checks now reject floating
+  dependency declarations before they can silently change a firmware build.
+
 ### Fixed
 
 - The firmware-update page now confirms success only after the restarted device
@@ -16,6 +28,11 @@ All notable changes to this project are documented in this file.
   resources before starting the full station WebUI, CloudIO, and MQTT services.
 
 ### Validation
+
+- Dependency-pin host tests passed, and clean resolution/builds passed for the
+  ESP8266 normal/HAN release and debug profiles, ESP32 normal/C3 profiles, and
+  ESP32-C6 release/debug profiles. The C6 intentionally retains its separately
+  tested Arduino 3.x dependency revisions.
 
 - An intentional ESP8266 HTTPS failure completed without OOM, retained Wi-Fi,
   recovered CloudIO/MQTT, and showed `HTTP error: connection failed` in Safari.

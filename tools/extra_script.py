@@ -64,6 +64,22 @@ def run_html_converter(source, target, env):
     return 0
 
 
+def run_dependency_validation(source, target, env):
+    project_dir = env["PROJECT_DIR"]
+    script_path = os.path.join(project_dir, "tools", "check_dependency_pins.py")
+
+    if not os.path.exists(script_path):
+        print("check_dependency_pins.py not found!")
+        return 1
+
+    print("")
+    print("Checking immutable dependency declarations ...")
+    print("")
+    subprocess.run([sys.executable, script_path], check=True, env=_subprocess_env())
+    print("")
+    return 0
+
+
 def run_release_validation(source, target, env):
     if _has_define("SKIP_RELEASE_VALIDATE"):
         print("")
@@ -111,6 +127,7 @@ def run_release_validation(source, target, env):
 # webpanel/ changed there is nothing to recompile, SCons skips the link, and the
 # action never fires — the build then reports SUCCESS while embedding the
 # previous panel. Regenerating at script-load time runs on every invocation.
+run_dependency_validation(None, None, env)
 run_html_converter(None, None, env)
 
 env.AddPreAction("$PROGPATH", Action(run_release_validation, "Pre-build: release validation"))
