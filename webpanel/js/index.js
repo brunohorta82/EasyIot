@@ -1397,7 +1397,13 @@ function onNewPinChange() {
 /* ---------------- actions ---------------- */
 async function control(id, state) {
   try { await api("/actuators/control", { method: "POST", body: JSON.stringify({ id: id, state: state }) }); }
-  catch (e) { toast("Não foi possível comandar", "err"); }
+  catch (e) {
+    if (e && e.body && e.body.result === 6 && e.body.applied === true) {
+      toast("Comando executado, mas o estado não ficou guardado", "err");
+    } else {
+      toast("Não foi possível comandar", "err");
+    }
+  }
 }
 
 async function addFeature() {

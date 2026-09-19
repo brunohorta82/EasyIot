@@ -50,7 +50,10 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     }
     else
     {
-        config.controlFeature(StateOrigin::MQTT, topic, payload_as_string);
+        const ConfigUpdateResult result =
+            config.controlFeature(StateOrigin::MQTT, topic, payload_as_string);
+        if (result == ConfigUpdateResult::PERSISTENCE_FAILED)
+            config.reportControlPersistenceFailure(StateOrigin::MQTT, topic);
     }
     free(payload_as_string);
 }
