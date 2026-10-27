@@ -9,6 +9,7 @@ enum Template
     GARAGE,
     HAN_MODULE,
     GARDEN,
+    WATER_METER,
 };
 namespace constantsMqtt
 {
@@ -258,6 +259,7 @@ namespace I18N
     constexpr const char *ENERGY{"Energia "};
     constexpr const char *ILLUMINANCE{"Iluminação "};
     constexpr const char *CLIMATIZATION{"Climatização"};
+    constexpr const char *WATER_METER_NAME{"Contador de água"};
     constexpr const char *NO_NAME{"Sem Nome"};
 
 }

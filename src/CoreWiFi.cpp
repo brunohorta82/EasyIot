@@ -35,7 +35,7 @@ struct WiFiConfigSnapshot
 // short lease, then release it before any potentially blocking network call.
 bool takeWiFiConfigSnapshot(WiFiConfigSnapshot &snapshot)
 {
-  if (!config.tryBeginFeatureAccess())
+  if (!config.tryBeginFeatureAccess("wifiSnapshot"))
     return false;
 
   strlcpy(snapshot.nodeId, config.nodeId, sizeof(snapshot.nodeId));
@@ -168,7 +168,7 @@ bool takeMDNSRefreshRequest()
 // loopWiFi(), rather than silently losing the event.
 static void drainPendingProvisioningCredentials()
 {
-  if (!hasPendingWiFiWork() || !config.tryBeginFeatureAccess())
+  if (!hasPendingWiFiWork() || !config.tryBeginFeatureAccess("wifiProvisioning"))
     return;
 
   const PendingWiFiCredentials pending = takePendingWiFiWork();
@@ -316,7 +316,7 @@ void scanNewWifiNetworks()
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
 static void drainPendingLegacyCredentials()
 {
-  if (!hasPendingWiFiWork() || !config.tryBeginFeatureAccess())
+  if (!hasPendingWiFiWork() || !config.tryBeginFeatureAccess("wifiProvisioning"))
     return;
 
   const PendingWiFiCredentials pending = takePendingWiFiWork();
