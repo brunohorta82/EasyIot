@@ -208,29 +208,6 @@ public:
   long waterLongMinPrev = 0;
   long waterLongMaxPrev = 0;
   unsigned long waterLongPeriodStart = 0ul;
-#ifdef DEBUG_ONOFRE
-  /** A burst of consecutive samples at the full read rate, for offline analysis.
-   *
-   *  The two-second stream that has been published so far cannot describe fast
-   *  flow at all: a revolution takes five or six seconds at a domestic draw, so
-   *  two-second samples give barely three points per cycle and the signal aliases
-   *  into noise. Every design decision about fast flow has therefore been made
-   *  blind. This fills across loop passes rather than in a blocking loop —
-   *  gathering 256 samples at once would hold the feature lease for five seconds
-   *  and answer every web request "busy", which is a bug this project already
-   *  paid for once. */
-  static constexpr size_t kWaterBurstSamples = 256;
-  long *waterBurst = nullptr;
-  size_t waterBurstCount = 0;
-  unsigned long waterBurstArmedAt = 0ul;
-  /** Take every fifth reading, so 256 samples span 25.6 s instead of 5.1.
-   *
-   *  Sized against the revolution period this time: a litre takes six to ten
-   *  seconds at a domestic draw, so a five-second burst never held a whole cycle
-   *  and its autocorrelation was noise. Ten samples a second still gives sixty
-   *  points per revolution, which is far more than enough to find its extremes. */
-  uint8_t waterBurstDecimate = 0;
-#endif
   bool waterPrimed = false;
   long waterResidualMin = 0;
   long waterResidualMax = 0;
