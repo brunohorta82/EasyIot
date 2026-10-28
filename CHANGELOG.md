@@ -25,6 +25,80 @@ All notable changes to this project are documented in this file.
 - 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
   static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
 
+## [9.224] - 2026-10-28
+
+### Added
+
+- LED strip on the ESP32-C6 (ESP32C6_IRRIGATION and its debug variant): LED_STRIP define plus the Adafruit NeoPixel and Espalexa libraries. Untested on the C6 hardware.
+
+### Changed
+
+- The LED strip is no longer offered under New feature on firmwares that do not include it (the ESP8266 has no memory for it): the firmware now reports ledSupport and the panel hides the option. The ESP8266 builds never contained the strip code; this only removes the dead option and the chance of trying to create it.
+
+## [9.223] - 2026-10-27
+
+### Added
+
+- Alexa start-up guard: the marker /alexa.try exists while the Alexa emulation is starting; if the device restarts by panic or watchdog before a minute has passed, the next boot switches Alexa off and says so in the device log and in the strip dialog, instead of restarting in a loop. Alexa now starts only after 15 s of uptime.
+
+### Fixed
+
+- LED strip settings that are not sliders (Alexa, LED count, segments, colour order, gamma, transition, current limit, KNX) are now written to flash at once instead of 3 seconds later, so they are no longer lost if the device restarts right after. The Alexa option also had a race in the panel that could show it as off right after switching it on.
+
+## [9.222] - 2026-10-26
+
+### Added
+
+- Alexa through Hue emulation for the LED strip (Espalexa library, Hue "extended colour light"): switch it on in the strip's dialog under Alexa, then ask Alexa to discover devices. Local, no cloud; on/off, brightness and colour only (no effects or segments). The web server's not-found handler now offers unknown requests to the Alexa emulation first.
+
+## [9.221] - 2026-10-25
+
+### Changed
+
+- Cloud presence: the log now says when the retained presence message could not be published (AsyncMqttClient::publish returned 0), instead of always reporting it as sent.
+
+## [9.220] - 2026-10-25
+
+### Changed
+
+- The cloud presence message (retained "1" on the available topic) is now renewed every 5 minutes while the cloud link is up, instead of once when it opens. If the server loses the retained message, the cloud panel no longer shows the device offline until its next reconnect.
+
+## [9.219] - 2026-10-24
+
+### Added
+
+- Manual firmware upload (Firmware > Update by file) now writes its failures to the device log with the Update error code and the byte count: device busy, Update.begin failed, write failed, or final verification failed. The panel only said that the upload failed.
+
+## [9.218] - 2026-10-24
+
+### Changed
+
+- The panel header and the Pinout tab now show the real chip (ESP32-C3, ESP32-C6, ESP32, ESP8266) taken from backupVariant. The mcu field is unchanged: it still names the OTA folder and is what the cloud receives, so a C3 keeps reporting ESP32 there.
+
+## [9.217] - 2026-10-24
+
+### Added
+
+- The device log (panel, Diagnostics) now records the cloud: the server's answer to each sync (200 / 204 not adopted / failure), the cloud MQTT link coming up and going down with the disconnect reason, and the presence message. Before, the panel text promised cloud events but none were written, so a cloud problem left no trace without a USB cable.
+
+## [9.216] - 2026-10-24
+
+### Fixed
+
+- ESP32-C3 builds (ESP32C3_LED_DEBUG/RELEASE) now have their own pin table, selected by the new ESP32C3 define. They used the classic ESP32 table: the Smart Bus on GPIO32/33 and selectable pins up to 27, none of which exist on a C3 (GPIO 0-21, with 12-17 on the SPI flash). The boot-time I2C scan now uses GPIO6/7 and the panel only offers 0-5, 10, 20 and 21. ESP32C3_HAN is unchanged.
+
+## [9.215] - 2026-10-24
+
+### Added
+
+- Addressable LED strip (WS2812/WS2813/WS2815) as a feature: Features > New feature > "Fita LED" with name, GPIO and LED count. An Overview tile switches it on and off; its gear opens a dialog with colour, brightness, effect, speed, intensity, LED count, up to 8 segments, smooth transitions, a supply current limit and colour order, gamma and white balance.
+- 24 effects, KNX on/off with state feedback, MQTT and Home Assistant discovery for the whole strip. ESP32 and ESP32-C3 only; the GPIO is reserved so no other feature can take it.
+- New environments: ESP32_4M_DEBUG/RELEASE (4 MB flash) and ESP32C3_LED_DEBUG/RELEASE (access-point provisioning, two OTA slots).
+
+### Changed
+
+- Web panel assets ship pre-generated (SKIP_HTML_CONVERT on by default), so building needs no Node.js. The generated files are not minified.
+
 ## [9.202] - 2026-08-31
 
 ### Added

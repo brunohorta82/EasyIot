@@ -10,6 +10,7 @@
 #include "Templates.h"
 #include "Irrigation.h"
 #include "DeviceLog.h"
+#include "LedStrip.h"
 #include <LittleFS.h>
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
@@ -795,7 +796,13 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     JsonObject featureJson = json.as<JsonObject>();
-    int result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
+    int result;
+#ifdef LED_STRIP
+    if ((featureJson["driver"] | 999) == kLedStripDriverCode)
+      result = ledStripCreate(featureJson["name"] | "", featureJson["input1"] | -1, featureJson["leds"] | 60);
+    else
+#endif
+      result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
     if (result == 0)
     {
       if (!config.persist())
@@ -1076,6 +1083,52 @@ void loadAPI()
       return;
     request->send(200, "text/plain; charset=utf-8", deviceLogText()); });
 
+#ifdef LED_STRIP
+  // Controlo da fita LED: página em /led e API /ledstate (GET) e /led/set, /led/remove (POST).
+  // /ledstate não pode ser /led/state: um handler em "/led" também apanha tudo o que começa por "/led/".
+  server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    if (!authorizeRequest(request))
+      return;
+    AsyncWebServerResponse *response = beginProgmemResponse(request, 200, "text/html",
+        (const uint8_t *)ledStripPageHtml(), ledStripPageSize());
+    response->addHeader("Cache-Control", "no-store");
+    request->send(response); });
+  server.on("/ledstate", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    if (!authorizeRequest(request))
+      return;
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    ledStripStateJson(root);
+    response->setLength();
+    request->send(response); });
+  server.on("/led/remove", HTTP_POST, [](AsyncWebServerRequest *request)
+            {
+    if (!authorizeRequest(request))
+      return;
+    ledStripRemove();
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["removed"] = true;
+    response->setLength();
+    request->send(response); });
+  server.addHandler(new AsyncCallbackJsonWebHandler("/led/set", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                    {
+    if (!authorizeRequest(request))
+      return;
+    if (!ledStripQueueCommand(json))
+    {
+      request->send(errorResponse("LED strip busy or command too large", 409));
+      return;
+    }
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    ledStripStateJson(root);
+    response->setLength();
+    request->send(response); }));
+#endif
+
   server.on("/reboot", HTTP_POST, rebootHandler);
   server.on("/reboot", HTTP_GET, rebootHandler);
   // GET as well as POST: stopping the watering is the one thing someone may need
@@ -1187,6 +1240,7 @@ void loadAPI()
               if (!config.tryBeginFeatureAccess())
               {
                 state->busy = true;
+                deviceLog("envio .bin: recusado, equipamento ocupado");
                 return;
               }
               state->ownsFeatureAccess = true;
@@ -1196,6 +1250,7 @@ void loadAPI()
                 state->busy = true;
                 config.endFeatureAccess();
                 state->ownsFeatureAccess = false;
+                deviceLog("envio .bin: recusado, ja ha um envio em curso");
                 return;
               }
 
@@ -1211,6 +1266,8 @@ void loadAPI()
               {
                 state->failed = true;
                 Update.printError(Serial);
+                deviceLog("envio .bin: Update.begin falhou (erro %d, espaco %u)", (int)Update.getError(),
+                          (unsigned)ESP.getFreeSketchSpace());
               }
             }
 
@@ -1228,6 +1285,8 @@ void loadAPI()
               {
                 state->failed = true;
                 Update.printError(Serial);
+                deviceLog("envio .bin: escrita falhou (erro %d) aos %u bytes", (int)Update.getError(),
+                          (unsigned)(index + len));
               }
             }
             if (final)
@@ -1237,6 +1296,7 @@ void loadAPI()
               state->failed = !state->success;
               if (state->success)
               {
+                deviceLog("envio .bin: gravado (%u bytes)", (unsigned)(index + len));
 #ifdef DEBUG_ONOFRE
                 Log.notice("%s Update Success: %d" CR, tags::system, index + len);
 #endif
@@ -1244,6 +1304,8 @@ void loadAPI()
               else
               {
                 Update.printError(Serial);
+                deviceLog("envio .bin: verificacao final falhou (erro %d) aos %u bytes", (int)Update.getError(),
+                          (unsigned)(index + len));
               }
             }
           });
@@ -1330,6 +1392,27 @@ void setupCors()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
 }
+// Pedidos que nenhuma rota tratou. A Alexa (emulação de Hue) fala por aqui: /api/... e /description.xml.
+static void notFoundHandler(AsyncWebServerRequest *request)
+{
+#ifdef LED_STRIP
+  if (ledStripAlexaHandle(request))
+    return;
+#endif
+  if (request->method() == HTTP_OPTIONS)
+  {
+    request->send(200);
+  }
+  else
+  {
+    request->send(404);
+  }
+}
+
+AsyncWebServer *webServerInstance() { return &server; }
+
+void webServerRegisterNotFound() { server.onNotFound(notFoundHandler); }
+
 void setupWebPanel()
 {
   // Register each mode once. Captive mode deliberately postpones the much
@@ -1347,16 +1430,7 @@ void setupWebPanel()
   server.addHandler(&events);
   loadWebPanel();
   loadAPI();
-  server.onNotFound([](AsyncWebServerRequest *request)
-                    {
-    if (request->method() == HTTP_OPTIONS)
-    {
-      request->send(200);
-    }
-    else
-    {
-      request->send(404);
-    } });
+  webServerRegisterNotFound();
   panelHandlersConfigured = true;
 }
 

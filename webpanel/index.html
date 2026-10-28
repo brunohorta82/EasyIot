@@ -90,6 +90,7 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
       </div>
       <div class="field"><label id="nf-p1-lbl">PINO</label><select id="nf-p1"></select></div>
       <div class="field" id="nf-p2-box"><label id="nf-p2-lbl">SEGUNDO PINO</label><select id="nf-p2"></select></div>
+      <div class="field hide" id="nf-leds-box"><label>NÚMERO DE LEDS</label><input type="number" id="nf-leds" min="1" max="600" value="60"></div>
     </div>
     <div class="feature-add-actions">
       <div class="note" id="nf-msg"></div>
@@ -263,6 +264,10 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   </div>
 
   <div class="sec">AÇÕES</div>
+  <p class="note" style="margin:0 0 8px">
+    Atenção: <b>Procurar atualização</b> instala o firmware <b>oficial</b> da OnOfre, que não tem a fita LED.
+    Para atualizar este firmware usa <b>Atualizar por ficheiro</b>, acima.
+  </p>
   <div class="btns">
     <button class="btn" id="a-reboot">Reiniciar</button>
     <button class="btn" id="a-update">Procurar atualização</button>

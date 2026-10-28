@@ -1,4 +1,5 @@
 #pragma once
+#include "LedStrip.h"
 #include "Constants.h"
 #include "Utils.hpp"
 #include <ArduinoJson.h>
@@ -134,7 +135,7 @@ public:
   {
     if (validOutputPin(pin))
       return true;
-#if defined(ESP32) && !defined(ESP32C6)
+#if defined(ESP32) && !defined(ESP32C6) && !defined(ESP32C3)
     for (auto p : DefaultPins::intputOnlyPins)
     {
       if (p == pin)
@@ -215,6 +216,8 @@ public:
         if (p == pin)
           return true;
     }
+    if (ledStripUsesPin(pin))
+      return true;
     return false;
   }
   void requestReloadWifi();

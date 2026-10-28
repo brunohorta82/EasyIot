@@ -33,6 +33,9 @@ const DRIVERS = [
     { v: 9, t: "GARAGE_PUSH", n: "Portão", pins: 1 },
     { v: 10, t: "GARDEN_VALVE", n: "Válvula de rega", pins: 1 },
   ]},
+  { g: "Iluminação LED", items: [
+    { v: 200, t: "LED_STRIP", n: "Fita LED (WS2812 / WS2813 / WS2815)", pins: 1 },
+  ]},
   { g: "Sensores", items: [
     { v: 111, t: "DHT_11", n: "DHT11 · temperatura e humidade", pins: 1 },
     { v: 121, t: "DHT_21", n: "DHT21 · temperatura e humidade", pins: 1 },
@@ -737,7 +740,8 @@ async function load() {
 function renderHeader() {
   $("h-name").textContent = config.nodeId || "—";
   $("h-chip").textContent = config.chipId || "";
-  $("h-mcu").textContent = config.mcu || "";
+  // `mcu` é o nome da pasta de atualização (um C3 diz "ESP32"); o chip verdadeiro vem em backupVariant.
+  $("h-mcu").textContent = config.backupVariant || config.mcu || "";
   $("h-fw").textContent = config.firmware || "—";
   const w = $("h-wifi");
   w.className = "pill " + rssiClass(config.signal);
@@ -825,7 +829,7 @@ function renderOverview() {
   // Tiles rather than full-width rows: an accessory is a small thing and reads
   // better as a grid, the way a phone's home app lays them out. Each tile is
   // wrapped because the cog cannot live inside the button that toggles it.
-  $("ov-actuators").innerHTML = acts.length ? '<div class="tiles">' + acts.map((f) => {
+  $("ov-actuators").innerHTML = (acts.length || config.ledStrip) ? '<div class="tiles">' + acts.map((f) => {
     const state = parseInt(f.state, 10) || 0;
     const pins = (f.outputs || []).length ? "OUT " + f.outputs.join(",") : "";
     const ins = (f.inputs || []).length ? "IN " + f.inputs.join(",") : "";
@@ -851,7 +855,9 @@ function renderOverview() {
         '<span class="tile-sub">' + tileAction(state > 0) + "</span>" +
         meta + "</button>";
     return '<div class="tile-wrap">' + body + cog + "</div>";
-  }).join("") + "</div>" : '<div class="note">Sem acessórios configurados.</div>';
+  }).join("") + ledTile() + "</div>" : '<div class="note">Sem acessórios configurados.</div>';
+
+  ledSync();
 
   $("ov-sensors-title").classList.toggle("hide", !sens.length);
   $("ov-sensors").innerHTML = sens.map((f) => isEnergy(f) ? energyCard(f) :
@@ -862,6 +868,294 @@ function renderOverview() {
       '"><h4>' + esc(f.name) + '</h4><div class="fval" id="sv-' + esc(f.id) + '">' +
       esc(sensorText(f.state, f.driver)) + "</div></div>").join("");
 }
+
+
+/* ---------------- Fita LED ----------------
+   A fita não é um atuador do firmware: tem o seu próprio estado em /ledstate (GET) e recebe
+   comandos em /led/set (POST). Aparece como mosaico em Acessórios, que liga e desliga como as
+   luzes; a rodinha abre uma janela com cor, brilho, efeito, velocidade, intensidade e nº de LEDs. */
+const LED_EFFECTS = [
+  ["Static", "Fixo"], ["Blink", "Piscar"], ["Breathe", "Respirar"], ["Rainbow", "Arco-íris"],
+  ["Color Wipe", "Varrimento"], ["Chase", "Perseguição"], ["Scan", "Scanner"],
+  ["Twinkle", "Cintilar"], ["Fire", "Fogo"], ["Meteor", "Meteoro"],
+  ["Strobe", "Estroboscópio"], ["Color Cycle", "Ciclo de cor"], ["Theater Rainbow", "Teatro arco-íris"],
+  ["Running Lights", "Luzes em movimento"], ["Sparkle", "Faíscas"], ["Plasma", "Plasma"],
+  ["Confetti", "Confetti"], ["Lightning", "Relâmpago"], ["Candle", "Vela"], ["Police", "Polícia"],
+  ["Heartbeat", "Batimento"], ["Juggle", "Malabarismo"], ["Gradient", "Gradiente"], ["Noise", "Nuvens"],
+]; // os nomes (1.º valor) têm de coincidir com led::kEffectNames em include/LedEffects.h
+const LED_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">' +
+  '<rect x="2" y="8.5" width="20" height="7" rx="3.5"/><circle cx="7" cy="12" r=".9" fill="currentColor"/>' +
+  '<circle cx="12" cy="12" r=".9" fill="currentColor"/><circle cx="17" cy="12" r=".9" fill="currentColor"/></svg>';
+let ledAlHold = 0, ledState = null, ledBusy = 0, ledTimer = null, ledOn = false, ledSeg = -1, ledSig = "";
+const ledHex = (c) => "#" + [c.r, c.g, c.b].map((x) => (x | 0).toString(16).padStart(2, "0")).join("");
+const ledRgb = (h) => ({ r: parseInt(h.substr(1, 2), 16), g: parseInt(h.substr(3, 2), 16), b: parseInt(h.substr(5, 2), 16) });
+
+// -1 = todos os segmentos; senão, o índice do segmento escolhido na janela.
+function ledTarget() {
+  return ledState && ledState.segs && ledSeg >= 0 && ledSeg < ledState.segs.length ? ledSeg : -1;
+}
+
+// Valores a mostrar nos controlos: do segmento escolhido, ou do primeiro quando se escolhe "Todos".
+function ledView() {
+  const t = ledTarget(), s = ledState, g = s.segs[t >= 0 ? t : 0];
+  return { color: g.color, brightness: t >= 0 ? g.brightness : s.brightness, effect: g.effect,
+           speed: g.speed, intensity: g.intensity, on: t >= 0 ? g.on : s.on };
+}
+
+function ledTile() {
+  const led = config.ledStrip;
+  if (!led) return "";
+  const on = ledState ? !!ledState.on : false;
+  ledOn = on;
+  const col = on && ledState ? ' style="color:' + ledHex(ledState.color) + '"' : "";
+  return '<div class="tile-wrap"><button type="button" class="tile tap' + (on ? " on" : "") +
+    '" data-led-toggle="1" aria-pressed="' + on + '" aria-label="' + tileAction(on) + " " + esc(led.name) + '">' +
+    '<span class="tile-top"' + col + ">" + LED_ICON + "</span><b>" + esc(led.name) + "</b>" +
+    '<span class="tile-sub">' + tileAction(on) + "</span>" +
+    '<span class="tile-pins">GPIO' + esc(led.pin) + " · " + esc(led.leds) + " LEDs</span></button>" +
+    '<button type="button" class="cog" data-led-cog="1" title="Configurar" aria-label="Configurar ' +
+    esc(led.name) + '">' + COG + "</button></div>";
+}
+
+// Chamado de renderOverview: lê o estado uma vez e fecha a janela se a fita já não existir.
+function ledSync() {
+  if (!config.ledStrip) { ledCloseModal(); ledState = null; return; }
+  if (!ledState) ledGet();
+}
+
+function ledTileUpdate() {
+  const t = document.querySelector("[data-led-toggle]");
+  if (!t) return;
+  setToggleTileState(t, ledOn);
+  const top = t.querySelector(".tile-top");
+  if (top) top.style.color = ledOn && ledState ? ledHex(ledState.color) : "";
+  const meta = t.querySelector(".tile-pins");
+  if (meta && ledState) meta.textContent = "GPIO" + ledState.pin + " · " + ledState.leds + " LEDs";
+}
+
+function ledPower(on) {
+  ledOn = on;
+  if (ledState) ledState.on = on;
+  ledTileUpdate();
+}
+
+function ledFill(s) {
+  if (!$("led-modal") || !s.segs) return;
+  if (ledSeg >= s.segs.length) ledSeg = -1;
+  // seletor e editor de segmentos: só se reconstroem quando o desenho muda (para não roubar o foco)
+  const sig = s.segs.map((g) => g.start + "-" + g.stop).join(",") + "|" + s.leds + "|" + ledSeg;
+  if (sig !== ledSig || !$("led-segs").children.length) {
+    ledSig = sig;
+    $("led-seg").innerHTML = '<option value="-1">Todos os segmentos</option>' +
+      s.segs.map((g, i) => '<option value="' + i + '">Segmento ' + (i + 1) + " (" + g.start + "–" + g.stop + ")</option>").join("");
+    $("led-seg").value = ledSeg;
+    $("led-segs").innerHTML = s.segs.map((g, i) =>
+      '<div class="led-segrow"><b>' + (i + 1) + "</b>" +
+      '<input type="number" min="0" max="' + (s.leds - 1) + '" data-led-seg="' + i + '" data-f="start" value="' + g.start + '">' +
+      '<input type="number" min="0" max="' + (s.leds - 1) + '" data-led-seg="' + i + '" data-f="stop" value="' + g.stop + '">' +
+      (s.segs.length > 1 ? '<button type="button" class="modal-x" data-led-segdel="' + i + '" aria-label="Remover segmento ' + (i + 1) + '">×</button>' : "<span></span>") +
+      "</div>").join("");
+  }
+  const v = ledView();
+  $("led-co").value = ledHex(v.color);
+  $("led-br").value = v.brightness; $("led-bv").textContent = v.brightness;
+  $("led-fx").value = v.effect;
+  $("led-sp").value = v.speed; $("led-it").value = v.intensity;
+  if (document.activeElement !== $("led-nl")) $("led-nl").value = s.leds;
+  if (document.activeElement !== $("led-tr")) $("led-tr").value = s.transition;
+  if (document.activeElement !== $("led-lm")) $("led-lm").value = s.limit ? (s.limit / 1000).toString() : "";
+  if (document.activeElement !== $("led-lp")) $("led-lp").value = s.maPerLed;
+  $("led-ord").value = s.colorOrder; $("led-gm").value = s.gamma;
+  if (Date.now() - ledAlHold > 4000) $("led-al").value = s.alexa ? "1" : "0";
+  $("led-alnote").textContent = s.alexaGuard ? "Foi desligada automaticamente: o dispositivo reiniciou quando a Alexa arrancou. Vê o motivo no Registo do equipamento (Diagnóstico)."
+    : !s.alexa ? "Liga e diz \"Alexa, descobre dispositivos\". Só liga, desliga, brilho e cor (sem efeitos)."
+    : s.alexaOn ? "Ativa: aparece na Alexa como uma lâmpada com o nome da função. Desligar aqui deixa de a responder já."
+                : "A ligar (precisa do Wi-Fi)...";
+  ["cr", "cg", "cb"].forEach((k, i) => {
+    if (document.activeElement !== $("led-" + k)) $("led-" + k).value = s.cal[i];
+    $("led-" + k + "v").textContent = s.cal[i] + "%";
+  });
+  const amps = (s.ma / 1000).toFixed(2).replace(".", ",");
+  $("led-ma").textContent = "Consumo estimado agora: " + amps + " A" +
+    (s.limit ? " (limite " + (s.limit / 1000).toString().replace(".", ",") + " A" + (s.limited ? " — a reduzir o brilho para o respeitar" : "") + ")" : " (sem limite definido)");
+  const t = ledTarget();
+  $("led-segpw-box").classList.toggle("hide", t < 0);
+  if (t >= 0) $("led-segpw").textContent = s.segs[t].on ? "Desligar este segmento" : "Ligar este segmento";
+  $("led-info").textContent = "GPIO" + s.pin + " · " + s.leds + " LEDs · " + s.segs.length + (s.segs.length === 1 ? " segmento" : " segmentos");
+  $("led-msg").textContent = "";
+}
+
+function ledShow(s, all) {
+  // O POST responde com o estado de antes de o comando ser aplicado: durante um instante depois
+  // de um comando, quem manda é o que o utilizador acabou de pedir.
+  if (Date.now() - ledBusy > 1200) { ledState = s; ledOn = !!s.on; } else if (ledState) { ledState.pin = s.pin; ledState.leds = s.leds; }
+  ledTileUpdate();
+  if (all) ledFill(s);
+}
+
+async function ledGet() {
+  try { ledShow(await api("/ledstate"), Date.now() - ledBusy > 1500); }
+  catch (e) { const m = $("led-msg"); if (m) m.textContent = "Sem resposta da fita."; }
+}
+
+function ledSend(o, now) {
+  clearTimeout(ledTimer);
+  ledBusy = Date.now();
+  if (o.state && o.seg === undefined) ledPower(o.state === "ON");
+  const go = async () => {
+    try {
+      ledShow(await api("/led/set", { method: "POST", body: JSON.stringify(o) }), false);
+      if (o.segments || o.leds !== undefined || o.limit !== undefined || o.maPerLed !== undefined || o.alexa !== undefined) setTimeout(() => { ledBusy = 0; ledGet(); }, 350);
+    }
+    catch (e) {
+      const m = $("led-msg");
+      if (m) m.textContent = e && e.status === 409 ? "A fita ainda está a arrancar — tenta daqui a uns segundos." : "Não foi possível comandar a fita.";
+    }
+  };
+  if (now) go(); else ledTimer = setTimeout(go, 90);
+}
+
+// Comandos de aspeto (cor, brilho, efeito...) vão para o segmento escolhido, ou para todos.
+function ledSendT(o, now) {
+  const t = ledTarget();
+  if (t >= 0) o.seg = t;
+  ledSend(o, now);
+}
+
+// Lê o desenho dos segmentos dos campos e envia-o ao dispositivo.
+function ledSendSegments(list) {
+  ledSend({ segments: list }, true);
+}
+function ledSegList() {
+  const out = [];
+  document.querySelectorAll("#led-segs [data-led-seg]").forEach((el) => {
+    const i = +el.dataset.ledSeg;
+    out[i] = out[i] || {};
+    out[i][el.dataset.f] = parseInt(el.value, 10) || 0;
+  });
+  return out;
+}
+
+function ledOpenModal() {
+  if ($("led-modal") || !config.ledStrip) return;
+  const bg = document.createElement("div");
+  bg.className = "modal-bg";
+  bg.id = "led-modal";
+  bg.innerHTML =
+    '<div class="modal" role="dialog" aria-modal="true" aria-label="' + esc(config.ledStrip.name) + '">' +
+    '<div class="modal-head"><b>' + esc(config.ledStrip.name) + '</b>' +
+    '<button type="button" class="modal-x" data-led-close="1" aria-label="Fechar">×</button></div>' +
+    '<div class="field"><label>SEGMENTO</label><select id="led-seg"><option value="-1">Todos os segmentos</option></select></div>' +
+    '<div class="field hide" id="led-segpw-box"><button type="button" class="btn" id="led-segpw" data-led-segpw="1"></button></div>' +
+    '<div class="field"><label>COR</label><input type="color" id="led-co" value="#ffa03c"></div>' +
+    '<div class="field"><label>BRILHO <span id="led-bv"></span></label><input type="range" id="led-br" min="1" max="255"></div>' +
+    '<div class="field"><label>EFEITO</label><select id="led-fx">' +
+    LED_EFFECTS.map((e) => '<option value="' + e[0] + '">' + e[1] + "</option>").join("") + "</select></div>" +
+    '<div class="row2"><div class="field"><label>VELOCIDADE</label><input type="range" id="led-sp" min="0" max="255"></div>' +
+    '<div class="field"><label>INTENSIDADE</label><input type="range" id="led-it" min="0" max="255"></div></div>' +
+    '<div class="field"><label>NÚMERO DE LEDS</label><input type="number" id="led-nl" min="1" max="600"></div>' +
+    '<div class="row2"><div class="field"><label>TRANSIÇÃO (ms)</label><input type="number" id="led-tr" min="0" max="3000" step="50"></div>' +
+    '<div class="field"><label>LIMITE DA FONTE (A)</label><input type="number" id="led-lm" min="0" max="20" step="0.1" placeholder="0 = sem limite"></div></div>' +
+    '<div class="field"><label>CONSUMO DE 1 LED A BRANCO (mA)</label><input type="number" id="led-lp" min="10" max="100"></div>' +
+    '<div class="note" id="led-ma"></div>' +
+    '<div class="field"><label>ALEXA (EMULAÇÃO DE LÂMPADA HUE)</label>' +
+    '<select id="led-al"><option value="0">Desligada</option><option value="1">Ligada</option></select>' +
+    '<p class="note" style="margin:6px 0 0" id="led-alnote"></p></div>' +
+    '<div class="field"><label>AJUSTE DE CORES</label>' +
+    '<p class="note" style="margin:0 0 8px">Se o vermelho sair rosado ou a cor não coincidir: liga a correção gama (2,2) e baixa um pouco o verde e o azul. Se o vermelho sair verde ou azul, muda a ordem das cores.</p>' +
+    '<div class="row2"><div class="field"><label>ORDEM DAS CORES</label><select id="led-ord">' +
+    ["GRB (normal)", "RGB", "BRG", "RBG", "GBR", "BGR"].map((n, i) => '<option value="' + i + '">' + n + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>CORREÇÃO GAMA</label><select id="led-gm"><option value="10">Sem correção</option><option value="22">2,2</option><option value="28">2,8</option></select></div></div>' +
+    '<div class="field"><label>VERMELHO <span id="led-crv"></span></label><input type="range" id="led-cr" min="10" max="100"></div>' +
+    '<div class="field"><label>VERDE <span id="led-cgv"></span></label><input type="range" id="led-cg" min="10" max="100"></div>' +
+    '<div class="field"><label>AZUL <span id="led-cbv"></span></label><input type="range" id="led-cb" min="10" max="100"></div></div>' +
+    '<div class="field"><label>SEGMENTOS (LED inicial / final)</label><div id="led-segs"></div>' +
+    '<button type="button" class="btn" data-led-segadd="1" style="margin-top:8px">+ Dividir (novo segmento)</button></div>' +
+    '<div class="field"><button type="button" class="btn" data-led-test="1">Testar fita (vermelho, verde, azul)</button></div>' +
+    '<div class="note" id="led-info"></div><div class="note err" id="led-msg"></div></div>';
+  document.body.appendChild(bg);
+  ledSig = ""; // janela nova e vazia: forçar o desenho do seletor e da lista de segmentos
+  if (ledState) ledFill(ledState); else ledGet();
+}
+
+function ledCloseModal() {
+  const m = $("led-modal");
+  if (m) m.remove();
+  ledSig = "";
+}
+
+document.addEventListener("click", (ev) => {
+  if (ev.target.closest("[data-led-cog]")) { ledOpenModal(); return; }
+  if (ev.target.closest("[data-led-close]") || ev.target.id === "led-modal") { ledCloseModal(); return; }
+  if (ev.target.closest("[data-led-test]")) { ledSend({ test: true }, true); return; }
+  if (ev.target.closest("[data-led-segpw]")) {
+    const t = ledTarget();
+    if (t >= 0) ledSend({ seg: t, state: ledState.segs[t].on ? "OFF" : "ON" }, true);
+    return;
+  }
+  const segDel = ev.target.closest("[data-led-segdel]");
+  if (segDel) {
+    const list = ledState.segs.map((g) => ({ start: g.start, stop: g.stop }));
+    const i = +segDel.dataset.ledSegdel;
+    if (i > 0) list[i - 1].stop = list[i].stop; else list[1].start = list[0].start; // o vizinho fica com os LEDs
+    list.splice(i, 1);
+    ledSeg = -1;
+    ledSendSegments(list);
+    return;
+  }
+  if (ev.target.closest("[data-led-segadd]")) {
+    const list = ledState.segs.map((g) => ({ start: g.start, stop: g.stop }));
+    if (list.length >= 8) { $("led-msg").textContent = "No máximo 8 segmentos."; return; }
+    let k = 0; // divide o segmento maior ao meio
+    list.forEach((g, i) => { if (g.stop - g.start > list[k].stop - list[k].start) k = i; });
+    const g = list[k];
+    if (g.stop - g.start < 1) { $("led-msg").textContent = "Já não há LEDs para dividir."; return; }
+    const mid = g.start + Math.floor((g.stop - g.start) / 2);
+    list.splice(k + 1, 0, { start: mid + 1, stop: g.stop });
+    g.stop = mid;
+    ledSendSegments(list);
+    return;
+  }
+  if (ev.target.closest("[data-led-toggle]")) ledSend({ state: ledOn ? "OFF" : "ON" }, true);
+});
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") ledCloseModal(); });
+document.addEventListener("input", (ev) => {
+  const id = ev.target.id;
+  if (id === "led-co") ledSendT({ state: "ON", color: ledRgb(ev.target.value) });
+  else if (id === "led-br") { $("led-bv").textContent = ev.target.value; ledSendT({ brightness: +ev.target.value }); }
+  else if (id === "led-sp") ledSendT({ speed: +ev.target.value });
+  else if (id === "led-it") ledSendT({ intensity: +ev.target.value });
+  else if (id === "led-cr" || id === "led-cg" || id === "led-cb") {
+    const cal = ["led-cr", "led-cg", "led-cb"].map((k) => +$(k).value);
+    $(id + "v").textContent = ev.target.value + "%";
+    ledSend({ cal: cal });
+  }
+});
+document.addEventListener("change", (ev) => {
+  if (ev.target.dataset && ev.target.dataset.ledKnx) {
+    const v = (k) => parseInt(document.querySelector('[data-led-knx="' + k + '"]').value, 10) || 0;
+    const knx = { area: v("area"), line: v("line"), member: v("member") };
+    api("/led/set", { method: "POST", body: JSON.stringify({ knx: knx }) })
+      .then(() => { Object.assign(config.ledStrip, knx); toast("KNX guardado", "ok"); })
+      .catch(() => toast("Não foi possível guardar o KNX", "err"));
+    return;
+  }
+  const id = ev.target.id;
+  if (id === "led-fx") ledSendT({ state: "ON", effect: ev.target.value }, true);
+  else if (id === "led-nl") ledSend({ leds: +ev.target.value }, true);
+  else if (id === "led-ord") ledSend({ colorOrder: +ev.target.value }, true);
+  else if (id === "led-gm") ledSend({ gamma: +ev.target.value }, true);
+  else if (id === "led-al") { ledAlHold = Date.now(); ledSend({ alexa: ev.target.value === "1" }, true); }
+  else if (id === "led-tr") ledSend({ transition: Math.max(0, Math.min(3000, parseInt(ev.target.value, 10) || 0)) }, true);
+  else if (id === "led-lm") ledSend({ limit: Math.round((parseFloat(String(ev.target.value).replace(",", ".")) || 0) * 1000) }, true);
+  else if (id === "led-lp") ledSend({ maPerLed: parseInt(ev.target.value, 10) || 60 }, true);
+  else if (id === "led-seg") { ledSeg = parseInt(ev.target.value, 10); ledSig = ""; if (ledState) ledFill(ledState); }
+  else if (ev.target.dataset && ev.target.dataset.ledSeg !== undefined) ledSendSegments(ledSegList());
+});
+setInterval(() => {
+  if (typeof config !== "undefined" && config && config.ledStrip && !document.hidden &&
+      Date.now() - ledBusy > 1500) ledGet();
+}, 3000);
 
 /* Energy meters report a dozen fields; a one-line summary would throw away
    everything that matters, so they get a card of their own. */
@@ -1132,7 +1426,7 @@ function renderPinout() {
   }).join("");
   $("pin-left").innerHTML = draw(all.slice(0, half), false);
   $("pin-right").innerHTML = draw(all.slice(half), true);
-  $("pin-board").textContent = config.mcu || "—";
+  $("pin-board").textContent = config.backupVariant || config.mcu || "—";
   $("pin-mcu").textContent = (usable.length + inputOnly.length) + " pinos";
   $("tpl-btns").innerHTML = TEMPLATES.map((t) =>
     '<button class="btn" data-tpl="' + t.v + '">' + esc(t.n) + "</button>").join("");
@@ -1148,6 +1442,7 @@ function pinOwners(selfId) {
     for (const p of o.outputs || []) owner[p] = o.name;
     for (const p of o.inputs || []) owner[p] = o.name;
   }
+  if (config.ledStrip && config.ledStrip.pin != null) owner[config.ledStrip.pin] = config.ledStrip.name;
   return owner;
 }
 
@@ -1214,8 +1509,25 @@ function featureKind(f) {
 
 function renderFeatures() {
   const feats = config.features || [];
-  $("feat-count").textContent = feats.length + (feats.length === 1 ? " função" : " funções");
-  $("feat-list").innerHTML = feats.length ? feats.map((f, i) => {
+  const led = config.ledStrip || null;
+  const total = feats.length + (led ? 1 : 0);
+  $("feat-count").textContent = total + (total === 1 ? " função" : " funções");
+  const ledCard = !led ? "" :
+    '<div class="card feature-card">' +
+    '<div class="feature-card-head"><span class="feature-index">FUNÇÃO ' + total + '</span>' +
+    '<div class="feature-badges"><span class="feature-badge kind-driver">Fita LED</span></div></div>' +
+    '<div class="field"><label>NOME</label><input value="' + esc(led.name) + '" disabled></div>' +
+    '<div class="row2"><div class="field"><label>PINO DE DADOS</label><input value="GPIO' + esc(led.pin) + '" disabled></div>' +
+    '<div class="field"><label>LEDS</label><input value="' + esc(led.leds) + '" disabled></div></div>' +
+    '<div class="field"><label>ENDEREÇO KNX (área / linha / membro)</label><div class="row2" style="grid-template-columns:1fr 1fr 1fr">' +
+    '<input type="number" min="0" max="31" data-led-knx="area" value="' + (led.area || 0) + '">' +
+    '<input type="number" min="0" max="7" data-led-knx="line" value="' + (led.line || 0) + '">' +
+    '<input type="number" min="0" max="255" data-led-knx="member" value="' + (led.member || 0) + '"></div>' +
+    '<p class="note" style="margin:6px 2px 0">Liga/desliga a fita e devolve o estado ao bus. 0 / 0 / 0 = sem KNX.</p></div>' +
+    '<p class="note" style="margin:0 2px 10px">Liga e desliga-se no mosaico da Visão geral; a rodinha desse mosaico abre a cor, o brilho e os efeitos. ' +
+    'Para mudar o pino, remove a função e cria-a de novo.</p>' +
+    '<div class="feature-card-actions"><button class="btn d" data-led-del="1">Remover função</button></div></div>';
+  $("feat-list").innerHTML = (feats.length || led) ? feats.map((f, i) => {
     const cover = isCover(f);
     const kind = featureKind(f);
     return '<div class="card feature-card" data-fi="' + i + '">' +
@@ -1251,7 +1563,7 @@ function renderFeatures() {
         '<input type="number" min="0" max="255" data-f="member" data-i="' + i + '" value="' + (f.member || 0) + '">' +
         "</div></div>" : "") +
       '<div class="feature-card-actions"><button class="btn d" data-del="' + esc(f.id) + '">Remover função</button></div></div>';
-  }).join("") : '<div class="note">Ainda não há funções configuradas.</div>';
+  }).join("") + ledCard : '<div class="note">Ainda não há funções configuradas.</div>';
 }
 
 function renderDiag() {
@@ -1351,7 +1663,9 @@ function openFirmwareSettings() {
 
 function fillNewFeatureForm() {
   const sel = $("nf-driver");
-  sel.innerHTML = DRIVERS.map((g) => '<optgroup label="' + esc(g.g) + '">' +
+  // A fita LED só se oferece nos firmwares que a têm (o ESP8266 não tem memória para ela).
+  const drivers = DRIVERS.filter((g) => config.ledSupport === true || !g.items.some((d) => d.v === 200));
+  sel.innerHTML = drivers.map((g) => '<optgroup label="' + esc(g.g) + '">' +
     g.items.map((d) => '<option value="' + d.v + '">' + esc(d.n) + "</option>").join("") + "</optgroup>").join("");
   // Every usable pin is listed; an occupied one names its owner instead of
   // disappearing, so it is clear what is in the way.
@@ -1371,6 +1685,7 @@ function onDriverChange() {
   const d = driverInfo(parseInt($("nf-driver").value, 10));
   const singlePin = !d || d.pins < 2;
   $("nf-p2-box").classList.toggle("hide", singlePin);
+  $("nf-leds-box").classList.toggle("hide", !d || d.v !== 200);
   $("nf-fields").classList.toggle("two-pins", !singlePin);
   onNewPinChange();
 }
@@ -1414,6 +1729,11 @@ async function addFeature() {
   msg.className = "note"; msg.textContent = "A criar…";
   const body = { name: name, driver: driver, input1: p1 };
   if (p2 !== undefined) body.input2 = p2;
+  if (driver === 200) {
+    const n = parseInt($("nf-leds").value, 10);
+    if (!(n >= 1 && n <= 600)) { msg.className = "note err"; msg.textContent = "O número de LEDs tem de ser entre 1 e 600."; return; }
+    body.leds = n;
+  }
   try {
     config = await api("/features", { method: "POST", body: JSON.stringify(body) });
     $("nf-name").value = "";
@@ -1436,6 +1756,7 @@ function featureError(e) {
   if (code === 4) return "Este tipo precisa de dois pinos válidos.";
   if (code === 5) return "Esse pino já está a ser usado por outra função.";
   if (code === 6) return "Não foi possível guardar na memória do dispositivo; a função não será mantida.";
+  if (code === 7) return "Já existe uma fita LED. Remove-a primeiro para criar outra.";
   return "O dispositivo recusou a função.";
 }
 
@@ -1915,6 +2236,19 @@ document.addEventListener("click", (ev) => {
     api("/sensors/reset-energy", { method: "POST", body: JSON.stringify({ id: rst.dataset.reset }) })
       .then(() => toast("Pedido de reposição em fila — confirme o valor na próxima leitura", "ok"))
       .catch(() => toast("Não foi possível repor o contador", "err"));
+    return;
+  }
+  const ledDel = ev.target.closest("[data-led-del]");
+  if (ledDel) {
+    if (!armed(ledDel, "Confirmar?")) return;
+    api("/led/remove", { method: "POST" })
+      .then(() => api("/config"))
+      .then((c) => {
+        config = c;
+        renderOverview(); renderPinout(); renderFeatures(); fillNewFeatureForm(); wireFeatureEvents();
+        toast("Fita LED removida", "ok");
+      })
+      .catch(() => toast("Não foi possível remover a fita", "err"));
     return;
   }
   const del = ev.target.closest("[data-del]");

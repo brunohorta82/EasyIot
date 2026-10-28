@@ -7,6 +7,7 @@
 #include "Mqtt.h"
 #include "CoreWiFi.h"
 #include <esp-knx-ip.h>
+#include "LedStrip.h"
 #include "CloudIO.h"
 #include "LittleFS.h"
 #include <time.h>
@@ -73,6 +74,21 @@ void actuatoresCallback(message_t const &msg, void *arg)
 #ifdef DEBUG_ONOFRE
   Log.notice("%s KNX PA %d.%d.%d" CR, tags::actuatores, msg.received_on.pa.area, msg.received_on.pa.line, msg.received_on.pa.member);
   Log.notice("%s KNX GA %d.%d.%d" CR, tags::actuatores, msg.received_on.ga.area, msg.received_on.ga.line, msg.received_on.ga.member);
+#endif
+
+#ifdef LED_STRIP
+  {
+    // a fita LED também responde ao KNX (ligar/desligar com realimentação)
+    const uint8_t a = msg.received_on.ga.area, l = msg.received_on.ga.line, m = msg.received_on.ga.member;
+    if (msg.ct == KNX_CT_WRITE || msg.ct == KNX_CT_ANSWER)
+      ledStripKnxWrite(a, l, m, knx.data_to_1byte_int(msg.data));
+    else if (msg.ct == KNX_CT_READ)
+    {
+      int ledState;
+      if (ledStripKnxRead(a, l, m, ledState))
+        knx.answer_1byte_int(msg.received_on, ledState);
+    }
+  }
 #endif
 
   for (auto &s : config.actuatores)

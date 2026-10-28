@@ -1,4 +1,5 @@
 #include "CloudIO.h"
+#include "DeviceLog.h"
 #include "Irrigation.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include "ConfigOnofre.h"
@@ -402,9 +403,13 @@ void onMqttConnect(bool sessionPresent)
   signalCloudMqttTransportEvent(CloudMqttTransportEvent::CONNECTED, true);
 }
 
+// Motivo da última desligação (AsyncMqttClientDisconnectReason): 0 ligação TCP fechada, 1 versão do protocolo,
+// 2 identificador recusado, 3 servidor indisponível, 4 credenciais mal formadas, 5 sem autorização.
+static volatile uint8_t cloudMqttLastDisconnectReason = 0;
+
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
-  (void)reason;
+  cloudMqttLastDisconnectReason = static_cast<uint8_t>(reason);
   signalCloudMqttTransportEvent(CloudMqttTransportEvent::DISCONNECTED, false);
 }
 bool cloudIOConnected()
@@ -490,7 +495,11 @@ void serviceCloudMqttSubscriptions()
   if (!config.tryBeginFeatureAccess())
     return;
 
-  mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1");
+  // publish() devolve 0 se a mensagem não saiu (ligação caída, sem memória); em QoS 0 devolve 1 se saiu.
+  if (mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1") != 0)
+    deviceLog("cloud presenca enviada");
+  else
+    deviceLog("cloud presenca NAO enviada (publish falhou)");
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
   if (config.cloudIOIrrigationWriteTopic[0] != '\0')
     subscribeOnMqttCloudIO(config.cloudIOIrrigationWriteTopic);
@@ -537,6 +546,7 @@ void serviceCloudIOMqtt()
     Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
     Log.info("----------------------------------------------" CR);
 #endif
+    deviceLog("cloud mqtt ligado");
   }
   else if (event == CloudMqttTransportEvent::DISCONNECTED)
   {
@@ -546,6 +556,7 @@ void serviceCloudIOMqtt()
 #ifdef DEBUG_ONOFRE
     Log.warning("%s Disconnected from MQTT." CR, tags::cloudIO);
 #endif
+    deviceLog("cloud mqtt desligado (motivo %d)", (int)cloudMqttLastDisconnectReason);
   }
 
   if (cloudMqttTransitionTimedOut())
@@ -694,6 +705,16 @@ void serviceCloudIOWatchdog()
   }
   if (cloudIOConnected())
   {
+    // A presença ("1" retida) só era enviada uma vez, quando a ligação abria. Se o servidor a perder (reinício do
+    // broker, limpeza de mensagens retidas), o painel da nuvem mostra o equipamento offline até ele voltar a ligar-se,
+    // mesmo com a ligação aberta. Renova-a de 5 em 5 minutos (1 tick = 60 s): é só uma mensagem pequena.
+    static uint8_t presenceTicks = 0;
+    if (++presenceTicks >= 5 && config.cloudIOhealthTopic[0] != '\0')
+    {
+      presenceTicks = 0;
+      if (mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1") == 0)
+        deviceLog("cloud presenca NAO renovada (publish falhou)");
+    }
 #ifdef DEBUG_ONOFRE
     Log.info("%s CloudIO OK." CR, tags::cloudIO);
 #endif
@@ -915,6 +936,12 @@ void connectToCloudIO()
   Log.info("%s [HTTP] Request result: %d (fallback=%d)" CR, tags::cloudIO, httpCode, usedHttpFallback ? 1 : 0);
   Log.info("----------------------------------------------" CR);
 #endif
+  if (httpCode == HTTP_CODE_NO_CONTENT)
+    deviceLog("cloud: nao adotado (204), nova tentativa em 30 min");
+  else if (httpCode == HTTP_CODE_OK)
+    deviceLog("cloud: servidor respondeu 200%s", usedHttpFallback ? " (por HTTP)" : "");
+  else
+    deviceLog("cloud: pedido falhou (%d)%s", httpCode, usedHttpFallback ? " mesmo por HTTP" : "");
   if (httpCode == HTTP_CODE_NO_CONTENT)
   {
     if (!config.tryBeginFeatureAccess())

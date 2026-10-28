@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="versão" src="https://img.shields.io/badge/firmware-9.202-97D700">
+  <img alt="versão" src="https://img.shields.io/badge/firmware-9.224-97D700">
   <img alt="alvos" src="https://img.shields.io/badge/alvos-ESP8266%20%C2%B7%20ESP32%20%C2%B7%20C3%20%C2%B7%20C6-blue">
   <a href="https://www.paypal.me/bhonofre"><img alt="donativo" src="https://img.shields.io/badge/donativo-PayPal-green"></a>
 </p>

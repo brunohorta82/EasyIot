@@ -2,6 +2,7 @@
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
+#include "LedStrip.h"
 extern ConfigOnofre config;
 
 bool homeAssistantOnline(String topic, String payload)
@@ -612,6 +613,7 @@ void initHomeAssistantDiscovery()
   // listens to a state topic once an entity claims it.
   createHaIrrigation();
   publishIrrigationHomeAssistantState();
+  ledStripDiscovery();
 }
 
 namespace

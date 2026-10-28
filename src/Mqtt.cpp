@@ -9,6 +9,7 @@
 #include "Constants.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
+#include "LedStrip.h"
 extern ConfigOnofre config;
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
@@ -47,6 +48,10 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
         // refused payload still leaves the entities showing the truth.
         irrigation.command(payload_as_string);
         notifyIrrigation();
+    }
+    else if (ledStripHandleMqtt(topic, payload_as_string))
+    {
+        // consumido pela fita LED
     }
     else
     {
@@ -87,6 +92,7 @@ boolean reconnect()
         }
         // Where the Home Assistant buttons and the zone-count number send to.
         subscribeOnMqtt(config.irrigationWriteTopic);
+        ledStripSubscribe();
         initHomeAssistantDiscovery();
     }
 
