@@ -37,15 +37,6 @@ Evita 6 a 11, 16 e 17 (flash interna nos módulos PICO), 0, 2, 12, 15 (arranque)
   conta no painel CloudIO (bhonofre.pt). Isso faz-se no serviço da OnOfre, e não no firmware. A fita LED não é enviada
   para a nuvem nem é comandada por ela.
 
-## Alexa
-Na janela da rodinha, em **Alexa**, escolhe **Ligada** e diz **"Alexa, descobre dispositivos"**. A fita aparece como uma
-lâmpada Philips Hue (cor) com o nome da função. É local, sem nuvem e sem Home Assistant, mas só liga, desliga, muda o
-brilho e a cor: os efeitos e os segmentos não existem para a Alexa (para isso, usa o Home Assistant e scripts). Se mudares o
-nome da função, remove e cria-a de novo e reinicia o dispositivo.
-Se a Alexa não a encontrar: reinicia o Echo, confirma que está na mesma rede (sem rede de convidados nem isolamento de
-clientes no Wi-Fi) e volta a descobrir. Depende de a Alexa aceitar a emulação de Hue, que varia com o modelo do Echo.
-Do lado do dispositivo, o Diagnóstico regista `alexa: ligada como "<nome>"` quando arranca.
-
 ## Transições e limite de corrente
 - **Transição (ms):** ligar, desligar, mudar de cor, de brilho e ligar/desligar segmentos faz-se com um desvanecimento suave
   (400 ms por omissão; 0 = sem transição).
@@ -81,7 +72,7 @@ API: `GET /led/state` e `POST /led/set` (o mesmo JSON do MQTT).
 ## Home Assistant
 Aparecem sozinhos: uma luz **Fita LED** (cor, brilho, efeito) e dois sliders, **Velocidade** e **Intensidade**.
 Efeitos: Static, Blink, Breathe, Rainbow, Color Wipe, Chase, Scan, Twinkle, Fire, Meteor.
-Para a Alexa, expõe a luz pelo Home Assistant e cria scripts/cenas para os efeitos.
+Para a Alexa, a integração é pela nuvem (CloudIO), não por aqui.
 
 ## MQTT
 Comando em `onofre/<chipId>/led/set`, estado em `.../led/state`:

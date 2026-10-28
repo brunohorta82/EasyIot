@@ -765,7 +765,10 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         )
 
         ok_branch = block_after(
-            sync, r"else\s+if\s*\(\s*httpCode\s*==\s*HTTP_CODE_OK\s*\)"
+            # Anchor on the braced branch that does the work: a bare logging
+            # "else if (httpCode == HTTP_CODE_OK)" also precedes it, and matching
+            # that one would check the contract against the wrong block.
+            sync, r"else\s+if\s*\(\s*httpCode\s*==\s*HTTP_CODE_OK\s*\)(?=\s*\{)"
         )
         self.assertOrdered(
             ok_branch,

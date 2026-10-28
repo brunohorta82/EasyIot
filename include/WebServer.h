@@ -10,9 +10,7 @@ enum class AutoUpdateResult : uint8_t
 };
 class AsyncWebServer;
 void setupWebPanel();
-/** O servidor web do painel (para a emulação de Hue da Alexa se registar nele). */
-AsyncWebServer *webServerInstance();
-/** Volta a registar o tratador de "não encontrado" do projeto (uma biblioteca pode tê-lo substituído). */
+/** Re-register the project's not-found handler. */
 void webServerRegisterNotFound();
 void initializeWebAuthCredentials();
 bool startWebserver();

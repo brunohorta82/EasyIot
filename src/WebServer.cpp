@@ -1408,13 +1408,9 @@ void setupCors()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
 }
-// Pedidos que nenhuma rota tratou. A Alexa (emulação de Hue) fala por aqui: /api/... e /description.xml.
+// Requests that no route handled.
 static void notFoundHandler(AsyncWebServerRequest *request)
 {
-#ifdef LED_STRIP
-  if (ledStripAlexaHandle(request))
-    return;
-#endif
   if (request->method() == HTTP_OPTIONS)
   {
     request->send(200);
@@ -1425,7 +1421,6 @@ static void notFoundHandler(AsyncWebServerRequest *request)
   }
 }
 
-AsyncWebServer *webServerInstance() { return &server; }
 
 void webServerRegisterNotFound() { server.onNotFound(notFoundHandler); }
 

@@ -19,8 +19,6 @@ constexpr bool ledStripSupported() { return false; }
 
 #ifdef LED_STRIP
 void ledStripSetup();
-/** Chamado pelo tratador de "não encontrado": True se o pedido era da Alexa (emulação de Hue) e foi tratado. */
-bool ledStripAlexaHandle(AsyncWebServerRequest *request);
 void ledStripLoop();
 /** Chamar no callback MQTT. Devolve true se o tópico era da fita. */
 bool ledStripHandleMqtt(const char *topic, const char *payload);
@@ -49,7 +47,6 @@ bool ledStripKnxRead(uint8_t area, uint8_t line, uint8_t member, int &state);
 void ledStripConfigJson(JsonVariant root);
 #else
 inline bool ledStripUsesPin(unsigned int) { return false; }
-inline bool ledStripAlexaHandle(AsyncWebServerRequest *) { return false; }
 inline void ledStripConfigJson(JsonVariant) {}
 inline void ledStripSetup() {}
 inline void ledStripLoop() {}

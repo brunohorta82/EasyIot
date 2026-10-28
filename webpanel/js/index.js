@@ -887,7 +887,7 @@ const LED_EFFECTS = [
 const LED_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">' +
   '<rect x="2" y="8.5" width="20" height="7" rx="3.5"/><circle cx="7" cy="12" r=".9" fill="currentColor"/>' +
   '<circle cx="12" cy="12" r=".9" fill="currentColor"/><circle cx="17" cy="12" r=".9" fill="currentColor"/></svg>';
-let ledAlHold = 0, ledState = null, ledBusy = 0, ledTimer = null, ledOn = false, ledSeg = -1, ledSig = "";
+let ledState = null, ledBusy = 0, ledTimer = null, ledOn = false, ledSeg = -1, ledSig = "";
 const ledHex = (c) => "#" + [c.r, c.g, c.b].map((x) => (x | 0).toString(16).padStart(2, "0")).join("");
 const ledRgb = (h) => ({ r: parseInt(h.substr(1, 2), 16), g: parseInt(h.substr(3, 2), 16), b: parseInt(h.substr(5, 2), 16) });
 
@@ -967,11 +967,6 @@ function ledFill(s) {
   if (document.activeElement !== $("led-lm")) $("led-lm").value = s.limit ? (s.limit / 1000).toString() : "";
   if (document.activeElement !== $("led-lp")) $("led-lp").value = s.maPerLed;
   $("led-ord").value = s.colorOrder; $("led-gm").value = s.gamma;
-  if (Date.now() - ledAlHold > 4000) $("led-al").value = s.alexa ? "1" : "0";
-  $("led-alnote").textContent = s.alexaGuard ? "Foi desligada automaticamente: o dispositivo reiniciou quando a Alexa arrancou. Vê o motivo no Registo do equipamento (Diagnóstico)."
-    : !s.alexa ? "Liga e diz \"Alexa, descobre dispositivos\". Só liga, desliga, brilho e cor (sem efeitos)."
-    : s.alexaOn ? "Ativa: aparece na Alexa como uma lâmpada com o nome da função. Desligar aqui deixa de a responder já."
-                : "A ligar (precisa do Wi-Fi)...";
   ["cr", "cg", "cb"].forEach((k, i) => {
     if (document.activeElement !== $("led-" + k)) $("led-" + k).value = s.cal[i];
     $("led-" + k + "v").textContent = s.cal[i] + "%";
@@ -1006,7 +1001,7 @@ function ledSend(o, now) {
   const go = async () => {
     try {
       ledShow(await api("/led/set", { method: "POST", body: JSON.stringify(o) }), false);
-      if (o.segments || o.leds !== undefined || o.limit !== undefined || o.maPerLed !== undefined || o.alexa !== undefined) setTimeout(() => { ledBusy = 0; ledGet(); }, 350);
+      if (o.segments || o.leds !== undefined || o.limit !== undefined || o.maPerLed !== undefined) setTimeout(() => { ledBusy = 0; ledGet(); }, 350);
     }
     catch (e) {
       const m = $("led-msg");
@@ -1059,9 +1054,6 @@ function ledOpenModal() {
     '<div class="field"><label>LIMITE DA FONTE (A)</label><input type="number" id="led-lm" min="0" max="20" step="0.1" placeholder="0 = sem limite"></div></div>' +
     '<div class="field"><label>CONSUMO DE 1 LED A BRANCO (mA)</label><input type="number" id="led-lp" min="10" max="100"></div>' +
     '<div class="note" id="led-ma"></div>' +
-    '<div class="field"><label>ALEXA (EMULAÇÃO DE LÂMPADA HUE)</label>' +
-    '<select id="led-al"><option value="0">Desligada</option><option value="1">Ligada</option></select>' +
-    '<p class="note" style="margin:6px 0 0" id="led-alnote"></p></div>' +
     '<div class="field"><label>AJUSTE DE CORES</label>' +
     '<p class="note" style="margin:0 0 8px">Se o vermelho sair rosado ou a cor não coincidir: liga a correção gama (2,2) e baixa um pouco o verde e o azul. Se o vermelho sair verde ou azul, muda a ordem das cores.</p>' +
     '<div class="row2"><div class="field"><label>ORDEM DAS CORES</label><select id="led-ord">' +
@@ -1146,7 +1138,6 @@ document.addEventListener("change", (ev) => {
   else if (id === "led-nl") ledSend({ leds: +ev.target.value }, true);
   else if (id === "led-ord") ledSend({ colorOrder: +ev.target.value }, true);
   else if (id === "led-gm") ledSend({ gamma: +ev.target.value }, true);
-  else if (id === "led-al") { ledAlHold = Date.now(); ledSend({ alexa: ev.target.value === "1" }, true); }
   else if (id === "led-tr") ledSend({ transition: Math.max(0, Math.min(3000, parseInt(ev.target.value, 10) || 0)) }, true);
   else if (id === "led-lm") ledSend({ limit: Math.round((parseFloat(String(ev.target.value).replace(",", ".")) || 0) * 1000) }, true);
   else if (id === "led-lp") ledSend({ maPerLed: parseInt(ev.target.value, 10) || 60 }, true);

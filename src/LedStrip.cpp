@@ -12,14 +12,6 @@
 #include "CoreWiFi.h"
 #include "DeviceLog.h"
 #include "WebServer.h"
-// Alexa por emulação de uma lâmpada Philips Hue (biblioteca Espalexa). A ordem importa: o WiFi.h e o servidor
-// assíncrono têm de vir antes, e o ESPALEXA_ASYNC antes do Espalexa.h.
-#include <WiFi.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#define ESPALEXA_ASYNC
-#define ESPALEXA_MAXDEVICES 1
-#include <Espalexa.h>
 
 // ---- Configuração de compilação (platformio.ini / platformio_override.ini) ----
 #ifndef LED_STRIP_PIN
@@ -79,7 +71,6 @@ namespace
         uint8_t colorOrder = 0;    // índice em kOrders (0 = GRB, o normal das WS2812B)
         uint8_t gamma = 10;        // correção gama em décimas (10 = sem correção, 22 = 2,2, 28 = 2,8)
         uint8_t cal[3] = {100, 100, 100}; // balanço de cores: % de vermelho, verde e azul
-        bool alexa = false;               // emulação de Hue para a Alexa (desligada por omissão)
     } st;
 
     // Ordens dos bytes de cor que as fitas usam. Quando "vermelho" sai verde ou azul, troca-se aqui.
@@ -183,42 +174,6 @@ namespace
     unsigned long lastChange = 0;
     char tCmd[64], tState[64], tSpeed[64], tSpeedSet[64], tInt[64], tIntSet[64];
 
-    // ---- Alexa (emulação de uma lâmpada Philips Hue) ----
-    // A Alexa descobre a "ponte" por SSDP e controla a lâmpada pela API Hue, na porta 80 do painel. Só liga, desliga,
-    // brilho e cor: os efeitos e os segmentos não existem para ela. Os pedidos chegam na tarefa do servidor web, por isso
-    // só se registam aqui e é o loop principal que os aplica.
-    const char *kAlexaTry = "/alexa.try"; // existe enquanto a Alexa está a arrancar (apaga-se passado 1 minuto estável)
-    uint32_t alexaStartedAt = 0;
-    bool alexaMarkerSet = false;
-    bool alexaGuardTripped = false; // a Alexa foi desligada porque o dispositivo reiniciou ao ligá-la
-
-    bool lastResetWasCrash()
-    {
-        const esp_reset_reason_t r = esp_reset_reason();
-        return r == ESP_RST_PANIC || r == ESP_RST_INT_WDT || r == ESP_RST_TASK_WDT || r == ESP_RST_WDT;
-    }
-
-    Espalexa espalexa;
-    EspalexaDevice *alexaDevice = nullptr;
-    bool alexaBegun = false;   // espalexa.begin() já foi chamado (só se faz uma vez)
-    bool alexaStarted = false; // pronta a responder
-    volatile bool alexaPending = false;
-    volatile uint8_t alexaProp = 0; // 1 ligar, 2 desligar, 3 brilho, 4 cor
-    volatile uint8_t alexaBri = 0;
-    volatile uint32_t alexaRgb = 0;
-    int alexaLastBri = -1; // último estado enviado à Alexa, para só o repetir quando muda
-    uint32_t alexaLastRgb = 0xFFFFFFFFu;
-
-    void alexaChanged(EspalexaDevice *d)
-    {
-        const EspalexaDeviceProperty p = d->getLastChangedProperty();
-        alexaBri = d->getValue();
-        alexaRgb = d->getRGB();
-        alexaProp = (p == EspalexaDeviceProperty::on) ? 1 : (p == EspalexaDeviceProperty::off) ? 2 : (p == EspalexaDeviceProperty::bri) ? 3 : 4;
-        __sync_synchronize();
-        alexaPending = true;
-    }
-
     void topics()
     {
         sprintf(tCmd, "onofre/%s/led/set", config.chipId);
@@ -251,7 +206,6 @@ namespace
             st.transition = constrain((int)(doc["tr"] | 400), 0, 3000);
             st.limitMA = constrain((int)(doc["lm"] | 0), 0, 20000);
             st.mAperLED = constrain((int)(doc["lp"] | 60), 10, 100);
-            st.alexa = doc["al"] | false;
             st.colorOrder = constrain((int)(doc["co"] | 0), 0, 5);
             st.gamma = constrain((int)(doc["gm"] | 10), 10, 40);
             st.cal[0] = constrain((int)(doc["cr"] | 100), 10, 100);
@@ -313,7 +267,6 @@ namespace
         doc["tr"] = st.transition;
         doc["lm"] = st.limitMA;
         doc["lp"] = st.mAperLED;
-        doc["al"] = st.alexa;
         doc["co"] = st.colorOrder;
         doc["gm"] = st.gamma;
         doc["cr"] = st.cal[0];
@@ -434,7 +387,7 @@ namespace
             return;
         // Cor, brilho, velocidade e intensidade mexem-se a deslizar e gravam-se com atraso (poupa a flash). O resto
         // são definições: gravam-se já, senão perdiam-se se o dispositivo reiniciasse logo a seguir.
-        if (doc["alexa"].is<bool>() || doc["leds"].is<int>() || doc["segments"].is<JsonArray>() ||
+        if (doc["leds"].is<int>() || doc["segments"].is<JsonArray>() ||
             doc["colorOrder"].is<int>() || doc["gamma"].is<int>() || doc["transition"].is<int>() ||
             doc["limit"].is<int>() || doc["maPerLed"].is<int>() || doc["knx"].is<JsonObject>())
             saveNow = true;
@@ -486,8 +439,6 @@ namespace
             st.transition = constrain((int)doc["transition"], 0, 3000);
         if (doc["limit"].is<int>())
             st.limitMA = constrain((int)doc["limit"], 0, 20000); // mA; 0 = sem limite
-        if (doc["alexa"].is<bool>())
-            st.alexa = doc["alexa"];
         if (doc["maPerLed"].is<int>())
             st.mAperLED = constrain((int)doc["maPerLed"], 10, 100);
         if (doc["colorOrder"].is<int>())
@@ -623,20 +574,6 @@ void ledStripSetup()
     // já existir uma função "Fita LED" criada em Nova função. Sem ela o módulo não toca em nada.
     topics();
     load();
-    if (LittleFS.exists(kAlexaTry))
-    {
-        LittleFS.remove(kAlexaTry);
-        if (st.alexa && lastResetWasCrash())
-        {
-            // A Alexa estava a arrancar e o dispositivo reiniciou por falha: desliga-a, em vez de reiniciar em ciclo.
-            st.alexa = false;
-            alexaGuardTripped = true;
-            needsSave = true;
-            saveNow = true;
-            lastChange = millis();
-            deviceLog("alexa: desligada, o dispositivo reiniciou ao ligá-la");
-        }
-    }
     if (created)
         knxAssign(); // o registo do callback KNX já foi feito em config.load()
     initAfter = millis() + kInitDelayMs;
@@ -687,81 +624,6 @@ void ledStripLoop()
     {
         testRequested = false;
         selfTest();
-    }
-    if (st.alexa)
-    {
-        if (!alexaStarted && wifiConnected() && now > 15000)
-        {
-            {
-                File f = LittleFS.open(kAlexaTry, "w");
-                if (f)
-                {
-                    f.print("1");
-                    f.close();
-                }
-                alexaMarkerSet = true;
-                alexaStartedAt = now;
-            }
-            if (!alexaDevice)
-            {
-                alexaDevice = new EspalexaDevice(fname, alexaChanged, EspalexaDeviceType::extendedcolor);
-                espalexa.addDevice(alexaDevice);
-            }
-            if (!alexaBegun)
-            {
-                espalexa.begin(webServerInstance());
-                webServerRegisterNotFound(); // garante que o tratador do projeto (que chama a Alexa) é o ativo
-                alexaBegun = true;
-            }
-            alexaLastBri = -1; // força o envio do estado atual
-            alexaStarted = true;
-            deviceLog("alexa: ligada como \"%s\"", fname);
-        }
-        if (alexaStarted)
-        {
-            if (alexaMarkerSet && now - alexaStartedAt > 60000)
-            {
-                LittleFS.remove(kAlexaTry); // passou um minuto sem falhas
-                alexaMarkerSet = false;
-            }
-            espalexa.loop();
-            if (alexaPending)
-            {
-                const uint8_t prop = alexaProp, bri = alexaBri;
-                const uint32_t rgb = alexaRgb;
-                alexaPending = false;
-                char cmd[112];
-                if (prop == 2 || (prop == 3 && bri == 0))
-                    snprintf(cmd, sizeof(cmd), "{\"state\":\"OFF\"}");
-                else if (prop == 1)
-                    snprintf(cmd, sizeof(cmd), "{\"state\":\"ON\"}");
-                else if (prop == 3)
-                    snprintf(cmd, sizeof(cmd), "{\"state\":\"ON\",\"brightness\":%u}", (unsigned)bri);
-                else
-                    snprintf(cmd, sizeof(cmd), "{\"state\":\"ON\",\"color\":{\"r\":%u,\"g\":%u,\"b\":%u}}",
-                             (unsigned)((rgb >> 16) & 255), (unsigned)((rgb >> 8) & 255), (unsigned)(rgb & 255));
-#ifdef DEBUG_ONOFRE
-                Log.notice("[LED] comando (Alexa): %s" CR, cmd);
-#endif
-                applyCommand(cmd);
-                if (prop == 4 && bri > 0)
-                {
-                    st.brightness = bri; // a cor traz o brilho que a Alexa tem
-                    touch();
-                }
-                needsPublish = true;
-            }
-            // Mantém a Alexa a par do que a fita mostra (por exemplo, quando se muda no painel).
-            const int curBri = st.on ? st.brightness : 0;
-            const uint32_t curRgb = ((uint32_t)segs[0].color.r << 16) | ((uint32_t)segs[0].color.g << 8) | segs[0].color.b;
-            if (curBri != alexaLastBri || curRgb != alexaLastRgb)
-            {
-                alexaDevice->setValue(curBri);
-                alexaDevice->setColor(segs[0].color.r, segs[0].color.g, segs[0].color.b);
-                alexaLastBri = curBri;
-                alexaLastRgb = curRgb;
-            }
-        }
     }
     if (knxPending >= 0)
     {
@@ -913,11 +775,6 @@ void ledStripLoop()
                              (uint8_t)(((uint32_t)p.b * fq) >> 8));
     }
     strip->show();
-}
-
-bool ledStripAlexaHandle(AsyncWebServerRequest *request)
-{
-    return created && st.alexa && alexaStarted && espalexa.handleAlexaApiCall(request);
 }
 
 bool ledStripHandleMqtt(const char *topic, const char *payload)
@@ -1186,9 +1043,6 @@ void ledStripStateJson(JsonVariant &root)
     root["maPerLed"] = st.mAperLED;
     root["ma"] = estMA;
     root["limited"] = limiting;
-    root["alexa"] = st.alexa;
-    root["alexaOn"] = alexaStarted;
-    root["alexaGuard"] = alexaGuardTripped;
     root["colorOrder"] = st.colorOrder;
     root["gamma"] = st.gamma;
     JsonArray cal = root["cal"].to<JsonArray>();
