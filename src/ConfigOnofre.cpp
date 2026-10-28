@@ -2304,6 +2304,9 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
       inputs.add(in);
     }
   }
+  // The strip lives outside actuatores and sensors, so it would otherwise never
+  // reach the cloud and could not be adopted as a feature.
+  ledStripFeatureJson(features, allFields);
 }
 
 void ConfigOnofre::requestWifiScan()

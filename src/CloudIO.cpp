@@ -1,4 +1,5 @@
 #include "CloudIO.h"
+#include "LedStrip.h"
 #include "DeviceLog.h"
 #include "Irrigation.h"
 #include "HomeAssistantMqttDiscovery.h"
@@ -510,6 +511,8 @@ void serviceCloudMqttSubscriptions()
     subscribeOnMqttCloudIO(sw.cloudIOwriteTopic);
     notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
   }
+  if (ledStripCloudWriteTopic()[0] != '\0')
+    subscribeOnMqttCloudIO(ledStripCloudWriteTopic());
   config.endFeatureAccess();
   // After the valve states, so an app that reconnects reads the cycle against
   // states it already has rather than against the ones it is about to receive.
@@ -666,6 +669,10 @@ void drainCloudIOCommands()
     // look like a deleted program.
     irrigation.command(command.payload);
     notifyIrrigation();
+  }
+  else if (ledStripHandleMqtt(command.topic, command.payload))
+  {
+    // consumed by the LED strip
   }
   else
   {
@@ -1013,6 +1020,8 @@ void connectToCloudIO()
       family.toLowerCase();
       snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/metrics", config.cloudIOUsername, config.chipId, family.c_str(), ss.uniqueId);
     }
+    // The strip is not in config.actuatores, so it needs its topics built here too.
+    ledStripCloudTopics(config.cloudIOUsername, config.chipId);
     const bool credentialsReady = strlen(config.cloudIOUsername) > 0 && strlen(config.cloudIOPassword) > 0;
     stageCloudMqttRuntimeLocked();
     config.endFeatureAccess();

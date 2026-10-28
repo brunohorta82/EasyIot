@@ -34,8 +34,10 @@ Evita 6 a 11, 16 e 17 (flash interna nos módulos PICO), 0, 2, 12, 15 (arranque)
   grava por USB com `-t erase`. Se o ficheiro for maior do que a ranhura (1,75 MB nos ambientes `4M` e no C3), a
   atualização falha: confirma a percentagem de `Flash:` no fim da compilação.
 - **Nuvem (CloudIO):** o dispositivo liga-se ao servidor, mas responde "not adopted" até o equipamento ser associado a uma
-  conta no painel CloudIO (bhonofre.pt). Isso faz-se no serviço da OnOfre, e não no firmware. A fita LED não é enviada
-  para a nuvem nem é comandada por ela.
+  conta no painel CloudIO (bhonofre.pt). Isso faz-se no serviço da OnOfre, e não no firmware.
+  Depois de adotado, a fita vai para a nuvem como uma função da família **LIGHT** com o driver **LED_STRIP**, que o
+  CloudIO trata como luz de cor: comandos em `<utilizador>/<chipId>/light/led/set` e estado retido em `.../light/led/status`,
+  com o mesmo JSON do MQTT local.
 
 ## Transições e limite de corrente
 - **Transição (ms):** ligar, desligar, mudar de cor, de brilho e ligar/desligar segmentos faz-se com um desvanecimento suave
@@ -72,7 +74,8 @@ API: `GET /led/state` e `POST /led/set` (o mesmo JSON do MQTT).
 ## Home Assistant
 Aparecem sozinhos: uma luz **Fita LED** (cor, brilho, efeito) e dois sliders, **Velocidade** e **Intensidade**.
 Efeitos: Static, Blink, Breathe, Rainbow, Color Wipe, Chase, Scan, Twinkle, Fire, Meteor.
-Para a Alexa, a integração é pela nuvem (CloudIO), não por aqui.
+Para a Alexa, a integração é pela nuvem: depois de adotada, a fita aparece como luz com ligar/desligar,
+brilho e cor. Efeitos e segmentos não têm vocabulário na Alexa e ficam no painel e no Home Assistant.
 
 ## MQTT
 Comando em `onofre/<chipId>/led/set`, estado em `.../led/state`:

@@ -12,6 +12,7 @@
 #include "CoreWiFi.h"
 #include "DeviceLog.h"
 #include "WebServer.h"
+#include "CloudIO.h"
 
 // ---- Configuração de compilação (platformio.ini / platformio_override.ini) ----
 #ifndef LED_STRIP_PIN
@@ -173,6 +174,9 @@ namespace
     bool testRequested = false;
     unsigned long lastChange = 0;
     char tCmd[64], tState[64], tSpeed[64], tSpeedSet[64], tInt[64], tIntSet[64];
+    // Cloud topics follow the actuator shape: <user>/<chip>/light/<id>/set and /status.
+    // Empty until the cloud hands over credentials, which is also the "do not publish" flag.
+    char tCloudCmd[160] = {0}, tCloudState[160] = {0};
 
     void topics()
     {
@@ -308,6 +312,8 @@ namespace
         String out;
         serializeJson(doc, out);
         publishOnMqtt(tState, out.c_str(), true);
+        if (tCloudState[0] != '\0')
+            notifyStateToCloudIO(tCloudState, out.c_str());
         publishOnMqtt(tSpeed, String(segs[0].speed).c_str(), true);
         publishOnMqtt(tInt, String(segs[0].intensity).c_str(), true);
     }
@@ -797,7 +803,8 @@ bool ledStripHandleMqtt(const char *topic, const char *payload)
         publishState();
         return true;
     }
-    if (strcmp(topic, tCmd) != 0)
+    const bool fromCloud = tCloudCmd[0] != '\0' && strcmp(topic, tCloudCmd) == 0;
+    if (!fromCloud && strcmp(topic, tCmd) != 0)
         return false;
 #ifdef DEBUG_ONOFRE
     Log.notice("[LED] comando (MQTT): %s" CR, payload);
@@ -916,6 +923,40 @@ void ledStripConfigJson(JsonVariant root)
     o["area"] = knxAddr[0];
     o["line"] = knxAddr[1];
     o["member"] = knxAddr[2];
+}
+
+void ledStripCloudTopics(const char *username, const char *chipId)
+{
+    if (!created || username == nullptr || username[0] == '\0')
+    {
+        tCloudCmd[0] = '\0';
+        tCloudState[0] = '\0';
+        return;
+    }
+    snprintf(tCloudCmd, sizeof(tCloudCmd), "%s/%s/light/led/set", username, chipId);
+    snprintf(tCloudState, sizeof(tCloudState), "%s/%s/light/led/status", username, chipId);
+}
+
+const char *ledStripCloudWriteTopic()
+{
+    return tCloudCmd;
+}
+
+void ledStripFeatureJson(JsonArray features, bool allFields)
+{
+    if (!created)
+        return;
+    JsonObject a = features.add<JsonObject>();
+    if (allFields)
+        a["group"] = "ACTUATOR";
+    a["id"] = "led";
+    a["name"] = fname;
+    a["family"] = "LIGHT";
+    a["driver"] = "LED_STRIP";
+    a["state"] = st.on ? "ON" : "OFF";
+    a["area"] = knxAddr[0];
+    a["line"] = knxAddr[1];
+    a["member"] = knxAddr[2];
 }
 
 // ---- KNX (chamado por actuatoresCallback) ----
