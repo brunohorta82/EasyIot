@@ -25,6 +25,31 @@ All notable changes to this project are documented in this file.
 - 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
   static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
 
+## [9.226] - 2026-10-28
+
+### Fixed
+
+- The web panel's asset cache-busting version said 9.224 in the 9.225 release:
+  platformio.ini was bumped after the panel was last generated. Harmless, since
+  9.224 was never released and no browser holds its assets, but wrong.
+
+### Changed
+
+- The imported LED strip's comments are in English, like the rest of the
+  project: LedStrip.cpp, LedStrip.h, LedEffects.h and its PC test, plus the
+  comments the same work left in CloudIO.cpp, WebServer.cpp, ConfigOnofre.cpp,
+  Mqtt.cpp, Actuatores.cpp and the panel's index.js. Comments only — with every
+  comment stripped, each file is byte-identical to 9.225, and the minified
+  panel bundle does not change at all.
+
+### Para testers
+
+Versão de manutenção, sem nada de novo para experimentar: só arrumação interna
+do código e a correção de um número de versão nos ficheiros do painel.
+
+Se ainda não viste a **fita LED**, que saiu na 9.225, é essa que vale a pena
+testar — continua tudo igual ao que foi anunciado.
+
 ## [9.225] - 2026-10-28
 
 ### Added
