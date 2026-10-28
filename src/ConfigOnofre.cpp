@@ -2305,8 +2305,12 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     }
   }
   // The strip lives outside actuatores and sensors, so it would otherwise never
-  // reach the cloud and could not be adopted as a feature.
-  ledStripFeatureJson(features, allFields);
+  // reach the cloud and could not be adopted as a feature. Only on the cloud
+  // payload: the panel draws its own strip tile from the "ledStrip" key, and
+  // listing it here as well showed it twice -- the second one a plain on/off
+  // accessory with no colour, and editable as if it owned a GPIO output.
+  if (!allFields)
+    ledStripFeatureJson(features);
 }
 
 void ConfigOnofre::requestWifiScan()

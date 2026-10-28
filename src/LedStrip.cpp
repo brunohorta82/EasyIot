@@ -944,13 +944,11 @@ const char *ledStripCloudWriteTopic()
     return tCloudCmd;
 }
 
-void ledStripFeatureJson(JsonArray features, bool allFields)
+void ledStripFeatureJson(JsonArray features)
 {
     if (!created)
         return;
     JsonObject a = features.add<JsonObject>();
-    if (allFields)
-        a["group"] = "ACTUATOR";
     a["id"] = "led";
     a["name"] = fname;
     a["family"] = "LIGHT";

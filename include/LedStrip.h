@@ -51,13 +51,13 @@ void ledStripCloudTopics(const char *username, const char *chipId);
 const char *ledStripCloudWriteTopic();
 /** Describe the strip to the cloud as a LIGHT feature with the LED_STRIP driver,
  *  so it is adopted as a colour light instead of being invisible. */
-void ledStripFeatureJson(JsonArray features, bool allFields);
+void ledStripFeatureJson(JsonArray features);
 #else
 inline bool ledStripUsesPin(unsigned int) { return false; }
 inline void ledStripConfigJson(JsonVariant) {}
 inline void ledStripCloudTopics(const char *, const char *) {}
 inline const char *ledStripCloudWriteTopic() { return ""; }
-inline void ledStripFeatureJson(JsonArray, bool) {}
+inline void ledStripFeatureJson(JsonArray) {}
 inline void ledStripSetup() {}
 inline void ledStripLoop() {}
 inline bool ledStripHandleMqtt(const char *, const char *) { return false; }

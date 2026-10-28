@@ -25,6 +25,29 @@ All notable changes to this project are documented in this file.
 - 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
   static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
 
+## [9.227] - 2026-10-28
+
+### Fixed
+
+- The LED strip showed up twice under Accessories: once as its own tile, with
+  the colour, the effects and the segment editor behind the cog, and once as a
+  plain on/off accessory with none of it. 9.225 started describing the strip as
+  a LIGHT feature so the cloud could adopt it, but it put that description in
+  the panel's payload as well, and the panel already draws the strip from the
+  "ledStrip" key. The description now goes only to the cloud, which is the one
+  that cannot see the strip any other way. The second tile also carried a cog
+  onto the actuator dialog, where the strip would have been edited as if it
+  owned a GPIO output.
+
+### Para testers
+
+Se abriste a **fita LED** no painel e viste **dois mosaicos iguais**, era um
+erro meu na 9.225: o segundo não tinha cor nem efeitos nenhuns, e a rodinha
+dele abria a janela errada. Nesta versão fica **um só mosaico** — o bom, aquele
+em que a rodinha abre a cor, o brilho, os 24 efeitos e os segmentos.
+
+Nada mais mudou: o que já estava configurado na fita mantém-se tal e qual.
+
 ## [9.226] - 2026-10-28
 
 ### Fixed
