@@ -404,8 +404,9 @@ void onMqttConnect(bool sessionPresent)
   signalCloudMqttTransportEvent(CloudMqttTransportEvent::CONNECTED, true);
 }
 
-// Motivo da última desligação (AsyncMqttClientDisconnectReason): 0 ligação TCP fechada, 1 versão do protocolo,
-// 2 identificador recusado, 3 servidor indisponível, 4 credenciais mal formadas, 5 sem autorização.
+// Reason for the last disconnection (AsyncMqttClientDisconnectReason): 0 TCP connection closed,
+// 1 protocol version, 2 identifier rejected, 3 server unavailable, 4 malformed credentials,
+// 5 not authorized.
 static volatile uint8_t cloudMqttLastDisconnectReason = 0;
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
@@ -496,7 +497,8 @@ void serviceCloudMqttSubscriptions()
   if (!config.tryBeginFeatureAccess("cloudio"))
     return;
 
-  // publish() devolve 0 se a mensagem não saiu (ligação caída, sem memória); em QoS 0 devolve 1 se saiu.
+  // publish() returns 0 when the message did not leave — connection down, out of memory —
+  // and 1 at QoS 0 when it did.
   if (mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1") != 0)
     deviceLog("cloud presenca enviada");
   else
@@ -712,9 +714,10 @@ void serviceCloudIOWatchdog()
   }
   if (cloudIOConnected())
   {
-    // A presença ("1" retida) só era enviada uma vez, quando a ligação abria. Se o servidor a perder (reinício do
-    // broker, limpeza de mensagens retidas), o painel da nuvem mostra o equipamento offline até ele voltar a ligar-se,
-    // mesmo com a ligação aberta. Renova-a de 5 em 5 minutos (1 tick = 60 s): é só uma mensagem pequena.
+    // Presence (a retained "1") used to be sent once, when the connection opened. If the
+    // server loses it — broker restart, retained messages cleared — the cloud panel shows
+    // the device offline until it reconnects, even with the connection up. Renew it every
+    // five minutes (1 tick = 60 s): it is one small message.
     static uint8_t presenceTicks = 0;
     if (++presenceTicks >= 5 && config.cloudIOhealthTopic[0] != '\0')
     {

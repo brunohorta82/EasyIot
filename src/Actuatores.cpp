@@ -78,7 +78,7 @@ void actuatoresCallback(message_t const &msg, void *arg)
 
 #ifdef LED_STRIP
   {
-    // a fita LED também responde ao KNX (ligar/desligar com realimentação)
+    // the LED strip answers KNX too: on and off, with state reported back
     const uint8_t a = msg.received_on.ga.area, l = msg.received_on.ga.line, m = msg.received_on.ga.member;
     if (msg.ct == KNX_CT_WRITE || msg.ct == KNX_CT_ANSWER)
       ledStripKnxWrite(a, l, m, knx.data_to_1byte_int(msg.data));

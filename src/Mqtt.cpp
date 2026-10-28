@@ -51,7 +51,7 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
     }
     else if (ledStripHandleMqtt(topic, payload_as_string))
     {
-        // consumido pela fita LED
+        // consumed by the LED strip
     }
     else
     {

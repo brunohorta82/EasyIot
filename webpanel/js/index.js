@@ -741,7 +741,7 @@ async function load() {
 function renderHeader() {
   $("h-name").textContent = config.nodeId || "—";
   $("h-chip").textContent = config.chipId || "";
-  // `mcu` é o nome da pasta de atualização (um C3 diz "ESP32"); o chip verdadeiro vem em backupVariant.
+  // `mcu` is the update folder name (a C3 reports "ESP32"); the real chip is in backupVariant.
   $("h-mcu").textContent = config.backupVariant || config.mcu || "";
   $("h-fw").textContent = config.firmware || "—";
   const w = $("h-wifi");
@@ -871,10 +871,11 @@ function renderOverview() {
 }
 
 
-/* ---------------- Fita LED ----------------
-   A fita não é um atuador do firmware: tem o seu próprio estado em /ledstate (GET) e recebe
-   comandos em /led/set (POST). Aparece como mosaico em Acessórios, que liga e desliga como as
-   luzes; a rodinha abre uma janela com cor, brilho, efeito, velocidade, intensidade e nº de LEDs. */
+/* ---------------- LED strip ----------------
+   The strip is not one of the firmware's actuators: it keeps its own state at /ledstate (GET)
+   and takes commands at /led/set (POST). It shows up as a tile under Accessories that switches
+   like the lights; the cog opens a panel with colour, brightness, effect, speed, intensity and
+   the LED count. */
 const LED_EFFECTS = [
   ["Static", "Fixo"], ["Blink", "Piscar"], ["Breathe", "Respirar"], ["Rainbow", "Arco-íris"],
   ["Color Wipe", "Varrimento"], ["Chase", "Perseguição"], ["Scan", "Scanner"],
@@ -883,7 +884,7 @@ const LED_EFFECTS = [
   ["Running Lights", "Luzes em movimento"], ["Sparkle", "Faíscas"], ["Plasma", "Plasma"],
   ["Confetti", "Confetti"], ["Lightning", "Relâmpago"], ["Candle", "Vela"], ["Police", "Polícia"],
   ["Heartbeat", "Batimento"], ["Juggle", "Malabarismo"], ["Gradient", "Gradiente"], ["Noise", "Nuvens"],
-]; // os nomes (1.º valor) têm de coincidir com led::kEffectNames em include/LedEffects.h
+]; // the names (first value) must match led::kEffectNames in include/LedEffects.h
 const LED_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">' +
   '<rect x="2" y="8.5" width="20" height="7" rx="3.5"/><circle cx="7" cy="12" r=".9" fill="currentColor"/>' +
   '<circle cx="12" cy="12" r=".9" fill="currentColor"/><circle cx="17" cy="12" r=".9" fill="currentColor"/></svg>';
@@ -891,12 +892,12 @@ let ledState = null, ledBusy = 0, ledTimer = null, ledOn = false, ledSeg = -1, l
 const ledHex = (c) => "#" + [c.r, c.g, c.b].map((x) => (x | 0).toString(16).padStart(2, "0")).join("");
 const ledRgb = (h) => ({ r: parseInt(h.substr(1, 2), 16), g: parseInt(h.substr(3, 2), 16), b: parseInt(h.substr(5, 2), 16) });
 
-// -1 = todos os segmentos; senão, o índice do segmento escolhido na janela.
+// -1 = every segment; otherwise the index of the one picked in the panel.
 function ledTarget() {
   return ledState && ledState.segs && ledSeg >= 0 && ledSeg < ledState.segs.length ? ledSeg : -1;
 }
 
-// Valores a mostrar nos controlos: do segmento escolhido, ou do primeiro quando se escolhe "Todos".
+// Values the controls show: the chosen segment's, or the first one's under "All".
 function ledView() {
   const t = ledTarget(), s = ledState, g = s.segs[t >= 0 ? t : 0];
   return { color: g.color, brightness: t >= 0 ? g.brightness : s.brightness, effect: g.effect,
@@ -918,7 +919,7 @@ function ledTile() {
     esc(led.name) + '">' + COG + "</button></div>";
 }
 
-// Chamado de renderOverview: lê o estado uma vez e fecha a janela se a fita já não existir.
+// Called from renderOverview: reads the state once, and closes the panel if the strip is gone.
 function ledSync() {
   if (!config.ledStrip) { ledCloseModal(); ledState = null; return; }
   if (!ledState) ledGet();
@@ -943,7 +944,7 @@ function ledPower(on) {
 function ledFill(s) {
   if (!$("led-modal") || !s.segs) return;
   if (ledSeg >= s.segs.length) ledSeg = -1;
-  // seletor e editor de segmentos: só se reconstroem quando o desenho muda (para não roubar o foco)
+  // segment picker and editor: rebuilt only when the layout changes, so focus is not stolen
   const sig = s.segs.map((g) => g.start + "-" + g.stop).join(",") + "|" + s.leds + "|" + ledSeg;
   if (sig !== ledSig || !$("led-segs").children.length) {
     ledSig = sig;
@@ -982,8 +983,8 @@ function ledFill(s) {
 }
 
 function ledShow(s, all) {
-  // O POST responde com o estado de antes de o comando ser aplicado: durante um instante depois
-  // de um comando, quem manda é o que o utilizador acabou de pedir.
+  // The POST answers with the state from before the command was applied, so for a moment
+  // afterwards what the user just asked for is what wins.
   if (Date.now() - ledBusy > 1200) { ledState = s; ledOn = !!s.on; } else if (ledState) { ledState.pin = s.pin; ledState.leds = s.leds; }
   ledTileUpdate();
   if (all) ledFill(s);
@@ -1011,14 +1012,14 @@ function ledSend(o, now) {
   if (now) go(); else ledTimer = setTimeout(go, 90);
 }
 
-// Comandos de aspeto (cor, brilho, efeito...) vão para o segmento escolhido, ou para todos.
+// Appearance commands (colour, brightness, effect...) go to the chosen segment, or to all.
 function ledSendT(o, now) {
   const t = ledTarget();
   if (t >= 0) o.seg = t;
   ledSend(o, now);
 }
 
-// Lê o desenho dos segmentos dos campos e envia-o ao dispositivo.
+// Read the segment layout from the fields and send it to the device.
 function ledSendSegments(list) {
   ledSend({ segments: list }, true);
 }
@@ -1067,7 +1068,7 @@ function ledOpenModal() {
     '<div class="field"><button type="button" class="btn" data-led-test="1">Testar fita (vermelho, verde, azul)</button></div>' +
     '<div class="note" id="led-info"></div><div class="note err" id="led-msg"></div></div>';
   document.body.appendChild(bg);
-  ledSig = ""; // janela nova e vazia: forçar o desenho do seletor e da lista de segmentos
+  ledSig = ""; // a fresh, empty panel: force the picker and segment list to be drawn
   if (ledState) ledFill(ledState); else ledGet();
 }
 
@@ -1090,7 +1091,7 @@ document.addEventListener("click", (ev) => {
   if (segDel) {
     const list = ledState.segs.map((g) => ({ start: g.start, stop: g.stop }));
     const i = +segDel.dataset.ledSegdel;
-    if (i > 0) list[i - 1].stop = list[i].stop; else list[1].start = list[0].start; // o vizinho fica com os LEDs
+    if (i > 0) list[i - 1].stop = list[i].stop; else list[1].start = list[0].start; // the neighbour takes the LEDs
     list.splice(i, 1);
     ledSeg = -1;
     ledSendSegments(list);
@@ -1664,7 +1665,7 @@ function openFirmwareSettings() {
 
 function fillNewFeatureForm() {
   const sel = $("nf-driver");
-  // A fita LED só se oferece nos firmwares que a têm (o ESP8266 não tem memória para ela).
+  // The strip is offered only by firmwares that carry it; the ESP8266 has no memory for it.
   const drivers = DRIVERS.filter((g) => config.ledSupport === true || !g.items.some((d) => d.v === 200));
   sel.innerHTML = drivers.map((g) => '<optgroup label="' + esc(g.g) + '">' +
     g.items.map((d) => '<option value="' + d.v + '">' + esc(d.n) + "</option>").join("") + "</optgroup>").join("");

@@ -46,7 +46,7 @@ int main()
                     }
                 }
     }
-    // --- transição suave de cor ---
+    // --- smooth colour fade ---
     {
         led::Engine t;
         t.resize(4);
@@ -67,7 +67,7 @@ int main()
         const led::RGB &fin = t.pixels()[0];
         printf("transição: %d quadros, %d intermédios, final %d/%d/%d\n", steps, midSeen, fin.r, fin.g, fin.b);
         if (fin.r != 0 || fin.b != 255 || midSeen < 3) { printf("FALHOU: transição\n"); bad++; }
-        // sem transição: salta logo
+        // no transition: jump straight there
         led::Engine u;
         u.resize(2);
         u.setTransition(0);
@@ -79,7 +79,7 @@ int main()
     }
     // --- limite de corrente ---
     {
-        // 60 LEDs a branco, 60 mA cada: 60*60 + 60 de repouso = 3660 mA
+        // 60 LEDs at white, 60 mA each: 60*60 plus 60 idle = 3660 mA
         const uint32_t sum = 60u * 765u;
         const uint32_t est = led::estimateMA(sum, 60, 60);
         const uint16_t f = led::limitFactor256(est, 60, 2000);

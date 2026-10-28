@@ -2168,8 +2168,8 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     JsonArray usable = root["usablePins"].to<JsonArray>();
     for (auto pin : DefaultPins::outputInputPins)
       usable.add(pin);
-    ledStripConfigJson(root); // função "Fita LED", se existir
-    root["ledSupport"] = ledStripSupported(); // o painel só oferece a Fita LED se o firmware a tiver
+    ledStripConfigJson(root); // the LED strip feature, when one exists
+    root["ledSupport"] = ledStripSupported(); // the panel offers the strip only when the firmware carries it
 #ifdef ESP32
     JsonArray inputOnly = root["inputOnlyPins"].to<JsonArray>();
 #if !defined(ESP32C6) && !defined(ESP32C3)

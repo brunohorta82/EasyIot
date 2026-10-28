@@ -14,12 +14,12 @@
 #include "WebServer.h"
 #include "CloudIO.h"
 
-// ---- Configuração de compilação (platformio.ini / platformio_override.ini) ----
+// ---- Build-time configuration (platformio.ini / platformio_override.ini) ----
 #ifndef LED_STRIP_PIN
 #if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)
-#define LED_STRIP_PIN 4 // só um valor de reserva: o pino real escolhe-se em "Nova função" (no C3, 18/19 são o USB)
+#define LED_STRIP_PIN 4 // a fallback only: the real pin is chosen in "New feature" (on the C3, 18/19 are USB)
 #else
-#define LED_STRIP_PIN 18 // só um valor de reserva: o pino real escolhe-se em "Nova função"
+#define LED_STRIP_PIN 18 // a fallback only: the real pin is chosen in "New feature"
 #endif
 #endif
 #ifndef LED_STRIP_COUNT
@@ -35,20 +35,21 @@ namespace
 {
     const char *kFile = "/led.json";
     const char *kTmp = "/led.tmp";
-    constexpr unsigned long kSaveDelayMs = 3000;  // poupa a flash: grava só depois de parar de mexer
-    constexpr unsigned long kInitDelayMs = 8000;  // no arranque, a fita só acorda depois de tudo assentar
-    constexpr unsigned long kCreateDelayMs = 500; // ao criar pelo painel, quase de imediato
+    constexpr unsigned long kSaveDelayMs = 3000;  // spares the flash: write only once the fiddling stops
+    constexpr unsigned long kInitDelayMs = 8000;  // at boot the strip wakes only after everything settles
+    constexpr unsigned long kCreateDelayMs = 500; // when created from the panel, almost at once
 
-    // Função "Fita LED" criada em Nova função. Criar e remover mexe só nestes campos (e no
-    // ficheiro); o hardware da fita é sempre tratado pelo loop principal (reconcile em ledStripLoop).
+    // The strip feature created from New feature. Creating and removing touches only
+    // these fields and the file; the hardware is always the main loop's business
+    // (the reconcile step in ledStripLoop).
     volatile bool created = false;
     char fname[24] = "Fita LED";
     int fpin = LED_STRIP_PIN;
 
-    // KNX: um endereço de grupo (área/linha/membro) para ligar/desligar, com realimentação do estado,
-    // como nas luzes. 0/0/0 = sem KNX. Valores como nos restantes atuadores: 0 = desligado, 100 = ligado.
+    // KNX: one group address (area/line/member) for on and off, reporting state back,
+    // as the lights do. 0/0/0 = no KNX. Values as elsewhere: 0 = off, 100 = on.
     uint8_t knxAddr[3] = {0, 0, 0};
-    volatile int knxPending = -1; // pedido recebido pelo KNX, aplicado no loop principal
+    volatile int knxPending = -1; // request from the KNX bus, applied in the main loop
     int lastKnxSent = 0;
     bool knxOn() { return knxAddr[0] > 0; }
     void knxAssign()
@@ -60,25 +61,25 @@ namespace
         knx.callback_assign(config.knxIdRegister, knx.GA_to_address(knxAddr[0], 0, 0));
     }
 
-    // Estado geral da fita: interruptor e brilho mestres, e número de LEDs.
+    // Whole-strip state: master switch and brightness, and the LED count.
     struct State
     {
         bool on = false;
         uint8_t brightness = 255;
         uint16_t count = LED_STRIP_COUNT;
-        uint16_t transition = 400; // ms para ligar/desligar e mudar de cor suavemente (0 = sem transição)
-        uint16_t limitMA = 0;      // limite de corrente da fonte, em mA (0 = sem limite)
+        uint16_t transition = 400; // ms to fade on, off and between colours (0 = no fade)
+        uint16_t limitMA = 0;      // supply current limit in mA (0 = no limit)
         uint16_t mAperLED = 60;    // consumo de um LED a branco, a fundo
-        uint8_t colorOrder = 0;    // índice em kOrders (0 = GRB, o normal das WS2812B)
-        uint8_t gamma = 10;        // correção gama em décimas (10 = sem correção, 22 = 2,2, 28 = 2,8)
-        uint8_t cal[3] = {100, 100, 100}; // balanço de cores: % de vermelho, verde e azul
+        uint8_t colorOrder = 0;    // index into kOrders (0 = GRB, usual for WS2812B)
+        uint8_t gamma = 10;        // gamma in tenths (10 = none, 22 = 2.2, 28 = 2.8)
+        uint8_t cal[3] = {100, 100, 100}; // white balance: per cent of red, green and blue
     } st;
 
-    // Ordens dos bytes de cor que as fitas usam. Quando "vermelho" sai verde ou azul, troca-se aqui.
+    // Colour byte orders strips use. When "red" comes out green or blue, change it here.
     const neoPixelType kOrders[6] = {NEO_GRB, NEO_RGB, NEO_BRG, NEO_RBG, NEO_GBR, NEO_BGR};
 
-    // Tabela da correção gama: o olho vê a luz de forma não linear e os LEDs são lineares; sem isto as
-    // cores fracas parecem lavadas (um vermelho com um pouco de verde ou azul vira rosa).
+    // Gamma table: the eye sees light non-linearly and the LEDs are linear, so without
+    // this faint colours look washed out and a red with a little green or blue turns pink.
     uint8_t gammaLut[256];
     uint8_t gammaBuilt = 0;
     void buildGamma()
@@ -90,16 +91,16 @@ namespace
         gammaBuilt = st.gamma;
     }
 
-    // Valores "a ver" durante as transições (não se gravam).
+    // The values on show during a fade; never persisted.
     float mLvl = 0.f;                 // 0..1: a fita toda a acender/apagar
     float mBri = 255.f;               // brilho geral suavizado
-    float segLvl[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // 0..1 de cada segmento a acender/apagar
+    float segLvl[8] = {1, 1, 1, 1, 1, 1, 1, 1}; // 0..1 as each segment fades in or out
     unsigned long lastRenderMs = 0;
-    uint32_t estMA = 0;               // corrente estimada da última imagem enviada (já com o limite)
-    bool limiting = false;            // o limite está a reduzir a luz
+    uint32_t estMA = 0;               // estimated current of the last frame sent, limit included
+    bool limiting = false;            // the limit is holding the light back
 
-    // Segmentos (zonas da fita), como no WLED: cada um com o seu intervalo de LEDs, cor, efeito, etc.
-    // Há sempre pelo menos um; por omissão o segmento 0 cobre a fita toda.
+    // Segments (zones of the strip), as in WLED: each with its own LED range, colour,
+    // effect and so on. There is always at least one; segment 0 covers the whole strip.
     constexpr int kMaxSeg = 8;
     struct Seg
     {
@@ -117,7 +118,7 @@ namespace
     std::vector<led::RGB> frame;  // imagem final da fita
     bool frameDirty = true;
 
-    // Redimensiona os motores ao tamanho dos segmentos (quando o desenho dos segmentos muda).
+    // Resize the engines to the segments, after the segment layout changes.
     void rebuildEngines()
     {
         for (int i = 0; i < segCount; i++)
@@ -131,7 +132,7 @@ namespace
         frameDirty = true;
     }
 
-    // Atualiza só as propriedades (efeito, cor, velocidade, intensidade) nos motores.
+    // Push only the properties (effect, colour, speed, intensity) into the engines.
     void syncEngines()
     {
         for (int i = 0; i < segCount; i++)
@@ -142,7 +143,7 @@ namespace
         frameDirty = true;
     }
 
-    // Garante que os segmentos cabem na fita (depois de mudar o número de LEDs).
+    // Keep the segments inside the strip after the LED count changes.
     void fitSegments()
     {
         const int n = st.count;
@@ -169,7 +170,7 @@ namespace
     Adafruit_NeoPixel *strip = nullptr;
     unsigned long initAfter = 0;
     bool needsSave = false, wasOn = false, needsPublish = false;
-    bool saveNow = false; // definições (não deslizantes): gravar já, para não se perderem se o dispositivo reiniciar
+    bool saveNow = false; // settings, not slider moves: write at once so a reboot cannot lose them
     bool needsDiscovery = false, needsUndiscovery = false;
     bool testRequested = false;
     unsigned long lastChange = 0;
@@ -217,7 +218,7 @@ namespace
             st.cal[2] = constrain((int)(doc["cb"] | 100), 10, 100);
             if (doc["sg"].is<JsonArray>() && doc["sg"].size() > 0)
             {
-                // segmentos: [início, fim, ligado, brilho, r, g, b, efeito, velocidade, intensidade]
+                // segments: [start, stop, on, brightness, r, g, b, effect, speed, intensity]
                 segCount = 0;
                 for (JsonVariant v : doc["sg"].as<JsonArray>())
                 {
@@ -238,7 +239,7 @@ namespace
             }
             else
             {
-                // ficheiro de uma versão sem segmentos: um segmento com tudo
+                // a file from a version without segments: one segment covering everything
                 segCount = 1;
                 segs[0] = Seg();
                 segs[0].stop = st.count - 1;
@@ -340,14 +341,14 @@ namespace
         if (segCount == 1)
         {
             segs[0].start = 0;
-            segs[0].stop = n - 1; // com um só segmento, acompanha a fita
+            segs[0].stop = n - 1; // with a single segment, it follows the strip
         }
         else
             fitSegments();
         rebuildEngines();
     }
 
-    // Define o desenho dos segmentos. Os novos herdam as propriedades do primeiro.
+    // Set the segment layout. New ones inherit the first one's properties.
     void applySegments(JsonArray arr)
     {
         Seg tmp[kMaxSeg];
@@ -379,7 +380,7 @@ namespace
         rebuildEngines();
     }
 
-    // Aplica um comando (JSON ou "ON"/"OFF"). Serve o MQTT e a página web.
+    // Apply a command, JSON or plain "ON"/"OFF". Serves both MQTT and the web page.
     void applyCommand(const char *payload)
     {
         if (strcasecmp(payload, "ON") == 0 || strcasecmp(payload, "OFF") == 0)
@@ -391,13 +392,14 @@ namespace
         JsonDocument doc;
         if (deserializeJson(doc, payload) != DeserializationError::Ok)
             return;
-        // Cor, brilho, velocidade e intensidade mexem-se a deslizar e gravam-se com atraso (poupa a flash). O resto
-        // são definições: gravam-se já, senão perdiam-se se o dispositivo reiniciasse logo a seguir.
+        // Colour, brightness, speed and intensity are dragged on sliders and written
+        // late, to spare the flash. The rest are settings: written at once, or a reboot
+        // right afterwards would lose them.
         if (doc["leds"].is<int>() || doc["segments"].is<JsonArray>() ||
             doc["colorOrder"].is<int>() || doc["gamma"].is<int>() || doc["transition"].is<int>() ||
             doc["limit"].is<int>() || doc["maPerLed"].is<int>() || doc["knx"].is<JsonObject>())
             saveNow = true;
-        // "seg": índice do segmento a que o comando se dirige; sem "seg" aplica-se a todos.
+        // "seg": which segment the command is aimed at; without it, all of them.
         int t = doc["seg"] | -1;
         if (t < 0 || t >= segCount)
             t = -1;
@@ -444,14 +446,14 @@ namespace
         if (doc["transition"].is<int>())
             st.transition = constrain((int)doc["transition"], 0, 3000);
         if (doc["limit"].is<int>())
-            st.limitMA = constrain((int)doc["limit"], 0, 20000); // mA; 0 = sem limite
+            st.limitMA = constrain((int)doc["limit"], 0, 20000); // mA; 0 = no limit
         if (doc["maPerLed"].is<int>())
             st.mAperLED = constrain((int)doc["maPerLed"], 10, 100);
         if (doc["colorOrder"].is<int>())
         {
             st.colorOrder = constrain((int)doc["colorOrder"], 0, 5);
             if (strip)
-                strip->updateType(kOrders[st.colorOrder] + NEO_KHZ800); // sem reiniciar
+                strip->updateType(kOrders[st.colorOrder] + NEO_KHZ800); // no restart needed
             frameDirty = true;
         }
         if (doc["gamma"].is<int>())
@@ -472,8 +474,8 @@ namespace
         touch();
     }
 
-    // Comandos vindos da página web: o handler assíncrono só os deixa aqui; quem os
-    // aplica é o loop principal, para nunca mexer na fita a partir de outra tarefa.
+    // Commands from the web page: the async handler only leaves them here and the main
+    // loop applies them, so the strip is never touched from another task.
     char pendingBuf[640];
     volatile bool pendingFlag = false;
 
@@ -511,7 +513,7 @@ namespace
         strip->clear();
         strip->show();
         rebuildEngines();
-        mLvl = st.on ? 1.f : 0.f; // ao arrancar, a fita fica logo como estava
+        mLvl = st.on ? 1.f : 0.f; // at boot the strip comes straight back as it was
         mBri = st.brightness;
         for (int i = 0; i < kMaxSeg; i++)
             segLvl[i] = (i < segCount && segs[i].on) ? 1.f : 0.f;
@@ -525,7 +527,7 @@ namespace
     }
 
     // Teste de hardware: a fita toda a vermelho, verde e azul, a brilho baixo. Se isto acende, o sinal,
-    // a massa e a alimentação estão bem, e qualquer problema depois disso é de configuração.
+    // ground and power are sound, and anything wrong after that is configuration.
     void selfTest()
     {
         if (!strip)
@@ -576,12 +578,12 @@ namespace
 
 void ledStripSetup()
 {
-    // Só carrega o estado. O hardware fica para o loop (depois do arranque assentar), e só se
-    // já existir uma função "Fita LED" criada em Nova função. Sem ela o módulo não toca em nada.
+    // Load the state only. The hardware waits for the loop, once boot has settled, and
+    // only when a strip feature already exists. Without one this module touches nothing.
     topics();
     load();
     if (created)
-        knxAssign(); // o registo do callback KNX já foi feito em config.load()
+        knxAssign(); // the KNX callback was registered back in config.load()
     initAfter = millis() + kInitDelayMs;
 #ifdef DEBUG_ONOFRE
     Log.notice("[LED] %s" CR, created ? "função Fita LED configurada" : "sem função Fita LED");
@@ -592,7 +594,7 @@ void ledStripLoop()
 {
     unsigned long now = millis();
 
-    // Reconciliar o hardware com a configuração (criar/remover a função faz-se noutra tarefa).
+    // Reconcile the hardware with the configuration; create and remove run in another task.
     if (created && !strip)
     {
         if ((long)(now - initAfter) >= 0)
@@ -641,7 +643,7 @@ void ledStripLoop()
         st.on = (v == 102) ? !st.on : (v != 0);
         touch();
         needsPublish = true;
-        lastKnxSent = st.on ? 100 : 0; // veio do KNX: não devolver eco
+        lastKnxSent = st.on ? 100 : 0; // it came from KNX: do not echo it back
     }
     if (knxOn() && (st.on ? 100 : 0) != lastKnxSent)
     {
@@ -670,7 +672,7 @@ void ledStripLoop()
             save();
     }
 
-    // Fita apagada e totalmente desvanecida: apaga uma vez e deixa-a em paz.
+    // Strip off and fully faded: clear it once and leave it alone.
     if (!st.on && mLvl <= 0.f)
     {
         if (wasOn)
@@ -697,10 +699,10 @@ void ledStripLoop()
         return;
     unsigned long dtMs = now - lastRenderMs;
     if (dtMs > 100)
-        dtMs = 100; // depois de uma pausa, não saltar
+        dtMs = 100; // after a pause, do not jump
     lastRenderMs = now;
 
-    // Transições: ligar/desligar (linear) e brilho geral (suave), para nada saltar.
+    // Fades: on/off linearly and master brightness smoothly, so nothing jumps.
     const float stepLvl = st.transition == 0 ? 1.f : dtMs / (float)st.transition;
     bool moving = false;
     const float mTarget = st.on ? 1.f : 0.f;
@@ -728,7 +730,7 @@ void ledStripLoop()
         }
     }
 
-    // Cada segmento anima-se no seu motor; depois juntam-se todos numa só imagem.
+    // Each segment animates in its own engine; they are then composed into one frame.
     bool changed = frameDirty || moving;
     for (int i = 0; i < segCount; i++)
         if ((segs[i].on || segLvl[i] > 0.f) && engines[i].update(now))
@@ -744,7 +746,7 @@ void ledStripLoop()
     {
         if (segLvl[i] <= 0.f)
             continue;
-        const int sb = (int)(segs[i].bri * segLvl[i]); // brilho do segmento, já com o desvanecimento
+        const int sb = (int)(segs[i].bri * segLvl[i]); // segment brightness, fade included
         const std::vector<led::RGB> &px = engines[i].pixels();
         for (size_t k = 0; k < px.size(); k++)
         {
@@ -756,8 +758,8 @@ void ledStripLoop()
         }
     }
 
-    // Brilho geral (com o desvanecimento de ligar/desligar), correção gama e balanço de cores. O que sai
-    // daqui é o que os LEDs vão mesmo mostrar, por isso é com isto que se estima a corrente.
+    // Master brightness including the on/off fade, then gamma and white balance. What
+    // leaves here is what the LEDs actually show, so this is what the current estimate uses.
     const int B = (int)(mBri * mLvl + 0.5f);
     buildGamma();
     uint32_t sum = 0;
@@ -770,7 +772,7 @@ void ledStripLoop()
         sum += p.r + p.g + p.b;
     }
     estMA = led::estimateMA(sum, st.count, st.mAperLED);
-    const uint16_t fq = led::limitFactor256(estMA, st.count, st.limitMA); // 256 = sem redução
+    const uint16_t fq = led::limitFactor256(estMA, st.count, st.limitMA); // 256 = no reduction
     limiting = fq < 256;
     if (limiting)
         estMA = led::estimateMA((uint64_t)sum * fq / 256, st.count, st.mAperLED);
@@ -874,18 +876,18 @@ void ledStripDiscovery()
     publishState();
 }
 
-// ---- Criar / remover a função (chamado pelo painel, noutra tarefa) ----
+// ---- Create and remove the feature; called by the panel, from another task ----
 
 int ledStripCreate(const char *name, int pin, int count)
 {
     if (!name || !*name || strlen(name) >= sizeof(fname))
-        return 1; // nome inválido
+        return 1; // invalid name
     if (created)
-        return 7; // só pode existir uma fita
+        return 7; // only one strip may exist
     if (pin < 0 || !config.validOutputPin((unsigned int)pin))
-        return 2; // pino que não serve nesta placa
+        return 2; // a pin this board cannot use
     if (config.pinInUse((unsigned int)pin))
-        return 5; // já usado por outra função
+        return 5; // already taken by another feature
     strlcpy(fname, name, sizeof(fname));
     fpin = pin;
     st.count = (count >= 1 && count <= LED_STRIP_MAX) ? count : LED_STRIP_COUNT;
@@ -897,7 +899,7 @@ int ledStripCreate(const char *name, int pin, int count)
     initAfter = millis() + kCreateDelayMs;
     __sync_synchronize();
     created = true;
-    save(); // fica guardada já; o hardware arranca no loop principal
+    save(); // stored right away; the hardware starts in the main loop
     return 0;
 }
 
@@ -962,7 +964,7 @@ void ledStripFeatureJson(JsonArray features, bool allFields)
 // ---- KNX (chamado por actuatoresCallback) ----
 static bool knxMatches(uint8_t a, uint8_t l, uint8_t m)
 {
-    // mesma regra dos restantes atuadores: endereço exato, ou o do grupo (área/linha/0 e área/0/0)
+    // same rule as the other actuators: the exact address, or the group's (area/line/0 and area/0/0)
     return knxOn() && knxAddr[0] == a && (knxAddr[1] == l || (l == 0 && m == 0)) && (knxAddr[2] == m || m == 0);
 }
 
@@ -982,7 +984,7 @@ bool ledStripKnxRead(uint8_t a, uint8_t l, uint8_t m, int &state)
     return true;
 }
 
-// ---- Página de controlo em /led ----
+// ---- Control page at /led ----
 static const char kPage[] PROGMEM = R"rawliteral(<!doctype html>
 <html lang="pt"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

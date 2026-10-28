@@ -1100,8 +1100,9 @@ void loadAPI()
     request->send(200, "text/plain; charset=utf-8", deviceLogText()); });
 
 #ifdef LED_STRIP
-  // Controlo da fita LED: página em /led e API /ledstate (GET) e /led/set, /led/remove (POST).
-  // /ledstate não pode ser /led/state: um handler em "/led" também apanha tudo o que começa por "/led/".
+  // LED strip control: the page at /led, and the API at /ledstate (GET) plus /led/set and
+  // /led/remove (POST). /ledstate cannot be /led/state: a handler on "/led" also catches
+  // everything beginning with "/led/".
   server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request)
             {
     if (!authorizeRequest(request))

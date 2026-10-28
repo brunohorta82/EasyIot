@@ -1,6 +1,6 @@
 #pragma once
-// Motor de efeitos para fitas LED enderecáveis (estilo WLED).
-// C++ puro: sem Arduino, sem bibliotecas. Por isso compila e testa-se no PC.
+// Effect engine for addressable LED strips, in the WLED spirit.
+// Plain C++: no Arduino, no libraries, so it builds and is tested on a PC.
 #include <stdint.h>
 #include <math.h>
 #include <stdlib.h>
@@ -116,7 +116,7 @@ namespace led
             h += 1.f;
     }
 
-    // Ruído de valor 1D, suave, entre 0 e 1.
+    // Smooth 1D value noise, between 0 and 1.
     inline float hash01(uint32_t n)
     {
         n = (n << 13) ^ n;
@@ -133,13 +133,13 @@ namespace led
     }
 
     // ---- Limite de corrente ----
-    // Um LED WS281x gasta cerca de mAperLED com os três canais a fundo (branco) e um terço disso só com um canal.
+    // A WS281x LED draws about mAperLED with all three channels at full (white), and a third of that on one channel.
     // Em repouso gasta ~1 mA. A estimativa soma os canais de todos os LEDs.
     inline uint32_t estimateMA(uint32_t channelSum, uint16_t leds, uint16_t mAperLED)
     {
         return (uint32_t)((uint64_t)channelSum * mAperLED / 765u) + leds;
     }
-    // Fator (0..256) por que multiplicar a luz para a corrente não passar de limitMA. 256 = sem redução.
+    // Factor (0..256) to scale the light by so the current stays under limitMA. 256 = no reduction.
     inline uint16_t limitFactor256(uint32_t estMA, uint16_t leds, uint32_t limitMA)
     {
         if (limitMA == 0 || estMA <= limitMA)
@@ -147,7 +147,7 @@ namespace led
         const uint32_t idle = leds;
         if (limitMA <= idle)
             return 0;
-        const uint32_t active = estMA - idle; // > 0, porque estMA > limitMA > idle
+        const uint32_t active = estMA - idle; // > 0, because estMA > limitMA > idle
         return (uint16_t)(((uint64_t)(limitMA - idle) * 256u) / active);
     }
 
@@ -163,7 +163,7 @@ namespace led
             _heat.assign(n, 0);
             _dirty = true;
         }
-        // Duração (ms) da transição suave entre cores. 0 = muda de cor de imediato.
+        // Length in ms of the fade between colours. 0 = change colour at once.
         void setTransition(uint16_t ms) { _trMs = ms; }
 
         void set(Effect e, RGB c, uint8_t speed, uint8_t intensity)
@@ -183,7 +183,7 @@ namespace led
                 _flash = 0;
                 _lvl = _tgt = 1.f;
             }
-            // _color é a cor que se vê; _tc é a pretendida. Aproximam-se em stepColor().
+            // _color is the colour on show; _tc the one asked for. stepColor() walks one to the other.
             _tc = c;
             if (!_hasColor || _trMs == 0)
             {
@@ -200,7 +200,7 @@ namespace led
         uint16_t size() const { return _n; }
         const std::vector<RGB> &pixels() const { return _px; }
 
-        // Avança o tempo. Devolve true se o quadro mudou e há que enviar à fita.
+        // Advance time. True when the frame changed and has to be pushed to the strip.
         bool update(uint32_t now)
         {
             uint32_t dt = _last ? now - _last : 0;
@@ -208,7 +208,7 @@ namespace led
                 return false;
             _last = now;
             if (dt > 250)
-                dt = 250; // depois de uma pausa longa, não saltar
+                dt = 250; // after a long pause, do not jump
             float rate = 0.1f + (_speed / 255.f) * 3.9f; // ciclos por segundo
             _phase += rate * (dt / 1000.f);
             if (_phase > 1000.f)
@@ -408,7 +408,7 @@ namespace led
         }
         void meteorStep()
         {
-            // cauda: apaga um pouco cada pixel; cabeça avança segundo a velocidade
+            // tail: dim every pixel a little; the head advances with the speed
             int fade = 20 + (255 - _intensity) / 4; // 20..83 em 256
             for (auto &p : _px)
             {
