@@ -25,11 +25,65 @@ All notable changes to this project are documented in this file.
 - 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
   static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
 
+## [9.225] - 2026-10-28
+
+### Added
+
+- The LED strip reaches CloudIO. It joins the features the device reports as
+  family LIGHT with driver LED_STRIP, and gets the cloud topic pair the
+  actuators get — `<user>/<chip>/light/led/set` and `.../light/led/status` —
+  carrying the same JSON the local broker already uses. Once the device is
+  adopted, the strip can be seen and driven from the cloud, and Alexa controls
+  it there as a colour light: on and off, brightness and colour. Effects and
+  segments have no Alexa vocabulary and stay on the device's page and in Home
+  Assistant.
+
+### Removed
+
+- The strip's own Alexa support, which emulated a Philips Hue bridge over
+  SSDP through Espalexa. Alexa is integrated through the cloud, so the local
+  path was a second thing to keep working for no gain. Gone with it: the
+  Espalexa dependency in every environment, the persisted "al" flag, the Hue
+  entry point in the not-found handler, and the panel's selector.
+
+### Fixed
+
+- A lease contract test anchored on the first `else if (httpCode ==
+  HTTP_CODE_OK)` in the cloud sync, which a logging branch had come to match,
+  so the contract was being checked against the wrong block and would have
+  passed with the lease removed.
+
+### Para testers
+
+Nova funcionalidade grande: **fita LED endereçável** (tipo WLED), nos ESP32,
+ESP32-C3 e ESP32-C6. O ESP8266 não a leva — não tem memória.
+
+Cria em Funções → Nova função → Fita LED, escolhe o pino de dados e o número de
+LEDs. Depois, na Visão geral, o mosaico liga e desliga e a rodinha abre cor,
+brilho, 24 efeitos, velocidade e intensidade. Dá para dividir a fita em até 8
+zonas e mexer em cada uma à parte. Tem transições suaves, limite de corrente da
+fonte (diz quantos amperes ela aguenta e o firmware baixa o brilho antes de
+passar disso) e ajuste de cores, para quando o vermelho sai rosado ou trocado
+com o verde.
+
+A fita aparece sozinha no Home Assistant e tem página própria em
+`http://<nome>.local/led`, que funciona bem no telemóvel.
+
+**Alexa:** funciona pela nuvem, depois do equipamento estar associado à conta.
+Diz "Alexa, descobre dispositivos" e a fita aparece como luz: ligar, desligar,
+brilho e cor. Efeitos e segmentos não existem para a Alexa — para isso usa o
+painel ou o Home Assistant.
+
+O que convém testar: criar e remover a função, o limite de corrente com a tua
+fonte real, as cores depois do ajuste, e a Alexa depois de adotares o
+equipamento. Avisem se o vermelho sair trocado: é a ordem das cores, muda-se na
+rodinha sem reiniciar.
+
 ## [9.224] - 2026-10-28
 
 ### Added
 
-- LED strip on the ESP32-C6 (ESP32C6_IRRIGATION and its debug variant): LED_STRIP define plus the Adafruit NeoPixel and Espalexa libraries. Untested on the C6 hardware.
+- LED strip on the ESP32-C6 (ESP32C6_IRRIGATION and its debug variant): LED_STRIP define plus the Adafruit NeoPixel library. Untested on the C6 hardware.
 
 ### Changed
 
