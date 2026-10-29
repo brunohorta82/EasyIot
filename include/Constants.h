@@ -65,6 +65,8 @@ namespace configFilenames
        such file and starts with no programs. */
     constexpr const char *irrigation = "/irrigation.json";
     constexpr const char *irrigationTemporary = "/irrigation.tmp";
+    constexpr const char *aquadance = "/aquadance.json";
+    constexpr const char *aquadanceTemporary = "/aquadance.tmp";
     constexpr const char *configRollback = "/config.rollback";
     constexpr const char *irrigationRollback = "/irrigation.rollback";
     constexpr const char *restore = "/restore.json";
