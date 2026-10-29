@@ -2,7 +2,9 @@
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
+#if __has_include("AquaDance.h")
 #include "AquaDance.h"
+#endif
 #include "LedStrip.h"
 extern ConfigOnofre config;
 
@@ -934,6 +936,7 @@ void publishIrrigationHomeAssistantState()
   }
 }
 
+#if __has_include("AquaDance.h")
 void createHaAquaDance()
 {
   if (!mqttConnected() || !deviceHasValves())
@@ -1001,3 +1004,5 @@ void publishAquaDanceHomeAssistantState()
   String topic = String("onofre/") + config.chipId + "/aquadance/state";
   publishOnMqtt(topic.c_str(), payload.c_str(), true);
 }
+
+#endif
