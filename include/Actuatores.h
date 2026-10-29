@@ -42,6 +42,7 @@ enum ActuatorDriver
     LIGHT_LATCH = 8,
     GARAGE_PUSH = 9,
     GARDEN_VALVE = 10,
+    LIGHT_DIMMER = 11,
     INVALID = 999
 };
 
@@ -87,6 +88,8 @@ public:
     Shutters *shutter{nullptr};
     unsigned long upCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
     unsigned long downCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
+    bool dimmingUp = true;
+    unsigned long lastDimTime = 0ul;
 
     // METHODS
     constexpr bool isCover()
@@ -95,7 +98,11 @@ public:
     };
     constexpr bool isLight()
     {
-        return driver == LIGHT_PUSH || driver == LIGHT_LATCH;
+        return driver == LIGHT_PUSH || driver == LIGHT_LATCH || driver == LIGHT_DIMMER;
+    };
+    constexpr bool isDimmer()
+    {
+        return driver == LIGHT_DIMMER;
     };
 
     constexpr bool isVirtual()
@@ -169,6 +176,8 @@ public:
             return FeatureDrivers::LIGHT_PUSH;
         case LIGHT_LATCH:
             return FeatureDrivers::LIGHT_LATCH;
+        case LIGHT_DIMMER:
+            return FeatureDrivers::LIGHT_DIMMER;
         case GARAGE_PUSH:
             return FeatureDrivers::GARAGE_PUSH;
         case GARDEN_VALVE:
@@ -186,6 +195,7 @@ public:
         case SWITCH_PUSH:
         case COVER_DUAL_PUSH:
         case GARAGE_PUSH:
+        case LIGHT_DIMMER:
             return ActuatorInputMode::PUSH;
         case SWITCH_LATCH:
         case LIGHT_LATCH:
