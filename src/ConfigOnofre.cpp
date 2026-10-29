@@ -12,7 +12,6 @@
 #include "CloudIO.h"
 #include "DeviceClock.h"
 #include "Irrigation.h"
-#include "AquaDance.h"
 #include "Persistence.h"
 #include <algorithm>
 
@@ -234,10 +233,7 @@ void ConfigOnofre::i2cDiscovery()
           }
           else
           {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
             delete candidate;
-#pragma GCC diagnostic pop
           }
         }
       }
@@ -614,7 +610,6 @@ ConfigOnofre &ConfigOnofre::load()
   // After the features, never before: a program naming a valve this device does
   // not have is dropped, which can only be decided once the valves are known.
   irrigation.load();
-  aquadance.load();
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
 
@@ -804,10 +799,6 @@ void ConfigOnofre::backup(JsonVariant &root)
   JsonVariant irrigationRoot = root["irrigation"].to<JsonObject>();
   irrigation.jsonBody(irrigationRoot);
   irrigationRoot.remove("running");
-
-  JsonVariant aquadanceRoot = root["aquadance"].to<JsonObject>();
-  aquadance.jsonBody(aquadanceRoot);
-  aquadanceRoot.remove("running");
 }
 
 ConfigOnofre &ConfigOnofre::save()
@@ -2236,7 +2227,6 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
       if (a.isGardenValve())
       {
         irrigation.json(root);
-        aquadance.json(root);
         break;
       }
     }
@@ -2441,7 +2431,6 @@ void ConfigOnofre::loopActuators()
     }
   }
   irrigation.loop();
-  aquadance.loop();
   endFeatureAccess();
 }
 void ConfigOnofre::requestRestart()

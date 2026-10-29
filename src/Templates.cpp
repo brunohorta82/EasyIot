@@ -4,7 +4,6 @@
 #include "Sensors.h"
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
-#include "AquaDance.h"
 #include <algorithm>
 extern ConfigOnofre config;
 
@@ -49,8 +48,6 @@ void clearLiveFeatureGraphSafely()
 
     if (irrigation.isRunning())
         irrigation.stop();
-    if (aquadance.isRunning())
-        aquadance.stop();
 
     std::vector<unsigned int> releasedOutputs;
     for (auto &actuator : config.actuatores)
