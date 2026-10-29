@@ -3,6 +3,7 @@
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
 #include "AquaDance.h"
+#include "LedStrip.h"
 extern ConfigOnofre config;
 
 bool homeAssistantOnline(String topic, String payload)
@@ -606,8 +607,18 @@ void initHomeAssistantDiscovery()
   }
   for (auto &ss : config.sensors)
   {
-    publishOnMqtt(ss.readTopic, ss.state.c_str(), true);
+    // Config first, then state. The comment below is right and the old order
+    // contradicted it: an entity has to claim the topic before its state means
+    // anything.
     addToHomeAssistant(ss);
+    // Never seed a state topic with nothing. A sensor that has not read yet has
+    // an empty state, and publishing it put an empty payload on the wire: every
+    // value template over it fails, which leaves the entity unknown and writes
+    // an error into Home Assistant's log on every reconnect. Worse, a zero-byte
+    // retained publish deletes the retained state, so a Home Assistant starting
+    // afterwards finds no value at all until the next reading.
+    if (ss.state.length() > 0)
+      publishOnMqtt(ss.readTopic, ss.state.c_str(), true);
   }
   // Last, and state before configs would be pointless: Home Assistant only
   // listens to a state topic once an entity claims it.
@@ -615,6 +626,7 @@ void initHomeAssistantDiscovery()
   publishIrrigationHomeAssistantState();
   createHaAquaDance();
   publishAquaDanceHomeAssistantState();
+  ledStripDiscovery();
 }
 
 namespace

@@ -2,6 +2,232 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- The firmware-update page now confirms success only after the restarted device
+  reports a different firmware version or build, then performs a full browser
+  reload so the normal login flow and new assets appear without manual refresh.
+- A failed automatic update stops the progress indicator and displays the actual
+  device error instead of remaining indefinitely on "updating".
+- ESP8266 closes port 80 while BearSSL owns the limited heap, preserves a failed
+  update message through a controlled recovery restart, and releases captive AP
+  resources before starting the full station WebUI, CloudIO, and MQTT services.
+
+### Validation
+
+- An intentional ESP8266 HTTPS failure completed without OOM, retained Wi-Fi,
+  recovered CloudIO/MQTT, and showed `HTTP error: connection failed` in Safari.
+- A real ESP8266 automatic update from a 9.198-labelled candidate to official
+  v9.201 restarted successfully, reopened the login page automatically, and
+  reported `FW 9.201`.
+- 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
+  static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
+
+## [9.228] - 2026-10-29
+
+### Changed
+
+- The strip's state message now carries its speed, intensity, LED count and
+  segment layout, not just the colour, brightness and effect of the first
+  segment. The cloud stores that object verbatim and the phone apps read it
+  from there, so anything left out of it was something a phone could command
+  but never show -- which is why the apps had no segment view to offer.
+- Segments are written tighter than the rest of that message: colour as
+  [r, g, b] and effect as its index. MQTT_MAX_PACKET_SIZE caps the packet at
+  1000 bytes and eight segments spelled out the long way measure 1287. The top
+  level keeps its colour object, which the Home Assistant discovery templates
+  read r/g/b from. If the budget is ever exceeded anyway the layout is dropped
+  rather than the whole message: an oversized publish is discarded in silence,
+  and the layout is the one part /ledstate can still be asked for.
+
+### Para testers
+
+Nada muda no equipamento nem no painel: esta versão só passa a contar à nuvem
+**tudo** o que a fita está a fazer, incluindo os segmentos. É o que falta para
+as apps do telemóvel poderem mostrar e mexer na cor, nos efeitos e nos
+segmentos — até agora só conseguiam ligar e desligar.
+
+Vale a pena atualizar já, para que a fita esteja pronta quando a app nova
+chegar.
+
+## [9.227] - 2026-10-28
+
+### Fixed
+
+- The LED strip showed up twice under Accessories: once as its own tile, with
+  the colour, the effects and the segment editor behind the cog, and once as a
+  plain on/off accessory with none of it. 9.225 started describing the strip as
+  a LIGHT feature so the cloud could adopt it, but it put that description in
+  the panel's payload as well, and the panel already draws the strip from the
+  "ledStrip" key. The description now goes only to the cloud, which is the one
+  that cannot see the strip any other way. The second tile also carried a cog
+  onto the actuator dialog, where the strip would have been edited as if it
+  owned a GPIO output.
+
+### Para testers
+
+Se abriste a **fita LED** no painel e viste **dois mosaicos iguais**, era um
+erro meu na 9.225: o segundo não tinha cor nem efeitos nenhuns, e a rodinha
+dele abria a janela errada. Nesta versão fica **um só mosaico** — o bom, aquele
+em que a rodinha abre a cor, o brilho, os 24 efeitos e os segmentos.
+
+Nada mais mudou: o que já estava configurado na fita mantém-se tal e qual.
+
+## [9.226] - 2026-10-28
+
+### Fixed
+
+- The web panel's asset cache-busting version said 9.224 in the 9.225 release:
+  platformio.ini was bumped after the panel was last generated. Harmless, since
+  9.224 was never released and no browser holds its assets, but wrong.
+
+### Changed
+
+- The imported LED strip's comments are in English, like the rest of the
+  project: LedStrip.cpp, LedStrip.h, LedEffects.h and its PC test, plus the
+  comments the same work left in CloudIO.cpp, WebServer.cpp, ConfigOnofre.cpp,
+  Mqtt.cpp, Actuatores.cpp and the panel's index.js. Comments only — with every
+  comment stripped, each file is byte-identical to 9.225, and the minified
+  panel bundle does not change at all.
+
+### Para testers
+
+Versão de manutenção, sem nada de novo para experimentar: só arrumação interna
+do código e a correção de um número de versão nos ficheiros do painel.
+
+Se ainda não viste a **fita LED**, que saiu na 9.225, é essa que vale a pena
+testar — continua tudo igual ao que foi anunciado.
+
+## [9.225] - 2026-10-28
+
+### Added
+
+- The LED strip reaches CloudIO. It joins the features the device reports as
+  family LIGHT with driver LED_STRIP, and gets the cloud topic pair the
+  actuators get — `<user>/<chip>/light/led/set` and `.../light/led/status` —
+  carrying the same JSON the local broker already uses. Once the device is
+  adopted, the strip can be seen and driven from the cloud, and Alexa controls
+  it there as a colour light: on and off, brightness and colour. Effects and
+  segments have no Alexa vocabulary and stay on the device's page and in Home
+  Assistant.
+
+### Removed
+
+- The strip's own Alexa support, which emulated a Philips Hue bridge over
+  SSDP through Espalexa. Alexa is integrated through the cloud, so the local
+  path was a second thing to keep working for no gain. Gone with it: the
+  Espalexa dependency in every environment, the persisted "al" flag, the Hue
+  entry point in the not-found handler, and the panel's selector.
+
+### Fixed
+
+- A lease contract test anchored on the first `else if (httpCode ==
+  HTTP_CODE_OK)` in the cloud sync, which a logging branch had come to match,
+  so the contract was being checked against the wrong block and would have
+  passed with the lease removed.
+
+### Para testers
+
+Nova funcionalidade grande: **fita LED endereçável** (tipo WLED), nos ESP32,
+ESP32-C3 e ESP32-C6. O ESP8266 não a leva — não tem memória.
+
+Cria em Funções → Nova função → Fita LED, escolhe o pino de dados e o número de
+LEDs. Depois, na Visão geral, o mosaico liga e desliga e a rodinha abre cor,
+brilho, 24 efeitos, velocidade e intensidade. Dá para dividir a fita em até 8
+zonas e mexer em cada uma à parte. Tem transições suaves, limite de corrente da
+fonte (diz quantos amperes ela aguenta e o firmware baixa o brilho antes de
+passar disso) e ajuste de cores, para quando o vermelho sai rosado ou trocado
+com o verde.
+
+A fita aparece sozinha no Home Assistant e tem página própria em
+`http://<nome>.local/led`, que funciona bem no telemóvel.
+
+**Alexa:** funciona pela nuvem, depois do equipamento estar associado à conta.
+Diz "Alexa, descobre dispositivos" e a fita aparece como luz: ligar, desligar,
+brilho e cor. Efeitos e segmentos não existem para a Alexa — para isso usa o
+painel ou o Home Assistant.
+
+O que convém testar: criar e remover a função, o limite de corrente com a tua
+fonte real, as cores depois do ajuste, e a Alexa depois de adotares o
+equipamento. Avisem se o vermelho sair trocado: é a ordem das cores, muda-se na
+rodinha sem reiniciar.
+
+## [9.224] - 2026-10-28
+
+### Added
+
+- LED strip on the ESP32-C6 (ESP32C6_IRRIGATION and its debug variant): LED_STRIP define plus the Adafruit NeoPixel library. Untested on the C6 hardware.
+
+### Changed
+
+- The LED strip is no longer offered under New feature on firmwares that do not include it (the ESP8266 has no memory for it): the firmware now reports ledSupport and the panel hides the option. The ESP8266 builds never contained the strip code; this only removes the dead option and the chance of trying to create it.
+
+## [9.223] - 2026-10-27
+
+### Added
+
+- Alexa start-up guard: the marker /alexa.try exists while the Alexa emulation is starting; if the device restarts by panic or watchdog before a minute has passed, the next boot switches Alexa off and says so in the device log and in the strip dialog, instead of restarting in a loop. Alexa now starts only after 15 s of uptime.
+
+### Fixed
+
+- LED strip settings that are not sliders (Alexa, LED count, segments, colour order, gamma, transition, current limit, KNX) are now written to flash at once instead of 3 seconds later, so they are no longer lost if the device restarts right after. The Alexa option also had a race in the panel that could show it as off right after switching it on.
+
+## [9.222] - 2026-10-26
+
+### Added
+
+- Alexa through Hue emulation for the LED strip (Espalexa library, Hue "extended colour light"): switch it on in the strip's dialog under Alexa, then ask Alexa to discover devices. Local, no cloud; on/off, brightness and colour only (no effects or segments). The web server's not-found handler now offers unknown requests to the Alexa emulation first.
+
+## [9.221] - 2026-10-25
+
+### Changed
+
+- Cloud presence: the log now says when the retained presence message could not be published (AsyncMqttClient::publish returned 0), instead of always reporting it as sent.
+
+## [9.220] - 2026-10-25
+
+### Changed
+
+- The cloud presence message (retained "1" on the available topic) is now renewed every 5 minutes while the cloud link is up, instead of once when it opens. If the server loses the retained message, the cloud panel no longer shows the device offline until its next reconnect.
+
+## [9.219] - 2026-10-24
+
+### Added
+
+- Manual firmware upload (Firmware > Update by file) now writes its failures to the device log with the Update error code and the byte count: device busy, Update.begin failed, write failed, or final verification failed. The panel only said that the upload failed.
+
+## [9.218] - 2026-10-24
+
+### Changed
+
+- The panel header and the Pinout tab now show the real chip (ESP32-C3, ESP32-C6, ESP32, ESP8266) taken from backupVariant. The mcu field is unchanged: it still names the OTA folder and is what the cloud receives, so a C3 keeps reporting ESP32 there.
+
+## [9.217] - 2026-10-24
+
+### Added
+
+- The device log (panel, Diagnostics) now records the cloud: the server's answer to each sync (200 / 204 not adopted / failure), the cloud MQTT link coming up and going down with the disconnect reason, and the presence message. Before, the panel text promised cloud events but none were written, so a cloud problem left no trace without a USB cable.
+
+## [9.216] - 2026-10-24
+
+### Fixed
+
+- ESP32-C3 builds (ESP32C3_LED_DEBUG/RELEASE) now have their own pin table, selected by the new ESP32C3 define. They used the classic ESP32 table: the Smart Bus on GPIO32/33 and selectable pins up to 27, none of which exist on a C3 (GPIO 0-21, with 12-17 on the SPI flash). The boot-time I2C scan now uses GPIO6/7 and the panel only offers 0-5, 10, 20 and 21. ESP32C3_HAN is unchanged.
+
+## [9.215] - 2026-10-24
+
+### Added
+
+- Addressable LED strip (WS2812/WS2813/WS2815) as a feature: Features > New feature > "Fita LED" with name, GPIO and LED count. An Overview tile switches it on and off; its gear opens a dialog with colour, brightness, effect, speed, intensity, LED count, up to 8 segments, smooth transitions, a supply current limit and colour order, gamma and white balance.
+- 24 effects, KNX on/off with state feedback, MQTT and Home Assistant discovery for the whole strip. ESP32 and ESP32-C3 only; the GPIO is reserved so no other feature can take it.
+- New environments: ESP32_4M_DEBUG/RELEASE (4 MB flash) and ESP32C3_LED_DEBUG/RELEASE (access-point provisioning, two OTA slots).
+
+### Changed
+
+- Web panel assets ship pre-generated (SKIP_HTML_CONVERT on by default), so building needs no Node.js. The generated files are not minified.
+
 ## [9.202] - 2026-08-31
 
 ### Added
