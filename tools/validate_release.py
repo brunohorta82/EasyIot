@@ -175,24 +175,36 @@ def main() -> int:
             else:
                 fail(f"CHANGELOG.md is missing section header: ## [{version}]")
 
-            # A merged pull request leaves its notes under "Unreleased". Releasing
-            # without renaming that heading files shipped work as unshipped, and it is
-            # invisible: one such section sat in the middle of the history for nine
-            # releases before anybody noticed. There is nothing left to release once a
-            # version is being cut, so any of these is a mistake.
-            # The first section has to be the version being cut. "Unreleased" is the
-            # usual placeholder, but any heading that is not this version means notes
-            # are shipping filed as something else — which is how a stray section sat
-            # in the middle of the history for nine releases. Checking the shape of
-            # the first heading catches every spelling of the mistake, including
-            # "Development after 9.200".
             headings = [line.strip() for line in changelog_text.splitlines()
                         if line.strip().startswith("## ")]
-            if headings and not headings[0].startswith(f"## [{version}]"):
-                fail(f"CHANGELOG.md starts with '{headings[0]}'; the newest section must "
-                     f"be ## [{version}] so shipped notes are filed under what shipped.")
+            version_heading = f"## [{version}]"
+            unreleased_heading = "## [Unreleased]"
+            has_unreleased = unreleased_heading in headings
+            if args.release:
+                if has_unreleased:
+                    fail("Strict release mode requires moving CHANGELOG.md "
+                         "[Unreleased] notes into the release version.")
+                elif headings and not headings[0].startswith(version_heading):
+                    fail(f"CHANGELOG.md starts with '{headings[0]}'; strict release "
+                         f"mode requires {version_heading} as the newest section.")
+                elif headings:
+                    ok("CHANGELOG.md's newest section is the version being released.")
             else:
-                ok("CHANGELOG.md's newest section is the version being released.")
+                version_is_first = bool(headings) and headings[0].startswith(version_heading)
+                unreleased_then_version = (
+                    len(headings) >= 2
+                    and headings[0] == unreleased_heading
+                    and headings[1].startswith(version_heading)
+                )
+                if not version_is_first and not unreleased_then_version:
+                    actual = headings[0] if headings else "<missing>"
+                    fail(f"CHANGELOG.md starts with '{actual}'; development requires "
+                         f"either {version_heading}, or one top {unreleased_heading} "
+                         f"followed immediately by {version_heading}.")
+                elif unreleased_then_version:
+                    ok("CHANGELOG.md has one top Unreleased section for pending work.")
+                else:
+                    ok("CHANGELOG.md's newest section is the current version.")
 
             # Two sections claiming one version means one of them is not what shipped.
             headers = [line.strip() for line in changelog_text.splitlines()
@@ -294,4 +306,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

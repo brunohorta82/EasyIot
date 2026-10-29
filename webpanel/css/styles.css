@@ -620,3 +620,19 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 
 .btn.active-audio { background: #00e5ff; color: #000; font-weight: 700; box-shadow: 0 0 10px rgba(0, 229, 255, 0.5); }
 .btn.active-heatmap { background: #ff5500; color: #fff; font-weight: 700; box-shadow: 0 0 10px rgba(255, 85, 0, 0.5); }
+
+/* Janela de configuração da fita LED (abre pela rodinha do mosaico). */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: flex; align-items: center;
+  justify-content: center; padding: 16px; z-index: 100; }
+.modal { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px;
+  width: 100%; max-width: 440px; max-height: 92vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.modal-x { background: none; border: 0; color: var(--dim); font-size: 22px; line-height: 1; cursor: pointer;
+  padding: 2px 9px; border-radius: 6px; }
+.modal-x:hover { color: var(--txt); background: var(--panel2); }
+.modal .field { margin-bottom: 10px; }
+.modal input[type=range] { width: 100%; }
+.modal input[type=color] { width: 100%; height: 44px; }
+.led-segrow { display: grid; grid-template-columns: 22px 1fr 1fr 34px; gap: 8px; align-items: center; margin-bottom: 6px; }
+.led-segrow b { color: var(--dim); font-size: 12px; text-align: center; }
+

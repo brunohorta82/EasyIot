@@ -4,6 +4,8 @@ This document defines the standard flow for development, upstream cherry-pick PR
 
 ## Branch Naming
 
+- `origin`: the contributor's fork.
+- `upstream`: the canonical `brunohorta82/EasyIot` repository.
 - `development`: main working branch in fork.
 - `cp-<topic>`: upstream cherry-pick PR branch (example: `cp-warning-cleanup-config-sensors`).
 - Keep topic names short and descriptive with kebab-case.
@@ -23,7 +25,8 @@ This document defines the standard flow for development, upstream cherry-pick PR
    - `GIT_EDITOR=true git cherry-pick --continue`
 7. Push CP branch:
    - `git push -u origin cp-<topic>`
-8. Open PR from `Hauzman:cp-<topic>` to `brunohorta82:master`.
+8. Open the PR from `<your-github-username>:cp-<topic>` to
+   `brunohorta82:master`.
 
 ## Release Checklist
 
@@ -48,7 +51,11 @@ This document defines the standard flow for development, upstream cherry-pick PR
    - confirm the board reboots and the WebUI reports the published version;
    - repeat the full cycle when closing a timing-dependent or memory regression.
    A successful build does not exercise BearSSL after all services are connected.
-7. Update `CHANGELOG.md` for the release/dev line.
+7. Keep validated pending work in the single top `## [Unreleased]` section of
+   `CHANGELOG.md`. When the release version is assigned, rename that section to
+   the exact version and date. Debug/development validation accepts one top
+   `Unreleased` section; strict release builds reject it so pending notes cannot
+   silently ship.
 8. Push `development` and prepare required CP PR(s).
 9. Keep open CP PRs minimal and grouped by scope.
 
