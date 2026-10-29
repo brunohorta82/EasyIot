@@ -733,8 +733,10 @@ void initHomeAssistantDiscovery()
   // listens to a state topic once an entity claims it.
   createHaIrrigation();
   publishIrrigationHomeAssistantState();
+#if __has_include("AquaDance.h")
   createHaAquaDance();
   publishAquaDanceHomeAssistantState();
+#endif
   ledStripDiscovery();
 }
 
