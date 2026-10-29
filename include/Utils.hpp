@@ -5,6 +5,7 @@ void normalize(String &inputStr);
 boolean isValidNumber(const char *str);
 void configPIN(uint8_t pin, uint8_t mode);
 void writeToPIN(uint8_t pin, uint8_t val);
+void writePWMToPIN(uint8_t pin, uint8_t percent);
 bool readPIN(uint8_t pin);
 int readPINToInt(uint8_t pin);
 int rssiToWiFiQuality(int rssi);
