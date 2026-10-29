@@ -27,6 +27,24 @@ IRRIGATION_SOURCE = ROOT / "src" / "Irrigation.cpp"
 HA_SOURCE = ROOT / "src" / "HomeAssistantMqttDiscovery.cpp"
 
 
+# Either door takes the same non-reentrant lease: tryBegin returns immediately
+# when it is held, waitBegin yields for a bounded window first. Both now carry
+# the owner's name, which is what the refusal logs report. The contracts below
+# are about ownership — taken once, released on every exit — so they match on
+# the acquisition itself and stay indifferent to which door was used.
+ACQUIRE_RE = re.compile(r"config\.(?:try|wait)BeginFeatureAccess\s*\(")
+ACQUIRE_ANY_RE = re.compile(r"\b(?:try|wait)BeginFeatureAccess\b")
+LOOP_ACQUIRE_RE = re.compile(r"\btryBeginFeatureLoopAccess\s*\(")
+ACQUIRE = "<lease acquisition>"
+BUSY_GUARD = r"if\s*\(\s*!\s*config\.(?:try|wait)BeginFeatureAccess\s*\("
+
+
+def acquisitions(source: str) -> int:
+    """How many times this block takes the feature lease."""
+
+    return len(ACQUIRE_RE.findall(source))
+
+
 def block_after(source: str, pattern: str) -> str:
     """Return the balanced brace block following *pattern*.
 
@@ -128,7 +146,11 @@ class FeatureAccessSourceContracts(unittest.TestCase):
     def assertOrdered(self, source: str, *needles: str) -> None:  # noqa: N802
         cursor = -1
         for needle in needles:
-            found = source.find(needle, cursor + 1)
+            if needle is ACQUIRE:
+                match = ACQUIRE_RE.search(source, cursor + 1)
+                found = match.start() if match else -1
+            else:
+                found = source.find(needle, cursor + 1)
             self.assertGreater(
                 found,
                 cursor,
@@ -145,7 +167,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
 
         busy = block_after(
             handler,
-            r"if\s*\(\s*!\s*config\.tryBeginFeatureAccess\s*\(\s*\)\s*\)",
+            BUSY_GUARD,
         )
         self.assertIn("return", busy, "BUSY handling must leave the callback")
         if "409" in busy:
@@ -167,13 +189,14 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         self.fail("BUSY branch does not send HTTP 409 directly or through a helper")
 
     def assertLeasedWebMutation(self, handler: str) -> None:  # noqa: N802
-        self.assertIn("config.tryBeginFeatureAccess()", handler)
+        self.assertRegex(handler, ACQUIRE_RE)
         self.assertIn("config.endFeatureAccess();", handler)
         self.assertBusyReturns409(handler)
 
     def test_single_cross_platform_non_reentrant_lease(self) -> None:
         public_api = self.header[: self.header.index("private:")]
-        self.assertIn("bool tryBeginFeatureAccess();", public_api)
+        self.assertIn('bool tryBeginFeatureAccess(const char *owner = "web");', public_api)
+        self.assertIn("bool waitBeginFeatureAccess(const char *owner, uint32_t timeoutMs);", public_api)
         self.assertIn("void endFeatureAccess();", public_api)
 
         esp32_field, esp8266_field = conditional_branches_around(
@@ -198,7 +221,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         self.assertNotIn("std::atomic", esp8266_field)
 
         begin = block_after(
-            self.config, r"bool\s+ConfigOnofre::tryBeginFeatureAccess\s*\(\s*\)"
+            self.config, r"bool\s+ConfigOnofre::tryBeginFeatureAccess\s*\("
         )
         begin_esp32, begin_esp8266 = conditional_branches_around(
             begin, "featureAccessInProgress"
@@ -253,8 +276,10 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         end = block_after(
             self.config, r"void\s+ConfigOnofre::endConfigUpdate\s*\(\s*\)"
         )
-        self.assertEqual(begin.count("tryBeginFeatureAccess()"), 1)
-        self.assertRegex(begin, r"return\s+tryBeginFeatureAccess\s*\(\s*\)\s*;")
+        self.assertEqual(len(ACQUIRE_ANY_RE.findall(begin)), 1)
+        self.assertRegex(
+            begin, r"return\s+(?:try|wait)BeginFeatureAccess\s*\([^;]*\)\s*;"
+        )
         self.assertNotIn("featureAccessInProgress", begin)
         self.assertEqual(end.count("endFeatureAccess();"), 1)
         self.assertNotIn("featureAccessInProgress", end)
@@ -266,7 +291,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
                 rf"void\s+ConfigOnofre::{function_name}\s*\(\s*\)",
             )
             busy_pattern = (
-                r"if\s*\(\s*!\s*tryBeginFeatureLoopAccess\s*\(\s*\)\s*\)"
+                r"if\s*\(\s*!\s*tryBeginFeatureLoopAccess\s*\("
             )
             busy = block_after(loop, busy_pattern)
             self.assertIn("return;", busy)
@@ -289,7 +314,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
                 loop.rstrip().endswith("endFeatureAccess();"),
                 f"{function_name} must release after its normal path",
             )
-            self.assertEqual(loop.count("tryBeginFeatureLoopAccess()"), 1)
+            self.assertEqual(len(LOOP_ACQUIRE_RE.findall(loop)), 1)
             self.assertGreaterEqual(
                 loop.count("endFeatureAccess();"),
                 len(list(re.finditer(r"\breturn\s*;", after_busy))) + 1,
@@ -340,7 +365,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             self.web, "/*SAVE CONFIG*/", "/*CREATE NEW FEATURE*/"
         )
         self.assertIn("config.update", save_config)
-        self.assertNotIn("tryBeginFeatureAccess", save_config)
+        self.assertNotRegex(save_config, ACQUIRE_ANY_RE)
         self.assertNotIn("endFeatureAccess", save_config)
 
     def test_web_authentication_uses_an_immutable_boot_snapshot(self) -> None:
@@ -348,7 +373,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             self.web,
             r"bool\s+authorizeRequest\s*\(\s*AsyncWebServerRequest\s*\*\s*request",
         )
-        self.assertNotIn("tryBeginFeatureAccess", authorize)
+        self.assertNotRegex(authorize, ACQUIRE_ANY_RE)
         self.assertIn(
             "request->authenticate(webApiUser, webApiPassword, REALM)", authorize
         )
@@ -386,11 +411,11 @@ class FeatureAccessSourceContracts(unittest.TestCase):
 
     def test_foreground_waiter_makes_periodic_loops_step_aside(self) -> None:
         foreground = block_after(
-            self.config, r"bool\s+ConfigOnofre::tryBeginFeatureAccess\s*\(\s*\)"
+            self.config, r"bool\s+ConfigOnofre::tryBeginFeatureAccess\s*\("
         )
         periodic = block_after(
             self.config,
-            r"bool\s+ConfigOnofre::tryBeginFeatureLoopAccess\s*\(\s*\)",
+            r"bool\s+ConfigOnofre::tryBeginFeatureLoopAccess\s*\(",
         )
         self.assertIn("featureAccessYieldUntilMs", foreground)
         self.assertIn("featureAccessYieldUntilMs", periodic)
@@ -422,10 +447,10 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             r"size_t\s+index\s*,\s*uint8_t\s*\*\s*data\s*,\s*size_t\s+len\s*,\s*bool\s+final\s*\)",
         )
         first_chunk = block_after(upload, r"if\s*\(\s*!\s*index\s*\)")
-        self.assertEqual(upload.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(upload), 1)
         self.assertIn("authorizeRequest(request, false, &authBusy)", first_chunk)
         self.assertNotIn("requestAuthentication", first_chunk)
-        self.assertIn("config.tryBeginFeatureAccess()", first_chunk)
+        self.assertRegex(first_chunk, ACQUIRE_RE)
         self.assertIn("ownsFeatureAccess", first_chunk)
         self.assertRegex(update_route, r"\bbusy\b")
         self.assertIn("409", update_route)
@@ -440,7 +465,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             routines,
             r"if\s*\(\s*requestedTemplateId\s*!=\s*Template::NO_TEMPLATE\s*\)",
         )
-        self.assertEqual(template.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(template), 1)
         self.assertNotIn("config.requestTemplateChange(requestedTemplateId);", template)
         self.assertIn("config.clearTemplateChangeRequest(requestedTemplateId);", template)
         self.assertIn("config.endFeatureAccess();", template)
@@ -449,7 +474,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             routines,
             r"if\s*\(\s*config\.isLoadDefaultsRequested\s*\(\s*\)\s*\)",
         )
-        self.assertEqual(defaults.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(defaults), 1)
         self.assertIn("config.requestLoadDefaults();", defaults)
         # Successful reset retains ownership until the requested restart.
         self.assertNotIn("config.endFeatureAccess();", defaults)
@@ -458,7 +483,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             routines,
             r"if\s*\(\s*config\.takeAutoUpdateRequest\s*\(\s*\)\s*\)",
         )
-        self.assertEqual(auto_ota.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(auto_ota), 1)
         self.assertIn("config.requestAutoUpdate();", auto_ota)
         self.assertIn("config.endFeatureAccess();", auto_ota)
         self.assertOrdered(
@@ -487,18 +512,18 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             ("local MQTT reconnect", reconnect),
         ):
             with self.subTest(leaf=label):
-                self.assertNotIn("tryBeginFeatureAccess", leaf)
+                self.assertNotRegex(leaf, ACQUIRE_ANY_RE)
                 self.assertNotIn("endFeatureAccess", leaf)
         self.assertIn("config.controlFeature", local_callback)
         self.assertIn("initHomeAssistantDiscovery", local_callback)
         self.assertIn("for (auto &sw : config.actuatores)", reconnect)
 
         mqtt_loop = block_after(self.mqtt, r"void\s+loopMqtt\s*\(\s*\)")
-        self.assertEqual(mqtt_loop.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(mqtt_loop), 1)
         self.assertEqual(mqtt_loop.count("config.endFeatureAccess();"), 2)
         busy = block_after(
             mqtt_loop,
-            r"if\s*\(\s*!\s*config\.tryBeginFeatureAccess\s*\(\s*\)\s*\)",
+            BUSY_GUARD,
         )
         self.assertIn("return", busy)
         unavailable = block_after(
@@ -528,7 +553,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             ("message", cloud_message),
         ):
             with self.subTest(callback=label):
-                self.assertNotIn("tryBeginFeatureAccess", callback)
+                self.assertNotRegex(callback, ACQUIRE_ANY_RE)
                 self.assertNotIn("endFeatureAccess", callback)
                 self.assertNotIn("Log.", callback)
                 self.assertNotRegex(
@@ -608,7 +633,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         )
         self.assertOrdered(
             mqtt_service,
-            "config.tryBeginFeatureAccess()",
+            ACQUIRE,
             "storeCloudMqttConnectedState(false);",
             "config.endFeatureAccess();",
             "mqttClient.disconnect(true);",
@@ -660,13 +685,13 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         subscriptions = block_after(
             self.cloud, r"void\s+serviceCloudMqttSubscriptions\s*\(\s*\)"
         )
-        self.assertEqual(subscriptions.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(subscriptions), 1)
         self.assertEqual(subscriptions.count("config.endFeatureAccess();"), 1)
 
         drain = block_after(
             self.cloud, r"void\s+drainCloudIOCommands\s*\(\s*\)"
         )
-        self.assertEqual(drain.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(drain), 1)
         self.assertEqual(drain.count("config.endFeatureAccess();"), 1)
         self.assertNotRegex(drain, r"\b(?:for|while)\s*\(")
         self.assertIn("Queue", self.cloud)
@@ -678,7 +703,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         self.assertIn("config.controlFeature", drain)
         self.assertOrdered(
             drain,
-            "config.tryBeginFeatureAccess()",
+            ACQUIRE,
             "PendingCloudCommand &command",
             "releasePendingCloudCommand(readIndex + 1);",
             "config.endFeatureAccess();",
@@ -726,25 +751,28 @@ class FeatureAccessSourceContracts(unittest.TestCase):
 
     def test_cloud_sync_uses_short_snapshot_and_apply_leases(self) -> None:
         sync = block_after(self.cloud, r"void\s+connectToCloudIO\s*\(\s*\)")
-        self.assertGreaterEqual(sync.count("config.tryBeginFeatureAccess()"), 2)
+        self.assertGreaterEqual(acquisitions(sync), 2)
         self.assertGreaterEqual(sync.count("config.endFeatureAccess();"), 2)
         self.assertGreaterEqual(sync.count("config.requestCloudIOSync();"), 2)
 
         # Never hold the lease through TLS retries and HTTP backoff.
         self.assertOrdered(
             sync,
-            "config.tryBeginFeatureAccess()",
+            ACQUIRE,
             "config.json(root, false);",
             "config.endFeatureAccess();",
             "postCloudConfig",
         )
 
         ok_branch = block_after(
-            sync, r"else\s+if\s*\(\s*httpCode\s*==\s*HTTP_CODE_OK\s*\)"
+            # Anchor on the braced branch that does the work: a bare logging
+            # "else if (httpCode == HTTP_CODE_OK)" also precedes it, and matching
+            # that one would check the contract against the wrong block.
+            sync, r"else\s+if\s*\(\s*httpCode\s*==\s*HTTP_CODE_OK\s*\)(?=\s*\{)"
         )
         self.assertOrdered(
             ok_branch,
-            "config.tryBeginFeatureAccess()",
+            ACQUIRE,
             "config.cloudIOUsername",
             "for (auto &sw : config.actuatores)",
             "for (auto &ss : config.sensors)",
@@ -802,7 +830,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         self.assertOrdered(
             drain,
             "hasPendingWiFiWork()",
-            "config.tryBeginFeatureAccess()",
+            ACQUIRE,
             "takePendingWiFiWork()",
             "config.wifiSSID",
             "config.wifiSecret",
@@ -830,11 +858,11 @@ class FeatureAccessSourceContracts(unittest.TestCase):
         snapshot = block_after(
             self.core_wifi, r"bool\s+takeWiFiConfigSnapshot\s*\("
         )
-        self.assertEqual(snapshot.count("config.tryBeginFeatureAccess()"), 1)
+        self.assertEqual(acquisitions(snapshot), 1)
         self.assertEqual(snapshot.count("config.endFeatureAccess();"), 1)
         self.assertOrdered(
             snapshot,
-            "config.tryBeginFeatureAccess()",
+            ACQUIRE,
             "config.nodeId",
             "config.chipId",
             "config.wifiSSID",
@@ -961,7 +989,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
 
         for label, leaf in leaves:
             with self.subTest(leaf=label):
-                self.assertNotIn("tryBeginFeatureAccess", leaf)
+                self.assertNotRegex(leaf, ACQUIRE_ANY_RE)
                 self.assertNotIn("endFeatureAccess", leaf)
 
 

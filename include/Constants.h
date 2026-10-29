@@ -9,6 +9,7 @@ enum Template
     GARAGE,
     HAN_MODULE,
     GARDEN,
+    WATER_METER,
 };
 namespace constantsMqtt
 {
@@ -88,7 +89,7 @@ namespace constantsConfig
     constexpr const char *PW_HIDE{"******"};
     constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{60000};
 }
-#if defined(ESP32) && !defined(ESP32C6)
+#if defined(ESP32) && !defined(ESP32C6) && !defined(ESP32C3)
 namespace DefaultPins
 {
     // ESP32 DEFAULT PINS
@@ -107,6 +108,31 @@ namespace DefaultPins
     constexpr unsigned int OUTPUT_VALVE_FOUR{noGPIO};
     constexpr unsigned int outputInputPins[] = {4,5,7, 8, 12, 13, 14, 19, 20, 21, 22, 25, 26, 27};
     constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
+}
+#endif
+#ifdef ESP32C3
+namespace DefaultPins
+{
+    // ESP32-C3 (XIAO ESP32-C3 and similar). The chip only has GPIO 0-21, so the classic-ESP32 table above
+    // (I2C on 32/33, pins up to 27, input-only 34-38) does not exist here: Wire.begin(32, 33) at boot has
+    // nothing to attach to. Not offered as feature pins: 12-17 (SPI flash), 18/19 (USB), 8/9 (strapping;
+    // GPIO9 is the BOOT button) and 6/7 (the Smart Bus below, which Wire owns once discovery has run).
+    // XIAO pads: D0=2 D1=3 D2=4 D3=5 D4=6 D5=7 D6=21 D7=20 D8=8 D9=9 D10=10.
+    constexpr unsigned int noGPIO{99u};
+    constexpr unsigned int INPUT_ONE{3u};
+    constexpr unsigned int INPUT_TWO{10u};
+    constexpr unsigned int OUTPUT_ONE{4u};
+    constexpr unsigned int OUTPUT_TWO{5u};
+    constexpr unsigned int PZEM_TX{21u};
+    constexpr unsigned int PZEM_RX{20u};
+    constexpr int SDA{6u};
+    constexpr int SCL{7u};
+    constexpr int HAN_TX{21u};
+    constexpr int HAN_RX{20u};
+    constexpr unsigned int OUTPUT_VALVE_THREE{noGPIO};
+    constexpr unsigned int OUTPUT_VALVE_FOUR{noGPIO};
+    // RISC-V parts have no input-only pins.
+    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 10, 20, 21};
 }
 #endif
 #ifdef ESP32C6
@@ -258,6 +284,7 @@ namespace I18N
     constexpr const char *ENERGY{"Energia "};
     constexpr const char *ILLUMINANCE{"Iluminação "};
     constexpr const char *CLIMATIZATION{"Climatização"};
+    constexpr const char *WATER_METER_NAME{"Contador de água"};
     constexpr const char *NO_NAME{"Sem Nome"};
 
 }

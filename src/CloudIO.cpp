@@ -1,4 +1,6 @@
 #include "CloudIO.h"
+#include "LedStrip.h"
+#include "DeviceLog.h"
 #include "Irrigation.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include "ConfigOnofre.h"
@@ -402,9 +404,14 @@ void onMqttConnect(bool sessionPresent)
   signalCloudMqttTransportEvent(CloudMqttTransportEvent::CONNECTED, true);
 }
 
+// Reason for the last disconnection (AsyncMqttClientDisconnectReason): 0 TCP connection closed,
+// 1 protocol version, 2 identifier rejected, 3 server unavailable, 4 malformed credentials,
+// 5 not authorized.
+static volatile uint8_t cloudMqttLastDisconnectReason = 0;
+
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
 {
-  (void)reason;
+  cloudMqttLastDisconnectReason = static_cast<uint8_t>(reason);
   signalCloudMqttTransportEvent(CloudMqttTransportEvent::DISCONNECTED, false);
 }
 bool cloudIOConnected()
@@ -487,10 +494,15 @@ void serviceCloudMqttSubscriptions()
     cloudMqttSubscriptionsPending = false;
     return;
   }
-  if (!config.tryBeginFeatureAccess())
+  if (!config.tryBeginFeatureAccess("cloudio"))
     return;
 
-  mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1");
+  // publish() returns 0 when the message did not leave — connection down, out of memory —
+  // and 1 at QoS 0 when it did.
+  if (mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1") != 0)
+    deviceLog("cloud presenca enviada");
+  else
+    deviceLog("cloud presenca NAO enviada (publish falhou)");
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
   if (config.cloudIOIrrigationWriteTopic[0] != '\0')
     subscribeOnMqttCloudIO(config.cloudIOIrrigationWriteTopic);
@@ -501,6 +513,8 @@ void serviceCloudMqttSubscriptions()
     subscribeOnMqttCloudIO(sw.cloudIOwriteTopic);
     notifyStateToCloudIO(sw.cloudIOreadTopic, String(sw.state).c_str());
   }
+  if (ledStripCloudWriteTopic()[0] != '\0')
+    subscribeOnMqttCloudIO(ledStripCloudWriteTopic());
   config.endFeatureAccess();
   // After the valve states, so an app that reconnects reads the cycle against
   // states it already has rather than against the ones it is about to receive.
@@ -537,6 +551,7 @@ void serviceCloudIOMqtt()
     Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
     Log.info("----------------------------------------------" CR);
 #endif
+    deviceLog("cloud mqtt ligado");
   }
   else if (event == CloudMqttTransportEvent::DISCONNECTED)
   {
@@ -546,6 +561,7 @@ void serviceCloudIOMqtt()
 #ifdef DEBUG_ONOFRE
     Log.warning("%s Disconnected from MQTT." CR, tags::cloudIO);
 #endif
+    deviceLog("cloud mqtt desligado (motivo %d)", (int)cloudMqttLastDisconnectReason);
   }
 
   if (cloudMqttTransitionTimedOut())
@@ -567,7 +583,7 @@ void serviceCloudIOMqtt()
       // retained pointer storage until onMqttDisconnect confirms completion.
       // Briefly gate feature publishers, mark the link unavailable, then drop
       // the gate before calling into the network client.
-      if (!config.tryBeginFeatureAccess())
+      if (!config.tryBeginFeatureAccess("cloudio"))
         return;
       enterCloudMqttTransportState(CloudMqttTransportState::DISCONNECTING);
       cloudMqttSubscriptionsPending = false;
@@ -627,7 +643,7 @@ void drainCloudIOCommands()
   // A busy graph is not an error: leave the command queued for the next pass.
   // Process at most one command so Cloud MQTT can never monopolize the feature
   // lease during a burst.
-  if (!config.tryBeginFeatureAccess())
+  if (!config.tryBeginFeatureAccess("cloudio"))
   {
     return;
   }
@@ -655,6 +671,10 @@ void drainCloudIOCommands()
     // look like a deleted program.
     irrigation.command(command.payload);
     notifyIrrigation();
+  }
+  else if (ledStripHandleMqtt(command.topic, command.payload))
+  {
+    // consumed by the LED strip
   }
   else
   {
@@ -694,6 +714,17 @@ void serviceCloudIOWatchdog()
   }
   if (cloudIOConnected())
   {
+    // Presence (a retained "1") used to be sent once, when the connection opened. If the
+    // server loses it — broker restart, retained messages cleared — the cloud panel shows
+    // the device offline until it reconnects, even with the connection up. Renew it every
+    // five minutes (1 tick = 60 s): it is one small message.
+    static uint8_t presenceTicks = 0;
+    if (++presenceTicks >= 5 && config.cloudIOhealthTopic[0] != '\0')
+    {
+      presenceTicks = 0;
+      if (mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1") == 0)
+        deviceLog("cloud presenca NAO renovada (publish falhou)");
+    }
 #ifdef DEBUG_ONOFRE
     Log.info("%s CloudIO OK." CR, tags::cloudIO);
 #endif
@@ -745,7 +776,7 @@ void connectToCloudIO()
     JsonVariant root = requestDoc.to<JsonVariant>();
     // Snapshot the vectors under a short lease, then release before any TLS,
     // HTTP, delay, or response parsing work.
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
 #ifdef DEBUG_ONOFRE
       Log.warning("%s Feature configuration busy; CloudIO snapshot deferred" CR, tags::cloudIO);
@@ -916,8 +947,14 @@ void connectToCloudIO()
   Log.info("----------------------------------------------" CR);
 #endif
   if (httpCode == HTTP_CODE_NO_CONTENT)
+    deviceLog("cloud: nao adotado (204), nova tentativa em 30 min");
+  else if (httpCode == HTTP_CODE_OK)
+    deviceLog("cloud: servidor respondeu 200%s", usedHttpFallback ? " (por HTTP)" : "");
+  else
+    deviceLog("cloud: pedido falhou (%d)%s", httpCode, usedHttpFallback ? " mesmo por HTTP" : "");
+  if (httpCode == HTTP_CODE_NO_CONTENT)
   {
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
       config.requestCloudIOSync();
       return;
@@ -935,7 +972,7 @@ void connectToCloudIO()
   }
   if (httpCode != HTTP_CODE_OK)
   {
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
       config.requestCloudIOSync();
       return;
@@ -956,7 +993,7 @@ void connectToCloudIO()
     }
     // Applying credentials and all per-feature topics is one atomic view of
     // the returned configuration. Never wait in this networking callback.
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("cloudio"))
     {
 #ifdef DEBUG_ONOFRE
       Log.warning("%s Feature configuration busy; CloudIO apply deferred" CR, tags::cloudIO);
@@ -986,6 +1023,8 @@ void connectToCloudIO()
       family.toLowerCase();
       snprintf(ss.cloudIOreadTopic, sizeof(ss.cloudIOreadTopic), "%s/%s/%s/%s/metrics", config.cloudIOUsername, config.chipId, family.c_str(), ss.uniqueId);
     }
+    // The strip is not in config.actuatores, so it needs its topics built here too.
+    ledStripCloudTopics(config.cloudIOUsername, config.chipId);
     const bool credentialsReady = strlen(config.cloudIOUsername) > 0 && strlen(config.cloudIOPassword) > 0;
     stageCloudMqttRuntimeLocked();
     config.endFeatureAccess();

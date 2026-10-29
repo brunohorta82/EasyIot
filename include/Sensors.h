@@ -184,13 +184,68 @@ public:
   /** Slow average subtracted from every sample so the thermal drift, which is
    *  larger than the signal, does not swamp it. Measured on an Itron Aquadis+:
    *  84,000 counts of drift over two seconds against a 1,400-count signal. */
+  /** The high-pass baseline, held as a fixed-point accumulator.
+   *
+   *  Not a plain average with a divisor: the time constant this needs is about
+   *  ten minutes, which at fifty samples a second is 32,768 samples, and
+   *  `average += (value - average) / 32768` in integer arithmetic never moves —
+   *  the difference is almost always smaller than the divisor, so it truncates
+   *  to zero. Keeping the accumulator scaled up by the same power of two makes
+   *  the increment survive. 64-bit because the reading itself is around 44
+   *  million and the scaled value is a thousand times that. */
+  int64_t waterSlowScaled = 0;
   long waterSlowAverage = 0;
+  /** Peak-to-peak of the residual over the last twenty to forty minutes, in two
+   *  buckets so the window slides in constant memory.
+   *
+   *  A three-second window measures a flush perfectly and a slow leak not at
+   *  all: at three litres an hour one revolution takes a quarter of an hour, so
+   *  three seconds of it looks like a flat line. The detector takes whichever of
+   *  the two windows is larger, which leaves the validated fast behaviour
+   *  untouched and gives the slow signal something to be measured against. */
+  long waterLongMinNow = 0;
+  long waterLongMaxNow = 0;
+  long waterLongMinPrev = 0;
+  long waterLongMaxPrev = 0;
+  unsigned long waterLongPeriodStart = 0ul;
   bool waterPrimed = false;
   long waterResidualMin = 0;
   long waterResidualMax = 0;
   long waterAmplitude = 0;
   unsigned long waterWindowStart = 0ul;
   unsigned long waterLastTurn = 0ul;
+  /** When the total was last announced. A meter with the tap shut produces no
+   *  turns, so without a heartbeat the panel and Home Assistant would show
+   *  nothing at all until somebody drew water. */
+  unsigned long waterLastPublish = 0ul;
+  /** When the high-pass filter was seeded. The slow average starts at the raw
+   *  reading and has a ten-second time constant, so for the first seconds every
+   *  residual is enormous — the very first window on a real board reported an
+   *  amplitude of 43.7 million against a working signal of about 1,500. Counting
+   *  during that settling window invents turns. */
+  unsigned long waterPrimedAt = 0ul;
+  /** Completed amplitude windows since warm-up ended. The first one is a
+   *  half-filled measurement — its minimum and maximum were reset at the warm-up
+   *  boundary — so it describes the settling tail rather than the signal, and on
+   *  a real board it read 4,404 where the settled figure was about 170. */
+  uint8_t waterWindowsSettled = 0;
+  /** Sliding CEILING of the quiet amplitude, kept in two buckets so the window
+   *  slides in O(1) memory: the highest amplitude seen below the threshold during
+   *  the period in progress, and the same for the period before it.
+   *
+   *  The ceiling and not the minimum. Twice the minimum was tried and it counted
+   *  noise as water: on a real meter the quiet amplitude wanders between 125 and
+   *  266 counts, so twice the minimum lands at 250 — the middle of the noise —
+   *  and left the detector permanently armed. Ten phantom litres in an hour. What
+   *  has to be cleared is the loudest the sensor gets when nothing is flowing.
+   *  -1 means nothing measured yet. */
+  long waterQuietNow = -1;
+  long waterQuietPrev = -1;
+  unsigned long waterQuietPeriodStart = 0ul;
+  /** The threshold in force, derived from the quiet level rather than compiled in.
+   *  Published with every reading so a decision the device made about its own
+   *  signal can be read back instead of guessed at. */
+  long waterFloor = 600;
   bool waterAbove = false;
   /** Turns since the last time the total was written to flash. */
   unsigned int waterUnsavedTurns = 0;
@@ -286,6 +341,8 @@ public:
   long ldcWaterRead();
   /** Publishes litres and flow as this sensor's state. */
   void publishWaterState();
+  /** Recompute the counting threshold from the amplitudes seen so far. */
+  void updateWaterFloor();
   /** Writes the running total to flash. Rare on purpose. */
   void persistWaterTotal();
 
@@ -343,6 +400,19 @@ public:
   void notifyState();
 
 private:
+  /** True when the driver keeps a running total rather than only reporting a
+   *  present value.
+   *
+   *  The distinction decides whether a reading may be skipped while the network
+   *  is down. For a thermometer, reading without being able to publish is wasted
+   *  work. For a meter it is the opposite: the reading *is* the state, nobody
+   *  else counts the litres, and a skipped one is water that vanishes from the
+   *  total. Three hours offline cost exactly that. */
+  static bool accumulatesTotal(SensorDriver driver)
+  {
+    return driver == SensorDriver::LDC1612;
+  }
+
   bool hasRuntimeInputTopology() const
   {
     if (!isSupportedOnCurrentTarget(driver))
@@ -356,6 +426,7 @@ private:
     case LTR303X:
     case SHT4X:
     case TMF882X:
+    case LDC1612:
       return true;
     // ESP32 HAN uses fixed UART pins. ESP8266 HAN indexes RX/TX from inputs.
     case HAN:
