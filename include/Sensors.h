@@ -23,7 +23,9 @@ enum SensorDriver
   TMF882X = 92,
   HCSR04 = 93,
   LD2410 = 94,
-  LDC1612 = 95
+  LDC1612 = 95,
+  LD2450 = 96,
+  LD2460 = 97
 
 };
 
@@ -58,6 +60,8 @@ public:
     case WINDOW:
     case DS18B20:
       return 1;
+    case LD2450:
+    case LD2460:
     case PZEM_004T_V03:
     case PZEM_004T_V01:
     case HAN:
@@ -98,6 +102,8 @@ public:
     case TMF882X:
     case HCSR04:
     case LD2410:
+    case LD2450:
+    case LD2460:
     case LDC1612:
       break;
     case INVALID_SENSOR:
@@ -105,7 +111,7 @@ public:
       return false;
     }
 #ifdef ESP8266
-    if (sensorDriver == TMF882X || sensorDriver == LD2410)
+    if (sensorDriver == TMF882X || sensorDriver == LD2410 || sensorDriver == LD2450 || sensorDriver == LD2460)
       return false;
 #endif
 #if defined(ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -258,7 +264,9 @@ public:
   int errorCounter = 0;
   unsigned long lastErrorTimestamp = 0ul;
   int id = 0;
+  void* context = nullptr;
   String
+
   familyToText()
   {
     switch (driver)
@@ -279,6 +287,8 @@ public:
     case DOOR:
     case WINDOW:
     case LD2410:
+    case LD2450:
+    case LD2460:
       return Family::SECURITY;
     case LTR303X:
     case HCSR04:
@@ -326,6 +336,10 @@ public:
       return FeatureDrivers::HCSR04;
     case LD2410:
       return FeatureDrivers::LD2410;
+    case LD2450:
+      return FeatureDrivers::LD2450;
+    case LD2460:
+      return FeatureDrivers::LD2460;
     case TMF882X:
       return FeatureDrivers::TMF882X;
     case LDC1612:
@@ -442,8 +456,10 @@ private:
 #else
       return inputs.size() == expectedInputCount(driver);
 #endif
-    // LD2410 is implemented only on ESP32. On that target it indexes RX/TX.
+    // LD2410/LD2450/LD2460 are implemented only on ESP32. On that target they index RX/TX.
     case LD2410:
+    case LD2450:
+    case LD2460:
 #ifdef ESP32
       return inputs.size() == 2;
 #else

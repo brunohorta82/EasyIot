@@ -2,7 +2,9 @@
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
+#if __has_include("AquaDance.h")
 #include "AquaDance.h"
+#endif
 #include "LedStrip.h"
 extern ConfigOnofre config;
 
@@ -186,7 +188,7 @@ void addToHomeAssistant(Sensor &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     delay(1);
-    
+
     object["name"] = "Presença";
     object["uniq_id"] = uniqueId + "occupancy";
     object["dev_cla"] = "occupancy";
@@ -249,7 +251,7 @@ void addToHomeAssistant(Sensor &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     delay(1);
-    
+
     object["name"] = "Presença";
     object["uniq_id"] = uniqueId + "occupancy";
     object["dev_cla"] = "occupancy";
@@ -279,7 +281,7 @@ void addToHomeAssistant(Sensor &s)
       for (int i = 1; i <= 3; i++)
       {
         String s_idx = String(i);
-        
+
         // X
         object["name"] = "Alvo " + s_idx + " X";
         object["uniq_id"] = uniqueId + "t" + s_idx + "_x";
@@ -316,7 +318,7 @@ void addToHomeAssistant(Sensor &s)
       for (int i = 1; i <= 5; i++)
       {
         String s_idx = String(i);
-        
+
         // X
         object["name"] = "Alvo " + s_idx + " X";
         object["uniq_id"] = uniqueId + "t" + s_idx + "_x";
@@ -934,6 +936,7 @@ void publishIrrigationHomeAssistantState()
   }
 }
 
+#if __has_include("AquaDance.h")
 void createHaAquaDance()
 {
   if (!mqttConnected() || !deviceHasValves())
@@ -1001,3 +1004,5 @@ void publishAquaDanceHomeAssistantState()
   String topic = String("onofre/") + config.chipId + "/aquadance/state";
   publishOnMqtt(topic.c_str(), payload.c_str(), true);
 }
+
+#endif
