@@ -310,6 +310,39 @@ namespace
         c["g"] = segs[0].color.g;
         c["b"] = segs[0].color.b;
         doc["effect"] = led::kEffectNames[segs[0].effect];
+        // Speed, intensity and the segment layout belong in the state object, not
+        // only on their own topics and in /ledstate: the cloud stores this object
+        // verbatim and the phone apps read it from there, so whatever is missing
+        // here is something a phone can command but never show.
+        doc["speed"] = segs[0].speed;
+        doc["intensity"] = segs[0].intensity;
+        doc["leds"] = st.count;
+        // Segments are written tighter than the fields above -- colour as [r,g,b],
+        // effect as its index -- because MQTT_MAX_PACKET_SIZE caps the whole
+        // packet at 1000 bytes and eight segments spelled out the long way come
+        // to 1287. The top level keeps its "color" object: the Home Assistant
+        // discovery templates read r/g/b from it. The index is the position in
+        // led::kEffectNames, the same coupling the web panel already relies on.
+        JsonArray sg = doc["segs"].to<JsonArray>();
+        for (int i = 0; i < segCount; i++)
+        {
+            const Seg &g = segs[i];
+            JsonObject o = sg.add<JsonObject>();
+            o["start"] = g.start;
+            o["stop"] = g.stop;
+            o["on"] = g.on;
+            o["brightness"] = g.bri;
+            JsonArray gc = o["color"].to<JsonArray>();
+            gc.add(g.color.r);
+            gc.add(g.color.g);
+            gc.add(g.color.b);
+            o["effect"] = g.effect;
+        }
+        // An oversized publish is dropped without a word, which would cost the
+        // state itself. The layout is the part that can be read back from
+        // /ledstate, so it is the part that goes if the budget is ever exceeded.
+        if (measureJson(doc) + strlen(tState) + 16 > MQTT_MAX_PACKET_SIZE)
+            doc.remove("segs");
         String out;
         serializeJson(doc, out);
         publishOnMqtt(tState, out.c_str(), true);

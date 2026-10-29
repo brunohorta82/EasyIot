@@ -25,6 +25,33 @@ All notable changes to this project are documented in this file.
 - 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
   static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
 
+## [9.228] - 2026-10-29
+
+### Changed
+
+- The strip's state message now carries its speed, intensity, LED count and
+  segment layout, not just the colour, brightness and effect of the first
+  segment. The cloud stores that object verbatim and the phone apps read it
+  from there, so anything left out of it was something a phone could command
+  but never show -- which is why the apps had no segment view to offer.
+- Segments are written tighter than the rest of that message: colour as
+  [r, g, b] and effect as its index. MQTT_MAX_PACKET_SIZE caps the packet at
+  1000 bytes and eight segments spelled out the long way measure 1287. The top
+  level keeps its colour object, which the Home Assistant discovery templates
+  read r/g/b from. If the budget is ever exceeded anyway the layout is dropped
+  rather than the whole message: an oversized publish is discarded in silence,
+  and the layout is the one part /ledstate can still be asked for.
+
+### Para testers
+
+Nada muda no equipamento nem no painel: esta versão só passa a contar à nuvem
+**tudo** o que a fita está a fazer, incluindo os segmentos. É o que falta para
+as apps do telemóvel poderem mostrar e mexer na cor, nos efeitos e nos
+segmentos — até agora só conseguiam ligar e desligar.
+
+Vale a pena atualizar já, para que a fita esteja pronta quando a app nova
+chegar.
+
 ## [9.227] - 2026-10-28
 
 ### Fixed
