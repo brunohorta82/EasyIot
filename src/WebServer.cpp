@@ -1024,7 +1024,7 @@ void loadAPI()
   {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -1044,7 +1044,7 @@ void loadAPI()
   {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -1083,7 +1083,7 @@ void loadAPI()
       request->send(errorResponse("AquaDance request must be a JSON object"));
       return;
     }
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
