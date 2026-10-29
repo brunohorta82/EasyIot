@@ -60,6 +60,8 @@ public:
     case WINDOW:
     case DS18B20:
       return 1;
+    case LD2450:
+    case LD2460:
     case PZEM_004T_V03:
     case PZEM_004T_V01:
     case HAN:
@@ -100,6 +102,8 @@ public:
     case TMF882X:
     case HCSR04:
     case LD2410:
+    case LD2450:
+    case LD2460:
     case LDC1612:
       break;
     case INVALID_SENSOR:
@@ -107,7 +111,7 @@ public:
       return false;
     }
 #ifdef ESP8266
-    if (sensorDriver == TMF882X || sensorDriver == LD2410)
+    if (sensorDriver == TMF882X || sensorDriver == LD2410 || sensorDriver == LD2450 || sensorDriver == LD2460)
       return false;
 #endif
 #if defined(ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -452,8 +456,10 @@ private:
 #else
       return inputs.size() == expectedInputCount(driver);
 #endif
-    // LD2410 is implemented only on ESP32. On that target it indexes RX/TX.
+    // LD2410/LD2450/LD2460 are implemented only on ESP32. On that target they index RX/TX.
     case LD2410:
+    case LD2450:
+    case LD2460:
 #ifdef ESP32
       return inputs.size() == 2;
 #else
