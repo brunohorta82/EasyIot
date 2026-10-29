@@ -14,3 +14,8 @@ void createHaIrrigation();
 
 /** The state behind those entities, on the local broker. */
 void publishIrrigationHomeAssistantState();
+
+#if __has_include("AquaDance.h")
+void createHaAquaDance();
+void publishAquaDanceHomeAssistantState();
+#endif
