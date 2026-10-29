@@ -17,6 +17,10 @@
 
 static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
 static constexpr uint32_t kFeatureAccessYieldMs = 100;
+// A hardware-random boot identity lets the WebUI distinguish a restarted
+// device from the pre-update process. It is deliberately RAM-only and changes
+// again on every boot; firmware/build metadata still decides OTA success.
+static const uint32_t kBootId = static_cast<uint32_t>(random(1L, 0x7FFFFFFFL));
 
 static const char *currentMcuName()
 {
@@ -279,7 +283,7 @@ void ConfigOnofre::serviceDeferredI2cDiscovery()
   // This method is called only after loopSensors() has released its lease.
   // Reacquire it for the scan because discovery may append sensors and save the
   // complete vectors. If another owner won the lease, coalesce another retry.
-  if (!tryBeginFeatureAccess())
+  if (!tryBeginFeatureAccess("i2cDiscovery"))
   {
     requestI2cDiscovery();
     return;
@@ -287,7 +291,7 @@ void ConfigOnofre::serviceDeferredI2cDiscovery()
   i2cDiscovery();
   endFeatureAccess();
 }
-bool ConfigOnofre::tryBeginFeatureAccess()
+bool ConfigOnofre::tryBeginFeatureAccess(const char *owner)
 {
 #ifdef ESP32
   bool expected = false;
@@ -301,6 +305,7 @@ bool ConfigOnofre::tryBeginFeatureAccess()
     return false;
   }
   featureAccessYieldUntilMs.store(0, std::memory_order_release);
+  recordFeatureAccessOwner(owner);
   return true;
 #else
   // Do not wait or yield here: ESP8266 networking and feature work share the
@@ -314,10 +319,11 @@ bool ConfigOnofre::tryBeginFeatureAccess()
   }
   featureAccessInProgress = true;
   featureAccessYieldUntilMs = 0;
+  recordFeatureAccessOwner(owner);
   return true;
 #endif
 }
-bool ConfigOnofre::tryBeginFeatureLoopAccess()
+bool ConfigOnofre::tryBeginFeatureLoopAccess(const char *owner)
 {
 #ifdef ESP32
   if (featureAccessYieldActive(
@@ -335,6 +341,7 @@ bool ConfigOnofre::tryBeginFeatureLoopAccess()
     featureAccessInProgress.store(false, std::memory_order_release);
     return false;
   }
+  recordFeatureAccessOwner(owner);
   return true;
 #else
   if (featureAccessInProgress ||
@@ -346,20 +353,69 @@ bool ConfigOnofre::tryBeginFeatureLoopAccess()
     featureAccessInProgress = false;
     return false;
   }
+  recordFeatureAccessOwner(owner);
   return true;
+#endif
+}
+bool ConfigOnofre::waitBeginFeatureAccess(const char *owner, uint32_t timeoutMs)
+{
+  if (tryBeginFeatureAccess(owner))
+    return true;
+#ifdef ESP32
+  // The first failure above opened the yield window, so the feature loops are
+  // now standing aside. Poll rather than sleep the whole window: the holder
+  // typically leaves within a couple of milliseconds.
+  const uint32_t deadline = millis() + timeoutMs;
+  while (static_cast<int32_t>(deadline - millis()) > 0)
+  {
+    delay(2);
+    if (tryBeginFeatureAccess(owner))
+      return true;
+  }
+#else
+  (void)timeoutMs;
+#endif
+  return false;
+}
+void ConfigOnofre::recordFeatureAccessOwner(const char *owner)
+{
+#ifdef DEBUG_ONOFRE
+  featureAccessOwner = owner;
+  featureAccessSinceMs = millis();
+#else
+  (void)owner;
 #endif
 }
 void ConfigOnofre::endFeatureAccess()
 {
+#ifdef DEBUG_ONOFRE
+  // Cleared before the lease itself: a reader that sees the lease free must
+  // never be handed the name of the owner that has already left.
+  featureAccessOwner = nullptr;
+#endif
 #ifdef ESP32
   featureAccessInProgress.store(false, std::memory_order_release);
 #else
   featureAccessInProgress = false;
 #endif
 }
+#ifdef DEBUG_ONOFRE
+const char *ConfigOnofre::featureAccessOwnerName() const
+{
+  return featureAccessOwner != nullptr ? featureAccessOwner : "none";
+}
+uint32_t ConfigOnofre::featureAccessHeldMs() const
+{
+  return featureAccessSinceMs == 0 ? 0 : millis() - featureAccessSinceMs;
+}
+#endif
 bool ConfigOnofre::tryBeginConfigUpdate()
 {
-  return tryBeginFeatureAccess();
+  // Saving the configuration is the longest-running request a person makes, and
+  // update() is only ever reached from the /config handler, which holds no lease
+  // of its own. Losing a whole save to a two-millisecond collision with a
+  // feature loop is the same defect the captive portal had.
+  return waitBeginFeatureAccess("configUpdate", 300u);
 }
 void ConfigOnofre::endConfigUpdate()
 {
@@ -728,6 +784,13 @@ void ConfigOnofre::backup(JsonVariant &root)
     item["driver"] = sensor.driver;
     item["hwAddress"] = sensor.hwAddress;
     item["delayRead"] = sensor.delayRead;
+    if (sensor.driver == SensorDriver::LDC1612)
+    {
+      // A coil counts turns from the moment it was fitted; the total is the only
+      // part of this sensor that cannot be reconstructed from the hardware.
+      item["waterLiters"] = sensor.waterLiters;
+      item["litersPerTurn"] = sensor.litersPerTurn;
+    }
     JsonArray inputs = item["inputs"].to<JsonArray>();
     for (auto pin : sensor.inputs)
       inputs.add(pin);
@@ -1396,7 +1459,7 @@ ConfigUpdateResult ConfigOnofre::stageRestore(JsonObject &root)
   JsonVariantConst dhcpValue = submitted["dhcp"];
   JsonVariantConst featuresValue = submitted["features"];
   if (!templateValue.is<unsigned int>() ||
-      templateValue.as<unsigned int>() > static_cast<unsigned int>(Template::GARDEN) ||
+      templateValue.as<unsigned int>() > static_cast<unsigned int>(Template::WATER_METER) ||
       !mqttPortValue.is<unsigned int>() || mqttPortValue.as<unsigned int>() == 0 ||
       mqttPortValue.as<unsigned int>() > 65535u || !dhcpValue.is<bool>() ||
       !featuresValue.is<JsonArrayConst>() ||
@@ -2096,6 +2159,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     root["maxFreeBlock"] = ESP.getMaxFreeBlockSize();
 #endif
     root["uptime"] = millis() / 1000;
+    root["bootId"] = kBootId;
     root["resetReason"] = deviceResetReason();
     root["sketchSize"] = ESP.getSketchSize();
     root["freeSketchSpace"] = ESP.getFreeSketchSpace();
@@ -2104,9 +2168,11 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     JsonArray usable = root["usablePins"].to<JsonArray>();
     for (auto pin : DefaultPins::outputInputPins)
       usable.add(pin);
+    ledStripConfigJson(root); // the LED strip feature, when one exists
+    root["ledSupport"] = ledStripSupported(); // the panel offers the strip only when the firmware carries it
 #ifdef ESP32
     JsonArray inputOnly = root["inputOnlyPins"].to<JsonArray>();
-#ifndef ESP32C6
+#if !defined(ESP32C6) && !defined(ESP32C3)
     for (auto pin : DefaultPins::intputOnlyPins)
       inputOnly.add(pin);
 #endif
@@ -2140,7 +2206,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
 #ifdef ESP32
   JsonVariant inPins = root["inPins"].to<JsonArray>();
 
-#ifndef ESP32C6
+#if !defined(ESP32C6) && !defined(ESP32C3)
   for (auto p : DefaultPins::intputOnlyPins)
   {
     inPins.add(p);
@@ -2227,12 +2293,24 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
         a["state"] = s.state;
     }
     a["driver"] = s.driverToText();
+    if (s.driver == SensorDriver::LDC1612)
+    {
+      a["waterLiters"] = s.waterLiters;
+      a["litersPerTurn"] = s.litersPerTurn;
+    }
     JsonArray inputs = a["inputs"].to<JsonArray>();
     for (auto in : s.inputs)
     {
       inputs.add(in);
     }
   }
+  // The strip lives outside actuatores and sensors, so it would otherwise never
+  // reach the cloud and could not be adopted as a feature. Only on the cloud
+  // payload: the panel draws its own strip tile from the "ledStrip" key, and
+  // listing it here as well showed it twice -- the second one a plain on/off
+  // accessory with no colour, and editable as if it owned a GPIO output.
+  if (!allFields)
+    ledStripFeatureJson(features);
 }
 
 void ConfigOnofre::requestWifiScan()
@@ -2304,7 +2382,7 @@ bool ConfigOnofre::isReloadWifiRequested()
 }
 void ConfigOnofre::loopActuators()
 {
-  if (!tryBeginFeatureLoopAccess())
+  if (!tryBeginFeatureLoopAccess("loopActuators"))
     return;
 
   // A restart-pending actuator has already released or halted hardware. Keep
@@ -2365,7 +2443,7 @@ void ConfigOnofre::requestRestart()
 }
 void ConfigOnofre::loopSensors()
 {
-  if (!tryBeginFeatureLoopAccess())
+  if (!tryBeginFeatureLoopAccess("loopSensors"))
     return;
   for (const auto &sensor : sensors)
     if (!sensor.ready)
@@ -2391,6 +2469,26 @@ bool ConfigOnofre::isRestartRequested()
     return true;
   }
   return false;
+#endif
+}
+
+void ConfigOnofre::requestSaveConfiguration()
+{
+#ifdef ESP32
+  saveConfiguration.store(true, std::memory_order_release);
+#else
+  saveConfiguration = true;
+#endif
+}
+
+bool ConfigOnofre::takeSaveConfigurationRequest()
+{
+#ifdef ESP32
+  return saveConfiguration.exchange(false, std::memory_order_acq_rel);
+#else
+  const bool requested = saveConfiguration;
+  saveConfiguration = false;
+  return requested;
 #endif
 }
 
