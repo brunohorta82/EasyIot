@@ -34,21 +34,34 @@ All notable changes to this project are documented in this file.
 
 ### Para testers
 
-Se já tiveste equipamentos a ficar lentos ou a não arrancar quando a nuvem está
-em baixo, é disto que se trata.
+Esta versão junta tudo o que ficou desde a 9.228, que foi a última que saiu.
 
-O que mudou: **o equipamento deixa de esperar pela nuvem**. Os interruptores,
-o painel e o MQTT local passam a responder na mesma, com ou sem internet. E se
-a nuvem estiver doente, o equipamento tenta cada vez menos vezes em vez de
-insistir de minuto a minuto.
+**O equipamento deixa de esperar pela nuvem.** Se já tiveste equipamentos a
+ficar lentos, com os interruptores a não responder, ou a não arrancar quando a
+nuvem está em baixo — era disto. Os botões, o painel e o MQTT local passam a
+funcionar na mesma, com ou sem internet, e quando a nuvem está doente o
+equipamento tenta cada vez menos vezes em vez de insistir de minuto a minuto.
+Deixa também de **reiniciar em ciclo**: ao fim de três tentativas desiste da
+nuvem até ao arranque seguinte. Antes reiniciava de 30 em 30 segundos e parecia
+morto. Se vires no Registo do equipamento a linha `cloud mqtt: 3 reinicios sem
+sucesso, a funcionar so localmente`, é isto a fazer o seu trabalho.
 
-E deixa de **reiniciar em ciclo**: ao fim de três tentativas falhadas desiste da
-nuvem até ao arranque seguinte e fica a funcionar localmente. Antes ficava a
-reiniciar de 30 em 30 segundos e parecia morto.
+**Sensor de presença LD2420** (o irmão mais novo do LD2410, só em ESP32): já
+aparece na lista de funções. Liga-o aos pinos RX/TX — o formulário agora diz
+mesmo PINO RX e PINO TX, em vez de PINO e SEGUNDO PINO. Dá presença,
+movimento e distância, e entra sozinho no Home Assistant.
 
-Se vires no Registo do equipamento (Diagnóstico) a linha `cloud mqtt: 3
-reinicios sem sucesso, a funcionar so localmente`, é isto a fazer o seu
-trabalho — não é avaria.
+**Fita LED com KNX**: num equipamento que só tenha a fita, os comandos KNX não
+chegavam. Já chegam.
+
+**O painel mostra o estado ao vivo.** Cada função ganhou uma marca na margem e
+a palavra LIGADO/DESLIGADO, e isso acompanha o que fazes na Visão geral sem ser
+preciso recarregar a página — coisa que no Safari obrigava mesmo a refrescar.
+As cores de saúde no cabeçalho e no diagnóstico passam a ser consistentes:
+verde bem, âmbar a coxear, vermelho em falha, cinzento desligado.
+
+**Quando um comando não fica guardado, o painel diz.** Antes, uma gravação
+falhada passava em silêncio e parecia que tinha corrido tudo bem.
 
 ## [9.229] - 2026-11-03
 

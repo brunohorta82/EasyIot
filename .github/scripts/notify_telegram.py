@@ -59,6 +59,30 @@ def testers_subsection(block):
     return out
 
 
+def paragraphs_from(block):
+    """The testers section written as prose, one paragraph per entry.
+
+    Without this, a section that reads like a note to a person rather than a
+    list silently produced nothing and the announcement fell back to the
+    English changelog bullets -- which is what 9.226, 9.227 and 9.228 actually
+    sent to the channel. The heading exists precisely so testers get something
+    written for them, so prose has to count."""
+    items, current = [], ""
+    for line in block:
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        if not stripped:
+            if current:
+                items.append(current)
+                current = ""
+            continue
+        current = f"{current} {stripped}".strip()
+    if current:
+        items.append(current)
+    return items
+
+
 def bullets_from(block):
     """One entry per '- ' item, joining the lines it wraps onto."""
     items, current = [], None
@@ -114,13 +138,20 @@ def main():
         os.environ.get("CHANGELOG_FILE", "CHANGELOG.md"),
         os.environ.get("CHANGELOG_VERSION", version),
     )
-    lines = bullets_from(testers_subsection(section)) or bullets_from(section)
+    testers = testers_subsection(section)
+    lines = bullets_from(testers) or paragraphs_from(testers) or bullets_from(section)
     if not lines:
         lines = commit_subjects()
     if not lines:
         lines = ["Sem notas para esta versão."]
 
-    body = "\n".join("• " + html.escape(l) for l in lines)
+    # The changelog is Markdown and the message is HTML, so **bold** would
+    # otherwise reach the channel as literal asterisks. Converted after escaping,
+    # never before, or a changelog entry could inject its own tags.
+    def render(line):
+        return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", html.escape(line))
+
+    body = "\n".join("• " + render(l) for l in lines)
     text = f"<b>{html.escape(product)} {html.escape(version)}</b>\n{body}"
 
     # curl rather than urllib: the self-hosted macOS runner uses a python.org build
