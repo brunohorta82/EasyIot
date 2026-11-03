@@ -28,6 +28,35 @@ This document defines the standard flow for development, upstream cherry-pick PR
 8. Open the PR from `<your-github-username>:cp-<topic>` to
    `brunohorta82:master`.
 
+## Working While Other PRs Are Under Review
+
+Independent changes can have open PRs at the same time. A pending PR is not a
+reason to stop unrelated development.
+
+- Create each `cp-<topic>` from the fetched `upstream/master`, transferring only
+  its focused commits. Do not branch from another pending PR unless the new
+  change actually depends on it. Separate Git worktrees can keep reviews and
+  builds isolated while `development` remains the integration workspace.
+- Include the source, generated assets, tests, relevant TODO updates, and that
+  topic's notes under the single top `## [Unreleased]` in each PR. Keep previously
+  merged notes intact. Do not include another pending topic's release notes or
+  create numbered Unreleased sections. Bruno assigns the release version when
+  preparing the release.
+- Validate each PR on its own base. If a change requires another pending PR,
+  state the dependency explicitly; either wait to submit that dependent part or
+  label a stacked PR with its required merge order.
+- After a merge, fetch upstream and refresh the remaining branches as needed.
+  Preserve all changelog entries when resolving documentation conflicts;
+  regenerate embedded headers from the resolved readable WebUI sources. Rerun
+  the affected checks and builds before marking a refreshed PR ready.
+- Keep each PR on the project board through review. Delete its branch only
+  after verifying the change is preserved upstream and in the integration
+  workspace. Closing a PR without merging does not prove its work is disposable.
+
+Shared files can still conflict; independent branches reduce coupling but do
+not eliminate integration review. Use `--force-with-lease`, never a blind force
+push, when an explicitly authorized rebase requires updating a published branch.
+
 ## Release Checklist
 
 1. Confirm version string in `platformio.ini` (`[extra] version = ...`).
@@ -106,6 +135,21 @@ real-board OTA checklist above.
 
 ## Dependency Audit
 
+Every direct library declaration must be immutable. Run the pin check directly
+when editing `platformio.ini`; it is also included in `--quick` and runs before
+every PlatformIO firmware build:
+
+- `python3 tools/check_dependency_pins.py`
+
+Registry libraries and platforms must use one exact version. Git libraries and
+Git-backed platforms must use a full 40-character commit hash; branches, tags,
+and abbreviated hashes are rejected. A platform release archive must identify
+a fixed GitHub release asset, never `latest` or a branch archive. PlatformIO
+Core and IntelHex are exact-pinned in the release workflow as well.
+Known moving transitive dependencies are declared explicitly where needed.
+Framework-bundled libraries are controlled by the pinned PlatformIO platform
+and framework package.
+
 Run the periodic dependency audit across every configured PlatformIO
 environment:
 
@@ -125,10 +169,11 @@ environment could not be audited, while still printing results for the remaining
 environments.
 
 Treat the output as an investigation list, not an upgrade recommendation.
-`Wanted` follows the current declaration; `Latest` may be incompatible, and Git
-dependencies may point at a moving branch. Upgrade one dependency family at a
-time, then run the relevant build matrix and hardware checks before changing a
-pin.
+`Wanted` follows the current declaration and `Latest` may be incompatible. Git
+dependencies are commit-pinned, so the audit cannot decide whether a newer
+commit is safe. Upgrade one dependency family at a time, record the old and new
+pins, then run the relevant build matrix and hardware checks before accepting
+the change.
 
 ## Local Wi-Fi Override
 
@@ -241,7 +286,8 @@ USB data connection is required; WebUI recovery is no longer possible.
 ## Practical Notes
 
 - Prefer one CP per logical scope (security, webpanel, docs, etc.).
-- If a PR is closed or merged, delete local/remote CP branch to keep repo clean.
+- After verifying merged work is preserved, remove its local/remote CP branch.
+  Preserve unmerged work from a closed PR until its disposition is agreed.
 - If `git cherry-pick --continue` fails due to editor, use:
   - `GIT_EDITOR=true git cherry-pick --continue`
 - Build hooks are automatic via `tools/extra_script.py` and
