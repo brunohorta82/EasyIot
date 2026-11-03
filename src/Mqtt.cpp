@@ -9,6 +9,7 @@
 #include "Constants.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
+#include "LedStrip.h"
 extern ConfigOnofre config;
 static WiFiClient espClient;
 static PubSubClient mqttClient(espClient);
@@ -47,6 +48,10 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
         // refused payload still leaves the entities showing the truth.
         irrigation.command(payload_as_string);
         notifyIrrigation();
+    }
+    else if (ledStripHandleMqtt(topic, payload_as_string))
+    {
+        // consumed by the LED strip
     }
     else
     {
@@ -87,6 +92,7 @@ boolean reconnect()
         }
         // Where the Home Assistant buttons and the zone-count number send to.
         subscribeOnMqtt(config.irrigationWriteTopic);
+        ledStripSubscribe();
         initHomeAssistantDiscovery();
     }
 
@@ -124,7 +130,7 @@ void loopMqtt()
     // PubSubClient is synchronous: connect(), loop(), callback dispatch, state
     // publication, and configuration changes must never use the client or its
     // backing config strings concurrently from another task.
-    if (!config.tryBeginFeatureAccess())
+    if (!config.tryBeginFeatureAccess("mqtt"))
         return;
     if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
     {
@@ -154,16 +160,17 @@ void loopMqtt()
     config.endFeatureAccess();
 }
 
-void publishOnMqtt(const char *topic, const char *payload, bool retain)
+bool publishOnMqtt(const char *topic, const char *payload, bool retain)
 {
     if (!mqttConnected())
     {
 #ifdef DEBUG_ONOFRE
         Log.warning("%s Connection Required" CR, tags::mqtt);
 #endif
-        return;
+        return false;
     }
-    if (mqttClient.publish(topic, payload, retain))
+    const bool published = mqttClient.publish(topic, payload, retain);
+    if (published)
     {
 #ifdef DEBUG_ONOFRE
         Log.error("%s Message %s published to the topic %s successfully" CR, tags::mqtt, payload, topic);
@@ -176,6 +183,7 @@ void publishOnMqtt(const char *topic, const char *payload, bool retain)
         Log.error("%s Error on try publish to the topic %s with message %s" CR, tags::mqtt, topic, payload);
     }
 #endif
+    return published;
 }
 bool mqttConnected()
 {
