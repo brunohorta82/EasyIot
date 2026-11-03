@@ -2200,22 +2200,11 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["wifiGw"] = WiFi.gatewayIP().toString();
   root["firmware"] = String(VERSION);
   root["buildDate"] = kFirmwareBuildDate;
-#ifdef ESP32
-#ifdef ESP32C6
-  // Must not report plain "ESP32": this string picks the OTA folder, and an 8 MB
-  // ESP32 image does not belong on a C6.
-  root["mcu"] = "ESP32-C6";
-#else
-  root["mcu"] = "ESP32";
-#endif
-#endif
-#ifdef ESP8266
-#ifdef HAN_MODE
-  root["mcu"] = "ESP8266-HAN";
-#else
-  root["mcu"] = "ESP8266";
-#endif
-#endif
+  // This string picks the OTA folder, so it has to be the real chip. It used to
+  // be worked out here a second time, with only the C6 special-cased, and a C3
+  // therefore called itself "ESP32" and was handed an 8 MB Xtensa image.
+  // currentMcuName() already knew better -- it was just not the one being asked.
+  root["mcu"] = currentMcuName();
   root["mac"] = WiFi.macAddress();
   if (allFields)
     root["signal"] = WiFi.RSSI();

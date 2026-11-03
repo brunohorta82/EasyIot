@@ -27,6 +27,9 @@ jobs:
           - { env: ESP8266-HAN_RELEASE,      mcu: ESP8266-HAN,     chip: esp8266, flash_size: 4MB }
           - { env: ESP32_RELEASE,            mcu: ESP32,           chip: esp32,   flash_size: 8MB }
           - { env: ESP32C6_IRRIGATION,       mcu: ESP32-C6,        chip: esp32c6, flash_size: 4MB }
+          # Without this the C3 had nowhere to update from, so it fell back to
+          # asking as a plain ESP32 and got an image for another architecture.
+          - { env: ESP32C3_LED_RELEASE,      mcu: ESP32-C3,        chip: esp32c3, flash_size: 4MB }
     steps:
       - uses: actions/checkout@v4
 

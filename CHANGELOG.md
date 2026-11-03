@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.231] - 2026-11-03
+
+### Fixed
+
+- An ESP32-C3 asked the update server for the plain ESP32 image and was given
+  it: a build for a different architecture, nearly twice its app partition.
+  Two separate places were wrong. The config payload worked the chip out a
+  second time with only the C6 special-cased, so a C3 called itself "ESP32" --
+  it now uses currentMcuName(), which already knew better. And the firmware's
+  own auto-update URL carried no variant outside the C6 and the HAN build, so
+  the cloud fell back to matching on the x-ESP32-version header, where a C3 is
+  indistinguishable from an 8 MB ESP32. The comment on the C6 case describes
+  this exact trap; the C3 was simply left out of the fix.
+- The release now publishes an ESP32-C3 image. Without one the C3 had nowhere
+  of its own to update from, which is what made falling back to "ESP32" look
+  like it worked.
+
+### Para testers
+
+Se tens um **ESP32-C3** e alguma vez usaste a actualização automática, isto é
+para ti: o equipamento pedia a imagem do ESP32 normal, que é de outra
+arquitectura e quase o dobro do tamanho da partição. Daí partir tudo.
+
+⚠️ **Importante:** esta versão corrige o pedido, mas um C3 que ainda tenha
+firmware antigo **continua a pedir mal** — a correcção só vale depois de ele já
+a ter. Num C3 que esteja numa versão anterior à 9.231, **não uses a
+actualização automática**: grava por cabo uma vez, e a partir daí fica
+autónomo.
+
+Nos restantes equipamentos não muda nada.
+
 ## [9.230] - 2026-11-03
 
 ### Fixed

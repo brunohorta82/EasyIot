@@ -235,6 +235,12 @@ namespace constanstsCloudIO
     constexpr const char *configUrl{"https://cloudio.bhonofre.pt/devices/config"};
 #ifdef HAN_MODE
     constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
+#elif defined(CONFIG_IDF_TARGET_ESP32C3)
+    // Same trap the C6 comment below describes, and the C3 was left out of it:
+    // without a variant the cloud sees an ESP32-family board asking over the
+    // x-ESP32-version header and hands it the 8 MB ESP32 image -- a different
+    // architecture entirely, and nearly twice this board's app partition.
+    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-C3"};
 #elif defined(ESP32C6)
     // The variant is not cosmetic here: the C6 asks over the same x-ESP32-version
     // header as an 8 MB ESP32, so without it the cloud would hand this board an
