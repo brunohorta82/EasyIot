@@ -97,6 +97,19 @@ void prepareLD2410(String name, unsigned int rx, unsigned int tx)
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
+void prepareLD2420(String name, unsigned int rx, unsigned int tx)
+{
+    Sensor sensor;
+    strlcpy(sensor.name, name.c_str(), sizeof(sensor.name));
+    // Sensor::loop passes slot 0 as UART RX and slot 1 as UART TX.
+    sensor.inputs = {rx, tx};
+    sensor.driver = LD2420;
+    sensor.delayRead = constantsConfig::ld2420Delay;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, rx, sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
 void prepareTMF882X(int hwAddress)
 {
     Sensor sensor;
@@ -292,6 +305,7 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
         case SensorDriver::HCSR04:
         case SensorDriver::RAIN:
         case SensorDriver::LD2410:
+        case SensorDriver::LD2420:
         case SensorDriver::PZEM_004T_V03:
         case SensorDriver::PZEM_004T_V01:
             break;
@@ -306,6 +320,7 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             return 5;
         const bool dualPin = driverCode == SensorDriver::HCSR04 ||
                              driverCode == SensorDriver::LD2410 ||
+                             driverCode == SensorDriver::LD2420 ||
                              driverCode == SensorDriver::PZEM_004T_V03 ||
                              driverCode == SensorDriver::PZEM_004T_V01;
         if (dualPin)
@@ -340,6 +355,9 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
             break;
         case SensorDriver::LD2410:
             prepareLD2410(name, input1, input2);
+            break;
+        case SensorDriver::LD2420:
+            prepareLD2420(name, input1, input2);
             break;
         case SensorDriver::PZEM_004T_V03:
         case SensorDriver::PZEM_004T_V01:

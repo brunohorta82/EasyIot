@@ -23,7 +23,8 @@ enum SensorDriver
   TMF882X = 92,
   HCSR04 = 93,
   LD2410 = 94,
-  LDC1612 = 95
+  LDC1612 = 95,
+  LD2420 = 96
 
 };
 
@@ -66,6 +67,7 @@ public:
     case TMF882X:
     case HCSR04:
     case LD2410:
+    case LD2420:
     case LDC1612:
       return 2;
     case INVALID_SENSOR:
@@ -98,6 +100,7 @@ public:
     case TMF882X:
     case HCSR04:
     case LD2410:
+    case LD2420:
     case LDC1612:
       break;
     case INVALID_SENSOR:
@@ -105,7 +108,8 @@ public:
       return false;
     }
 #ifdef ESP8266
-    if (sensorDriver == TMF882X || sensorDriver == LD2410)
+    if (sensorDriver == TMF882X || sensorDriver == LD2410 ||
+        sensorDriver == LD2420)
       return false;
 #endif
 #if defined(ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -279,6 +283,7 @@ public:
     case DOOR:
     case WINDOW:
     case LD2410:
+    case LD2420:
       return Family::SECURITY;
     case LTR303X:
     case HCSR04:
@@ -326,6 +331,8 @@ public:
       return FeatureDrivers::HCSR04;
     case LD2410:
       return FeatureDrivers::LD2410;
+    case LD2420:
+      return FeatureDrivers::LD2420;
     case TMF882X:
       return FeatureDrivers::TMF882X;
     case LDC1612:
@@ -442,8 +449,9 @@ private:
 #else
       return inputs.size() == expectedInputCount(driver);
 #endif
-    // LD2410 is implemented only on ESP32. On that target it indexes RX/TX.
+    // LD2410/LD2420 are implemented only on ESP32. On that target they index RX/TX.
     case LD2410:
+    case LD2420:
 #ifdef ESP32
       return inputs.size() == 2;
 #else

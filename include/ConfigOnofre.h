@@ -179,6 +179,7 @@ public:
     case SensorDriver::HCSR04:
       return slot < 2 && (slot == 0 ? validOutputPin(pin) : validInputPin(pin));
     case SensorDriver::LD2410:
+    case SensorDriver::LD2420:
     case SensorDriver::PZEM_004T_V03:
     case SensorDriver::PZEM_004T_V01:
       return slot < 2 && (slot == 0 ? validInputPin(pin) : validOutputPin(pin));

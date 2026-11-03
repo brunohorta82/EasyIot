@@ -1161,6 +1161,106 @@ void Sensor::loop()
     }
     break;
   }
+  case LD2420:
+  {
+    // Hi-Link LD2420 in its default "simple" output mode (115200 8N1).
+    // The radar prints ASCII lines: "ON" / "OFF" for presence and
+    // "Range <cm>" with the distance of the target while it is present.
+    static char line[24];
+    static size_t lineLen = 0;
+    static bool present = false;
+    static int rangeCm = 0;
+    static unsigned long lastFrame = 0;
+
+    if (!isInitialized())
+    {
+      Serial1.begin(115200, SERIAL_8N1, inputs[0], inputs[1]);
+      lineLen = 0;
+      present = false;
+      rangeCm = 0;
+      lastFrame = 0;
+      lastRead = millis();
+      return;
+    }
+
+    while (Serial1.available())
+    {
+      const char c = static_cast<char>(Serial1.read());
+      if (c == '\n' || c == '\r')
+      {
+        if (lineLen > 0)
+        {
+          line[lineLen] = '\0';
+          if (strcmp(line, "ON") == 0)
+          {
+            present = true;
+            lastFrame = millis();
+          }
+          else if (strcmp(line, "OFF") == 0)
+          {
+            present = false;
+            rangeCm = 0;
+            lastFrame = millis();
+          }
+          else if (strncmp(line, "Range ", 6) == 0)
+          {
+            rangeCm = atoi(line + 6);
+            lastFrame = millis();
+          }
+          lineLen = 0;
+        }
+      }
+      else if (lineLen < sizeof(line) - 1)
+      {
+        line[lineLen++] = c;
+      }
+      else
+      {
+        lineLen = 0; // overflow: drop the line and resync
+      }
+    }
+
+    if (lastRead + delayRead < millis())
+    {
+      lastRead = millis();
+      // No frame at all for 10 s means the radar is unplugged or mis-wired.
+      if (lastFrame == 0 || millis() - lastFrame > 10000ul)
+      {
+#ifdef DEBUG_ONOFRE
+        Log.error("Ld2420 sem dados " CR, tags::sensors);
+#endif
+        return;
+      }
+
+      JsonDocument doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+
+      if (present)
+      {
+        lastBinaryState = true;
+        obj["occupancy"] = Payloads::presenceOnPayload;
+        obj["motion"] = Payloads::motionOnPayload;
+        obj["distance"] = rangeCm;
+      }
+      else
+      {
+        if (lastBinaryState == false)
+          return;
+        lastBinaryState = false;
+        obj["occupancy"] = Payloads::presenceOffPayload;
+        obj["motion"] = Payloads::motionOffPayload;
+        obj["distance"] = 0;
+      }
+      serializeJson(doc, state);
+      doc.clear();
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s %s " CR, tags::sensors, state.c_str());
+#endif
+    }
+  }
+  break;
 #endif
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
@@ -1410,6 +1510,7 @@ void Sensor::loop()
 #ifndef ESP32
   case TMF882X:
   case LD2410:
+  case LD2420:
     // These drivers are ESP32-only and intentionally no-op on ESP8266 builds.
     break;
 #endif

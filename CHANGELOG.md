@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.229] - 2026-11-03
+
+### Added
+
+- Hi-Link LD2420 presence radar (driver 96, ESP32 only). It reads the radar's
+  default 115200 baud text output (`ON`/`OFF`/`Range <cm>`) and publishes
+  `occupancy`, `motion` and `distance`, with Home Assistant discovery.
+- The new-function form labels the UART pins of the LD2410/LD2420 as
+  "PINO RX" and "PINO TX" instead of "PINO" and "SEGUNDO PINO".
+
+### Fixed
+
+- LED strip: KNX commands now arrive on units that have only the strip. The KNX
+  stack was polled solely from the actuator loop, so on a unit with no KNX
+  actuator the bus was never read at all.
+
+### Para testers
+
+Duas novidades.
+
+**Sensor de presença LD2420** (o irmão mais novo do LD2410, só em ESP32): já
+aparece na lista de funções. Liga-o aos pinos RX/TX — o formulário agora diz
+mesmo "PINO RX" e "PINO TX", em vez de "PINO" e "SEGUNDO PINO", que não ajudava
+nada. Dá presença, movimento e distância, e entra sozinho no Home Assistant.
+
+**Fita LED com KNX**: se tens um equipamento que só tem a fita e mandavas
+comandos por KNX, eles não chegavam. Já chegam.
+
 ## [Unreleased]
 
 ### Fixed

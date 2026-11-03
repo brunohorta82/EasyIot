@@ -666,6 +666,11 @@ void ledStripLoop()
         testRequested = false;
         selfTest();
     }
+    // The KNX stack only reads the bus when someone calls knx.loop(), and the actuator
+    // loop does that only for actuators with KNX. On a unit whose function is just the
+    // strip nothing else would, and the bus commands would never arrive.
+    if (knxOn() && wifiConnected())
+        knx.loop();
     if (knxPending >= 0)
     {
         const int v = knxPending;

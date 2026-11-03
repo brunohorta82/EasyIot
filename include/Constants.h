@@ -79,6 +79,7 @@ namespace constantsConfig
     constexpr unsigned long rainDelay{5000l};
     constexpr unsigned long pirDelay{100l};
     constexpr unsigned long ld2410Delay{500l};
+    constexpr unsigned long ld2420Delay{500l};
     constexpr unsigned long hcsr04Delay{100l};
     constexpr unsigned long hallsensorDelay{1000l};
     constexpr unsigned long illuminanceReadDelay{5000l};
@@ -318,6 +319,7 @@ namespace FeatureDrivers
     constexpr const char *HCSR04{"HCSR04"};
     constexpr const char *LDC1612{"LDC1612"};
     constexpr const char *LD2410{"LD2410"};
+    constexpr const char *LD2420{"LD2420"};
     constexpr const char *TMF882X{"TMF882X"};
 
     constexpr const char *INVALID{"INVALID"};

@@ -310,6 +310,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             r"case\s+TMF882X\s*:\s*"
             r"case\s+HCSR04\s*:\s*"
             r"case\s+LD2410\s*:\s*"
+            r"case\s+LD2420\s*:\s*"
             r"case\s+LDC1612\s*:\s*"
             r"return\s+2\s*;",
         )
@@ -486,6 +487,7 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertRegex(
             validator,
             r"case\s+SensorDriver::LD2410\s*:\s*"
+            r"case\s+SensorDriver::LD2420\s*:\s*"
             r"case\s+SensorDriver::PZEM_004T_V03\s*:\s*"
             r"case\s+SensorDriver::PZEM_004T_V01\s*:\s*"
             r"return\s+slot\s*<\s*2\s*&&\s*\(slot\s*==\s*0\s*\?\s*"

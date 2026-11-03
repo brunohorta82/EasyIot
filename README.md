@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="versão" src="https://img.shields.io/badge/firmware-9.224-97D700">
+  <img alt="versão" src="https://img.shields.io/badge/firmware-9.229-97D700">
   <img alt="alvos" src="https://img.shields.io/badge/alvos-ESP8266%20%C2%B7%20ESP32%20%C2%B7%20C3%20%C2%B7%20C6-blue">
   <a href="https://www.paypal.me/bhonofre"><img alt="donativo" src="https://img.shields.io/badge/donativo-PayPal-green"></a>
 </p>
@@ -48,7 +48,7 @@ falhar a meio.
 | **Temperatura e humidade** | DHT11, DHT21, DHT22, DS18B20, SHT4X |
 | **Energia** | PZEM-004T v1 e v3, e contador da rede por **HAN / Modbus** |
 | **Água** | contador de água por indução com o **LDC1612**, lido através do registo do próprio contador |
-| **Presença e movimento** | PIR e radar **LD2410** |
+| **Presença e movimento** | PIR e radares **LD2410** / **LD2420** |
 | **Distância e nível** | HC-SR04 e TMF882X |
 | **Estado** | porta, janela, chuva |
 | **Luminosidade** | LTR303 |
