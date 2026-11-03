@@ -74,7 +74,7 @@ def print_notes() -> None:
     print("- Current is the locally resolved package version.")
     print("- Wanted is the newest version allowed by the current declaration.")
     print("- Latest may contain breaking changes and is not an upgrade recommendation.")
-    print("- Git dependencies may compare against a moving branch rather than a release.")
+    print("- Commit-pinned Git dependencies cannot be upgraded implicitly.")
     print("- An audit does not prove compatibility; build and test every affected target.")
     print("- This tool does not edit platformio.ini or update declared dependencies.")
 
