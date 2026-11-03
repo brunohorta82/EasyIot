@@ -8,7 +8,10 @@ enum class AutoUpdateResult : uint8_t
   NO_UPDATE,
   FAILED
 };
+class AsyncWebServer;
 void setupWebPanel();
+/** Re-register the project's not-found handler. */
+void webServerRegisterNotFound();
 void initializeWebAuthCredentials();
 bool startWebserver();
 void stopWebserver();

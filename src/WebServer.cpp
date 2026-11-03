@@ -10,6 +10,7 @@
 #include "Templates.h"
 #include "Irrigation.h"
 #include "DeviceLog.h"
+#include "LedStrip.h"
 #include <LittleFS.h>
 // STATIC WEBPANEL
 #include "CaptivePortal.h"
@@ -30,6 +31,11 @@
 #include <ESP8266mDNS.h>
 #include <WiFiClientSecureBearSSL.h>
 #endif
+// Requests a person is waiting on wait for the feature lease instead of failing
+// on the first collision. 300ms is far longer than any feature loop holds it,
+// and short enough that a genuinely stuck lease still answers rather than
+// hanging the connection.
+static constexpr uint32_t kRequestLeaseWaitMs = 300;
 extern ConfigOnofre config;
 
 DNSServer dnsServer;
@@ -199,6 +205,7 @@ bool isCaptiveTemplateAllowed(int templateId)
   case Template::COVER:
   case Template::GARAGE:
   case Template::GARDEN:
+  case Template::WATER_METER:
     return true;
   default:
     return false;
@@ -376,8 +383,13 @@ public:
     // silently truncate the ESP8266 response before the form was appended.
     AsyncResponseStream *response = request->beginResponseStream("text/html", 4096);
     response->addHeader("Cache-Control", "no-store");
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("captive", kRequestLeaseWaitMs))
     {
+#ifdef DEBUG_ONOFRE
+      Log.error("%s Captive portal refused: lease held by %s for %ums" CR,
+                tags::system, config.featureAccessOwnerName(),
+                config.featureAccessHeldMs());
+#endif
       response->setCode(409);
       response->print("Feature configuration is busy; retry shortly.");
       request->send(response);
@@ -578,6 +590,11 @@ AsyncJsonResponse *errorResponse(const char *cause, int status = 400)
 
 void sendFeatureBusy(AsyncWebServerRequest *request)
 {
+#ifdef DEBUG_ONOFRE
+  Log.error("%s %s refused: lease held by %s for %ums" CR, tags::system,
+            request->url().c_str(), config.featureAccessOwnerName(),
+            config.featureAccessHeldMs());
+#endif
   request->send(errorResponse("Feature configuration is busy; retry shortly", 409));
 }
 
@@ -653,7 +670,7 @@ void loadAPI()
             {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -688,7 +705,7 @@ void loadAPI()
           request->send(errorResponse("Restore request must be a JSON object"));
           return;
         }
-        if (!config.tryBeginFeatureAccess())
+        if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
         {
           sendFeatureBusy(request);
           return;
@@ -724,7 +741,7 @@ void loadAPI()
           {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -787,7 +804,7 @@ void loadAPI()
       request->send(errorResponse("Feature request must be a JSON object"));
       return;
     }
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -795,7 +812,13 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     JsonObject featureJson = json.as<JsonObject>();
-    int result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
+    int result;
+#ifdef LED_STRIP
+    if ((featureJson["driver"] | 999) == kLedStripDriverCode)
+      result = ledStripCreate(featureJson["name"] | "", featureJson["input1"] | -1, featureJson["leds"] | 60);
+    else
+#endif
+      result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
     if (result == 0)
     {
       if (!config.persist())
@@ -833,7 +856,7 @@ void loadAPI()
       request->send(errorResponse("Actuator request must be a JSON object"));
       return;
     }
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -864,7 +887,7 @@ void loadAPI()
     }
     else
     {
-      if (!config.tryBeginFeatureAccess())
+      if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
       {
         delete response;
         sendFeatureBusy(request);
@@ -892,7 +915,7 @@ void loadAPI()
   {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -912,7 +935,7 @@ void loadAPI()
   {
     if (!authorizeRequest(request))
       return;
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -954,7 +977,7 @@ void loadAPI()
       request->send(errorResponse("Irrigation request must be a JSON object"));
       return;
     }
-    if (!config.tryBeginFeatureAccess())
+    if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
     {
       sendFeatureBusy(request);
       return;
@@ -1028,7 +1051,7 @@ void loadAPI()
     templateValue.trim();
     const int templateId = templateValue.toInt();
     if (templateValue != String(templateId) ||
-        templateId < Template::DUAL_LIGHT || templateId > Template::GARDEN)
+        templateId < Template::DUAL_LIGHT || templateId > Template::WATER_METER)
     {
       request->send(errorResponse("Template id is invalid"));
       return;
@@ -1075,6 +1098,53 @@ void loadAPI()
     if (!authorizeRequest(request))
       return;
     request->send(200, "text/plain; charset=utf-8", deviceLogText()); });
+
+#ifdef LED_STRIP
+  // LED strip control: the page at /led, and the API at /ledstate (GET) plus /led/set and
+  // /led/remove (POST). /ledstate cannot be /led/state: a handler on "/led" also catches
+  // everything beginning with "/led/".
+  server.on("/led", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    if (!authorizeRequest(request))
+      return;
+    AsyncWebServerResponse *response = beginProgmemResponse(request, 200, "text/html",
+        (const uint8_t *)ledStripPageHtml(), ledStripPageSize());
+    response->addHeader("Cache-Control", "no-store");
+    request->send(response); });
+  server.on("/ledstate", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    if (!authorizeRequest(request))
+      return;
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    ledStripStateJson(root);
+    response->setLength();
+    request->send(response); });
+  server.on("/led/remove", HTTP_POST, [](AsyncWebServerRequest *request)
+            {
+    if (!authorizeRequest(request))
+      return;
+    ledStripRemove();
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    root["removed"] = true;
+    response->setLength();
+    request->send(response); });
+  server.addHandler(new AsyncCallbackJsonWebHandler("/led/set", [](AsyncWebServerRequest *request, JsonVariant json)
+                                                    {
+    if (!authorizeRequest(request))
+      return;
+    if (!ledStripQueueCommand(json))
+    {
+      request->send(errorResponse("LED strip busy or command too large", 409));
+      return;
+    }
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &root = response->getRoot();
+    ledStripStateJson(root);
+    response->setLength();
+    request->send(response); }));
+#endif
 
   server.on("/reboot", HTTP_POST, rebootHandler);
   server.on("/reboot", HTTP_GET, rebootHandler);
@@ -1184,9 +1254,10 @@ void loadAPI()
               // The updater and the feature graph are process-global. A second
               // upload or any competing feature operation must retry instead
               // of waiting inside the AsyncWebServer callback.
-              if (!config.tryBeginFeatureAccess())
+              if (!config.waitBeginFeatureAccess("web", kRequestLeaseWaitMs))
               {
                 state->busy = true;
+                deviceLog("envio .bin: recusado, equipamento ocupado");
                 return;
               }
               state->ownsFeatureAccess = true;
@@ -1196,6 +1267,7 @@ void loadAPI()
                 state->busy = true;
                 config.endFeatureAccess();
                 state->ownsFeatureAccess = false;
+                deviceLog("envio .bin: recusado, ja ha um envio em curso");
                 return;
               }
 
@@ -1211,6 +1283,8 @@ void loadAPI()
               {
                 state->failed = true;
                 Update.printError(Serial);
+                deviceLog("envio .bin: Update.begin falhou (erro %d, espaco %u)", (int)Update.getError(),
+                          (unsigned)ESP.getFreeSketchSpace());
               }
             }
 
@@ -1228,6 +1302,8 @@ void loadAPI()
               {
                 state->failed = true;
                 Update.printError(Serial);
+                deviceLog("envio .bin: escrita falhou (erro %d) aos %u bytes", (int)Update.getError(),
+                          (unsigned)(index + len));
               }
             }
             if (final)
@@ -1237,6 +1313,7 @@ void loadAPI()
               state->failed = !state->success;
               if (state->success)
               {
+                deviceLog("envio .bin: gravado (%u bytes)", (unsigned)(index + len));
 #ifdef DEBUG_ONOFRE
                 Log.notice("%s Update Success: %d" CR, tags::system, index + len);
 #endif
@@ -1244,6 +1321,8 @@ void loadAPI()
               else
               {
                 Update.printError(Serial);
+                deviceLog("envio .bin: verificacao final falhou (erro %d) aos %u bytes", (int)Update.getError(),
+                          (unsigned)(index + len));
               }
             }
           });
@@ -1330,6 +1409,22 @@ void setupCors()
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Methods"), F("POST,PUT,DELETE,GET"));
   DefaultHeaders::Instance().addHeader(F("Access-Control-Allow-Headers"), F("Authorization, Content-Type, Origin, Referer, User-Agent"));
 }
+// Requests that no route handled.
+static void notFoundHandler(AsyncWebServerRequest *request)
+{
+  if (request->method() == HTTP_OPTIONS)
+  {
+    request->send(200);
+  }
+  else
+  {
+    request->send(404);
+  }
+}
+
+
+void webServerRegisterNotFound() { server.onNotFound(notFoundHandler); }
+
 void setupWebPanel()
 {
   // Register each mode once. Captive mode deliberately postpones the much
@@ -1347,16 +1442,7 @@ void setupWebPanel()
   server.addHandler(&events);
   loadWebPanel();
   loadAPI();
-  server.onNotFound([](AsyncWebServerRequest *request)
-                    {
-    if (request->method() == HTTP_OPTIONS)
-    {
-      request->send(200);
-    }
-    else
-    {
-      request->send(404);
-    } });
+  webServerRegisterNotFound();
   panelHandlersConfigured = true;
 }
 

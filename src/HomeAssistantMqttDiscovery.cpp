@@ -2,6 +2,7 @@
 #include "Mqtt.h"
 #include "ConfigOnofre.h"
 #include "Irrigation.h"
+#include "LedStrip.h"
 extern ConfigOnofre config;
 
 bool homeAssistantOnline(String topic, String payload)
@@ -226,6 +227,36 @@ void addToHomeAssistant(Sensor &s)
     object["unit_of_meas"] = "cm";
     object["dev_cla"] = "distance";
     object["val_tpl"] = "{{value_json.movingTargetDistance}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+    break;
+  case LD2420:
+    object["name"] = "Movimento";
+    object["uniq_id"] = uniqueId + "motion";
+    object["dev_cla"] = "motion";
+    object["pl_on"] = Payloads::motionOnPayload;
+    object["pl_off"] = Payloads::motionOffPayload;
+    object["val_tpl"] = "{{value_json.motion}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+
+    object["name"] = "Presença";
+    object["uniq_id"] = uniqueId + "occupancy";
+    object["dev_cla"] = "occupancy";
+    object["pl_on"] = Payloads::presenceOnPayload;
+    object["pl_off"] = Payloads::presenceOffPayload;
+    object["val_tpl"] = "{{value_json.occupancy}}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/binary_sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    delay(1);
+
+    object["name"] = "Distancia alvo";
+    object["uniq_id"] = uniqueId + "distance";
+    object["unit_of_meas"] = "cm";
+    object["dev_cla"] = "distance";
+    object["val_tpl"] = "{{value_json.distance}}";
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     delay(1);
@@ -605,13 +636,24 @@ void initHomeAssistantDiscovery()
   }
   for (auto &ss : config.sensors)
   {
-    publishOnMqtt(ss.readTopic, ss.state.c_str(), true);
+    // Config first, then state. The comment below is right and the old order
+    // contradicted it: an entity has to claim the topic before its state means
+    // anything.
     addToHomeAssistant(ss);
+    // Never seed a state topic with nothing. A sensor that has not read yet has
+    // an empty state, and publishing it put an empty payload on the wire: every
+    // value template over it fails, which leaves the entity unknown and writes
+    // an error into Home Assistant's log on every reconnect. Worse, a zero-byte
+    // retained publish deletes the retained state, so a Home Assistant starting
+    // afterwards finds no value at all until the next reading.
+    if (ss.state.length() > 0)
+      publishOnMqtt(ss.readTopic, ss.state.c_str(), true);
   }
   // Last, and state before configs would be pointless: Home Assistant only
   // listens to a state topic once an entity claims it.
   createHaIrrigation();
   publishIrrigationHomeAssistantState();
+  ledStripDiscovery();
 }
 
 namespace
