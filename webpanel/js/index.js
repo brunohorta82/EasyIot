@@ -1777,7 +1777,15 @@ async function control(id, state, confirmedState) {
     // Safari EventSource message cannot leave Functions stale until reload.
     if (confirmedState != null) applyFeatureState(id, confirmedState);
   }
-  catch (e) { toast("Não foi possível comandar", "err"); }
+  catch (e) {
+    // "Applied but not saved" is a different answer from "did not happen": the
+    // output moved, the state did not reach flash.
+    if (e && e.body && e.body.result === 6 && e.body.applied === true) {
+      toast("Comando executado, mas o estado não ficou guardado", "err");
+    } else {
+      toast("Não foi possível comandar", "err");
+    }
+  }
 }
 
 async function addFeature() {

@@ -333,6 +333,21 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         self.assertIn('a["waterLiters"] = ss.waterLiters;', self.config)
         self.assertIn('sensor.waterLiters = d["waterLiters"] | 0.0;', self.config)
 
+    def test_water_meter_writes_off_the_feature_lease(self) -> None:
+        persist_total = block_after(
+            self.sensors, r"void\s+Sensor::persistWaterTotal\s*\(\s*\)",
+        )
+        # This runs inside loopSensors(), which holds the feature lease for as
+        # long as it takes, and writing the configuration file is hundreds of
+        # milliseconds of LittleFS. Doing it here answers every web request
+        # "busy" for that whole window, so the main loop does it once the lease
+        # is free. The contract this replaced asked for the opposite -- a
+        # synchronous write that could report its own failure -- and was
+        # written before the lease was introduced.
+        self.assertIn("config.requestSaveConfiguration();", persist_total)
+        self.assertNotIn("config.persist()", persist_total)
+        self.assertEqual(persist_total.count("waterUnsavedTurns = 0;"), 1)
+
     def test_water_meter_reaches_home_assistant_as_water(self) -> None:
         # device_class water plus state_class total_increasing is what Home
         # Assistant's water dashboard looks for; with those two it appears there on
@@ -662,7 +677,8 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         discovery = block_after(
             self.config, r"void\s+ConfigOnofre::i2cDiscovery\s*\(\s*\)",
         )
-        self.assertEqual(discovery.count("save();"), 1)
+        self.assertEqual(discovery.count("persist()"), 1)
+        self.assertIn("if (!persist())", discovery)
         self.assertIn("bool needsSave = false;", discovery)
         tmf_start = discovery.index("Discovery::I2C_TMF880X_ADDRESS")
         tmf = discovery[tmf_start:]

@@ -176,7 +176,15 @@ void checkInternalRoutines()
   {
     if (config.tryBeginFeatureAccess("saveConfiguration"))
     {
-      config.save();
+      // persist() replaced the save wrapper that threw its result away. This is
+      // the deferred write, so there is nobody left to answer with an error --
+      // ask again next time round and say so, rather than losing the count to a
+      // failed filesystem write in silence.
+      if (!config.persist())
+      {
+        deviceLog("configuracao: gravacao falhou, nova tentativa");
+        config.requestSaveConfiguration();
+      }
       config.endFeatureAccess();
     }
     else

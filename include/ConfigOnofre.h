@@ -81,7 +81,6 @@ public:
   ConfigUpdateResult update(JsonObject &root, JsonVariant &responseRoot);
   ConfigUpdateResult stageRestore(JsonObject &root);
   bool persist();
-  ConfigOnofre &save();
   ConfigOnofre &init();
   ConfigOnofre &load();
   bool tryBeginFeatureAccess(const char *owner = "web");
@@ -245,9 +244,10 @@ public:
   }
   void requestReloadWifi();
   bool isReloadWifiRequested();
-  void controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result);
-  void controlFeature(StateOrigin origin, String topic, String payload);
-  void controlFeature(StateOrigin origin, String uniqueId, int state);
+  ConfigUpdateResult controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result);
+  ConfigUpdateResult controlFeature(StateOrigin origin, String topic, String payload);
+  ConfigUpdateResult controlFeature(StateOrigin origin, String uniqueId, int state);
+  void reportControlPersistenceFailure(StateOrigin origin, const char *featureId);
 
 private:
   bool tryBeginFeatureLoopAccess(const char *owner = "loop");
