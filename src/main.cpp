@@ -123,7 +123,15 @@ void checkInternalRoutines()
     Log.notice("%s CloudIO requested." CR, tags::system);
     Log.info("----------------------------------------------" CR);
 #endif
+#ifdef ESP32
+    // Off this loop where there is a scheduler to put it on: the sync blocks
+    // for as long as the server takes to answer, and everything local --
+    // panel, local MQTT, actuators -- waits behind it otherwise.
+    if (!dispatchCloudIOSync())
+      connectToCloudIO();
+#else
     connectToCloudIO();
+#endif
   }
 
   if (config.isWifiScanRequested())

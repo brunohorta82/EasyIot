@@ -2,6 +2,11 @@
 #define CLOUDIO_H
 #include "Arduino.h"
 void connectToCloudIO();
+#ifdef ESP32
+/** Run the config sync on its own task instead of blocking loop(). False when
+ *  the task could not be created, so the caller falls back to calling inline. */
+bool dispatchCloudIOSync();
+#endif
 void startCloudIOWatchdog();
 bool cloudIOConnected();
 /** Force the asynchronous cloud transport idle before ESP8266 OTA asks BearSSL

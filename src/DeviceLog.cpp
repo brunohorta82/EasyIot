@@ -1,6 +1,10 @@
 #include "DeviceLog.h"
 #include <stdarg.h>
 #include <stdlib.h>
+#ifdef ESP32
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#endif
 
 namespace
 {
@@ -11,6 +15,37 @@ namespace
 #endif
   size_t nextLine{0};
   bool wrapped{false};
+
+#ifdef ESP32
+  // The ring buffer is written from the main loop, from the sensor task, and --
+  // since the cloud sync moved off the loop -- from the cloud task too. Two
+  // writers racing on nextLine overwrite each other's line and can leave the
+  // index past the end. The ESP8266 has one thread and needs none of this.
+  SemaphoreHandle_t logMutex{nullptr};
+
+  struct LogGuard
+  {
+    bool held{false};
+    LogGuard()
+    {
+      if (logMutex == nullptr)
+        logMutex = xSemaphoreCreateMutex();
+      // A reader or writer that cannot take the lock within a tick writes
+      // nothing rather than blocking something more important than a log line.
+      held = logMutex != nullptr && xSemaphoreTake(logMutex, pdMS_TO_TICKS(20)) == pdTRUE;
+    }
+    ~LogGuard()
+    {
+      if (held)
+        xSemaphoreGive(logMutex);
+    }
+  };
+#else
+  struct LogGuard
+  {
+    bool held{true};
+  };
+#endif
 
   bool ensureBuffer()
   {
@@ -49,6 +84,7 @@ namespace
 
 void deviceLog(const char *format, ...)
 {
+  LogGuard guard;
   char stamp[12];
   stampInto(stamp, sizeof(stamp));
 
@@ -79,6 +115,7 @@ void deviceLog(const char *format, ...)
 
 String deviceLogText()
 {
+  LogGuard guard;
   String out;
   if (!ensureBuffer())
     return out;
@@ -100,6 +137,7 @@ String deviceLogText()
 
 void deviceLogClear()
 {
+  LogGuard guard;
   if (!ensureBuffer())
     return;
   nextLine = 0;

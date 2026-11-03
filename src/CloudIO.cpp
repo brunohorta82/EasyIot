@@ -25,11 +25,25 @@ Ticker checkCloudIOWatchdog;
 
 namespace
 {
+#ifdef ESP8266
+// The ESP8266 has one thread: this POST runs where the web panel, the local
+// MQTT and the actuators run. It cannot be moved off, so it is kept short --
+// one attempt at six seconds instead of three at twelve plus a fallback, which
+// stalled the device for the best part of a minute. The exponential backoff
+// then spreads the retries, so a cloud outage costs six seconds every few
+// minutes rather than fifty-one every single minute.
+const uint16_t kCloudIoRequestTimeoutMs = 6000;
+#else
 const uint16_t kCloudIoRequestTimeoutMs = 12000;
+#endif
 #ifdef ESP32
 const int32_t kCloudIoConnectTimeoutMs = 8000;
 #endif
+#ifdef ESP8266
+const uint8_t kCloudIoHttpsRetryCount = 1;
+#else
 const uint8_t kCloudIoHttpsRetryCount = 3;
+#endif
 const uint16_t kCloudIoRetryBackoffMs = 1500;
 const uint32_t kCloudMqttTransitionTimeoutMs = 30000;
 
@@ -151,6 +165,58 @@ bool cloudMqttTransitionTimedOut()
              kCloudMqttTransitionTimeoutMs;
 }
 
+// How many controlled restarts in a row before the cloud is given up on for
+// this boot. Three is enough to clear a genuinely stuck transport; more than
+// that is not a stuck transport, it is an outage, and restarting into one is a
+// loop the user sees as "the device will not start".
+const uint32_t kCloudMqttMaxRecoveryRestarts = 3;
+// RTC memory survives ESP.restart() but not a power cut, which is the lifetime
+// this counter wants: a run of failed recoveries must stop retrying, and
+// unplugging the device must give it a clean start. Flash is the wrong place --
+// a restart loop would write to it every thirty seconds, forever.
+const uint32_t kCloudRecoveryMagic = 0x0C10DA01;
+
+#ifdef ESP32
+RTC_NOINIT_ATTR static uint32_t cloudRecoveryMagicCell;
+RTC_NOINIT_ATTR static uint32_t cloudRecoveryRestartCell;
+#endif
+
+static uint32_t readCloudRecoveryRestarts()
+{
+#ifdef ESP32
+  if (cloudRecoveryMagicCell != kCloudRecoveryMagic)
+  {
+    // Uninitialised after a power-on: RTC_NOINIT keeps whatever was in the
+    // cells, so the magic is what tells a real count from noise.
+    cloudRecoveryMagicCell = kCloudRecoveryMagic;
+    cloudRecoveryRestartCell = 0;
+  }
+  return cloudRecoveryRestartCell;
+#else
+  uint32_t cells[2] = {0, 0};
+  if (!ESP.rtcUserMemoryRead(0, cells, sizeof(cells)) || cells[0] != kCloudRecoveryMagic)
+    return 0;
+  return cells[1];
+#endif
+}
+
+static void writeCloudRecoveryRestarts(uint32_t value)
+{
+#ifdef ESP32
+  cloudRecoveryMagicCell = kCloudRecoveryMagic;
+  cloudRecoveryRestartCell = value;
+#else
+  uint32_t cells[2] = {kCloudRecoveryMagic, value};
+  ESP.rtcUserMemoryWrite(0, cells, sizeof(cells));
+#endif
+}
+
+void clearCloudMqttRecoveryRestarts()
+{
+  if (readCloudRecoveryRestarts() != 0)
+    writeCloudRecoveryRestarts(0);
+}
+
 void requestCloudMqttRecoveryRestart()
 {
   if (cloudMqttRecoveryQueued)
@@ -168,6 +234,25 @@ void requestCloudMqttRecoveryRestart()
   // DNS/TCP attempt before AsyncTCP owns a PCB. An in-place retry can therefore
   // race a late callback. Reboot is the only app-level recovery that destroys
   // every outstanding callback and retained pointer safely.
+  //
+  // But a reboot only recovers a transport that is stuck on its own. When the
+  // cloud itself is unwell, every boot ends here again thirty seconds later and
+  // the device never finishes starting -- the worst possible answer, because
+  // everything local works perfectly well without the cloud. After a few tries
+  // in a row, stop restarting and run without it: cloudMqttRecoveryQueued keeps
+  // the transport untouched for the rest of this boot, and late callbacks from
+  // the abandoned attempt are ignored exactly as they are before a restart.
+  const uint32_t restarts = readCloudRecoveryRestarts() + 1;
+  if (restarts > kCloudMqttMaxRecoveryRestarts)
+  {
+    writeCloudRecoveryRestarts(0);
+    deviceLog("cloud mqtt: %d reinicios sem sucesso, a funcionar so localmente",
+              (int)kCloudMqttMaxRecoveryRestarts);
+    return;
+  }
+  writeCloudRecoveryRestarts(restarts);
+  deviceLog("cloud mqtt: reinicio controlado %d/%d", (int)restarts,
+            (int)kCloudMqttMaxRecoveryRestarts);
   config.requestRestart();
 }
 
@@ -552,6 +637,9 @@ void serviceCloudIOMqtt()
     Log.info("----------------------------------------------" CR);
 #endif
     deviceLog("cloud mqtt ligado");
+    // The transport came up, so whatever the earlier restarts were chasing is
+    // gone. Clear the streak or the next unrelated hiccup starts from three.
+    clearCloudMqttRecoveryRestarts();
   }
   else if (event == CloudMqttTransportEvent::DISCONNECTED)
   {
@@ -693,6 +781,26 @@ void drainCloudIOCommands()
 // the watchdog must NEVER stop permanently — it just waits this many ticks
 // (1 tick = 60 s) before asking again. 0 = no backoff.
 static uint8_t cloudSyncBackoffTicks = 0;
+// Consecutive failed config syncs. A failure used to carry no backoff at all:
+// the watchdog asked again every 60 s for as long as the cloud was unwell, and
+// each attempt blocks the main loop. Doubling the wait turns a permanent outage
+// from a device-wide stall into an occasional one.
+static uint8_t cloudSyncFailureStreak = 0;
+// Minutes, since one watchdog tick is 60 s. Thirty matches the "not adopted"
+// backoff, which is already the longest this device ever waits to try again.
+const uint8_t kCloudSyncMaxBackoffTicks = 30;
+
+static uint8_t nextCloudSyncBackoffTicks()
+{
+  if (cloudSyncFailureStreak < 255)
+    cloudSyncFailureStreak++;
+  // 1, 2, 4, 8, 16, then capped. The first failure still retries after a
+  // minute, so a brief blip costs nothing.
+  uint16_t ticks = 1;
+  for (uint8_t i = 1; i < cloudSyncFailureStreak && ticks < kCloudSyncMaxBackoffTicks; i++)
+    ticks <<= 1;
+  return ticks > kCloudSyncMaxBackoffTicks ? kCloudSyncMaxBackoffTicks : (uint8_t)ticks;
+}
 
 void watchdogTimer()
 {
@@ -763,6 +871,56 @@ void ConfigOnofre::stopCloudIOWatchdog()
   // fresh 60-second interval rather than stale work from access-point mode.
   takeCloudIOWatchdogSignal();
 }
+#ifdef ESP32
+static TaskHandle_t cloudSyncTaskHandle = nullptr;
+
+static void cloudSyncTask(void *)
+{
+  for (;;)
+  {
+    // Sleeps until someone asks for a sync, so an idle device pays nothing.
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    connectToCloudIO();
+  }
+}
+
+/**
+ * Hand the config sync to its own task.
+ *
+ * The POST is synchronous and can take tens of seconds against a cloud that
+ * accepts the connection and then does not answer -- which is what an unwell
+ * server looks like, as opposed to one that is simply down and refuses at once.
+ * Run from loop(), that stalls the web panel, the local MQTT and the actuators
+ * with it, so physical switches stop responding because a server far away is
+ * unhealthy. Nothing local depends on the cloud, so nothing local should wait
+ * for it.
+ *
+ * Safe to run here because connectToCloudIO already takes the feature lease
+ * around every read and write of the feature graph and releases it before any
+ * TLS or HTTP work, and because the result reaches the main loop the way it
+ * always did: through the staged-runtime flag that serviceCloudIOMqtt consumes.
+ *
+ * Returns false when the task could not be created, so the caller can fall
+ * back to the old inline behaviour rather than never syncing at all.
+ */
+bool dispatchCloudIOSync()
+{
+  if (cloudSyncTaskHandle == nullptr)
+  {
+    // 10 KB: mbedTLS handshakes are the deepest thing that runs here.
+    if (xTaskCreate(cloudSyncTask, "CloudIO-Sync", 10240, nullptr, 1, &cloudSyncTaskHandle) != pdPASS)
+    {
+      cloudSyncTaskHandle = nullptr;
+      return false;
+    }
+  }
+  // Already syncing: the notification is remembered, so one more pass follows
+  // the current one instead of being lost or queueing without bound.
+  xTaskNotifyGive(cloudSyncTaskHandle);
+  return true;
+}
+#endif
+
 void connectToCloudIO()
 {
 
@@ -982,11 +1140,14 @@ void connectToCloudIO()
     }
     config.cloudIOReady = false;
     config.endFeatureAccess();
+    cloudSyncBackoffTicks = nextCloudSyncBackoffTicks();
+    deviceLog("cloud: nova tentativa em %d min", (int)cloudSyncBackoffTicks);
     return;
   }
   else if (httpCode == HTTP_CODE_OK)
   {
     cloudSyncBackoffTicks = 0;
+    cloudSyncFailureStreak = 0;
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, responsePayload);
     if (error)

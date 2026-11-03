@@ -2,6 +2,54 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.230] - 2026-11-03
+
+### Fixed
+
+- A sick cloud no longer takes the device with it. The config sync is a
+  synchronous POST, and against a server that accepts the connection and then
+  does not answer -- which is what an unwell server looks like, as opposed to
+  one that is down and refuses at once -- it ran for up to 51 seconds: three
+  HTTPS attempts of twelve, plus backoff, plus a plain-HTTP fallback. It ran
+  from loop(), so the web panel, the local MQTT and the actuators all waited
+  behind it. With the watchdog asking again every 60 seconds, a device spent
+  most of its life unresponsive, and physical switches stopped working because
+  of a server somewhere else. On ESP32 the sync now runs on its own task. The
+  ESP8266 has one thread and nowhere to move it to, so its budget is capped
+  instead: one attempt at six seconds rather than three at twelve.
+- A failed sync now backs off -- 1, 2, 4, 8, 16, then 30 minutes -- instead of
+  retrying every single minute for as long as the outage lasts. A success
+  clears it, so a brief blip still costs one minute.
+- A device no longer restarts forever because the cloud is unwell. A cloud MQTT
+  transport that does not finish connecting within 30 seconds triggers a
+  controlled restart, which recovers a transport stuck on its own but, during
+  an outage, happens again on every boot: the device never finishes starting.
+  After three in a row it now gives up on the cloud for that boot and runs
+  locally, which is what it should have been doing all along. The count lives
+  in RTC memory, so it survives the restart it is counting but not a power cut,
+  and no flash is written.
+- The device log is guarded on ESP32. It is written from the main loop, the
+  sensor task and now the cloud task, and two writers racing on the line index
+  lose a line and can run it past the end of the buffer.
+
+### Para testers
+
+Se já tiveste equipamentos a ficar lentos ou a não arrancar quando a nuvem está
+em baixo, é disto que se trata.
+
+O que mudou: **o equipamento deixa de esperar pela nuvem**. Os interruptores,
+o painel e o MQTT local passam a responder na mesma, com ou sem internet. E se
+a nuvem estiver doente, o equipamento tenta cada vez menos vezes em vez de
+insistir de minuto a minuto.
+
+E deixa de **reiniciar em ciclo**: ao fim de três tentativas falhadas desiste da
+nuvem até ao arranque seguinte e fica a funcionar localmente. Antes ficava a
+reiniciar de 30 em 30 segundos e parecia morto.
+
+Se vires no Registo do equipamento (Diagnóstico) a linha `cloud mqtt: 3
+reinicios sem sucesso, a funcionar so localmente`, é isto a fazer o seu
+trabalho — não é avaria.
+
 ## [9.229] - 2026-11-03
 
 ### Added
