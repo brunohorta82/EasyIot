@@ -167,6 +167,30 @@ void addToHomeAssistant(Sensor &s)
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
     break;
+  case TOFSENSE:
+    // Two entities. The distance is the measurement; the signal strength is
+    // what says whether to believe it, and without it a reading taken off a
+    // dark or angled surface looks exactly like a good one.
+    object["uniq_id"] = uniqueId;
+    object["unit_of_meas"] = "cm";
+    object["dev_cla"] = "distance";
+    object["stat_cla"] = "measurement";
+    object["val_tpl"] = "{{value_json.distance | round(1) }}";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+
+    objectStr = "";
+    object["uniq_id"] = "strength" + uniqueId;
+    object["name"] = String(s.name) + " sinal";
+    object.remove("unit_of_meas");
+    object.remove("dev_cla");
+    object["stat_cla"] = "measurement";
+    object["val_tpl"] = "{{ value_json.strength }}";
+    object["ic"] = "mdi:signal";
+    object["ent_cat"] = "diagnostic";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    break;
   case TMF882X:
     object["uniq_id"] = uniqueId;
     object["unit_of_meas"] = "mm";

@@ -24,7 +24,8 @@ enum SensorDriver
   HCSR04 = 93,
   LD2410 = 94,
   LDC1612 = 95,
-  LD2420 = 96
+  LD2420 = 96,
+  TOFSENSE = 97
 
 };
 
@@ -69,6 +70,7 @@ public:
     case LD2410:
     case LD2420:
     case LDC1612:
+    case TOFSENSE:
       return 2;
     case INVALID_SENSOR:
     default:
@@ -102,6 +104,7 @@ public:
     case LD2410:
     case LD2420:
     case LDC1612:
+    case TOFSENSE:
       break;
     case INVALID_SENSOR:
     default:
@@ -109,7 +112,7 @@ public:
     }
 #ifdef ESP8266
     if (sensorDriver == TMF882X || sensorDriver == LD2410 ||
-        sensorDriver == LD2420)
+        sensorDriver == LD2420 || sensorDriver == TOFSENSE)
       return false;
 #endif
 #if defined(ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -288,6 +291,7 @@ public:
     case LTR303X:
     case HCSR04:
     case LDC1612:
+    case TOFSENSE:
       return Family::LEVEL_METER;
     case INVALID_SENSOR:
       return Family::NONE;
@@ -337,6 +341,8 @@ public:
       return FeatureDrivers::TMF882X;
     case LDC1612:
       return FeatureDrivers::LDC1612;
+    case TOFSENSE:
+      return FeatureDrivers::TOFSENSE;
     case INVALID_SENSOR:
       return FeatureDrivers::INVALID;
     }
@@ -449,9 +455,11 @@ private:
 #else
       return inputs.size() == expectedInputCount(driver);
 #endif
-    // LD2410/LD2420 are implemented only on ESP32. On that target they index RX/TX.
+    // LD2410/LD2420/TOFSense are implemented only on ESP32. On that target
+    // they index RX/TX out of the stored array.
     case LD2410:
     case LD2420:
+    case TOFSENSE:
 #ifdef ESP32
       return inputs.size() == 2;
 #else

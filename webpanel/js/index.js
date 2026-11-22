@@ -49,6 +49,7 @@ const DRIVERS = [
     { v: 95, t: "LDC1612", n: "Contador de água (LDC1612)", pins: 2 },
     { v: 94, t: "LD2410", n: "Presença (LD2410)", pins: 2, l: ["PINO RX", "PINO TX"] },
     { v: 96, t: "LD2420", n: "Presença (LD2420)", pins: 2, l: ["PINO RX", "PINO TX"] },
+    { v: 97, t: "TOFSENSE", n: "Distância laser (TOFSense)", pins: 2, l: ["PINO RX", "PINO TX"] },
     { v: 71, t: "PZEM_004T_V03", n: "Contador PZEM v3", pins: 2 },
     { v: 72, t: "PZEM_004T_V01", n: "Contador PZEM v1", pins: 2 },
   ]},
@@ -1347,7 +1348,7 @@ function sensorText(state, driver) {
 }
 
 /* Numeric readings deserve the width; binary states do not. */
-const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "LD2420", "TMF882X", "LDC1612"];
+const MEASURE_DRIVERS = ["LTR303", "HCSR04", "LD2410", "LD2420", "TMF882X", "LDC1612", "TOFSENSE"];
 const CLIMATE_DRIVERS = ["DS18B20", "SHT4X", "DHT_11", "DHT_21", "DHT_22"];
 const CLIMATE_MAX_SAMPLES = 360;
 const isClimate = (f) => CLIMATE_DRIVERS.indexOf(f.driver) >= 0;

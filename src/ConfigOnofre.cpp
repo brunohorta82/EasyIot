@@ -118,6 +118,12 @@ ConfigOnofre &ConfigOnofre::init()
 #ifdef HAN_MODE
   templateSelect(Template::HAN_MODULE);
 #endif
+#ifdef TOFSENSE_MODE
+  // A bench board for bringing the rangefinder up: it comes back configured
+  // after every flash, so the driver can be read over USB without a network
+  // and without anyone picking a template in the panel first.
+  templateSelect(Template::TOF_DISTANCE);
+#endif
 #ifdef IRRIGATION_MODE
   // A dedicated irrigation board should come up as one, the same way HAN_MODE
   // works: five zones and the rain sensor, without anyone picking a template.

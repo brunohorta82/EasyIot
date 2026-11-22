@@ -136,6 +136,25 @@ void prepareSHT4X(int hwAddress)
     strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
     config.sensors.push_back(sensor);
 }
+void prepareTofSense()
+{
+    Sensor sensor;
+    strlcpy(sensor.name, I18N::TOF_SENSOR_NAME, sizeof(sensor.name));
+    // The Grove port, which on this board is the same pair of pins whether it
+    // carries I2C or a UART -- the connector does not change, only what is
+    // spoken over it. Slot 0 is RX and slot 1 is TX, the order every other
+    // serial sensor here uses, so the sensor's TXD lands on the board's RX.
+    sensor.inputs = {static_cast<unsigned int>(DefaultPins::SCL),
+                     static_cast<unsigned int>(DefaultPins::SDA)};
+    sensor.driver = TOFSENSE;
+    // The sensor sends ten frames a second on its own. Publishing every one of
+    // them would be ten MQTT messages a second for a distance that rarely moves.
+    sensor.delayRead = 1000ul;
+    String idStr;
+    config.generateId(idStr, sensor.name, sensor.driver, sensor.inputs[0], sizeof(sensor.uniqueId));
+    strlcpy(sensor.uniqueId, idStr.c_str(), sizeof(sensor.uniqueId));
+    config.sensors.push_back(sensor);
+}
 void prepareWaterMeter()
 {
     Sensor sensor;
@@ -432,7 +451,7 @@ bool templateSelect(enum Template _template)
 {
     if (config.templateId != Template::NO_TEMPLATE)
         return false;
-    if (_template < Template::NO_TEMPLATE || _template > Template::WATER_METER)
+    if (_template < Template::NO_TEMPLATE || _template > Template::TOF_DISTANCE)
         return false;
 #ifdef DEBUG_ONOFRE
     Log.info("%s Template selected: %d" CR, tags::webserver, _template);
@@ -464,6 +483,12 @@ bool templateSelect(enum Template _template)
         break;
     case HAN_MODULE:
         prepareHAN();
+        break;
+    case TOF_DISTANCE:
+        // Only the rangefinder, for the same reason the water meter is alone:
+        // this board measures, it does not switch anything, and an invented
+        // actuator would claim the very pins the sensor talks over.
+        prepareTofSense();
         break;
     case WATER_METER:
         // Nothing but the meter. A board reading a water meter has no relays to
