@@ -206,6 +206,7 @@ bool isCaptiveTemplateAllowed(int templateId)
   case Template::GARAGE:
   case Template::GARDEN:
   case Template::WATER_METER:
+  case Template::TOF_DISTANCE:
     return true;
   default:
     return false;
@@ -1063,7 +1064,7 @@ void loadAPI()
     templateValue.trim();
     const int templateId = templateValue.toInt();
     if (templateValue != String(templateId) ||
-        templateId < Template::DUAL_LIGHT || templateId > Template::WATER_METER)
+        templateId < Template::DUAL_LIGHT || templateId > Template::TOF_DISTANCE)
     {
       request->send(errorResponse("Template id is invalid"));
       return;

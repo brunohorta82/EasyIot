@@ -10,6 +10,7 @@ enum Template
     HAN_MODULE,
     GARDEN,
     WATER_METER,
+    TOF_DISTANCE,
 };
 namespace constantsMqtt
 {
@@ -292,6 +293,7 @@ namespace I18N
     constexpr const char *ILLUMINANCE{"Iluminação "};
     constexpr const char *CLIMATIZATION{"Climatização"};
     constexpr const char *WATER_METER_NAME{"Contador de água"};
+    constexpr const char *TOF_SENSOR_NAME{"Distância"};
     constexpr const char *NO_NAME{"Sem Nome"};
 
 }
@@ -327,6 +329,7 @@ namespace FeatureDrivers
     constexpr const char *LD2410{"LD2410"};
     constexpr const char *LD2420{"LD2420"};
     constexpr const char *TMF882X{"TMF882X"};
+    constexpr const char *TOFSENSE{"TOFSENSE"};
 
     constexpr const char *INVALID{"INVALID"};
 }

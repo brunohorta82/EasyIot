@@ -277,10 +277,12 @@ void Sensor::loop()
   // A totaliser must keep counting with the network down. Everything else may
   // wait: publishing is all it would do, and publishOnMqtt already returns
   // without a broker while the event stream sends nothing without a listener.
+#ifndef BRINGUP_RUN_SENSORS_OFFLINE
   if (!wifiConnected() && !accumulatesTotal(driver))
   {
     return;
   }
+#endif
   if (error)
   {
     if (lastErrorTimestamp + constantsConfig::DEFAULT_TIME_SENSOR_ERROR_CLEAR < millis())
@@ -1261,6 +1263,203 @@ void Sensor::loop()
     }
   }
   break;
+
+  case TOFSENSE:
+  {
+    // Nooploop TOFSense over UART, in the factory active-output mode: the
+    // sensor sends a sixteen-byte NLink frame ten times a second, unasked.
+    //
+    // Frame, little-endian:
+    //   0      0x57, header
+    //   1      0x00, function mark
+    //   2      reserved
+    //   3      node id
+    //   4-7    system time, ms
+    //   8-10   distance, 24-bit
+    //   11     status; 0 is the only value documented as a good measurement
+    //   12-13  signal strength
+    //   14     reserved
+    //   15     sum check, the low byte of the sum of bytes 0..14
+    //
+    // The unit is the one thing the vendor documentation contradicts itself
+    // about: the field is labelled "dis * 100" while the same page decodes its
+    // own example, 0x0008AD, as 2.221 m -- which is millimetres. The worked
+    // example is evidence and the label is not, so this reads millimetres, and
+    // the raw value is logged during bring-up so a tape measure can settle it.
+    static constexpr size_t kFrameLen = 16;
+    static uint8_t frame[kFrameLen];
+    static size_t frameLen = 0;
+    static unsigned long lastFrame = 0;
+    static long distanceMm = -1;
+    static long lastRaw = 0;
+    static uint8_t lastStatus = 0xFF;
+    static uint16_t lastStrength = 0;
+    // Bring-up counters. Silence on the serial port has two very different
+    // causes -- nothing arriving at all (wrong pins, wrong baud, sensor in CAN
+    // mode) and bytes arriving that never form a frame (wrong baud, a parser
+    // bug) -- and without these the two look identical.
+    static unsigned long bytesSeen = 0;
+    static unsigned long framesOk = 0;
+    static unsigned long sumBad = 0;
+    static unsigned long portOpenedAt = 0;
+    // The baud rate is a setting stored in the sensor, not a constant of the
+    // part: it survives a power cut, and garbage arriving on the sensor's RX can
+    // change it. Seen on the bench -- after a run with its RX left floating the
+    // sensor came back at a slower rate, and at 921600 every byte read as 0x00
+    // or 0x80, which is what a slower signal looks like sampled too fast. So the
+    // driver finds the rate instead of assuming it: the vendor default first,
+    // then the other documented rates, and it locks on the first that yields a
+    // frame with a valid sum.
+    static const unsigned long kBauds[] = {921600, 115200, 460800, 230400,
+                                           256000, 1000000, 57600, 9600};
+    static size_t baudIdx = 0;
+    static bool baudLocked = false;
+
+
+    if (!isInitialized())
+    {
+      // Receive only. inputs[1] is kept in the configuration as the TX pin so
+      // the shape matches every other serial sensor, but -1 is passed instead
+      // so nothing of ours ever drives the sensor's RX line.
+      //
+      // The sensor streams unasked ten times a second, so there is nothing to
+      // send it. Driving the line costs something, though: on a soft reset the
+      // board's TX glitches while the sensor keeps running on a 5 V rail that
+      // never dropped, and the sensor comes back emitting something that is
+      // not NLink at all -- bytes at roughly twice the rate, not one header in
+      // thousands. Reopening our own port does not recover it; only pulling
+      // the sensor's power does. Never touching its RX avoids the whole thing.
+      Serial1.begin(kBauds[baudIdx], SERIAL_8N1, inputs[0], inputs[1]);
+      frameLen = 0;
+      lastFrame = 0;
+      distanceMm = -1;
+      lastRead = millis();
+      portOpenedAt = millis();
+      return;
+    }
+
+    // Bytes arriving that never form a frame: the rate is wrong. Move to the
+    // next candidate. Silence is a different fault -- wiring or power -- and
+    // stepping through rates would not fix it, so only a busy line advances.
+    if (!baudLocked && framesOk == 0 && bytesSeen > 64 &&
+        millis() - portOpenedAt > 2500ul)
+    {
+      baudIdx = (baudIdx + 1) % (sizeof(kBauds) / sizeof(kBauds[0]));
+      Serial1.end();
+      delay(20);
+      Serial1.begin(kBauds[baudIdx], SERIAL_8N1, inputs[0], inputs[1]);
+      frameLen = 0;
+      bytesSeen = 0;
+      sumBad = 0;
+      portOpenedAt = millis();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s tofsense a tentar baud=%u" CR, tags::sensors,
+                 static_cast<unsigned int>(kBauds[baudIdx]));
+#endif
+      return;
+    }
+    // Locked, then ten seconds without a single good frame: the sensor may have
+    // been reconfigured under us. Search again from the current rate.
+    if (baudLocked && lastFrame != 0 && millis() - lastFrame > 10000ul)
+    {
+      baudLocked = false;
+      framesOk = 0;
+      bytesSeen = 0;
+      portOpenedAt = millis();
+    }
+
+
+    while (Serial1.available())
+    {
+      const uint8_t b = static_cast<uint8_t>(Serial1.read());
+      bytesSeen++;
+      // Resynchronise on the header instead of trusting the stream. At this
+      // baud rate one dropped byte would misalign every frame after it, and a
+      // misaligned frame still parses -- it just reports a distance that was
+      // never measured. The sum check below catches the rest.
+      if (frameLen == 0)
+      {
+        if (b != 0x57)
+          continue;
+      }
+      else if (frameLen == 1 && b != 0x00)
+      {
+        frameLen = 0;
+        if (b != 0x57)
+          continue;
+      }
+      frame[frameLen++] = b;
+      if (frameLen < kFrameLen)
+        continue;
+      frameLen = 0;
+
+      uint8_t sum = 0;
+      for (size_t i = 0; i < kFrameLen - 1; i++)
+        sum += frame[i];
+      if (sum != frame[kFrameLen - 1])
+      {
+        sumBad++;
+        continue;
+      }
+      framesOk++;
+      if (!baudLocked)
+      {
+        baudLocked = true;
+        char msg[48];
+        snprintf(msg, sizeof(msg), "tofsense: baud %u",
+                 static_cast<unsigned int>(kBauds[baudIdx]));
+        deviceLog(msg);
+      }
+
+      lastRaw = static_cast<long>(frame[8]) |
+                (static_cast<long>(frame[9]) << 8) |
+                (static_cast<long>(frame[10]) << 16);
+      lastStatus = frame[11];
+      lastStrength = static_cast<uint16_t>(frame[12] | (frame[13] << 8));
+      lastFrame = millis();
+      distanceMm = (lastStatus == 0) ? lastRaw : -1;
+    }
+
+    if (lastRead + delayRead < millis())
+    {
+      lastRead = millis();
+      // Ten frames a second means five seconds of silence is the sensor gone,
+      // not a slow sample. Most often it is the pair wired the wrong way round.
+      if (lastFrame == 0 || millis() - lastFrame > 5000ul)
+      {
+        deviceLog("tofsense: sem tramas (rx/tx trocados?)");
+#ifdef DEBUG_ONOFRE
+        Log.error("%s tofsense sem tramas: bytes=%l somas_ma=%l rx=%d tx=%d" CR,
+                  tags::sensors, bytesSeen, sumBad, inputs[0], inputs[1]);
+#endif
+        return;
+      }
+
+      JsonDocument doc;
+      JsonObject obj = doc.to<JsonObject>();
+      state.clear();
+      // Centimetres: the unit every other distance sensor here publishes and
+      // the one the panel prints. One decimal keeps the millimetre the sensor
+      // actually resolves instead of rounding it away.
+      if (distanceMm >= 0)
+        obj["distance"] = distanceMm / 10.0;
+      // Published for the same reason the water meter publishes its amplitude:
+      // a reading is worth no more than the signal behind it, and a status
+      // other than zero says why there is no distance this time.
+      obj["strength"] = lastStrength;
+      obj["status"] = lastStatus;
+      serializeJson(doc, state);
+      doc.clear();
+      notifyState();
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s tofsense raw=%l status=%d tramas=%l bytes=%l %s " CR,
+                 tags::sensors, lastRaw, lastStatus, framesOk, bytesSeen,
+                 state.c_str());
+#endif
+    }
+  }
+  break;
+
 #endif
   case PZEM_004T_V03:
     if (lastRead + delayRead < millis())
