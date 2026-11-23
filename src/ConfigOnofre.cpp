@@ -623,6 +623,25 @@ ConfigOnofre &ConfigOnofre::load()
   // After the features, never before: a program naming a valve this device does
   // not have is dropped, which can only be decided once the valves are known.
   irrigation.load();
+#ifdef TOFSENSE_MODE
+  // Bench board: make sure the rangefinder exists even on a configuration that
+  // was saved before it did. templateSelect() only runs on a default config and
+  // refuses once a template has been picked, so a board that has already been
+  // through Wi-Fi setup would otherwise come back with no features at all and
+  // nothing to read.
+  {
+    bool hasTof = false;
+    for (auto &snsr : sensors)
+      if (snsr.driver == SensorDriver::TOFSENSE)
+        hasTof = true;
+    if (!hasTof)
+    {
+      prepareTofSense();
+      persist();
+      deviceLog("tofsense: funcao criada pelo firmware (bancada)");
+    }
+  }
+#endif
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Stored config loaded." CR, tags::config);
 

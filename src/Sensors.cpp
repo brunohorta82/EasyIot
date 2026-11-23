@@ -1302,6 +1302,18 @@ void Sensor::loop()
     static unsigned long framesOk = 0;
     static unsigned long sumBad = 0;
     static unsigned long portOpenedAt = 0;
+    // The baud rate is a setting stored in the sensor, not a constant of the
+    // part: it survives a power cut, and garbage arriving on the sensor's RX can
+    // change it. Seen on the bench -- after a run with its RX left floating the
+    // sensor came back at a slower rate, and at 921600 every byte read as 0x00
+    // or 0x80, which is what a slower signal looks like sampled too fast. So the
+    // driver finds the rate instead of assuming it: the vendor default first,
+    // then the other documented rates, and it locks on the first that yields a
+    // frame with a valid sum.
+    static const unsigned long kBauds[] = {921600, 115200, 460800, 230400,
+                                           256000, 1000000, 57600, 9600};
+    static size_t baudIdx = 0;
+    static bool baudLocked = false;
 
 
     if (!isInitialized())
@@ -1317,7 +1329,7 @@ void Sensor::loop()
       // not NLink at all -- bytes at roughly twice the rate, not one header in
       // thousands. Reopening our own port does not recover it; only pulling
       // the sensor's power does. Never touching its RX avoids the whole thing.
-      Serial1.begin(921600, SERIAL_8N1, inputs[0], -1);
+      Serial1.begin(kBauds[baudIdx], SERIAL_8N1, inputs[0], inputs[1]);
       frameLen = 0;
       lastFrame = 0;
       distanceMm = -1;
@@ -1326,29 +1338,34 @@ void Sensor::loop()
       return;
     }
 
-    // Bytes arriving that never once form a frame, and the port has been open
-    // for a while: reopen it.
-    //
-    // This is not theoretical. A soft reset -- an OTA, a watchdog, a reflash --
-    // restarts the board while the sensor keeps running on the 5 V rail that
-    // never dropped, and the port comes back mis-sampling: the byte counter
-    // climbs at roughly twice the real rate and not a single header appears.
-    // Only pulling the power fixed it by hand, which in the field means a
-    // sensor that silently stops reading after a routine update. Closing and
-    // reopening the port recovers it without anyone going to look.
-    if (framesOk == 0 && bytesSeen > 200 && millis() - portOpenedAt > 5000ul)
+    // Bytes arriving that never form a frame: the rate is wrong. Move to the
+    // next candidate. Silence is a different fault -- wiring or power -- and
+    // stepping through rates would not fix it, so only a busy line advances.
+    if (!baudLocked && framesOk == 0 && bytesSeen > 64 &&
+        millis() - portOpenedAt > 2500ul)
     {
+      baudIdx = (baudIdx + 1) % (sizeof(kBauds) / sizeof(kBauds[0]));
       Serial1.end();
       delay(20);
-      Serial1.begin(921600, SERIAL_8N1, inputs[0], -1);
+      Serial1.begin(kBauds[baudIdx], SERIAL_8N1, inputs[0], inputs[1]);
       frameLen = 0;
       bytesSeen = 0;
       sumBad = 0;
       portOpenedAt = millis();
 #ifdef DEBUG_ONOFRE
-      Log.notice("%s tofsense porta reaberta sem tramas" CR, tags::sensors);
+      Log.notice("%s tofsense a tentar baud=%u" CR, tags::sensors,
+                 static_cast<unsigned int>(kBauds[baudIdx]));
 #endif
       return;
+    }
+    // Locked, then ten seconds without a single good frame: the sensor may have
+    // been reconfigured under us. Search again from the current rate.
+    if (baudLocked && lastFrame != 0 && millis() - lastFrame > 10000ul)
+    {
+      baudLocked = false;
+      framesOk = 0;
+      bytesSeen = 0;
+      portOpenedAt = millis();
     }
 
 
@@ -1385,6 +1402,14 @@ void Sensor::loop()
         continue;
       }
       framesOk++;
+      if (!baudLocked)
+      {
+        baudLocked = true;
+        char msg[48];
+        snprintf(msg, sizeof(msg), "tofsense: baud %u",
+                 static_cast<unsigned int>(kBauds[baudIdx]));
+        deviceLog(msg);
+      }
 
       lastRaw = static_cast<long>(frame[8]) |
                 (static_cast<long>(frame[9]) << 8) |

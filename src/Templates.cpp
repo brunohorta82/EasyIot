@@ -325,6 +325,7 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
         case SensorDriver::RAIN:
         case SensorDriver::LD2410:
         case SensorDriver::LD2420:
+        case SensorDriver::TOFSENSE:
         case SensorDriver::PZEM_004T_V03:
         case SensorDriver::PZEM_004T_V01:
             break;
@@ -340,6 +341,7 @@ int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int
         const bool dualPin = driverCode == SensorDriver::HCSR04 ||
                              driverCode == SensorDriver::LD2410 ||
                              driverCode == SensorDriver::LD2420 ||
+                             driverCode == SensorDriver::TOFSENSE ||
                              driverCode == SensorDriver::PZEM_004T_V03 ||
                              driverCode == SensorDriver::PZEM_004T_V01;
         if (dualPin)
