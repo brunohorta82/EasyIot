@@ -508,6 +508,20 @@ void refreshMDNS()
   }
 
   bool success = false;
+#if defined(ESP32) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  // A Mac asks mDNS for the IPv4 and the IPv6 address of "<name>.local" at
+  // once, and waits for both. With no IPv6 address the responder answered the
+  // AAAA question with the A record, so every lookup stalled five seconds: the
+  // panel took that long to open by name and opened at once by IP. A
+  // link-local address is enough for the responder to answer properly.
+  //
+  // Asked for here, on a live connection, where the core creates it at once.
+  // Asked for in setupWiFi() it never appeared: the provisioning library
+  // restarts the station interface afterwards and the request is lost with it.
+  // The web server already listens on both families (AsyncTCP binds
+  // IPADDR_TYPE_ANY). Arduino 3.x only: on 2.x that stack binds IPv4 alone.
+  WiFi.enableIPv6();
+#endif
 #ifdef ESP32
   MDNS.end();
   success = MDNS.begin(snapshot.nodeId);

@@ -343,6 +343,20 @@ AutoUpdateResult performUpdate()
   return AutoUpdateResult::FAILED;
 }
 
+// The captive portal is unauthenticated, so it may only answer clients of the
+// device's own access point. The library's ON_AP_FILTER does not check that: it
+// calls any request whose local address is not the station's IPv4 an AP
+// request. A connection over IPv6 never has that address, so with IPv6 enabled
+// every neighbour on the LAN reached the portal -- the form that rewrites the
+// Wi-Fi settings and restarts the board -- without a password. Match the AP's
+// own address instead; an IPv6 address never equals an IPv4 one.
+bool onAccessPointOnly(AsyncWebServerRequest *request)
+{
+  if ((WiFi.getMode() & WIFI_AP) == 0)
+    return false;
+  return request->client()->localIP() == WiFi.softAPIP();
+}
+
 class CaptiveRequestHandler : public AsyncWebHandler
 {
 public:
@@ -1350,7 +1364,7 @@ void setupCaptivePortal()
   // connected while the fallback AP was still alive.
   if (!captiveHandlerConfigured)
   {
-    server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+    server.addHandler(new CaptiveRequestHandler()).setFilter(onAccessPointOnly);
     captiveHandlerConfigured = true;
   }
 }
@@ -1449,7 +1463,7 @@ void setupWebPanel()
 
   if (!captiveHandlerConfigured)
   {
-    server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);
+    server.addHandler(new CaptiveRequestHandler()).setFilter(onAccessPointOnly);
     captiveHandlerConfigured = true;
   }
   server.addHandler(&events);
