@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.236] - 2026-11-24
+
+### Fixed
+
+- The LED strip reported itself to CloudIO as "led" on every device. The
+  cloud looks features up by id across all devices, so a second strip
+  anywhere would have taken over the first one's cloud feature. Its cloud
+  id is now "<chipId>led", like every other feature, and its cloud command
+  and status topics follow. The panel, local MQTT and Home Assistant keep
+  "led". CloudIO renames the existing feature on the first sync, so its
+  name, favourite and order are kept.
+
+### Para testers
+
+- **Fita LED na Alexa**: depois de atualizar, a fita aparece na Alexa como
+  um dispositivo novo. Diz «Alexa, descobre dispositivos» e apaga a entrada
+  antiga, que deixa de responder.
+
 ## [9.235] - 2026-11-24
 
 ### Fixed
