@@ -569,6 +569,16 @@ void setupWiFi()
   // jw.enableSTA() only sets a flag of its own, so it cannot be relied on here.
   WiFi.enableSTA(true);
   WiFi.setSleep(false);
+#if defined(ESP32) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  // A Mac asks mDNS for the IPv4 and the IPv6 address of "<name>.local" at
+  // once, and waits for both. With no IPv6 address the responder never answers
+  // the second question, so every lookup stalled five seconds before giving up:
+  // the panel took that long to open by name and opened at once by IP. A
+  // link-local address is enough for the responder to answer. The web server
+  // already listens on both families (AsyncTCP binds IPADDR_TYPE_ANY). Arduino
+  // 3.x only: on 2.x the server's TCP stack binds IPv4 alone.
+  WiFi.enableIPv6();
+#endif
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
 #endif
