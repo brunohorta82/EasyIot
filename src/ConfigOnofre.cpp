@@ -42,6 +42,20 @@ static const char *currentMcuName()
 #endif
 }
 
+// The image this build updates from, as the update server names it. Reported
+// as "mcu" so the panel and the cloud look for updates in the same folder the
+// device itself updates from. currentMcuName() stays the chip family: backups
+// are checked against it, and a backup has to restore across the builds of
+// one chip.
+static const char *otaVariantName()
+{
+#ifdef ONOFRE_OTA_VARIANT
+  return ONOFRE_OTA_VARIANT;
+#else
+  return currentMcuName();
+#endif
+}
+
 static bool featureAccessYieldActive(uint32_t deadline)
 {
   return deadline != 0 &&
@@ -2225,11 +2239,12 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["wifiGw"] = WiFi.gatewayIP().toString();
   root["firmware"] = String(VERSION);
   root["buildDate"] = kFirmwareBuildDate;
-  // This string picks the OTA folder, so it has to be the real chip. It used to
-  // be worked out here a second time, with only the C6 special-cased, and a C3
-  // therefore called itself "ESP32" and was handed an 8 MB Xtensa image.
-  // currentMcuName() already knew better -- it was just not the one being asked.
-  root["mcu"] = currentMcuName();
+  // This string picks the OTA folder, so it has to name this build's image, not
+  // just its chip: reporting "ESP32-C6" from a NanoC6 water meter sent the panel
+  // and the cloud to the irrigation folder. It used to be worked out here a
+  // second time, which is how a C3 once called itself "ESP32"; it now comes
+  // from the one place the device's own update URL comes from.
+  root["mcu"] = otaVariantName();
   root["mac"] = WiFi.macAddress();
   if (allFields)
     root["signal"] = WiFi.RSSI();
