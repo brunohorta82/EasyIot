@@ -90,15 +90,15 @@ OtaStatus otaStatus;
 
 namespace
 {
-#ifdef ESP8266
+// Every target journals the reason when it has to reboot to recover from a
+// failed update: the ESP8266 always does, the ESP32 family when its listener
+// would not come back.
 constexpr const char *kOtaFailurePath = "/.ota-failure";
 constexpr const char *kOtaFailureTempPath = "/.ota-failure.tmp";
-#endif
 }
 
 bool storeOtaFailureForRestart()
 {
-#ifdef ESP8266
   LittleFS.remove(kOtaFailureTempPath);
   File file = LittleFS.open(kOtaFailureTempPath, "w");
   if (!file)
@@ -117,13 +117,11 @@ bool storeOtaFailureForRestart()
     LittleFS.remove(kOtaFailureTempPath);
     return false;
   }
-#endif
   return true;
 }
 
 void restoreOtaFailureStatus()
 {
-#ifdef ESP8266
   File file = LittleFS.open(kOtaFailurePath, "r");
   if (!file)
     return;
@@ -133,7 +131,6 @@ void restoreOtaFailureStatus()
   LittleFS.remove(kOtaFailurePath);
   otaStatus.state = OtaState::FAILED;
   otaStatus.percent = 0;
-#endif
 }
 
 void otaStatusJson(JsonVariant &root)

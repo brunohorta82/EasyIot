@@ -1949,7 +1949,9 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
             "storeOtaFailureForRestart()",
             "config.requestRestart();",
             "#else",
-            "startWebserver();",
+            "if (!startWebserver())",
+            "storeOtaFailureForRestart();",
+            "config.requestRestart();",
         )
         self.assertNotIn("config.requestReloadWifi();", ota)
 

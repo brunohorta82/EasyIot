@@ -156,6 +156,12 @@ jobs:
         if: ${{ startsWith(matrix.env, 'ESP8266') }}
         run: python3 tools/check_ram_budget.py --env ${{ matrix.env }}
 
+      # PlatformIO's "Flash: x% used" is not the size of the .bin a device
+      # downloads. Irrigation 9.233/9.234 read 94% and were still larger than
+      # their OTA slot, so every controller that tried to update failed.
+      - name: Verify the image fits its OTA slot
+        run: python3 tools/check_app_size.py --env ${{ matrix.env }}
+
       - name: Rename binary
         id: bin
         run: |

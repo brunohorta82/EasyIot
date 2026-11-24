@@ -492,7 +492,7 @@ class FeatureAccessSourceContracts(unittest.TestCase):
             "if (updateResult == AutoUpdateResult::UPDATED)",
             "config.requestRestart();",
             "config.endFeatureAccess();",
-            "startWebserver();",
+            "if (!startWebserver())",
         )
 
         self.assertNotIn("pauseFeatures", routines)
