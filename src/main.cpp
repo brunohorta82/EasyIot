@@ -253,7 +253,15 @@ void checkInternalRoutines()
         }
         config.requestRestart();
 #else
-        startWebserver();
+        // The panel is where a failed update explains itself. If the listener
+        // does not come back, nothing can reach the board until its power is
+        // cut, which is what users ended up doing. Reboot into a fresh listener
+        // instead and carry the reason across, as the ESP8266 does.
+        if (!startWebserver())
+        {
+          (void)storeOtaFailureForRestart();
+          config.requestRestart();
+        }
 #endif
       }
     }
