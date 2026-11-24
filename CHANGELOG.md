@@ -2,6 +2,45 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.232] - 2026-11-24
+
+### Added
+
+- Nooploop TOFSense laser rangefinder (DFRobot SEN0337) over UART: distance in
+  millimetres, 1 cm to 5 m. The sensor stores its own baud rate and can change
+  it, so the driver searches for it and locks on the first frame with a valid
+  checksum.
+
+### Fixed
+
+- Every build now updates from an image of its own. The OTA variant decides
+  the image a device is handed, and builds with different pins were sharing
+  one:
+  - the C6 water meters asked for `ESP32-C6`, the irrigation image;
+  - the C3 meter asked for the ESP8266 meter's image;
+  - the 4 MB ESP32 got the 8 MB image.
+
+  New variants: `ESP32-4M`, `ESP32-C3-HAN`, `ESP32-C6-GENERIC` and
+  `ESP32-C6-NANO`. The irrigation controller keeps `ESP32-C6`.
+- The browser installer's C3 image had its bootloader at 0x1000, the classic
+  ESP32's offset. The C3 reads it from 0x0, so that image never booted. The
+  offset is now chosen per chip.
+
+### Para testers
+
+- **Novo sensor:** o laser de distância TOFSense, ligado por UART. Mede de
+  1 cm a 5 m.
+- **Instalar pelo browser** (cloudio.bhonofre.pt/flash): escolhes primeiro a
+  família do chip e depois a versão. Já há firmware genérico para ESP32 de
+  4 MB, ESP32-C3 e ESP32-C6.
+- **Se gravaste um ESP32-C3 pela página antes de hoje**, a placa não arrancava.
+  A imagem já está corrigida: grava outra vez.
+
+⚠️ **Contadores de água em ESP32-C6 e contadores HAN em ESP32-C3:** a
+correcção só vale depois de a placa já ter esta versão. **Grava-os por cabo
+ou pela página**. Pela actualização automática, um C6 de água ainda receberia
+a imagem da rega.
+
 ## [9.231] - 2026-11-03
 
 ### Fixed
