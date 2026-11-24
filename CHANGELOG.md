@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.234] - 2026-11-24
+
+### Fixed
+
+- The panel was slow to open for the first ~15 s after boot. The CloudIO
+  sync gave up whenever the configuration lease was busy, which at boot is
+  most of the time, and re-requested the whole sync. That meant dozens of
+  retries a second and, after a 204, a new HTTPS POST each time: ten in ten
+  seconds. The panel's first load waited for the same lease. The sync now
+  waits up to 300 ms for the lease. On a XIAO ESP32-C6, the first 40 s went
+  from 10 POSTs and 33 deferred snapshots to 1 POST and none. ESP8266
+  behaviour is unchanged.
+
+### Para testers
+
+- **Painel disponível mais cedo depois de ligar a placa**: nos primeiros
+  segundos a placa já não fica ocupada a repetir pedidos à cloud, por isso o
+  painel abre logo. Nas placas ESP32, C3 e C6.
+
 ## [9.233] - 2026-11-24
 
 ### Added
