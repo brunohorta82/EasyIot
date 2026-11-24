@@ -30,6 +30,12 @@ jobs:
           # Without this the C3 had nowhere to update from, so it fell back to
           # asking as a plain ESP32 and got an image for another architecture.
           - { env: ESP32C3_LED_RELEASE,      mcu: ESP32-C3,        chip: esp32c3, flash_size: 4MB }
+          # One build per OTA variant: the variant decides the image a device is
+          # handed later, so boards with other pins must not share one.
+          - { env: ESP32_4M_RELEASE,         mcu: ESP32-4M,        chip: esp32,   flash_size: 4MB }
+          - { env: ESP32C3_HAN,              mcu: ESP32-C3-HAN,    chip: esp32c3, flash_size: 4MB }
+          - { env: ESP32C6_WATER,            mcu: ESP32-C6-GENERIC, chip: esp32c6, flash_size: 4MB }
+          - { env: ESP32C6_NANO_WATER,       mcu: ESP32-C6-NANO,   chip: esp32c6, flash_size: 4MB }
     steps:
       - uses: actions/checkout@v4
 
@@ -204,9 +210,17 @@ jobs:
             for f in "$ESPTOOL" "$BOOT_APP0" "$BUILD_DIR/bootloader.bin" "$BUILD_DIR/partitions.bin"; do
               [ -n "$f" ] && [ -f "$f" ] || { echo "missing input for merge: '$f'"; exit 1; }
             done
+            # The ROM looks for the bootloader at 0x1000 on the classic ESP32 and at
+            # 0x0 on the C3. Merged at 0x1000, the C3 image published with 9.231
+            # left a blank first sector and a board that never booted.
+            case "${{ matrix.chip }}" in
+              esp32) BOOT_OFFSET=0x1000 ;;
+              esp32c3) BOOT_OFFSET=0x0 ;;
+              *) echo "::error::no bootloader offset known for ${{ matrix.chip }}"; exit 1 ;;
+            esac
             python3 "$ESPTOOL" --chip ${{ matrix.chip }} merge_bin -o "webflash/$NAME" \
               --flash_mode dio --flash_freq 40m --flash_size ${{ matrix.flash_size }} \
-              0x1000 "$BUILD_DIR/bootloader.bin" \
+              "$BOOT_OFFSET" "$BUILD_DIR/bootloader.bin" \
               0x8000 "$BUILD_DIR/partitions.bin" \
               0xe000 "$BOOT_APP0" \
               0x10000 "$APP"
