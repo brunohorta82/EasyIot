@@ -249,29 +249,33 @@ namespace constanstsCloudIO
     // one chip differ in their pins, and a C6 water meter handed the irrigation
     // image comes back driving valves on its I2C pins. A build env that is not
     // simply "the generic one for its chip" sets ONOFRE_OTA_VARIANT itself; the
-    // branches below are the defaults for the rest.
-#if defined(ONOFRE_OTA_VARIANT)
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=" ONOFRE_OTA_VARIANT};
-#elif defined(CONFIG_IDF_TARGET_ESP32C3) && defined(HAN_MODE)
-    // Tested before HAN_MODE alone: the C3 meter used to fall into the branch
-    // below and ask for the ESP8266 meter's image.
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-C3-HAN"};
+    // defaults below cover the rest. The same name is reported as "mcu" to the
+    // panel and the cloud, which use it to look for updates -- so it is worked
+    // out here once, never a second time somewhere else.
+#if !defined(ONOFRE_OTA_VARIANT)
+#if defined(CONFIG_IDF_TARGET_ESP32C3) && defined(HAN_MODE)
+    // Tested before HAN_MODE alone: the C3 meter used to ask for the ESP8266
+    // meter's image.
+#define ONOFRE_OTA_VARIANT "ESP32-C3-HAN"
 #elif defined(HAN_MODE)
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
+#define ONOFRE_OTA_VARIANT "ESP8266-HAN"
 #elif defined(CONFIG_IDF_TARGET_ESP32C3)
     // Without a variant the cloud sees an ESP32-family board asking over the
-    // x-ESP32-version header and hands it the 8 MB ESP32 image -- a different
-    // architecture entirely, and nearly twice this board's app partition.
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-C3"};
+    // x-ESP32-version header and hands it the 8 MB ESP32 image.
+#define ONOFRE_OTA_VARIANT "ESP32-C3"
 #elif defined(ESP32C6) && defined(IRRIGATION_MODE)
     // The irrigation controller keeps the name every C6 used to share, so the
     // boards already in gardens go on updating from the image they run.
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-C6"};
+#define ONOFRE_OTA_VARIANT "ESP32-C6"
 #elif defined(ESP32C6)
-    // Same header trap as the C3: without a variant this would be handed an
-    // image for a different chip.
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-C6-GENERIC"};
+#define ONOFRE_OTA_VARIANT "ESP32-C6-GENERIC"
+#endif
+#endif
+#if defined(ONOFRE_OTA_VARIANT)
+    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=" ONOFRE_OTA_VARIANT};
 #else
+    // The 8 MB ESP32 and the ESP8266: the cloud tells them apart by the
+    // x-ESP32-version / x-ESP8266-version header.
     constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest"};
 #endif
 }
