@@ -965,6 +965,20 @@ void ledStripConfigJson(JsonVariant root)
     o["member"] = knxAddr[2];
 }
 
+// The id the cloud knows the strip by. Every other feature's id starts with the
+// chip id, because the cloud looks features up by id across all devices. The
+// strip used the bare "led", so a second strip on any other device would have
+// taken over the first one's cloud feature. The panel, local MQTT and Home
+// Assistant keep "led": those are per-device already.
+static const char *cloudStripId()
+{
+    // Built on every call rather than cached: the chip id is filled in at boot,
+    // and a copy taken before that would stay "led" for good.
+    static char id[32];
+    snprintf(id, sizeof(id), "%sled", config.chipId);
+    return id;
+}
+
 void ledStripCloudTopics(const char *username, const char *chipId)
 {
     if (!created || username == nullptr || username[0] == '\0')
@@ -973,8 +987,8 @@ void ledStripCloudTopics(const char *username, const char *chipId)
         tCloudState[0] = '\0';
         return;
     }
-    snprintf(tCloudCmd, sizeof(tCloudCmd), "%s/%s/light/led/set", username, chipId);
-    snprintf(tCloudState, sizeof(tCloudState), "%s/%s/light/led/status", username, chipId);
+    snprintf(tCloudCmd, sizeof(tCloudCmd), "%s/%s/light/%s/set", username, chipId, cloudStripId());
+    snprintf(tCloudState, sizeof(tCloudState), "%s/%s/light/%s/status", username, chipId, cloudStripId());
 }
 
 const char *ledStripCloudWriteTopic()
@@ -987,7 +1001,7 @@ void ledStripFeatureJson(JsonArray features)
     if (!created)
         return;
     JsonObject a = features.add<JsonObject>();
-    a["id"] = "led";
+    a["id"] = cloudStripId();
     a["name"] = fname;
     a["family"] = "LIGHT";
     a["driver"] = "LED_STRIP";
