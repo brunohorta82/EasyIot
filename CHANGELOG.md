@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.235] - 2026-11-24
+
+### Fixed
+
+- The ESP32-C6 irrigation images of 9.233 and 9.234 were 672 and 688 bytes
+  larger than their OTA slot, so every irrigation controller refused the
+  update ("Not Enough space"). Boards on firmware older than 9.225 then stayed
+  on "updating" until their power was cut. The irrigation build now drops the
+  C++ unwind tables nothing uses (`-fno-exceptions`): the image goes from
+  1,835,936 to 1,698,272 bytes. Both oversize images were withdrawn from the
+  server, and irrigation controllers were offered 9.232 meanwhile.
+- PlatformIO's "Flash: x% used" does not measure the `.bin` a device
+  downloads, which is how this went unnoticed. The release workflow now
+  checks every image against its partition table's OTA slot
+  (`tools/check_app_size.py`). It fails on overflow and warns below 32 KB of
+  headroom.
+- ESP32 family: if the web server does not listen again after a failed
+  update, the board records the error and restarts, instead of staying
+  without a panel. The ESP8266 already did this.
+
+### Para testers
+
+- **Controladores de rega C6 voltam a atualizar**: as versões 9.233 e 9.234
+  não cabiam na memória e a atualização falhava. Nas versões antigas ficava
+  parado em «a atualizar» até desligar a placa. A 9.235 cabe com folga.
+
 ## [9.234] - 2026-11-24
 
 ### Fixed
