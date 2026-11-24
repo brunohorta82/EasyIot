@@ -1983,6 +1983,14 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
     def test_web_handlers_are_installed_once_across_wifi_mode_changes(self) -> None:
         self.assertIn('AsyncEventSource events("/events");', self.server)
         self.assertNotIn("server.reset();", self.server)
+        # The unauthenticated captive portal may only answer the device's own AP.
+        # The library's ON_AP_FILTER calls every IPv6 connection an AP client,
+        # which put the portal in front of the whole LAN once IPv6 was enabled.
+        self.assertNotIn("setFilter(ON_AP_FILTER)", self.server)
+        ap_only = self.server[self.server.index("bool onAccessPointOnly("):]
+        ap_only = ap_only[: ap_only.index("\n}\n")]
+        self.assertIn("WIFI_AP", ap_only)
+        self.assertIn("request->client()->localIP() == WiFi.softAPIP()", ap_only)
         panel = block_after(self.server, r"void\s+setupWebPanel\s*\(")
         self.assertOrdered(
             panel,
@@ -1995,14 +2003,14 @@ class ConfigUpdateSourceContracts(unittest.TestCase):
         )
         self.assertIn("if (!captiveHandlerConfigured)", panel)
         self.assertIn(
-            "server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);",
+            "server.addHandler(new CaptiveRequestHandler()).setFilter(onAccessPointOnly);",
             panel,
         )
 
         captive = block_after(self.server, r"void\s+setupCaptivePortal\s*\(")
         self.assertIn("if (!captiveHandlerConfigured)", captive)
         self.assertIn(
-            "server.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER);",
+            "server.addHandler(new CaptiveRequestHandler()).setFilter(onAccessPointOnly);",
             captive,
         )
         self.assertNotIn("setupWebPanel();", captive)
