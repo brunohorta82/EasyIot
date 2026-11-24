@@ -1684,6 +1684,9 @@ function fillSystem() {
   $("s-ip").value = config.wifiIp || "";
   $("s-mask").value = config.wifiMask || "";
   $("s-gw").value = config.wifiGw || "";
+  // Only C6 builds can drive the XIAO's RF switch.
+  $("s-antenna-box").classList.toggle("hide", !config.antennaSwitch);
+  $("s-antenna").value = String(config.wifiAntenna || 0);
   $("s-mqttHost").value = config.mqttIpDns || "";
   $("s-mqttPort").value = config.mqttPort || 1883;
   $("s-mqttUser").value = config.mqttUsername || "";
@@ -1863,6 +1866,7 @@ async function save() {
     body.wifiMask = $("s-mask").value.trim();
     body.wifiGw = $("s-gw").value.trim();
   }
+  if (config.antennaSwitch) body.wifiAntenna = parseInt($("s-antenna").value, 10) || 0;
   body.mqttIpDns = $("s-mqttHost").value.trim();
   body.mqttPort = parseInt($("s-mqttPort").value, 10) || 1883;
   body.mqttUsername = $("s-mqttUser").value.trim();

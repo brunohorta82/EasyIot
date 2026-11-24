@@ -100,6 +100,7 @@ ConfigOnofre &ConfigOnofre::init()
   strlcpy(nodeId, chipId, sizeof(nodeId));
   mqttPort = constantsMqtt::defaultPort;
   dhcp = true;
+  wifiAntenna = 0;
   strlcpy(accessPointPassword, constantsConfig::apSecret, sizeof(accessPointPassword));
   strlcpy(apiUser, constantsConfig::apiUser, sizeof(apiUser));
   strlcpy(apiPassword, constantsConfig::apiPassword, sizeof(apiPassword));
@@ -528,6 +529,9 @@ ConfigOnofre &ConfigOnofre::load()
   strlcpy(wifiSSID, doc["wifiSSID"] | "", sizeof(wifiSSID));
   strlcpy(wifiSecret, doc["wifiSecret"] | "", sizeof(wifiSecret));
   dhcp = doc["dhcp"] | true;
+  wifiAntenna = doc["wifiAntenna"] | 0;
+  if (wifiAntenna > 2)
+    wifiAntenna = 0;
   strlcpy(wifiIp, doc["wifiIp"] | "", sizeof(wifiIp));
   strlcpy(wifiMask, doc["wifiMask"] | "", sizeof(wifiMask));
   strlcpy(wifiGw, doc["wifiGw"] | "", sizeof(wifiGw));
@@ -680,6 +684,7 @@ bool ConfigOnofre::persist()
   if (!String(wifiSecret).isEmpty())
     doc["wifiSecret"] = wifiSecret;
   doc["dhcp"] = dhcp;
+  doc["wifiAntenna"] = wifiAntenna;
   if (!String(wifiIp).isEmpty())
     doc["wifiIp"] = wifiIp;
   if (!String(wifiMask).isEmpty())
@@ -777,6 +782,7 @@ void ConfigOnofre::backup(JsonVariant &root)
   stored["cloudIOUsername"] = cloudIOUsername;
   stored["wifiSSID"] = wifiSSID;
   stored["dhcp"] = dhcp;
+  stored["wifiAntenna"] = wifiAntenna;
   stored["wifiIp"] = wifiIp;
   stored["wifiMask"] = wifiMask;
   stored["wifiGw"] = wifiGw;
@@ -1085,6 +1091,11 @@ bool validateConfigScalarTypes(JsonObjectConst root)
 
   JsonVariantConst dhcpValue = root["dhcp"];
   if (!dhcpValue.isUnbound() && !dhcpValue.is<bool>())
+    return false;
+
+  JsonVariantConst antennaValue = root["wifiAntenna"];
+  if (!antennaValue.isUnbound() &&
+      (!antennaValue.is<unsigned int>() || antennaValue.as<unsigned int>() > 2u))
     return false;
 
   JsonVariantConst mqttPortValue = root["mqttPort"];
@@ -1529,6 +1540,13 @@ ConfigUpdateResult ConfigOnofre::stageRestore(JsonObject &root)
   if (wifiSecret[0])
     restoredConfig["wifiSecret"] = wifiSecret;
   restoredConfig["dhcp"] = dhcpValue.as<bool>();
+  JsonVariantConst antennaValue = submitted["wifiAntenna"];
+  if (!antennaValue.isUnbound())
+  {
+    if (!antennaValue.is<unsigned int>() || antennaValue.as<unsigned int>() > 2u)
+      return ConfigUpdateResult::INVALID_REQUEST;
+    restoredConfig["wifiAntenna"] = antennaValue.as<unsigned int>();
+  }
   restoredConfig["wifiIp"] = restoredWifiIp;
   restoredConfig["wifiMask"] = restoredWifiMask;
   restoredConfig["wifiGw"] = restoredWifiGw;
@@ -1822,6 +1840,7 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
   strlcpy(previousApiUser, apiUser, sizeof(previousApiUser));
   strlcpy(previousApiPassword, apiPassword, sizeof(previousApiPassword));
   const bool previousDhcp = dhcp;
+  const uint8_t previousAntenna = wifiAntenna;
 
   const bool restore = false;
   std::vector<FeaturePinPlan> pinPlans;
@@ -1836,6 +1855,22 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
       endConfigUpdate();
       return result;
     }
+#ifdef ESP32C6
+    // Turning the antenna on takes GPIO3/14 from whatever feature holds them:
+    // refuse it rather than drive a relay or sensor line as an RF switch.
+    JsonVariantConst requestedAntenna = root["wifiAntenna"];
+    const unsigned int nextAntenna = requestedAntenna.isUnbound()
+                                         ? wifiAntenna
+                                         : requestedAntenna.as<unsigned int>();
+    if (nextAntenna != 0)
+      for (const auto &claim : newClaims)
+        if (claim.pin == XiaoC6Antenna::RF_SWITCH_ENABLE ||
+            claim.pin == XiaoC6Antenna::ANTENNA_SELECT)
+        {
+          endConfigUpdate();
+          return ConfigUpdateResult::PIN_CONFLICT;
+        }
+#endif
 
 
     bool deactivateActuators = false;
@@ -1888,6 +1923,9 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
   JsonVariantConst dhcpValue = root["dhcp"];
   if (!dhcpValue.isUnbound())
     dhcp = dhcpValue.as<bool>();
+  JsonVariantConst antennaValue = root["wifiAntenna"];
+  if (!antennaValue.isUnbound())
+    wifiAntenna = static_cast<uint8_t>(antennaValue.as<unsigned int>());
 
   JsonVariantConst mqttPasswordValue = root["mqttPassword"];
   if (!mqttPasswordValue.isUnbound() &&
@@ -2132,7 +2170,10 @@ ConfigUpdateResult ConfigOnofre::update(JsonObject &root, JsonVariant &responseR
                            strcmp(previousMqttPassword, mqttPassword) != 0;
   if (mqttChanged)
     setupMQTT(true);
+  // The antenna is set before the radio starts, so switching it is a network
+  // change like any other: it takes a restart.
   const bool networkChanged = previousDhcp != dhcp ||
+                              previousAntenna != wifiAntenna ||
                               strcmp(previousNodeId, nodeId) != 0 ||
                               strcmp(previousWifiSSID, wifiSSID) != 0 ||
                               strcmp(previousWifiSecret, wifiSecret) != 0 ||
@@ -2180,6 +2221,11 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
     // Recovery needs an exact hardware family. The historical `mcu` field is
     // also an OTA folder selector and reports C3 as ESP32, so do not overload it.
     root["backupVariant"] = currentMcuName();
+#ifdef ESP32C6
+    // Only C6 builds can drive the XIAO's RF switch, so only they offer it.
+    root["antennaSwitch"] = true;
+    root["wifiAntenna"] = wifiAntenna;
+#endif
     root["mqttConnected"] = mqttConnected();
     // Expose configuration state without returning CloudIO credentials to the
     // browser. The panel cannot inspect the deliberately omitted username.
@@ -2246,7 +2292,8 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
 #endif
   for (auto p : DefaultPins::outputInputPins)
   {
-    outInPins.add(p);
+    if (!antennaReservesPin(p))
+      outInPins.add(p);
   }
 
   // The schedule travels with the features it commands, so the panel gets both
@@ -2577,5 +2624,19 @@ bool ConfigOnofre::isLoadDefaultsRequested()
     return true;
   }
   return false;
+#endif
+}
+
+void ConfigOnofre::applyAntenna() const
+{
+#ifdef ESP32C6
+  if (wifiAntenna == 0)
+    return;
+  pinMode(XiaoC6Antenna::RF_SWITCH_ENABLE, OUTPUT);
+  digitalWrite(XiaoC6Antenna::RF_SWITCH_ENABLE, LOW);
+  // Seeed's own example lets the switch power up before selecting a path.
+  delay(100);
+  pinMode(XiaoC6Antenna::ANTENNA_SELECT, OUTPUT);
+  digitalWrite(XiaoC6Antenna::ANTENNA_SELECT, wifiAntenna == 2 ? HIGH : LOW);
 #endif
 }

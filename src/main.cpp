@@ -319,6 +319,8 @@ void setup()
 #endif
   }
   config.load();
+  // Before setupWiFi(): the radio must start on the antenna it will use.
+  config.applyAntenna();
   // Authentication credentials stay immutable for this boot. Credential edits
   // request a controlled restart before the new snapshot becomes active.
   initializeWebAuthCredentials();

@@ -66,6 +66,9 @@ public:
   char wifiIp[24];
   char wifiMask[24];
   char wifiGw[24];
+  // XIAO ESP32-C6 RF switch: 0 leaves GPIO3/14 alone (every other board), 1 the
+  // on-board antenna, 2 the external one. Applied at boot, before Wi-Fi starts.
+  uint8_t wifiAntenna = 0;
   // ACCESS POINT AND PANNEL ADMIN
   char accessPointPassword[64];
   char apiUser[32];
@@ -141,8 +144,22 @@ public:
   int peekTemplateChangeRequest() const;
   void clearTemplateChangeRequest(int templateId);
 
+  // The RF switch pins belong to the antenna while it is managed.
+  bool antennaReservesPin(unsigned int pin) const
+  {
+#ifdef ESP32C6
+    return wifiAntenna != 0 && (pin == XiaoC6Antenna::RF_SWITCH_ENABLE ||
+                                pin == XiaoC6Antenna::ANTENNA_SELECT);
+#else
+    (void)pin;
+    return false;
+#endif
+  }
+  void applyAntenna() const;
   bool validOutputPin(unsigned int pin) const
   {
+    if (antennaReservesPin(pin))
+      return false;
     for (auto p : DefaultPins::outputInputPins)
     {
       if (p == pin)

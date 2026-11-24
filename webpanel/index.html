@@ -197,6 +197,12 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
     <div class="field"><label>REDE (SSID)</label><input id="s-ssid" maxlength="23"></div>
     <div class="field"><label>PALAVRA-PASSE</label><input id="s-wpw" type="password" maxlength="63"></div>
     <div class="field"><label><input type="checkbox" id="s-dhcp"> obter IP automaticamente (DHCP)</label></div>
+    <div class="field hide" id="s-antenna-box"><label>ANTENA (XIAO ESP32-C6)</label>
+      <select id="s-antenna">
+        <option value="0">não gerir — outras placas C6</option>
+        <option value="1">interna (cerâmica)</option>
+        <option value="2">externa (conector U.FL)</option>
+      </select></div>
     <div id="s-static" class="hide">
       <div class="field"><label>IP</label><input id="s-ip" maxlength="15"></div>
       <div class="row2">
