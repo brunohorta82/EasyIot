@@ -74,6 +74,31 @@ Nos restantes equipamentos não muda nada.
 
 ## [9.230] - 2026-11-03
 
+### Added
+
+- Header and diagnostic health states now use a consistent left-edge indicator:
+  green for healthy, amber for degraded, red for a real connection failure, and
+  gray for disabled or unknown. Informational diagnostic cards keep the same
+  compact edge structure in neutral gray. Existing status text remains visible,
+  and a connected but weak Wi-Fi signal is no longer presented as a red failure.
+- Pinout rows now repeat their existing output, input and free category color on
+  the left edge, making occupied pins easier to scan without removing the text
+  labels or changing pin-assignment behavior.
+- Configured light and socket Function cards now show their live state with a
+  neutral/green left edge and explicit `DESLIGADO`/`LIGADO` label. SSE events,
+  accepted browser commands, and a state-only reconciliation when Functions is
+  opened keep the card current even when Safari delays an event; unsaved form
+  edits are not rebuilt. Controls without a truthful binary state remain neutral.
+- Documented independent topic PRs and shared Unreleased notes so unrelated work
+  can continue during review, including dependency and post-merge conflict rules.
+- PlatformIO library dependencies are now reproducible: registry libraries use
+  exact versions, Git libraries use full commit hashes, and the known moving
+  transitive libraries are pinned explicitly for each board family.
+- Platform declarations and the release workflow's PlatformIO Core/IntelHex
+  build tools are pinned too, so the resolver itself cannot drift silently.
+- Every PlatformIO build and the quick project checks now reject floating
+  dependency declarations before they can silently change a firmware build.
+
 ### Fixed
 
 - A sick cloud no longer takes the device with it. The config sync is a
@@ -101,6 +126,12 @@ Nos restantes equipamentos não muda nada.
 - The device log is guarded on ESP32. It is written from the main loop, the
   sensor task and now the cloud task, and two writers racing on the line index
   lose a line and can run it past the end of the buffer.
+- Water-meter checkpoints use the persistence result, report failed writes, and
+  retain the unsaved-turn count for a later retry instead of reporting success.
+- Runtime actuator commands no longer discard atomic-storage failures. The WebUI
+  reports when a command was physically applied but its state could not be saved,
+  while MQTT, Cloud, GPIO and KNX paths record the source and feature in the
+  device log. Unknown actuator requests remain distinct from storage failures.
 
 ### Para testers
 
@@ -133,6 +164,19 @@ verde bem, âmbar a coxear, vermelho em falha, cinzento desligado.
 **Quando um comando não fica guardado, o painel diz.** Antes, uma gravação
 falhada passava em silêncio e parecia que tinha corrido tudo bem.
 
+### Validation
+
+- 142 host tests, all quick project checks, and the ESP8266_DEBUG/ESP32_DEBUG
+  build pair passed on the v9.202 base. ESP8266 static RAM is 52,764 / 54,000 bytes, leaving 1,236
+  bytes of guard margin.
+- Normal command behavior compiles on both targets. The forced storage-failure
+  branch is covered by source contracts but was not induced on hardware because
+  deliberately exhausting or corrupting LittleFS would be a destructive test.
+- Dependency-pin host tests passed, and clean resolution/builds passed for the
+  ESP8266 normal/HAN release and debug profiles, ESP32 normal/C3 profiles, and
+  ESP32-C6 release/debug profiles. The C6 intentionally retains its separately
+  tested Arduino 3.x dependency revisions.
+
 ## [9.229] - 2026-11-03
 
 ### Added
@@ -160,71 +204,6 @@ nada. Dá presença, movimento e distância, e entra sozinho no Home Assistant.
 
 **Fita LED com KNX**: se tens um equipamento que só tem a fita e mandavas
 comandos por KNX, eles não chegavam. Já chegam.
-
-## [Unreleased]
-
-### Added
-
-- Header and diagnostic health states now use a consistent left-edge indicator:
-  green for healthy, amber for degraded, red for a real connection failure, and
-  gray for disabled or unknown. Informational diagnostic cards keep the same
-  compact edge structure in neutral gray. Existing status text remains visible,
-  and a connected but weak Wi-Fi signal is no longer presented as a red failure.
-- Pinout rows now repeat their existing output, input and free category color on
-  the left edge, making occupied pins easier to scan without removing the text
-  labels or changing pin-assignment behavior.
-- Configured light and socket Function cards now show their live state with a
-  neutral/green left edge and explicit `DESLIGADO`/`LIGADO` label. SSE events,
-  accepted browser commands, and a state-only reconciliation when Functions is
-  opened keep the card current even when Safari delays an event; unsaved form
-  edits are not rebuilt. Controls without a truthful binary state remain neutral.
-- Documented independent topic PRs and shared Unreleased notes so unrelated work
-  can continue during review, including dependency and post-merge conflict rules.
-- PlatformIO library dependencies are now reproducible: registry libraries use
-  exact versions, Git libraries use full commit hashes, and the known moving
-  transitive libraries are pinned explicitly for each board family.
-- Platform declarations and the release workflow's PlatformIO Core/IntelHex
-  build tools are pinned too, so the resolver itself cannot drift silently.
-- Every PlatformIO build and the quick project checks now reject floating
-  dependency declarations before they can silently change a firmware build.
-
-### Fixed
-
-- Water-meter checkpoints use the persistence result, report failed writes, and
-  retain the unsaved-turn count for a later retry instead of reporting success.
-- Runtime actuator commands no longer discard atomic-storage failures. The WebUI
-  reports when a command was physically applied but its state could not be saved,
-  while MQTT, Cloud, GPIO and KNX paths record the source and feature in the
-  device log. Unknown actuator requests remain distinct from storage failures.
-- The firmware-update page now confirms success only after the restarted device
-  reports a different firmware version or build, then performs a full browser
-  reload so the normal login flow and new assets appear without manual refresh.
-- A failed automatic update stops the progress indicator and displays the actual
-  device error instead of remaining indefinitely on "updating".
-- ESP8266 closes port 80 while BearSSL owns the limited heap, preserves a failed
-  update message through a controlled recovery restart, and releases captive AP
-  resources before starting the full station WebUI, CloudIO, and MQTT services.
-
-### Validation
-
-- 142 host tests, all quick project checks, and the ESP8266_DEBUG/ESP32_DEBUG
-  build pair passed on the v9.202 base. ESP8266 static RAM is 52,764 / 54,000 bytes, leaving 1,236
-  bytes of guard margin.
-- Normal command behavior compiles on both targets. The forced storage-failure
-  branch is covered by source contracts but was not induced on hardware because
-  deliberately exhausting or corrupting LittleFS would be a destructive test.
-- Dependency-pin host tests passed, and clean resolution/builds passed for the
-  ESP8266 normal/HAN release and debug profiles, ESP32 normal/C3 profiles, and
-  ESP32-C6 release/debug profiles. The C6 intentionally retains its separately
-  tested Arduino 3.x dependency revisions.
-
-- An intentional ESP8266 HTTPS failure completed without OOM, retained Wi-Fi,
-  recovered CloudIO/MQTT, and showed `HTTP error: connection failed` in Safari.
-- A real ESP8266 automatic update from a 9.198-labelled candidate to official
-  v9.201 restarted successfully, reopened the login page automatically, and
-  reported `FW 9.201`.
-- 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
-  static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
 
 ## [9.228] - 2026-10-29
 
@@ -328,6 +307,14 @@ testar — continua tudo igual ao que foi anunciado.
   HTTP_CODE_OK)` in the cloud sync, which a logging branch had come to match,
   so the contract was being checked against the wrong block and would have
   passed with the lease removed.
+- The firmware-update page now confirms success only after the restarted device
+  reports a different firmware version or build, then performs a full browser
+  reload so the normal login flow and new assets appear without manual refresh.
+- A failed automatic update stops the progress indicator and displays the actual
+  device error instead of remaining indefinitely on "updating".
+- ESP8266 closes port 80 while BearSSL owns the limited heap, preserves a failed
+  update message through a controlled recovery restart, and releases captive AP
+  resources before starting the full station WebUI, CloudIO, and MQTT services.
 
 ### Para testers
 
@@ -354,6 +341,16 @@ O que convém testar: criar e remover a função, o limite de corrente com a tua
 fonte real, as cores depois do ajuste, e a Alexa depois de adotares o
 equipamento. Avisem se o vermelho sair trocado: é a ordem das cores, muda-se na
 rodinha sem reiniciar.
+
+### Validation
+
+- An intentional ESP8266 HTTPS failure completed without OOM, retained Wi-Fi,
+  recovered CloudIO/MQTT, and showed `HTTP error: connection failed` in Safari.
+- A real ESP8266 automatic update from a 9.198-labelled candidate to official
+  v9.201 restarted successfully, reopened the login page automatically, and
+  reported `FW 9.201`.
+- 132 host tests and the ESP8266_DEBUG/ESP32_DEBUG build pair passed. ESP8266
+  static RAM was 52,332 / 54,000 bytes, leaving 1,668 bytes of guard margin.
 
 ## [9.224] - 2026-10-28
 
