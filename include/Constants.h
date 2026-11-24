@@ -138,6 +138,16 @@ namespace DefaultPins
 }
 #endif
 #ifdef ESP32C6
+// Seeed XIAO ESP32-C6: an RF switch picks between the ceramic antenna and the
+// U.FL connector. GPIO3 low powers the switch; GPIO14 then selects the
+// antenna (low = on-board, high = external). These builds target the
+// DevKitC-1, so the XIAO variant's own initVariant() never runs and nothing
+// drives the switch unless the configuration asks for it.
+namespace XiaoC6Antenna
+{
+    constexpr unsigned int RF_SWITCH_ENABLE{3u};
+    constexpr unsigned int ANTENNA_SELECT{14u};
+}
 namespace DefaultPins
 {
     // ESP32-C6-DevKitC-1, wired for irrigation: five valves, one button each and
