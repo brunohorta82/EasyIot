@@ -2,6 +2,47 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.233] - 2026-11-24
+
+### Added
+
+- Wi-Fi setting "Antena (XIAO ESP32-C6)", offered on C6 builds only. The
+  XIAO routes its radio through an RF switch (GPIO3 powers it, GPIO14 picks
+  the ceramic antenna or the U.FL connector) that our DevKitC-1 builds never
+  drove. Options:
+  - "não gerir", the default, for every other C6 board;
+  - "interna";
+  - "externa".
+
+  The setting is applied before the radio starts. While it is managed,
+  GPIO3/14 are reserved. On the bench, "interna" took a XIAO from -86 dBm at
+  1 Mbps to -69 dBm at 25-68 Mbps.
+
+### Fixed
+
+- `<name>.local` took five seconds to resolve on a Mac. The device had no
+  IPv6 address and answered the AAAA question with its A record. C6 builds
+  now take a link-local IPv6 address on every connection, and the lookup
+  drops to a few milliseconds.
+- The captive portal answers only clients of the device's own access point.
+  The library filter it used treated every IPv6 connection as an AP client,
+  so with IPv6 on, any device on the LAN would have reached the portal with
+  no password. Caught on the bench before any release carried IPv6.
+- The panel and the cloud now see each build's own OTA variant as "mcu". A
+  NanoC6 or generic C6 reported "ESP32-C6" and was pointed at the irrigation
+  image when looking for updates.
+
+### Para testers
+
+- **Painel mais rápido no Mac**: abrir pelo nome (`nome.local`) deixa de
+  demorar 5 segundos em cada página. Nas placas C6.
+- **XIAO ESP32-C6 com sinal fraco**: em Rede → Wi-Fi há agora a opção
+  **Antena**. Escolhe «interna», ou «externa» se tiveres antena ligada ao
+  conector U.FL. A placa reinicia ao guardar. Noutras placas C6 deixa em
+  «não gerir».
+- Contadores de água e placas C6 genéricas deixam de ver a versão da rega
+  como «atualização disponível».
+
 ## [9.232] - 2026-11-24
 
 ### Added
