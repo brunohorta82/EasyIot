@@ -921,6 +921,16 @@ bool dispatchCloudIOSync()
 }
 #endif
 
+// The sync wants the feature lease three times: to snapshot the configuration,
+// and after the answer to record it. Giving up on a busy lease re-requested the
+// whole sync -- a fresh HTTPS POST. At boot, with the sensor loop holding the
+// lease, that was a POST a second for ten seconds and a sync loop spinning in
+// between, while the panel's first load waited for the same lease. On ESP32
+// this runs in its own task, where a short wait costs nothing; the feature
+// loops stand aside while a waiter is pending. ESP8266 runs it inline, and
+// there waitBeginFeatureAccess() tries once, as before.
+static constexpr uint32_t kCloudSyncLeaseWaitMs = 300;
+
 void connectToCloudIO()
 {
 
@@ -937,7 +947,7 @@ void connectToCloudIO()
     JsonVariant root = requestDoc.to<JsonVariant>();
     // Snapshot the vectors under a short lease, then release before any TLS,
     // HTTP, delay, or response parsing work.
-    if (!config.tryBeginFeatureAccess("cloudio"))
+    if (!config.waitBeginFeatureAccess("cloudio", kCloudSyncLeaseWaitMs))
     {
 #ifdef DEBUG_ONOFRE
       Log.warning("%s Feature configuration busy; CloudIO snapshot deferred" CR, tags::cloudIO);
@@ -1115,7 +1125,7 @@ void connectToCloudIO()
     deviceLog("cloud: pedido falhou (%d)%s", httpCode, usedHttpFallback ? " mesmo por HTTP" : "");
   if (httpCode == HTTP_CODE_NO_CONTENT)
   {
-    if (!config.tryBeginFeatureAccess("cloudio"))
+    if (!config.waitBeginFeatureAccess("cloudio", kCloudSyncLeaseWaitMs))
     {
       config.requestCloudIOSync();
       return;
@@ -1133,7 +1143,7 @@ void connectToCloudIO()
   }
   if (httpCode != HTTP_CODE_OK)
   {
-    if (!config.tryBeginFeatureAccess("cloudio"))
+    if (!config.waitBeginFeatureAccess("cloudio", kCloudSyncLeaseWaitMs))
     {
       config.requestCloudIOSync();
       return;
@@ -1156,8 +1166,8 @@ void connectToCloudIO()
       return;
     }
     // Applying credentials and all per-feature topics is one atomic view of
-    // the returned configuration. Never wait in this networking callback.
-    if (!config.tryBeginFeatureAccess("cloudio"))
+    // the returned configuration.
+    if (!config.waitBeginFeatureAccess("cloudio", kCloudSyncLeaseWaitMs))
     {
 #ifdef DEBUG_ONOFRE
       Log.warning("%s Feature configuration busy; CloudIO apply deferred" CR, tags::cloudIO);
